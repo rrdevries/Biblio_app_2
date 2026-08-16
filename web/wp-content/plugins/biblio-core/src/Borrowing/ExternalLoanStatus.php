@@ -7,4 +7,5 @@ namespace Biblio\Core\Borrowing;
 enum ExternalLoanStatus: string
 {
     case Active = "active";
+    case Inactive = "inactive";
 }

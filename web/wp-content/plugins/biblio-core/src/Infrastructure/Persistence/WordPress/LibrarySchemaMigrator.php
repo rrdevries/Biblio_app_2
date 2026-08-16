@@ -9,7 +9,7 @@ use wpdb;
 
 final readonly class LibrarySchemaMigrator
 {
-    public const CURRENT_VERSION = 4;
+    public const CURRENT_VERSION = 5;
     public const VERSION_OPTION = "biblio_core_library_schema_version";
 
     public function __construct(
@@ -34,6 +34,7 @@ final readonly class LibrarySchemaMigrator
         $editions = $this->tableNames->editions();
         $items = $this->tableNames->items();
         $externalLoans = $this->tableNames->externalLoans();
+        $readingRounds = $this->tableNames->readingRounds();
         $charsetCollate = $this->database->get_charset_collate();
 
         $this->execute(
@@ -154,6 +155,52 @@ final readonly class LibrarySchemaMigrator
             . "ON UPDATE RESTRICT ON DELETE RESTRICT, "
             . "CHECK (CHAR_LENGTH(TRIM(user_id)) > 0), "
             . "CHECK (loan_status IN ('active'))"
+            . ") ENGINE=InnoDB {$charsetCollate}"
+        );
+
+        $this->execute(
+            "CREATE TABLE IF NOT EXISTS `{$readingRounds}` ("
+            . "reading_round_id VARCHAR(191) CHARACTER SET utf8mb4 "
+            . "COLLATE utf8mb4_bin NOT NULL, "
+            . "user_id VARCHAR(191) CHARACTER SET utf8mb4 "
+            . "COLLATE utf8mb4_bin NOT NULL, "
+            . "work_id VARCHAR(191) CHARACTER SET utf8mb4 "
+            . "COLLATE utf8mb4_bin NOT NULL, "
+            . "item_id VARCHAR(191) CHARACTER SET utf8mb4 "
+            . "COLLATE utf8mb4_bin NULL, "
+            . "external_loan_id VARCHAR(191) CHARACTER SET utf8mb4 "
+            . "COLLATE utf8mb4_bin NULL, "
+            . "round_status VARCHAR(32) NOT NULL, "
+            . "started_at DATETIME(6) NOT NULL, "
+            . "active_item_user_id VARCHAR(191) CHARACTER SET utf8mb4 "
+            . "COLLATE utf8mb4_bin GENERATED ALWAYS AS ("
+            . "CASE WHEN round_status = 'active' AND item_id IS NOT NULL "
+            . "THEN user_id ELSE NULL END"
+            . ") STORED, "
+            . "active_external_loan_user_id VARCHAR(191) "
+            . "CHARACTER SET utf8mb4 COLLATE utf8mb4_bin "
+            . "GENERATED ALWAYS AS ("
+            . "CASE WHEN round_status = 'active' "
+            . "AND external_loan_id IS NOT NULL "
+            . "THEN user_id ELSE NULL END"
+            . ") STORED, "
+            . "PRIMARY KEY (reading_round_id), "
+            . "KEY reading_rounds_by_user (user_id), "
+            . "KEY reading_rounds_by_work (work_id), "
+            . "UNIQUE KEY one_active_item_round_per_user "
+            . "(active_item_user_id, item_id), "
+            . "UNIQUE KEY one_active_external_round_per_user "
+            . "(active_external_loan_user_id, external_loan_id), "
+            . "FOREIGN KEY (work_id) REFERENCES `{$works}` (work_id) "
+            . "ON UPDATE RESTRICT ON DELETE RESTRICT, "
+            . "FOREIGN KEY (item_id) REFERENCES `{$items}` (item_id) "
+            . "ON UPDATE RESTRICT ON DELETE RESTRICT, "
+            . "FOREIGN KEY (external_loan_id) "
+            . "REFERENCES `{$externalLoans}` (external_loan_id) "
+            . "ON UPDATE RESTRICT ON DELETE RESTRICT, "
+            . "CHECK (round_status IN ('active')), "
+            . "CHECK ((item_id IS NOT NULL AND external_loan_id IS NULL) "
+            . "OR (item_id IS NULL AND external_loan_id IS NOT NULL))"
             . ") ENGINE=InnoDB {$charsetCollate}"
         );
 
