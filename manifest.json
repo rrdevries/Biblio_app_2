@@ -1,0 +1,23 @@
+{
+  "project": "Biblio V2",
+  "root": "Biblio_app_2",
+  "version": "v2.001",
+  "status": "canonical Fase-0 set; consistency checked",
+  "files": [
+    "AGENTS.md",
+    "README.md",
+    "docs/00-current-state.md",
+    "docs/01-functional-design.md",
+    "docs/02-architecture.md",
+    "docs/03-scope-and-deferred.md",
+    "docs/04-terminology.md",
+    "docs/05-source-register.md",
+    "docs/06-testing-and-acceptance.md",
+    "docs/decisions/ADR-001-single-site-tenancy.md",
+    "docs/decisions/ADR-002-modular-monolith.md",
+    "docs/decisions/ADR-003-biblio-core-owns-domain-logic.md"
+  ],
+  "assumptions": [
+    "For v2.001 each user has at most one designated personal Privébibliotheek, auto-created on first relevant reading/borrowing action if absent."
+  ]
+}
