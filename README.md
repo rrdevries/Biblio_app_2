@@ -15,6 +15,27 @@ Lokale ontwikkelomgeving voor Biblio V2.
 
 https://biblio-v2.ddev.site
 
+## Biblio Core setup en tests
+
+Installeer na een verse checkout eerst de vastgelegde Composer-dependencies:
+
+```bash
+ddev composer --working-dir=web/wp-content/plugins/biblio-core install
+```
+
+Voer de tests uit vanaf de projectroot:
+
+```bash
+./scripts/test-biblio-core-unit.sh
+./scripts/test-biblio-core-integration.sh
+./scripts/test-biblio-core-all.sh
+```
+
+De integratietest gebruikt uitsluitend de wegwerpdatabase
+`biblio_core_test`. Het script bouwt die database per run opnieuw op en
+verwijdert haar ook wanneer de test faalt. De normale DDEV-database `db`
+wordt niet als testdatabase gebruikt.
+
 ## Architectuur
 
 Biblio V2 wordt gebouwd als één WordPress-site met een custom Biblio Core-plugin.
