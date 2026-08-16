@@ -23,18 +23,34 @@ final readonly class CreateLibraryService
 
     public function create(Library $library, UserId $ownerId): void
     {
+        $this->createAndThen(
+            $library,
+            $ownerId,
+            static fn (): null => null
+        );
+    }
+
+    public function createAndThen(
+        Library $library,
+        UserId $ownerId,
+        callable $continuation
+    ): mixed
+    {
         $ownerAssignment = new LibraryMembershipAssignment(
             $library->id(),
             $ownerId,
             LibraryMembership::owner()
         );
 
-        $this->transactionManager->run(function () use (
+        return $this->transactionManager->run(function () use (
             $library,
-            $ownerAssignment
-        ): void {
+            $ownerAssignment,
+            $continuation
+        ): mixed {
             $this->libraryRepository->add($library);
             $this->membershipRepository->add($ownerAssignment);
+
+            return $continuation();
         });
     }
 }

@@ -42,9 +42,14 @@ abstract class PersistenceIntegrationTestCase extends TestCase
 
     protected function resetLibraryTables(): void
     {
+        $personalLibraryDesignations = $this->tableNames
+            ->personalLibraryDesignations();
         $memberships = $this->tableNames->memberships();
         $libraries = $this->tableNames->libraries();
 
+        $this->database->query(
+            "DELETE FROM `{$personalLibraryDesignations}`"
+        );
         $this->database->query("DELETE FROM `{$memberships}`");
         $this->database->query("DELETE FROM `{$libraries}`");
     }

@@ -9,7 +9,7 @@ use wpdb;
 
 final readonly class LibrarySchemaMigrator
 {
-    public const CURRENT_VERSION = 1;
+    public const CURRENT_VERSION = 2;
     public const VERSION_OPTION = "biblio_core_library_schema_version";
 
     public function __construct(
@@ -28,6 +28,8 @@ final readonly class LibrarySchemaMigrator
 
         $libraries = $this->tableNames->libraries();
         $memberships = $this->tableNames->memberships();
+        $personalLibraryDesignations = $this->tableNames
+            ->personalLibraryDesignations();
         $charsetCollate = $this->database->get_charset_collate();
 
         $this->execute(
@@ -68,6 +70,22 @@ final readonly class LibrarySchemaMigrator
             . "CHECK (use_access IN ('direct', 'borrow', 'view_only')), "
             . "CHECK (management_role <> 'owner' OR use_access = 'direct'), "
             . "CHECK (JSON_VALID(additional_permissions))"
+            . ") ENGINE=InnoDB {$charsetCollate}"
+        );
+
+        $this->execute(
+            "CREATE TABLE IF NOT EXISTS `{$personalLibraryDesignations}` ("
+            . "user_id VARCHAR(191) CHARACTER SET utf8mb4 "
+            . "COLLATE utf8mb4_bin NOT NULL, "
+            . "library_id VARCHAR(191) CHARACTER SET utf8mb4 "
+            . "COLLATE utf8mb4_bin NOT NULL, "
+            . "PRIMARY KEY (user_id), "
+            . "UNIQUE KEY one_personal_user_per_library (library_id), "
+            . "FOREIGN KEY (library_id) REFERENCES `{$libraries}` (library_id) "
+            . "ON UPDATE RESTRICT ON DELETE RESTRICT, "
+            . "FOREIGN KEY (library_id, user_id) "
+            . "REFERENCES `{$memberships}` (library_id, user_id) "
+            . "ON UPDATE RESTRICT ON DELETE RESTRICT"
             . ") ENGINE=InnoDB {$charsetCollate}"
         );
 
