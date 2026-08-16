@@ -9,7 +9,7 @@ use wpdb;
 
 final readonly class LibrarySchemaMigrator
 {
-    public const CURRENT_VERSION = 2;
+    public const CURRENT_VERSION = 3;
     public const VERSION_OPTION = "biblio_core_library_schema_version";
 
     public function __construct(
@@ -30,6 +30,9 @@ final readonly class LibrarySchemaMigrator
         $memberships = $this->tableNames->memberships();
         $personalLibraryDesignations = $this->tableNames
             ->personalLibraryDesignations();
+        $works = $this->tableNames->works();
+        $editions = $this->tableNames->editions();
+        $items = $this->tableNames->items();
         $charsetCollate = $this->database->get_charset_collate();
 
         $this->execute(
@@ -86,6 +89,49 @@ final readonly class LibrarySchemaMigrator
             . "FOREIGN KEY (library_id, user_id) "
             . "REFERENCES `{$memberships}` (library_id, user_id) "
             . "ON UPDATE RESTRICT ON DELETE RESTRICT"
+            . ") ENGINE=InnoDB {$charsetCollate}"
+        );
+
+        $this->execute(
+            "CREATE TABLE IF NOT EXISTS `{$works}` ("
+            . "work_id VARCHAR(191) CHARACTER SET utf8mb4 "
+            . "COLLATE utf8mb4_bin NOT NULL, "
+            . "work_title VARCHAR(512) NOT NULL, "
+            . "PRIMARY KEY (work_id), "
+            . "CHECK (CHAR_LENGTH(TRIM(work_title)) > 0)"
+            . ") ENGINE=InnoDB {$charsetCollate}"
+        );
+
+        $this->execute(
+            "CREATE TABLE IF NOT EXISTS `{$editions}` ("
+            . "edition_id VARCHAR(191) CHARACTER SET utf8mb4 "
+            . "COLLATE utf8mb4_bin NOT NULL, "
+            . "work_id VARCHAR(191) CHARACTER SET utf8mb4 "
+            . "COLLATE utf8mb4_bin NOT NULL, "
+            . "PRIMARY KEY (edition_id), "
+            . "KEY editions_by_work (work_id), "
+            . "FOREIGN KEY (work_id) REFERENCES `{$works}` (work_id) "
+            . "ON UPDATE RESTRICT ON DELETE RESTRICT"
+            . ") ENGINE=InnoDB {$charsetCollate}"
+        );
+
+        $this->execute(
+            "CREATE TABLE IF NOT EXISTS `{$items}` ("
+            . "item_id VARCHAR(191) CHARACTER SET utf8mb4 "
+            . "COLLATE utf8mb4_bin NOT NULL, "
+            . "library_id VARCHAR(191) CHARACTER SET utf8mb4 "
+            . "COLLATE utf8mb4_bin NOT NULL, "
+            . "edition_id VARCHAR(191) CHARACTER SET utf8mb4 "
+            . "COLLATE utf8mb4_bin NOT NULL, "
+            . "item_status VARCHAR(32) NOT NULL, "
+            . "PRIMARY KEY (item_id), "
+            . "KEY items_by_library (library_id), "
+            . "KEY items_by_edition (edition_id), "
+            . "FOREIGN KEY (library_id) REFERENCES `{$libraries}` (library_id) "
+            . "ON UPDATE RESTRICT ON DELETE RESTRICT, "
+            . "FOREIGN KEY (edition_id) REFERENCES `{$editions}` (edition_id) "
+            . "ON UPDATE RESTRICT ON DELETE RESTRICT, "
+            . "CHECK (item_status IN ('active'))"
             . ") ENGINE=InnoDB {$charsetCollate}"
         );
 

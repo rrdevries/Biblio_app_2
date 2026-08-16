@@ -14,6 +14,9 @@ final class LibrarySchemaTest extends PersistenceIntegrationTestCase
         $memberships = $this->tableNames->memberships();
         $personalLibraryDesignations = $this->tableNames
             ->personalLibraryDesignations();
+        $works = $this->tableNames->works();
+        $editions = $this->tableNames->editions();
+        $items = $this->tableNames->items();
 
         self::assertSame(
             (string) LibrarySchemaMigrator::CURRENT_VERSION,
@@ -25,6 +28,9 @@ final class LibrarySchemaTest extends PersistenceIntegrationTestCase
             "InnoDB",
             $this->tableEngine($personalLibraryDesignations)
         );
+        self::assertSame("InnoDB", $this->tableEngine($works));
+        self::assertSame("InnoDB", $this->tableEngine($editions));
+        self::assertSame("InnoDB", $this->tableEngine($items));
         self::assertSame(
             "PRIMARY KEY",
             $this->constraintType($memberships, "PRIMARY")
@@ -52,6 +58,35 @@ final class LibrarySchemaTest extends PersistenceIntegrationTestCase
         self::assertSame(
             2,
             $this->foreignKeyCount($personalLibraryDesignations)
+        );
+        self::assertSame(1, $this->foreignKeyCount($editions));
+        self::assertSame(2, $this->foreignKeyCount($items));
+        self::assertFalse($this->columnExists($works, "library_id"));
+        self::assertFalse($this->columnExists($editions, "library_id"));
+        self::assertTrue($this->columnExists($items, "library_id"));
+    }
+
+    public function testVersionTwoSchemaUpgradesToCatalogSchema(): void
+    {
+        $items = $this->tableNames->items();
+        $editions = $this->tableNames->editions();
+        $works = $this->tableNames->works();
+        $this->database->query("DROP TABLE `{$items}`");
+        $this->database->query("DROP TABLE `{$editions}`");
+        $this->database->query("DROP TABLE `{$works}`");
+        update_option(LibrarySchemaMigrator::VERSION_OPTION, "2", false);
+
+        (new LibrarySchemaMigrator(
+            $this->database,
+            $this->tableNames
+        ))->migrate();
+
+        self::assertSame($works, $this->existingTable($works));
+        self::assertSame($editions, $this->existingTable($editions));
+        self::assertSame($items, $this->existingTable($items));
+        self::assertSame(
+            (string) LibrarySchemaMigrator::CURRENT_VERSION,
+            get_option(LibrarySchemaMigrator::VERSION_OPTION)
         );
     }
 
@@ -128,6 +163,28 @@ final class LibrarySchemaTest extends PersistenceIntegrationTestCase
             DB_NAME,
             $tableName,
             $columnName
+        ));
+    }
+
+    private function columnExists(
+        string $tableName,
+        string $columnName
+    ): bool {
+        return (int) $this->database->get_var($this->database->prepare(
+            "SELECT COUNT(*) FROM information_schema.COLUMNS "
+            . "WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s "
+            . "AND COLUMN_NAME = %s",
+            DB_NAME,
+            $tableName,
+            $columnName
+        )) === 1;
+    }
+
+    private function existingTable(string $tableName): ?string
+    {
+        return $this->database->get_var($this->database->prepare(
+            "SHOW TABLES LIKE %s",
+            $tableName
         ));
     }
 }
