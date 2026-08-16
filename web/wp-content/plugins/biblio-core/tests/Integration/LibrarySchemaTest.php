@@ -17,6 +17,7 @@ final class LibrarySchemaTest extends PersistenceIntegrationTestCase
         $works = $this->tableNames->works();
         $editions = $this->tableNames->editions();
         $items = $this->tableNames->items();
+        $externalLoans = $this->tableNames->externalLoans();
 
         self::assertSame(
             (string) LibrarySchemaMigrator::CURRENT_VERSION,
@@ -31,6 +32,7 @@ final class LibrarySchemaTest extends PersistenceIntegrationTestCase
         self::assertSame("InnoDB", $this->tableEngine($works));
         self::assertSame("InnoDB", $this->tableEngine($editions));
         self::assertSame("InnoDB", $this->tableEngine($items));
+        self::assertSame("InnoDB", $this->tableEngine($externalLoans));
         self::assertSame(
             "PRIMARY KEY",
             $this->constraintType($memberships, "PRIMARY")
@@ -64,13 +66,51 @@ final class LibrarySchemaTest extends PersistenceIntegrationTestCase
         self::assertFalse($this->columnExists($works, "library_id"));
         self::assertFalse($this->columnExists($editions, "library_id"));
         self::assertTrue($this->columnExists($items, "library_id"));
+        self::assertSame(1, $this->foreignKeyCount($externalLoans));
+        self::assertTrue($this->columnExists($externalLoans, "user_id"));
+        self::assertFalse($this->columnExists($externalLoans, "library_id"));
+        self::assertSame(
+            "NO",
+            $this->columnNullability($externalLoans, "borrowed_at")
+        );
+        self::assertSame(
+            "YES",
+            $this->columnNullability($externalLoans, "due_at")
+        );
+        self::assertTrue($this->indexExists(
+            $externalLoans,
+            "external_loans_by_user"
+        ));
+    }
+
+    public function testVersionThreeSchemaUpgradesToExternalLoanSchema(): void
+    {
+        $externalLoans = $this->tableNames->externalLoans();
+        $this->database->query("DROP TABLE `{$externalLoans}`");
+        update_option(LibrarySchemaMigrator::VERSION_OPTION, "3", false);
+
+        (new LibrarySchemaMigrator(
+            $this->database,
+            $this->tableNames
+        ))->migrate();
+
+        self::assertSame(
+            $externalLoans,
+            $this->existingTable($externalLoans)
+        );
+        self::assertSame(
+            (string) LibrarySchemaMigrator::CURRENT_VERSION,
+            get_option(LibrarySchemaMigrator::VERSION_OPTION)
+        );
     }
 
     public function testVersionTwoSchemaUpgradesToCatalogSchema(): void
     {
+        $externalLoans = $this->tableNames->externalLoans();
         $items = $this->tableNames->items();
         $editions = $this->tableNames->editions();
         $works = $this->tableNames->works();
+        $this->database->query("DROP TABLE `{$externalLoans}`");
         $this->database->query("DROP TABLE `{$items}`");
         $this->database->query("DROP TABLE `{$editions}`");
         $this->database->query("DROP TABLE `{$works}`");
@@ -186,5 +226,33 @@ final class LibrarySchemaTest extends PersistenceIntegrationTestCase
             "SHOW TABLES LIKE %s",
             $tableName
         ));
+    }
+
+    private function columnNullability(
+        string $tableName,
+        string $columnName
+    ): string {
+        return (string) $this->database->get_var($this->database->prepare(
+            "SELECT IS_NULLABLE FROM information_schema.COLUMNS "
+            . "WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s "
+            . "AND COLUMN_NAME = %s",
+            DB_NAME,
+            $tableName,
+            $columnName
+        ));
+    }
+
+    private function indexExists(
+        string $tableName,
+        string $indexName
+    ): bool {
+        return (int) $this->database->get_var($this->database->prepare(
+            "SELECT COUNT(*) FROM information_schema.STATISTICS "
+            . "WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s "
+            . "AND INDEX_NAME = %s",
+            DB_NAME,
+            $tableName,
+            $indexName
+        )) > 0;
     }
 }

@@ -14,6 +14,7 @@ final readonly class LibraryTableNames
     private string $works;
     private string $editions;
     private string $items;
+    private string $externalLoans;
 
     public function __construct(string $prefix)
     {
@@ -24,6 +25,7 @@ final readonly class LibraryTableNames
         $this->works = $prefix . "biblio_works";
         $this->editions = $prefix . "biblio_editions";
         $this->items = $prefix . "biblio_items";
+        $this->externalLoans = $prefix . "biblio_external_loans";
 
         $this->assertSafe($this->libraries);
         $this->assertSafe($this->memberships);
@@ -31,6 +33,7 @@ final readonly class LibraryTableNames
         $this->assertSafe($this->works);
         $this->assertSafe($this->editions);
         $this->assertSafe($this->items);
+        $this->assertSafe($this->externalLoans);
     }
 
     public function libraries(): string
@@ -61,6 +64,11 @@ final readonly class LibraryTableNames
     public function items(): string
     {
         return $this->items;
+    }
+
+    public function externalLoans(): string
+    {
+        return $this->externalLoans;
     }
 
     private function assertSafe(string $tableName): void

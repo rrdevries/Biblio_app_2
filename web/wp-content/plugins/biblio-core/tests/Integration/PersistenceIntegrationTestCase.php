@@ -42,6 +42,7 @@ abstract class PersistenceIntegrationTestCase extends TestCase
 
     protected function resetLibraryTables(): void
     {
+        $externalLoans = $this->tableNames->externalLoans();
         $items = $this->tableNames->items();
         $editions = $this->tableNames->editions();
         $works = $this->tableNames->works();
@@ -50,6 +51,7 @@ abstract class PersistenceIntegrationTestCase extends TestCase
         $memberships = $this->tableNames->memberships();
         $libraries = $this->tableNames->libraries();
 
+        $this->database->query("DELETE FROM `{$externalLoans}`");
         $this->database->query("DELETE FROM `{$items}`");
         $this->database->query("DELETE FROM `{$editions}`");
         $this->database->query("DELETE FROM `{$works}`");

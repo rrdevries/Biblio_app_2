@@ -9,7 +9,7 @@ use wpdb;
 
 final readonly class LibrarySchemaMigrator
 {
-    public const CURRENT_VERSION = 3;
+    public const CURRENT_VERSION = 4;
     public const VERSION_OPTION = "biblio_core_library_schema_version";
 
     public function __construct(
@@ -33,6 +33,7 @@ final readonly class LibrarySchemaMigrator
         $works = $this->tableNames->works();
         $editions = $this->tableNames->editions();
         $items = $this->tableNames->items();
+        $externalLoans = $this->tableNames->externalLoans();
         $charsetCollate = $this->database->get_charset_collate();
 
         $this->execute(
@@ -132,6 +133,27 @@ final readonly class LibrarySchemaMigrator
             . "FOREIGN KEY (edition_id) REFERENCES `{$editions}` (edition_id) "
             . "ON UPDATE RESTRICT ON DELETE RESTRICT, "
             . "CHECK (item_status IN ('active'))"
+            . ") ENGINE=InnoDB {$charsetCollate}"
+        );
+
+        $this->execute(
+            "CREATE TABLE IF NOT EXISTS `{$externalLoans}` ("
+            . "external_loan_id VARCHAR(191) CHARACTER SET utf8mb4 "
+            . "COLLATE utf8mb4_bin NOT NULL, "
+            . "user_id VARCHAR(191) CHARACTER SET utf8mb4 "
+            . "COLLATE utf8mb4_bin NOT NULL, "
+            . "work_id VARCHAR(191) CHARACTER SET utf8mb4 "
+            . "COLLATE utf8mb4_bin NOT NULL, "
+            . "loan_status VARCHAR(32) NOT NULL, "
+            . "borrowed_at DATETIME(6) NOT NULL, "
+            . "due_at DATETIME(6) NULL, "
+            . "PRIMARY KEY (external_loan_id), "
+            . "KEY external_loans_by_user (user_id), "
+            . "KEY external_loans_by_work (work_id), "
+            . "FOREIGN KEY (work_id) REFERENCES `{$works}` (work_id) "
+            . "ON UPDATE RESTRICT ON DELETE RESTRICT, "
+            . "CHECK (CHAR_LENGTH(TRIM(user_id)) > 0), "
+            . "CHECK (loan_status IN ('active'))"
             . ") ENGINE=InnoDB {$charsetCollate}"
         );
 
