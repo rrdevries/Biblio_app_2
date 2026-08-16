@@ -29,3 +29,5 @@ vendor/
 /config/jetengine/*.local.*
 
 /web/wp-content/plugins/biblio-core/vendor/
+
+/web/wp-content/plugins/biblio-core/.phpunit.cache/
