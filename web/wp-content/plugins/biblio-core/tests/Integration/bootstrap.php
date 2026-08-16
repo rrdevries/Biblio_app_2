@@ -35,3 +35,14 @@ if (!defined("DB_NAME") || DB_NAME !== $expectedDatabase) {
         "WordPress did not bootstrap against the isolated test database."
     );
 }
+
+$tableNames = new \Biblio\Core\Infrastructure\Persistence\WordPress\LibraryTableNames(
+    $wpdb->prefix
+);
+$schemaMigrator = new \Biblio\Core\Infrastructure\Persistence\WordPress\LibrarySchemaMigrator(
+    $wpdb,
+    $tableNames
+);
+$schemaMigrator->migrate();
+
+require_once __DIR__ . "/PersistenceIntegrationTestCase.php";
