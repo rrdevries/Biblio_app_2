@@ -8,11 +8,17 @@ use InvalidArgumentException;
 
 final readonly class LibraryMembership
 {
+    private AdditionalPermissions $additionalPermissions;
+
     public function __construct(
         private ManagementRole $managementRole,
         private UseAccess $useAccess,
-        private MembershipStatus $status
+        private MembershipStatus $status,
+        ?AdditionalPermissions $additionalPermissions = null
     ) {
+        $this->additionalPermissions = $additionalPermissions
+            ?? AdditionalPermissions::none();
+
         if (
             $this->managementRole === ManagementRole::Owner
             && $this->useAccess !== UseAccess::Direct
@@ -54,5 +60,10 @@ final readonly class LibraryMembership
     public function status(): MembershipStatus
     {
         return $this->status;
+    }
+
+    public function additionalPermissions(): AdditionalPermissions
+    {
+        return $this->additionalPermissions;
     }
 }

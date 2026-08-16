@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Tests\Unit;
 
+use Biblio\Core\Library\AdditionalPermissions;
 use Biblio\Core\Library\LibraryMembership;
 use Biblio\Core\Library\ManagementRole;
 use Biblio\Core\Library\MembershipStatus;
@@ -73,5 +74,22 @@ final class LibraryMembershipTest extends TestCase
         );
 
         self::assertSame(UseAccess::Direct, $membership->useAccess());
+    }
+
+    public function testAdditionalPermissionsRemainASeparateDimension(): void
+    {
+        $membership = new LibraryMembership(
+            ManagementRole::Manager,
+            UseAccess::Borrow,
+            MembershipStatus::Active,
+            AdditionalPermissions::fromValues("lending")
+        );
+
+        self::assertSame(ManagementRole::Manager, $membership->managementRole());
+        self::assertSame(UseAccess::Borrow, $membership->useAccess());
+        self::assertSame(
+            ["lending"],
+            $membership->additionalPermissions()->values()
+        );
     }
 }
