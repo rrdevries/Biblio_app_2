@@ -12,6 +12,8 @@ final class LibrarySchemaTest extends PersistenceIntegrationTestCase
     {
         $libraries = $this->tableNames->libraries();
         $memberships = $this->tableNames->memberships();
+        $personalLibraryDesignations = $this->tableNames
+            ->personalLibraryDesignations();
 
         self::assertSame(
             (string) LibrarySchemaMigrator::CURRENT_VERSION,
@@ -19,6 +21,10 @@ final class LibrarySchemaTest extends PersistenceIntegrationTestCase
         );
         self::assertSame("InnoDB", $this->tableEngine($libraries));
         self::assertSame("InnoDB", $this->tableEngine($memberships));
+        self::assertSame(
+            "InnoDB",
+            $this->tableEngine($personalLibraryDesignations)
+        );
         self::assertSame(
             "PRIMARY KEY",
             $this->constraintType($memberships, "PRIMARY")
@@ -31,6 +37,48 @@ final class LibrarySchemaTest extends PersistenceIntegrationTestCase
         self::assertSame(
             "STORED GENERATED",
             $this->columnExtra($memberships, "active_owner_library_id")
+        );
+        self::assertSame(
+            "PRIMARY KEY",
+            $this->constraintType($personalLibraryDesignations, "PRIMARY")
+        );
+        self::assertSame(
+            "UNIQUE",
+            $this->constraintType(
+                $personalLibraryDesignations,
+                "one_personal_user_per_library"
+            )
+        );
+        self::assertSame(
+            2,
+            $this->foreignKeyCount($personalLibraryDesignations)
+        );
+    }
+
+    public function testVersionOneSchemaUpgradesToPersonalDesignationSchema(): void
+    {
+        $personalLibraryDesignations = $this->tableNames
+            ->personalLibraryDesignations();
+        $this->database->query(
+            "DROP TABLE `{$personalLibraryDesignations}`"
+        );
+        update_option(LibrarySchemaMigrator::VERSION_OPTION, "1", false);
+
+        (new LibrarySchemaMigrator(
+            $this->database,
+            $this->tableNames
+        ))->migrate();
+
+        self::assertSame(
+            $personalLibraryDesignations,
+            $this->database->get_var($this->database->prepare(
+                "SHOW TABLES LIKE %s",
+                $personalLibraryDesignations
+            ))
+        );
+        self::assertSame(
+            (string) LibrarySchemaMigrator::CURRENT_VERSION,
+            get_option(LibrarySchemaMigrator::VERSION_OPTION)
         );
     }
 

@@ -51,4 +51,4 @@ ddev exec env DB_NAME="$TEST_DATABASE" wp \
 ddev exec \
   --dir "/var/www/html/$PLUGIN_DIRECTORY" \
   env DB_NAME="$TEST_DATABASE" \
-  vendor/bin/phpunit --configuration phpunit.integration.xml
+  vendor/bin/phpunit --configuration phpunit.integration.xml "$@"
