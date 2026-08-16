@@ -34,4 +34,4 @@ Do not infer current product behavior from historical source files when the cano
 
 Media scope is physical books only.
 
-Persistence mapping (CPT/CCT/custom tables) is intentionally not fixed until the technical spike.
+Biblio-owned custom tables are the proven Fase-0 baseline for integrity-, scope-, transaction- and concurrency-sensitive Core-data. Persistence remains selectable per domain; see `docs/decisions/ADR-004-fase-0-persistence-and-reading-sources.md`.

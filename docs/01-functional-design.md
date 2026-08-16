@@ -16,7 +16,7 @@ Biblio runs as one platform. A `Bibliotheek` is an internal tenant/domain entity
 
 Historical sources remain preserved as design history. Current truth is determined by the conflict order documented in `README.md`.
 
-Persistence choices such as CPT, CCT or custom tables are technical implementation decisions and remain open until the technical spike.
+Persistence choices such as CPT, CCT or custom tables are technical implementation decisions. Fase 0 established Biblio-owned custom tables as the baseline for integrity-, scope-, transaction- and concurrency-sensitive Core-data; selection remains open per domain as specified in `docs/decisions/ADR-004-fase-0-persistence-and-reading-sources.md`.
 
 # 2. Product model
 

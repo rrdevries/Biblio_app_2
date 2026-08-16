@@ -211,4 +211,59 @@ One WordPress site with:
 - Elementor Pro for presentation;
 - custom PHP/JS where integrity or interaction requires it.
 
-Persistence mapping remains open until the technical spike.
+Biblio-owned custom tables are the proven baseline for relational and transactional Core-data where hard integrity, tenant isolation, user ownership, transactions or concurrency are central. Persistence remains selectable per domain. CPT, CCT and JetEngine remain available as supporting options where they do not undermine Core boundaries or integrity rules.
+
+Work and Edition remain platform-wide and use Biblio-owned custom tables for v2.001. Item is Library-owned. ExternalLoan and ReadingRound are user-owned.
+
+The current ReadingRound source representation uses nullable `item_id` and `external_loan_id` foreign keys with an exactly-one check. This is the accepted v2.001 baseline for the two currently implemented source types, not a permanent decision for every future source type.
+
+See `docs/decisions/ADR-004-fase-0-persistence-and-reading-sources.md`.
+
+## Fase 0
+
+Status: **Afgerond — GO**
+
+Fase 0 has proven:
+- single-site WordPress as application runtime;
+- Biblio Core without an Elementor dependency for domain flows;
+- explicit Library Context;
+- LibraryMembership and server-side authorization;
+- Biblio-owned custom-table persistence against real MariaDB;
+- a valid zero-Library account state;
+- explicit personal-Library designation;
+- transactional, idempotent and concurrency-safe personal Privébibliotheek provisioning;
+- platform-wide Work and Edition;
+- Library-owned Item with cross-Library isolation;
+- user-owned ExternalLoan without Library ownership;
+- user-owned ReadingRound with exactly one concrete source;
+- simultaneous active ReadingRounds for the same Work on different sources;
+- cross-user privacy and absence of Library-role bypasses;
+- transactions and rollback for compound mutations;
+- database-enforced concurrency invariants;
+- isolated WordPress/MariaDB integration tests with automatic setup and cleanup.
+
+Last verified Fase-0 test baseline:
+- PHP 8.3.31;
+- PHPUnit 12.5.33;
+- unit: 55 tests, 114 assertions;
+- integration: 57 tests, 276 assertions;
+- total: 112 tests, 390 assertions;
+- WordPress smoke: plugin active, Core loaded, init hook executed, HTTP 200.
+
+InternalLoan has not been implemented in Fase 0.
+
+## Next phase
+
+**Fase 1 — Biblio Core fundament stabiliseren**
+
+Initial technical attention points are limited to:
+- distinguish spike-only code from production-worthy code;
+- stabilize module boundaries and naming;
+- define the migrations/install/upgrade lifecycle;
+- stabilize application-service contracts;
+- establish a consistent exception model;
+- review transaction boundaries;
+- extend the authorization matrix where the next implemented behavior requires it;
+- establish logging and audit boundaries.
+
+This does not yet define the complete Fase-1 implementation.

@@ -1,6 +1,6 @@
 # 02 — Architecture
 
-Status: canonical architecture direction; persistence mapping remains open until spike.
+Status: canonical architecture direction with accepted Fase-0 persistence baseline.
 
 ## 1. Deployment model
 
@@ -69,9 +69,12 @@ Use when:
 
 Every Library-scoped query/mutation requires:
 - explicit library_id / Library Context;
+- authenticated user matching that context;
 - valid active membership where applicable;
-- role/permission checks;
-- tenant isolation.
+- relevant role, use-access and/or additional-permission checks;
+- tenant isolation and verification that the involved record belongs to the current Library.
+
+Library Context is not inferred from UI, cookie, session or page builder.
 
 ### User-owned
 
@@ -80,6 +83,8 @@ Every user-owned query/mutation requires:
 - ownership check.
 
 Optional library_id/source context never replaces ownership.
+
+User-owned data can exist while its owner belongs to zero Libraries. Library roles do not grant automatic access to another user's private data.
 
 ## 4. Membership
 
@@ -102,6 +107,10 @@ A platform account may initially exist without Library membership.
 For v2.001, the first relevant reading or borrowing action auto-creates one designated personal Privébibliotheek if absent:
 - user becomes Eigenaar;
 - Gebruikstoegang = Directe toegang.
+
+The designation is stored explicitly as user→Library data and is not inferred heuristically from Library ownership.
+
+The provisioning primitive is transactional, idempotent and concurrency-safe. It is invoked by relevant application use-cases, not at login or account registration.
 
 This Library provides a stable collection/authorization anchor but does not own personal Mijn Biblio data.
 
@@ -133,14 +142,21 @@ Central identity governance:
 
 ## 6. Reading source model
 
-Active ReadingRound requires a concrete source identity.
+ReadingRound is user-owned. An active ReadingRound requires exactly one concrete source identity.
 
 Do not model current active reading as Work-only.
 
-A source adapter/reference must support:
-- Library Item with direct access;
-- internal loan of an Item;
-- external loan.
+The active uniqueness rule is User + concrete source, not User + Work. The same user may therefore have simultaneous active rounds for the same Work through different physical sources.
+
+At start, Work is derived from the validated concrete source rather than trusted as a separate client-provided value.
+
+The current v2.001 persistence supports:
+- Library Item with direct access through nullable `item_id`;
+- active ExternalLoan through nullable `external_loan_id`;
+- exactly one populated source FK through a database check;
+- concurrency-safe active uniqueness through generated columns and unique indexes.
+
+InternalLoan is not implemented yet. Its addition requires a renewed choice between a third explicit FK and a common source identity; the current representation does not settle that future choice permanently.
 
 Historical closed rounds may retain an unknown source.
 
@@ -171,24 +187,40 @@ Central bibliographic changes require separate central bibliographic audit/prove
 
 ## 9. Persistence
 
-Not yet fixed.
+Biblio-owned custom tables are the proven baseline for relational and transactional Core-data where hard integrity, tenant isolation, user ownership, transactions or concurrency are central.
 
-Candidates:
-- WordPress CPT/post storage;
-- JetEngine CCT;
-- custom tables;
-- combinations.
+Fase 0 proved this baseline for:
+- Library and LibraryMembership;
+- personal-Library designation;
+- platform-wide Work and Edition;
+- Library-owned Item;
+- user-owned ExternalLoan and ReadingRound.
 
-Decision criteria:
-- query patterns;
-- volume;
-- integrity;
-- transactionality;
-- migration;
-- plugin coupling;
-- testability.
+Work and Edition remain in this persistence for v2.001. There is no technical need to move them to CPT or CCT now.
 
-Transactional/history-heavy relations deserve serious consideration for Biblio-owned tables/application services even when presentation uses JetEngine.
+This is not a rule that every Biblio object must use a custom table. Persistence remains selectable per domain based on query patterns, volume, integrity, lifecycle, transactionality, migration, plugin coupling, testability and maintenance. CPT, CCT, JetEngine and combinations remain valid supporting options where they provide demonstrated net benefit without bypassing Core.
+
+### Defense in depth
+
+Core invariants are protected at the domain, application, transaction and database layers where appropriate.
+
+Current database examples include:
+- unique membership per Library + User;
+- at most one active Owner per Library;
+- one personal-Library designation per User;
+- foreign-key integrity;
+- exactly one active ReadingRound source;
+- at most one active ReadingRound per User + concrete source.
+
+The requirement that a Library has at least one current Owner cannot be fully expressed as one isolated database constraint. It requires a controlled ownership lifecycle and application boundary.
+
+### Schema management
+
+Biblio Core owns versioning and migrations for its Core tables. MariaDB DDL is not fully transactional, so migrations remain versioned, reproducible, rerunnable where possible and integration-tested against real MariaDB. The installed schema version is advanced only after successful migration steps.
+
+No source FK uses cascade-delete in a way that removes personal ReadingRound history when a physical source changes or ends.
+
+See `docs/decisions/ADR-004-fase-0-persistence-and-reading-sources.md`.
 
 ## 10. Interfaces/adapters
 
@@ -211,46 +243,40 @@ Production must never be the only place the application configuration exists.
 
 ## 12. Development/test direction
 
-Recommended local stack:
+Current local stack:
 - DDEV;
 - Git;
-- private GitHub;
 - Composer;
 - WP-CLI;
 - PHPUnit;
-- Playwright;
-- configuration exports.
+- WordPress;
+- MariaDB 10.11.
 
-Before final persistence mapping, run a vertical technical spike proving both Library-scoped and pure personal flows.
+The Fase-0 integration harness is the structural baseline for Core integration tests:
+- real WordPress bootstrap;
+- real MariaDB;
+- isolated `biblio_core_test` database;
+- automatic setup and cleanup;
+- explicit guards against integration writes to the development database;
+- independent processes/connections for concurrency-sensitive invariants.
 
-## 13. Spike acceptance
+Playwright and configuration exports remain relevant for later end-to-end and reproducibility work; they were not part of the completed Core persistence proof.
 
-At minimum prove:
+## 13. Fase-0 result
 
-### Personal path
-New user before first relevant reading/borrowing action:
-- can have Mijn Biblio with no Library membership;
-- cannot leak into arbitrary Library scope.
+Status: **GO**
 
-On first relevant reading/borrowing action:
-- designated personal Privébibliotheek is created once if absent;
-- user becomes Eigenaar with Directe toegang;
-- private user-owned data remains user-owned rather than becoming Library-owned.
+The vertical technical spike proved:
+- a platform user can exist with zero Libraries;
+- personal Privébibliotheek provisioning creates one explicit designation and Eigenaar · Directe toegang atomically, idempotently and concurrency-safe;
+- Library-scoped Item access requires explicit context and server-side authorization;
+- Work and Edition can remain platform-wide while Item remains Library-owned;
+- ExternalLoan and ReadingRound remain user-owned without Library-role bypass;
+- active ReadingRound uses exactly one concrete Item or ExternalLoan source;
+- different concrete sources of the same Work may be active simultaneously;
+- the same User + source cannot be active twice, including under concurrent starts;
+- cross-Library isolation and cross-user privacy hold;
+- invalid and failed compound operations leave no half-valid state;
+- Core flows run without Elementor.
 
-### Library path
-User with membership:
-- can execute authorized Item/Library flow;
-- Library Context isolates data;
-- role/use-access rules are enforceable server-side.
-
-### Reading
-- active ReadingRound uses a concrete source;
-- multiple active rounds for same Work are possible on different sources;
-- user-owned ReadingRounds remain private.
-
-No-go if:
-- personal data requires a Library without functional reason;
-- Library roles expose another user's private reading data;
-- cross-Library queries leak data;
-- core domain logic requires Elementor;
-- forbidden writes can be performed by hiding/bypassing UI.
+The accepted persistence and source conclusions are recorded in ADR-004. Persistence for domains not investigated in Fase 0 remains open to domain-specific evaluation.
