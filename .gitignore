@@ -27,3 +27,5 @@ vendor/
 
 /config/elementor/*.local.*
 /config/jetengine/*.local.*
+
+/web/wp-content/plugins/biblio-core/vendor/
