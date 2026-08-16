@@ -18,6 +18,7 @@ final class LibrarySchemaTest extends PersistenceIntegrationTestCase
         $editions = $this->tableNames->editions();
         $items = $this->tableNames->items();
         $externalLoans = $this->tableNames->externalLoans();
+        $readingRounds = $this->tableNames->readingRounds();
 
         self::assertSame(
             (string) LibrarySchemaMigrator::CURRENT_VERSION,
@@ -33,6 +34,7 @@ final class LibrarySchemaTest extends PersistenceIntegrationTestCase
         self::assertSame("InnoDB", $this->tableEngine($editions));
         self::assertSame("InnoDB", $this->tableEngine($items));
         self::assertSame("InnoDB", $this->tableEngine($externalLoans));
+        self::assertSame("InnoDB", $this->tableEngine($readingRounds));
         self::assertSame(
             "PRIMARY KEY",
             $this->constraintType($memberships, "PRIMARY")
@@ -81,11 +83,69 @@ final class LibrarySchemaTest extends PersistenceIntegrationTestCase
             $externalLoans,
             "external_loans_by_user"
         ));
+        self::assertSame(3, $this->foreignKeyCount($readingRounds));
+        self::assertFalse($this->columnExists($readingRounds, "library_id"));
+        self::assertSame(
+            "YES",
+            $this->columnNullability($readingRounds, "item_id")
+        );
+        self::assertSame(
+            "YES",
+            $this->columnNullability($readingRounds, "external_loan_id")
+        );
+        self::assertSame(
+            "STORED GENERATED",
+            $this->columnExtra($readingRounds, "active_item_user_id")
+        );
+        self::assertSame(
+            "STORED GENERATED",
+            $this->columnExtra(
+                $readingRounds,
+                "active_external_loan_user_id"
+            )
+        );
+        self::assertSame(
+            "UNIQUE",
+            $this->constraintType(
+                $readingRounds,
+                "one_active_item_round_per_user"
+            )
+        );
+        self::assertSame(
+            "UNIQUE",
+            $this->constraintType(
+                $readingRounds,
+                "one_active_external_round_per_user"
+            )
+        );
+    }
+
+    public function testVersionFourSchemaUpgradesToReadingRoundSchema(): void
+    {
+        $readingRounds = $this->tableNames->readingRounds();
+        $this->database->query("DROP TABLE `{$readingRounds}`");
+        update_option(LibrarySchemaMigrator::VERSION_OPTION, "4", false);
+
+        (new LibrarySchemaMigrator(
+            $this->database,
+            $this->tableNames
+        ))->migrate();
+
+        self::assertSame(
+            $readingRounds,
+            $this->existingTable($readingRounds)
+        );
+        self::assertSame(
+            (string) LibrarySchemaMigrator::CURRENT_VERSION,
+            get_option(LibrarySchemaMigrator::VERSION_OPTION)
+        );
     }
 
     public function testVersionThreeSchemaUpgradesToExternalLoanSchema(): void
     {
+        $readingRounds = $this->tableNames->readingRounds();
         $externalLoans = $this->tableNames->externalLoans();
+        $this->database->query("DROP TABLE `{$readingRounds}`");
         $this->database->query("DROP TABLE `{$externalLoans}`");
         update_option(LibrarySchemaMigrator::VERSION_OPTION, "3", false);
 
@@ -106,10 +166,12 @@ final class LibrarySchemaTest extends PersistenceIntegrationTestCase
 
     public function testVersionTwoSchemaUpgradesToCatalogSchema(): void
     {
+        $readingRounds = $this->tableNames->readingRounds();
         $externalLoans = $this->tableNames->externalLoans();
         $items = $this->tableNames->items();
         $editions = $this->tableNames->editions();
         $works = $this->tableNames->works();
+        $this->database->query("DROP TABLE `{$readingRounds}`");
         $this->database->query("DROP TABLE `{$externalLoans}`");
         $this->database->query("DROP TABLE `{$items}`");
         $this->database->query("DROP TABLE `{$editions}`");
