@@ -25,6 +25,7 @@ use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Exception\AuthorizationException;
 use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Identity\UserId;
+use Biblio\Core\Infrastructure\Persistence\PersistenceException;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbEditionRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbExternalLoanRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbExternalLoanWriter;
@@ -346,6 +347,68 @@ final class ReadingRoundPersistenceTest extends PersistenceIntegrationTestCase
         } catch (AuthorizationException $exception) {
             self::assertSame(
                 FailureReason::AuthorizationDenied,
+                $exception->reason()
+            );
+            self::assertSame(0, $this->roundCount());
+        }
+    }
+
+    public function testRepositoryRejectsItemWorkMismatch(): void
+    {
+        $library = new LibraryId("library-a");
+        $user = new UserId("user-x");
+        $this->createLibrary($library, $user);
+        $item = $this->persistItem(
+            $library,
+            "work-from-item",
+            "edition-a",
+            "item-a"
+        );
+        $wrongWork = $this->persistWork("wrong-work");
+        $round = ReadingRound::active(
+            new ReadingRoundId("round-mismatched-item"),
+            $user,
+            $wrongWork->id(),
+            ReadingSource::libraryItem($item->id()),
+            $this->startedAt()
+        );
+
+        try {
+            $this->roundRepository()->addForUser($user, $round);
+            self::fail("Item/Work mismatch was persisted.");
+        } catch (PersistenceException $exception) {
+            self::assertSame(
+                FailureReason::PersistenceWriteFailed,
+                $exception->reason()
+            );
+            self::assertSame(0, $this->roundCount());
+        }
+    }
+
+    public function testRepositoryRejectsExternalLoanWorkMismatch(): void
+    {
+        $user = new UserId("user-x");
+        $loanWork = $this->persistWork("work-from-loan");
+        $wrongWork = $this->persistWork("wrong-work");
+        $loan = $this->persistLoan(
+            $user,
+            $loanWork->id(),
+            "loan-a"
+        );
+        $round = ReadingRound::active(
+            new ReadingRoundId("round-mismatched-loan"),
+            $user,
+            $wrongWork->id(),
+            ReadingSource::externalLoan($loan->id()),
+            $this->startedAt()
+        );
+
+        try {
+            $this->roundRepository()->addForUser($user, $round);
+            self::fail("ExternalLoan/Work mismatch was persisted.");
+        } catch (PersistenceException $exception) {
+            self::assertSame(
+                FailureReason::PersistenceWriteFailed,
                 $exception->reason()
             );
             self::assertSame(0, $this->roundCount());

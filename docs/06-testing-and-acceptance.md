@@ -362,4 +362,33 @@ Acceptance:
   transaction and smoke regressions stay green.
 
 REST/Abilities/UI, a public ExternalLoan creation lifecycle, membership/catalog
-CRUD and F1.5 ReadingRound source/Work hardening are outside F1.4.
+CRUD and ReadingRound source/Work hardening are outside F1.4.
+
+## 25. ReadingRound source and Work invariants
+
+Acceptance:
+
+- no supported production method accepts a caller-selected `WorkId` together
+  with a `ReadingSource`;
+- Library Item start validates Item → Edition and derives Work from Edition;
+- ExternalLoan start requires the server-side authenticated owner, requires an
+  active loan and derives Work from that loan;
+- foreign, unknown, inactive or relationally inconsistent sources fail as
+  `reading_source_unavailable` without disclosing existence;
+- a privileged inconsistent ReadingRound cannot be inserted through the wpdb
+  repository and fails as `persistence_write_failed`;
+- XOR, source foreign keys, historical behavior and active uniqueness per User
+  + concrete source remain unchanged;
+- different concrete sources for the same Work may still have simultaneous
+  active rounds;
+- two independent processes starting from the same Item produce one active
+  round and one semantic conflict;
+- two independent processes starting from the same ExternalLoan produce one
+  active round and one semantic conflict;
+- production composition exposes neither the ReadingRound writer nor an
+  arbitrary Work/source creation route;
+- identity, Library scoping, migrations, lifecycle/activation, transactions,
+  personal-Library concurrency and smoke regressions remain green.
+
+InternalLoan, a new source representation, database triggers, denormalization,
+REST/Abilities/UI and source-creation lifecycles are outside F1.5.

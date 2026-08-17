@@ -261,6 +261,36 @@ final class StartReadingServicesTest extends TestCase
         }
     }
 
+    public function testMismatchedItemAndEditionCannotCreateRound(): void
+    {
+        $user = new UserId("user-x");
+        $rounds = new ReadingInMemoryRoundRepository();
+        $service = new CreateActiveReadingRoundService(
+            new ControllableAuthenticatedUser($user),
+            $rounds
+        );
+        $item = Item::active(
+            new ItemId("item-a"),
+            new LibraryId("library-a"),
+            new EditionId("edition-a")
+        );
+        $wrongEdition = new Edition(
+            new EditionId("edition-b"),
+            new WorkId("work-b")
+        );
+
+        try {
+            $service->createFromLibraryItem(
+                $item,
+                $wrongEdition,
+                new DateTimeImmutable(self::STARTED_AT)
+            );
+            self::fail("Mismatched Item and Edition were accepted.");
+        } catch (ReadingSourceUnavailable) {
+            self::assertCount(0, $rounds->rounds);
+        }
+    }
+
     public function testExternalLoanFlowDerivesWorkWithoutLibraryContext(): void
     {
         $user = new UserId("user-x");
@@ -319,6 +349,26 @@ final class StartReadingServicesTest extends TestCase
                 new DateTimeImmutable(self::STARTED_AT)
             );
             self::fail("Inactive loan was accepted.");
+        } catch (ReadingSourceUnavailable) {
+            self::assertCount(0, $rounds->rounds);
+        }
+    }
+
+    public function testForeignLoanCannotCreateRoundThroughInternalCreator(): void
+    {
+        $owner = new UserId("user-x");
+        $rounds = new ReadingInMemoryRoundRepository();
+        $service = new CreateActiveReadingRoundService(
+            new ControllableAuthenticatedUser(new UserId("user-y")),
+            $rounds
+        );
+
+        try {
+            $service->createFromExternalLoan(
+                $this->loan($owner, ExternalLoanStatus::Active),
+                new DateTimeImmutable(self::STARTED_AT)
+            );
+            self::fail("Foreign External Loan was accepted by creator.");
         } catch (ReadingSourceUnavailable) {
             self::assertCount(0, $rounds->rounds);
         }

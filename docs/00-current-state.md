@@ -364,7 +364,7 @@ F1.3 deliberately adds no REST/Abilities/UI/WP-CLI adapter.
 
 ### F1.4 — Authenticated identity and scoped boundaries
 
-Status: **Implemented — pending review/commit**
+Status: **Implemented**
 
 - application services resolve the current actor through the small
   `AuthenticatedUser` port; the WordPress adapter accepts no actor input and
@@ -399,5 +399,38 @@ Last verified F1.4 test baseline:
 - total: 141 tests, 533 assertions.
 
 F1.4 adds no REST/Abilities/UI/WP-CLI adapter and no new ExternalLoan,
-membership or catalog product lifecycle. Full ReadingRound source/Work
-invariant hardening remains F1.5.
+membership or catalog product lifecycle.
+
+### F1.5 — ReadingRound source and Work invariants
+
+Status: **Implemented — pending review/commit**
+
+- supported Reading-start operations accept a concrete source target, never a
+  caller-selected `WorkId` plus `ReadingSource` combination;
+- Library Item start validates the Item/Edition relation and derives Work via
+  Item → Edition → Work;
+- ExternalLoan start resolves the actor server-side, requires the active loan
+  to be owned by that actor and derives Work from the loan;
+- the shared Reading creation service exposes only source-specific public
+  entrypoints; its generic aggregate construction step is private;
+- the ReadingRound write repository re-resolves the persisted source relation
+  and rejects a source/Work mismatch before insert;
+- the database representation remains the ADR-004 v2.001 baseline: exactly one
+  source through XOR/FKs and active uniqueness per User + concrete source;
+- independent-process MariaDB tests prove exactly one winner for concurrent
+  starts from the same Item and from the same ExternalLoan.
+
+The repository check is defense in depth for privileged internal/test callers;
+production adapters receive no ReadingRound writer and cannot bypass the
+source-specific application services. No trigger, denormalized source table or
+schema migration is introduced. A future InternalLoan source remains outside
+F1.5 and still requires the renewed representation choice recorded in ADR-004.
+
+Last verified F1.5 test baseline:
+
+- unit: 71 tests, 169 assertions;
+- integration: 76 tests, 379 assertions;
+- total: 147 tests, 548 assertions.
+
+F1.5 adds no REST/Abilities/UI/WP-CLI adapter and no ExternalLoan, InternalLoan,
+membership or catalog creation lifecycle.

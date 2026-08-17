@@ -8,7 +8,6 @@ use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
 use Biblio\Core\Borrowing\ExternalLoanId;
 use Biblio\Core\Borrowing\ExternalLoanStatus;
 use Biblio\Core\Reading\ReadingRound;
-use Biblio\Core\Reading\ReadingSource;
 use Biblio\Core\Reading\ReadingSourceUnavailable;
 use DateTimeImmutable;
 
@@ -35,9 +34,8 @@ final readonly class StartReadingFromExternalLoanService
             throw new ReadingSourceUnavailable();
         }
 
-        return $this->createReadingRound->create(
-            $externalLoan->workId(),
-            ReadingSource::externalLoan($externalLoan->id()),
+        return $this->createReadingRound->createFromExternalLoan(
+            $externalLoan,
             $startedAt
         );
     }

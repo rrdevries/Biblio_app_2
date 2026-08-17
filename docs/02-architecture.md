@@ -150,11 +150,26 @@ The active uniqueness rule is User + concrete source, not User + Work. The same 
 
 At start, Work is derived from the validated concrete source rather than trusted as a separate client-provided value.
 
+The supported application paths make that rule structural. A Library Item
+start validates the supplied Item/Edition link and derives Work through Item →
+Edition → Work. An ExternalLoan start accepts only the loan selected through
+the owned, active-loan read and derives Work from that loan. The shared creation
+service therefore has source-specific public methods and no public method that
+accepts both an arbitrary Work identity and a Reading source.
+
 The current v2.001 persistence supports:
 - Library Item with direct access through nullable `item_id`;
 - active ExternalLoan through nullable `external_loan_id`;
 - exactly one populated source FK through a database check;
 - concurrency-safe active uniqueness through generated columns and unique indexes.
+
+Before insert, the ReadingRound repository also resolves the selected source's
+persisted Work relation and rejects a mismatch. This is a persistence-boundary
+guard for privileged internal/test use, not a replacement for application
+authorization or source validation. The relational schema itself intentionally
+retains the ADR-004 baseline: it enforces source XOR, source existence and
+User + concrete-source uniqueness, but adds no cross-table Work trigger or
+denormalized source identity.
 
 InternalLoan is not implemented yet. Its addition requires a renewed choice between a third explicit FK and a common source identity; the current representation does not settle that future choice permanently.
 
@@ -327,6 +342,12 @@ explicit named accessors for the existing personal-Library, accessible Item,
 owned ExternalLoan/ReadingRound and Reading start services. It exposes no
 generic lookup and no concrete wpdb repository. Lower-level creation services
 remain internal composition details.
+
+For Reading start, the internal creation service exposes only source-specific
+public entrypoints. It derives Work from an Item plus its Edition or from an
+owned ExternalLoan. The aggregate factory and repository writer remain
+privileged construction/persistence mechanisms; neither is a supported
+production adapter boundary.
 
 All exposed services share one `AuthenticatedUser` dependency created by the
 composition root. The WordPress implementation reads `get_current_user_id()`

@@ -9,10 +9,13 @@ use Biblio\Core\Application\CoreApplication;
 use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
 use Biblio\Core\Application\Library\GetAccessibleLibraryItemService;
 use Biblio\Core\Application\Reading\GetOwnedReadingRoundService;
+use Biblio\Core\Application\Reading\CreateActiveReadingRoundService;
 use Biblio\Core\Application\Reading\StartReadingFromExternalLoanService;
 use Biblio\Core\Application\Reading\StartReadingFromLibraryItemService;
 use Biblio\Core\Library\LibraryContext;
 use Biblio\Core\Identity\UserId;
+use Biblio\Core\Catalog\WorkId;
+use Biblio\Core\Reading\ReadingSource;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use ReflectionMethod;
@@ -67,5 +70,41 @@ final class ProductionApplicationBoundaryTest extends TestCase
         ], $publicMethods);
         self::assertNotContains("get", $publicMethods);
         self::assertNotContains("resolve", $publicMethods);
+    }
+
+    public function testReadingCreationHasOnlySourceSpecificPublicMethods(): void
+    {
+        $methods = array_filter(
+            (new ReflectionClass(CreateActiveReadingRoundService::class))
+                ->getMethods(ReflectionMethod::IS_PUBLIC),
+            static fn (ReflectionMethod $method): bool =>
+                $method->getName() !== "__construct"
+        );
+        $methodNames = array_map(
+            static fn (ReflectionMethod $method): string => $method->getName(),
+            $methods
+        );
+        sort($methodNames);
+
+        self::assertSame([
+            "createFromExternalLoan",
+            "createFromLibraryItem",
+        ], $methodNames);
+
+        foreach ($methods as $method) {
+            foreach ($method->getParameters() as $parameter) {
+                $type = $parameter->getType();
+
+                self::assertFalse(
+                    $type instanceof ReflectionNamedType
+                    && in_array($type->getName(), [
+                        WorkId::class,
+                        ReadingSource::class,
+                    ], true),
+                    $method->getName()
+                        . " accepts an independent Work or Reading source."
+                );
+            }
+        }
     }
 }

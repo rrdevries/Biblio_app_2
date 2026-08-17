@@ -61,6 +61,14 @@ dezelfde authenticated identity; concrete repositories blijven intern aan de
 composition root. REST, Abilities, Elementor, JetEngine en UI-adapters zijn nog
 niet gebouwd.
 
+F1.5 laat een ReadingRound uitsluitend via een gevalideerde concrete bron
+starten. Voor een Library Item wordt Work via Item → Edition → Work afgeleid;
+voor een ExternalLoan komt Work uit de actieve, door de actor bezeten lening.
+Geen ondersteunde production-call accepteert een losse combinatie van Work en
+ReadingSource. De database behoudt de ADR-004-baseline met XOR, foreign keys en
+uniekheid per gebruiker + concrete bron; de repository controleert aanvullend
+dat de bron werkelijk bij het afgeleide Work hoort.
+
 ## Repository
 
 WordPress Core, lokale secrets, uploads en gelicentieerde pluginpackages worden niet in Git opgeslagen.
