@@ -252,11 +252,13 @@ Last verified Fase-0 test baseline:
 
 InternalLoan has not been implemented in Fase 0.
 
-## Next phase
+## Fase 1
 
 **Fase 1 — Biblio Core fundament stabiliseren**
 
-Initial technical attention points are limited to:
+Status: **Afgerond — GO**
+
+De uitgevoerde stabilisatie omvat:
 - distinguish spike-only code from production-worthy code;
 - stabilize module boundaries and naming;
 - define the migrations/install/upgrade lifecycle;
@@ -264,9 +266,8 @@ Initial technical attention points are limited to:
 - establish a consistent exception model;
 - review transaction boundaries;
 - extend the authorization matrix where the next implemented behavior requires it;
-- establish logging and audit boundaries.
-
-This does not yet define the complete Fase-1 implementation.
+- establish lifecycle diagnostics; product-level audit behavior remains
+  deferred until a concrete use-case requires it.
 
 ### F1.1 — Versioned Core Migration Infrastructure
 
@@ -437,7 +438,7 @@ membership or catalog creation lifecycle.
 
 ### F1.6 — Domain/persistence contracts and naming
 
-Status: **Implemented — pending review/commit**
+Status: **Implemented**
 
 - every currently persisted Core identifier is non-empty valid UTF-8 with a
   maximum of 191 characters, matching the actual `VARCHAR(191)` columns;
@@ -477,3 +478,41 @@ Last verified F1.6 test baseline:
 
 F1.6 adds no lifecycle transitions, new permission functionality, REST/UI,
 schema migration or new failure reason.
+
+### F1.7 — Complete quality gate and proven documentation
+
+Status: **Implemented**
+
+- `./scripts/test-biblio-core-all.sh` is the canonical root quality command;
+- it validates Composer metadata and runtime platform requirements, lints all
+  plugin PHP, runs PHPStan against production `src`, executes the complete unit
+  and isolated MariaDB integration suites once, performs the WordPress smoke,
+  validates `manifest.json` and checks staged plus unstaged Git diffs;
+- PHPStan and the WordPress stubs are reproducible `require-dev` dependencies
+  in `composer.lock`; analysis uses explicit level 6 without baseline or
+  ignored errors;
+- the gate is fail-fast and compares the complete visible Git status before
+  and after execution, so an otherwise green run still fails on a repository
+  mutation;
+- migration, lifecycle/activation, identity/authorization, transaction and
+  both concurrency categories remain covered by the one full integration/unit
+  pass rather than duplicate targeted reruns;
+- `docs/07-fase-1-exit-evidence.md` records the complete Fase-1 exit decision,
+  evidence and deferred boundaries.
+
+Last verified F1.7 quality baseline:
+
+- PHPStan 2.2.8, level 6, production `src`: no errors;
+- unit: 105 tests, 206 assertions;
+- integration: 79 tests, 396 assertions;
+- total: 184 tests, 602 assertions;
+- WordPress smoke: plugin active, Core loaded, init hook executed, HTTP 200;
+- Composer metadata/platform, all plugin PHP syntax, manifest JSON, staged and
+  unstaged diff checks: passed;
+- visible repository status before and after the gate: unchanged.
+
+Fase 1 changes no product version, plugin/package version or formal schema
+baseline: these remain `v2.001`, `2.1.0` and `1000`. Legacy spike versions 1–5
+remain unsupported migration sources under ADR-005, not unfinished Fase-1
+work. No REST/Abilities/UI adapter, new product behavior, new schema migration,
+CI pipeline or Fase-2 implementation is introduced.

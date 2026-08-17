@@ -420,4 +420,32 @@ Acceptance:
 - all F1.1–F1.5 regressions remain green.
 
 ExternalLoan/ReadingRound completion, Item archive, membership mutation,
-new permission functionality, REST/UI and F1.7 quality gates are outside F1.6.
+new permission functionality and REST/UI are outside F1.6.
+
+## 27. Fase-1 quality gate and exit
+
+Acceptance:
+
+- one documented root command runs the complete Fase-1 verification without
+  duplicate full suite executions;
+- the gate fails non-zero on every failed subsection and identifies each
+  subsection in its output;
+- Composer metadata and current-platform requirements are valid from the
+  committed lockfile;
+- every plugin PHP file passes syntax validation;
+- PHPStan analyses production `src` at configured level 6 without a
+  baseline or ignored errors, with explicit WordPress stubs;
+- the complete unit and isolated real-MariaDB integration suites pass,
+  including migration, lifecycle/activation, identity/authorization,
+  transaction and both independent-process concurrency coverage;
+- the active local WordPress runtime passes plugin/class/init-hook/HTTP smoke;
+- `manifest.json`, unstaged diff and staged diff validation pass;
+- the gate leaves the visible repository status exactly as it found it;
+- the F1.1–F1.7 documentation distinguishes proven implementation from
+  deferred product behavior and records a criterion-by-criterion exit result;
+- product `v2.001`, plugin/package `2.1.0` and schema baseline `1000` remain
+  independent and unchanged.
+
+Legacy Fase-0 schema versions 1–5 are **N/A** as Fase-1 upgrade paths: ADR-005
+replaces them with the first formally supported baseline `1000`. See
+`docs/07-fase-1-exit-evidence.md` for the durable exit checklist and evidence.

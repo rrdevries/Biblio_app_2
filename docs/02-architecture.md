@@ -1,6 +1,6 @@
 # 02 — Architecture
 
-Status: canonical architecture direction with accepted Fase-0 persistence baseline.
+Status: canonical architecture direction with accepted Fase-0 persistence baseline and completed Fase-1 Core stabilization.
 
 ## 1. Deployment model
 
@@ -448,8 +448,17 @@ Current local stack:
 - Composer;
 - WP-CLI;
 - PHPUnit;
+- PHPStan with WordPress stubs;
 - WordPress;
 - MariaDB 10.11.
+
+`./scripts/test-biblio-core-all.sh` is the single canonical Fase-1 quality
+gate. It composes metadata/platform validation, PHP syntax, level-6
+static analysis of production `src`, the complete unit and isolated real
+MariaDB integration suites, runtime smoke, manifest JSON and Git whitespace
+checks. Category coverage is obtained from the complete suites rather than by
+running overlapping targeted suites again. Its before/after repository-status
+check makes unexpected visible file mutations a gate failure.
 
 The Fase-0 integration harness is the structural baseline for Core integration tests:
 - real WordPress bootstrap;
@@ -479,3 +488,22 @@ The vertical technical spike proved:
 - Core flows run without Elementor.
 
 The accepted persistence and source conclusions are recorded in ADR-004. Persistence for domains not investigated in Fase 0 remains open to domain-specific evaluation.
+
+## 15. Fase-1 result
+
+Status: **GO**
+
+Fase 1 turns the accepted spike baseline into a production-wired Core
+foundation: formal forward-only schema lifecycle and health, stable failure and
+transaction contracts, fail-closed plugin lifecycle, a single composition
+root, server-side authenticated operation boundaries, source-derived
+ReadingRound Work invariants, aligned domain/persistence contracts and one
+reproducible quality gate. The formal schema baseline remains `1000`; internal
+spike versions 1–5 are deliberately not production migrations.
+
+This GO applies only to the implemented Core foundation. Product adapters and
+flows that are still described as deferred—including REST/Abilities/UI,
+ExternalLoan/InternalLoan creation and completion lifecycles, membership and
+catalog mutation use-cases, broader audit behavior and Fase 2—are not implied
+to be implemented. The criterion-by-criterion evidence is maintained in
+`docs/07-fase-1-exit-evidence.md`.

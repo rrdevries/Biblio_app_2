@@ -17,7 +17,9 @@ if [ ! -f "$PLUGIN_DIRECTORY/vendor/autoload.php" ]; then
   exit 1
 fi
 
-ddev start >/dev/null
+if [ "${BIBLIO_DDEV_STARTED:-0}" != "1" ]; then
+  ddev start >/dev/null
+fi
 
 cleanup() {
   ddev mysql -uroot -proot -e \

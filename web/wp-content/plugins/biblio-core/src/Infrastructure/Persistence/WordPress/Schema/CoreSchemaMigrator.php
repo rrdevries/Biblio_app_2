@@ -220,6 +220,6 @@ final readonly class CoreSchemaMigrator
             $expectedSource = $migration->targetVersion();
         }
 
-        return array_values($migrations);
+        return $migrations;
     }
 }

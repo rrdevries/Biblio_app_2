@@ -1,0 +1,9 @@
+<?php
+
+class wpdb
+{
+    /** @phpstan-impure */
+    public function get_var(?string $query = null, int $x = 0, int $y = 0): mixed
+    {
+    }
+}
