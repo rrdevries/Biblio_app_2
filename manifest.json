@@ -2,7 +2,7 @@
   "project": "Biblio V2",
   "root": "Biblio_app_2",
   "version": "v2.001",
-  "status": "canonical Fase-0 baseline with completed F1.1-F1.7 Core stabilization",
+  "status": "completed F1.1-F1.7 foundation and first F2.3 catalog vertical slice",
   "files": [
     "AGENTS.md",
     "README.md",
