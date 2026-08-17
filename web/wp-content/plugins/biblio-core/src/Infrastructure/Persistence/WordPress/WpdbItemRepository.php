@@ -9,6 +9,7 @@ use Biblio\Core\Catalog\Item;
 use Biblio\Core\Catalog\ItemId;
 use Biblio\Core\Catalog\ItemRepository;
 use Biblio\Core\Catalog\ItemStatus;
+use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Infrastructure\Persistence\PersistenceException;
 use Biblio\Core\Library\LibraryId;
 use Throwable;
@@ -42,8 +43,9 @@ final readonly class WpdbItemRepository implements ItemRepository
         }
 
         if ($result !== 1) {
-            throw new PersistenceException(
-                "Could not persist Item: " . $this->database->last_error
+            throw WpdbErrorTranslator::writeFailure(
+                "Could not persist Item.",
+                $this->database->last_error
             );
         }
     }
@@ -75,7 +77,8 @@ final readonly class WpdbItemRepository implements ItemRepository
             throw new PersistenceException(
                 "Stored Item data is invalid.",
                 0,
-                $exception
+                $exception,
+                FailureReason::PersistenceReadFailed
             );
         }
     }

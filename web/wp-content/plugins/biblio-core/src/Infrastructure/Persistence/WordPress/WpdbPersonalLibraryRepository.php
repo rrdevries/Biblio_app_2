@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Biblio\Core\Infrastructure\Persistence\WordPress;
 
 use Biblio\Core\Identity\UserId;
+use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Infrastructure\Persistence\PersistenceException;
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Library\PersonalLibraryDesignationConflict;
@@ -39,7 +40,8 @@ final readonly class WpdbPersonalLibraryRepository implements
             throw new PersistenceException(
                 "Stored personal Library designation is invalid.",
                 0,
-                $exception
+                $exception,
+                FailureReason::PersistenceReadFailed
             );
         }
     }
@@ -50,13 +52,14 @@ final readonly class WpdbPersonalLibraryRepository implements
         $previousSuppression = $this->database->suppress_errors(true);
 
         try {
-            $result = $this->database->query($this->database->prepare(
-                "INSERT INTO `{$table}` (user_id, library_id) "
-                . "VALUES (%s, %s) "
-                . "ON DUPLICATE KEY UPDATE library_id = library_id",
-                $userId->value(),
-                $libraryId->value()
-            ));
+            $result = $this->database->insert(
+                $table,
+                [
+                    "user_id" => $userId->value(),
+                    "library_id" => $libraryId->value(),
+                ],
+                ["%s", "%s"]
+            );
         } finally {
             $this->database->suppress_errors($previousSuppression);
         }
@@ -65,15 +68,28 @@ final readonly class WpdbPersonalLibraryRepository implements
             return;
         }
 
-        if ($result === 0) {
+        $conflict = WpdbErrorTranslator::conflict(
+            $this->database->last_error
+        );
+
+        if ($conflict !== null && in_array($conflict->constraintName(), [
+            "PRIMARY",
+            "one_personal_user_per_library",
+        ], true)) {
             throw new PersonalLibraryDesignationConflict(
-                "A personal Library designation already exists."
+                $conflict->constraintName() === "PRIMARY"
+                    ? FailureReason::PersonalLibraryAlreadyProvisioned
+                    : FailureReason::PersonalLibraryDesignationConflict,
+                WpdbErrorTranslator::diagnostic(
+                    "personal Library designation insert",
+                    $this->database->last_error
+                )
             );
         }
 
-        throw new PersistenceException(
-            "Could not persist personal Library designation: "
-            . $this->database->last_error
+        throw WpdbErrorTranslator::writeFailure(
+            "Could not persist personal Library designation.",
+            $this->database->last_error
         );
     }
 }

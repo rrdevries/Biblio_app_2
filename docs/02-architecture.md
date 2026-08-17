@@ -238,13 +238,64 @@ No source FK uses cascade-delete in a way that removes personal ReadingRound his
 
 See `docs/decisions/ADR-004-fase-0-persistence-and-reading-sources.md`.
 
-## 10. Interfaces/adapters
+## 10. Failure and transaction contracts
+
+Expected Core failures expose a stable `FailureReason` through the
+`CoreFailure` contract. The five categories are:
+
+- validation: invalid domain or application input/state;
+- authorization/access: the actor or context may not perform the operation;
+- conflict: a valid operation conflicts with existing state or concurrency;
+- persistence: storage or infrastructure could not complete a read/write;
+- transaction: begin, commit, rollback or transaction nesting failed.
+
+Reason codes are the adapter-facing contract. Exception messages are technical
+developer summaries, not UI copy. Raw wpdb/MariaDB diagnostics are retained as
+exception context where useful, but are not reason codes and are not included
+in the public persistence message. HTTP status and user-facing text mapping are
+outside Core and outside F1.2.
+
+Read methods may return `null` when absence is a valid result. Authorization
+policy predicates may return `false`. Mutations never use `false` as an
+ambiguous failure result: validation, access, conflict, persistence and
+transaction failures use their explicit exception category and reason.
+
+wpdb duplicate-key recognition is centralized in the infrastructure adapter.
+It translates a database error into a technical conflict with a constraint
+name. The owning repository then maps only known constraints to domain-specific
+reasons, such as an already-active ReadingRound or a personal-Library
+designation conflict. Application and domain layers never inspect MariaDB text
+or database index names.
+
+Transactions do not nest implicitly. A transaction manager rejects both a
+reentrant call on the same manager and an already-active transaction on the
+same database connection with `nested_transaction_not_supported`. Savepoints
+are not used.
+
+Transaction execution follows these semantics:
+
+- begin failure: callback is not invoked and `transaction_begin_failed` is
+  reported;
+- operation failure: rollback is attempted; after successful rollback the
+  original failure remains primary;
+- operation plus rollback failure: `transaction_rollback_failed` is primary,
+  with both the operation and rollback failures retained;
+- commit failure: success is never reported; because commit was not confirmed,
+  rollback is attempted on a best-effort basis and
+  `transaction_commit_failed` remains primary when rollback succeeds;
+- commit plus rollback failure: `transaction_rollback_failed` reports an
+  uncertain outcome and retains both failures.
+
+A failed commit or rollback never implies that MariaDB guaranteed restoration;
+the uncertain-outcome diagnostic is intentional.
+
+## 11. Interfaces/adapters
 
 Abilities API may be an adapter if useful, not a Core dependency.
 
 External metadata sources are adapters and never a precondition for core data integrity.
 
-## 11. Configuration discipline
+## 12. Configuration discipline
 
 Repository should version where practical:
 - JetEngine definitions;
@@ -257,7 +308,7 @@ Repository should version where practical:
 
 Production must never be the only place the application configuration exists.
 
-## 12. Development/test direction
+## 13. Development/test direction
 
 Current local stack:
 - DDEV;
@@ -278,7 +329,7 @@ The Fase-0 integration harness is the structural baseline for Core integration t
 
 Playwright and configuration exports remain relevant for later end-to-end and reproducibility work; they were not part of the completed Core persistence proof.
 
-## 13. Fase-0 result
+## 14. Fase-0 result
 
 Status: **GO**
 

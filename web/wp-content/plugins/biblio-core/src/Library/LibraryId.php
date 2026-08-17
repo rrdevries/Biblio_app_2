@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Library;
 
-use InvalidArgumentException;
+use Biblio\Core\Exception\ValidationException;
 
 final readonly class LibraryId
 {
     public function __construct(private string $value)
     {
         if (trim($this->value) === "") {
-            throw new InvalidArgumentException(
+            throw new ValidationException(
                 "Library ID must not be empty."
             );
         }

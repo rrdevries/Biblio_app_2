@@ -2,7 +2,7 @@
   "project": "Biblio V2",
   "root": "Biblio_app_2",
   "version": "v2.001",
-  "status": "canonical Fase-0 set with F1.1 migration infrastructure",
+  "status": "canonical Fase-0 set with F1.1 migrations and F1.2 failure contracts",
   "files": [
     "AGENTS.md",
     "README.md",

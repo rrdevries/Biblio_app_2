@@ -9,6 +9,7 @@ use Biblio\Core\Borrowing\ExternalLoanId;
 use Biblio\Core\Borrowing\ExternalLoanRepository;
 use Biblio\Core\Borrowing\ExternalLoanStatus;
 use Biblio\Core\Catalog\WorkId;
+use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Persistence\PersistenceException;
 use DateTimeImmutable;
@@ -53,9 +54,9 @@ final readonly class WpdbExternalLoanRepository implements
         }
 
         if ($result !== 1) {
-            throw new PersistenceException(
-                "Could not persist External Loan: "
-                . $this->database->last_error
+            throw WpdbErrorTranslator::writeFailure(
+                "Could not persist External Loan.",
+                $this->database->last_error
             );
         }
     }
@@ -92,7 +93,8 @@ final readonly class WpdbExternalLoanRepository implements
             throw new PersistenceException(
                 "Stored External Loan data is invalid.",
                 0,
-                $exception
+                $exception,
+                FailureReason::PersistenceReadFailed
             );
         }
     }
@@ -121,7 +123,8 @@ final readonly class WpdbExternalLoanRepository implements
             )
         ) {
             throw new PersistenceException(
-                "Stored External Loan date is invalid."
+                "Stored External Loan date is invalid.",
+                failureReason: FailureReason::PersistenceReadFailed
             );
         }
 

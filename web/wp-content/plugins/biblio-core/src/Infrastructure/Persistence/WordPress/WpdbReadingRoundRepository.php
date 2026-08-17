@@ -7,6 +7,8 @@ namespace Biblio\Core\Infrastructure\Persistence\WordPress;
 use Biblio\Core\Borrowing\ExternalLoanId;
 use Biblio\Core\Catalog\ItemId;
 use Biblio\Core\Catalog\WorkId;
+use Biblio\Core\Exception\AuthorizationException;
+use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Persistence\PersistenceException;
 use Biblio\Core\Reading\ActiveReadingRoundAlreadyExists;
@@ -36,7 +38,7 @@ final readonly class WpdbReadingRoundRepository implements
         ReadingRound $readingRound
     ): void {
         if (!$authenticatedUserId->equals($readingRound->userId())) {
-            throw new PersistenceException(
+            throw new AuthorizationException(
                 "Cannot persist a Reading Round for another user."
             );
         }
@@ -68,22 +70,25 @@ final readonly class WpdbReadingRoundRepository implements
             return;
         }
 
-        if (
-            str_contains(
-                $this->database->last_error,
-                "one_active_item_round_per_user"
-            )
-            || str_contains(
-                $this->database->last_error,
-                "one_active_external_round_per_user"
-            )
-        ) {
-            throw new ActiveReadingRoundAlreadyExists();
+        $conflict = WpdbErrorTranslator::conflict(
+            $this->database->last_error
+        );
+
+        if ($conflict !== null && in_array($conflict->constraintName(), [
+            "one_active_item_round_per_user",
+            "one_active_external_round_per_user",
+        ], true)) {
+            throw new ActiveReadingRoundAlreadyExists(
+                WpdbErrorTranslator::diagnostic(
+                    "Reading Round insert",
+                    $this->database->last_error
+                )
+            );
         }
 
-        throw new PersistenceException(
-            "Could not persist Reading Round: "
-            . $this->database->last_error
+        throw WpdbErrorTranslator::writeFailure(
+            "Could not persist Reading Round.",
+            $this->database->last_error
         );
     }
 
@@ -146,7 +151,8 @@ final readonly class WpdbReadingRoundRepository implements
             throw new PersistenceException(
                 "Stored Reading Round data is invalid.",
                 0,
-                $exception
+                $exception,
+                FailureReason::PersistenceReadFailed
             );
         }
     }
@@ -175,7 +181,8 @@ final readonly class WpdbReadingRoundRepository implements
             )
         ) {
             throw new PersistenceException(
-                "Stored Reading Round date is invalid."
+                "Stored Reading Round date is invalid.",
+                failureReason: FailureReason::PersistenceReadFailed
             );
         }
 

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Infrastructure\Persistence\WordPress;
 
-use InvalidArgumentException;
+use Biblio\Core\Exception\ValidationException;
 
 final readonly class CoreTableNames
 {
@@ -92,7 +92,7 @@ final readonly class CoreTableNames
     private function assertSafe(string $tableName): void
     {
         if (preg_match('/^[a-zA-Z0-9_]+$/', $tableName) !== 1) {
-            throw new InvalidArgumentException("Unsafe database table name.");
+            throw new ValidationException("Unsafe database table name.");
         }
     }
 }

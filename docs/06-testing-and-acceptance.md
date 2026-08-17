@@ -279,3 +279,29 @@ Acceptance:
 - legacy Fase-0 spike versions 1–5 are not treated as production upgrade
   sources;
 - migration and health behavior is tested against the real MariaDB baseline.
+
+## 22. Core failures and transactions
+
+Acceptance:
+- expected validation, authorization, conflict, persistence and transaction
+  failures expose stable reason codes;
+- ReadingRound and personal-Library conflicts are distinguishable without
+  inspecting MariaDB text;
+- known duplicate-key conflicts are recognized only in the infrastructure
+  adapter and mapped semantically by the owning repository;
+- raw database diagnostics are not the application contract;
+- valid read absence remains `null`, authorization predicates may remain
+  boolean, and mutation failure is never an ambiguous `false`;
+- transaction success commits once;
+- operation failure rolls back and remains primary when rollback succeeds;
+- begin failure does not execute the operation;
+- commit failure is explicit and triggers only a best-effort rollback attempt;
+- rollback failure retains the preceding operation or commit failure and marks
+  the transaction outcome as potentially uncertain;
+- nested transactions on the same manager or database connection fail with
+  `nested_transaction_not_supported` and do not use savepoints;
+- real MariaDB integration tests retain rollback, provisioning and concurrency
+  coverage, while deterministic transaction-level failures use a test double.
+
+HTTP status mapping, REST/Abilities responses and UI copy are not part of this
+Core contract.

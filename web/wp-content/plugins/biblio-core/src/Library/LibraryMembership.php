@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Library;
 
-use InvalidArgumentException;
+use Biblio\Core\Exception\ValidationException;
 
 final readonly class LibraryMembership
 {
@@ -23,7 +23,7 @@ final readonly class LibraryMembership
             $this->managementRole === ManagementRole::Owner
             && $this->useAccess !== UseAccess::Direct
         ) {
-            throw new InvalidArgumentException(
+            throw new ValidationException(
                 "An owner must always have direct access."
             );
         }

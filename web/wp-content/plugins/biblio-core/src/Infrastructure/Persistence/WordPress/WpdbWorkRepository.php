@@ -7,6 +7,7 @@ namespace Biblio\Core\Infrastructure\Persistence\WordPress;
 use Biblio\Core\Catalog\Work;
 use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Catalog\WorkRepository;
+use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Infrastructure\Persistence\PersistenceException;
 use Throwable;
 use wpdb;
@@ -37,8 +38,9 @@ final readonly class WpdbWorkRepository implements WorkRepository
         }
 
         if ($result !== 1) {
-            throw new PersistenceException(
-                "Could not persist Work: " . $this->database->last_error
+            throw WpdbErrorTranslator::writeFailure(
+                "Could not persist Work.",
+                $this->database->last_error
             );
         }
     }
@@ -64,7 +66,8 @@ final readonly class WpdbWorkRepository implements WorkRepository
             throw new PersistenceException(
                 "Stored Work data is invalid.",
                 0,
-                $exception
+                $exception,
+                FailureReason::PersistenceReadFailed
             );
         }
     }

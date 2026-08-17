@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Library;
 
+use Biblio\Core\Exception\AuthorizationException;
 use Biblio\Core\Identity\UserId;
-use DomainException;
 
 final readonly class LibraryContext
 {
@@ -29,13 +29,13 @@ final readonly class LibraryContext
         LibraryMembershipAssignment $assignment
     ): void {
         if (!$this->libraryId->equals($assignment->libraryId())) {
-            throw new DomainException(
+            throw new AuthorizationException(
                 "Membership belongs to another library."
             );
         }
 
         if (!$this->userId->equals($assignment->userId())) {
-            throw new DomainException(
+            throw new AuthorizationException(
                 "Membership belongs to another user."
             );
         }

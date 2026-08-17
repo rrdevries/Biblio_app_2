@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Borrowing;
 
-use InvalidArgumentException;
+use Biblio\Core\Exception\ValidationException;
 
 final readonly class ExternalLoanId
 {
     public function __construct(private string $value)
     {
         if (trim($this->value) === "") {
-            throw new InvalidArgumentException(
+            throw new ValidationException(
                 "External Loan ID must not be empty."
             );
         }

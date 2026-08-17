@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Library;
 
-use InvalidArgumentException;
+use Biblio\Core\Exception\ValidationException;
 
 final readonly class AdditionalPermissions
 {
@@ -15,13 +15,13 @@ final readonly class AdditionalPermissions
 
         foreach ($this->values as $value) {
             if (trim($value) === "") {
-                throw new InvalidArgumentException(
+                throw new ValidationException(
                     "Additional permission must not be empty."
                 );
             }
 
             if (isset($seen[$value])) {
-                throw new InvalidArgumentException(
+                throw new ValidationException(
                     "Additional permissions must be unique."
                 );
             }

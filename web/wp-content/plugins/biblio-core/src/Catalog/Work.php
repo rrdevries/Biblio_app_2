@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Catalog;
 
-use InvalidArgumentException;
+use Biblio\Core\Exception\ValidationException;
 
 final readonly class Work
 {
@@ -13,7 +13,7 @@ final readonly class Work
         private string $title
     ) {
         if (trim($this->title) === "") {
-            throw new InvalidArgumentException("Work title must not be empty.");
+            throw new ValidationException("Work title must not be empty.");
         }
     }
 

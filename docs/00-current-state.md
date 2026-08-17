@@ -293,3 +293,34 @@ Last verified F1.1 test baseline:
 Automatic plugin activation/upgrade wiring remains work for F1.3.
 
 See `docs/decisions/ADR-005-formal-core-schema-migration-baseline.md`.
+
+### F1.2 — Consistent exception and transaction model
+
+Status: **Implemented — pending review/commit**
+
+- expected Core failures use validation, authorization, conflict, persistence
+  and transaction categories with stable reason codes;
+- valid read absence remains `null`, authorization predicates may remain
+  boolean, and mutation failures use exceptions;
+- wpdb duplicate-key recognition is centralized and repositories translate
+  known constraints into semantic ReadingRound or personal-Library conflicts;
+- raw database diagnostics remain diagnostic context rather than application
+  reason codes or public persistence messages;
+- nested transactions are rejected on both the manager and connection level;
+- begin, operation, commit and rollback failures have explicit semantics;
+- operation failures remain primary after successful rollback, while rollback
+  failure retains both failures and reports an uncertain outcome;
+- deterministic transaction-level failures are covered by test doubles and
+  real MariaDB continues to prove compound rollback and concurrency behavior.
+
+Last verified F1.2 test baseline:
+- unit: 66 tests, 149 assertions;
+- integration: 61 tests, 295 assertions;
+- total: 127 tests, 444 assertions;
+- personal-Library concurrency: 1 test, 10 assertions;
+- ReadingRound concurrency: 1 test, 3 assertions;
+- F1.1 migration regression: 9 tests, 52 assertions;
+- WordPress smoke: plugin active, Core loaded, init hook executed, HTTP 200.
+
+HTTP/REST/Abilities mapping, UI copy and plugin composition remain outside
+F1.2.
