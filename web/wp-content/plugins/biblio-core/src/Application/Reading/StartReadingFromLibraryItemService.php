@@ -10,7 +10,6 @@ use Biblio\Core\Catalog\ItemId;
 use Biblio\Core\Catalog\ItemStatus;
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Reading\ReadingRound;
-use Biblio\Core\Reading\ReadingSource;
 use Biblio\Core\Reading\ReadingSourceUnavailable;
 use DateTimeImmutable;
 
@@ -48,9 +47,9 @@ final readonly class StartReadingFromLibraryItemService
             throw new ReadingSourceUnavailable();
         }
 
-        return $this->createReadingRound->create(
-            $edition->workId(),
-            ReadingSource::libraryItem($item->id()),
+        return $this->createReadingRound->createFromLibraryItem(
+            $item,
+            $edition,
             $startedAt
         );
     }

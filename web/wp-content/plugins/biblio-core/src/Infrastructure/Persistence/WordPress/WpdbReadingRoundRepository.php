@@ -43,6 +43,13 @@ final readonly class WpdbReadingRoundRepository implements
             );
         }
 
+        if (!$this->sourceBelongsToWork($readingRound)) {
+            throw new PersistenceException(
+                "Reading Round source and Work are inconsistent.",
+                failureReason: FailureReason::PersistenceWriteFailed
+            );
+        }
+
         $previousSuppression = $this->database->suppress_errors(true);
 
         try {
@@ -162,6 +169,33 @@ final readonly class WpdbReadingRoundRepository implements
         return $date
             ->setTimezone(new DateTimeZone("UTC"))
             ->format(self::DATABASE_DATE_FORMAT);
+    }
+
+    private function sourceBelongsToWork(ReadingRound $readingRound): bool
+    {
+        $source = $readingRound->source();
+
+        if ($source->itemId() !== null) {
+            $items = $this->tableNames->items();
+            $editions = $this->tableNames->editions();
+            $sourceWorkId = $this->database->get_var($this->database->prepare(
+                "SELECT e.work_id FROM `{$items}` i "
+                . "INNER JOIN `{$editions}` e "
+                . "ON e.edition_id = i.edition_id "
+                . "WHERE i.item_id = %s",
+                $source->itemId()->value()
+            ));
+        } else {
+            $externalLoans = $this->tableNames->externalLoans();
+            $sourceWorkId = $this->database->get_var($this->database->prepare(
+                "SELECT work_id FROM `{$externalLoans}` "
+                . "WHERE external_loan_id = %s",
+                $source->externalLoanId()?->value()
+            ));
+        }
+
+        return is_string($sourceWorkId)
+            && $sourceWorkId === $readingRound->workId()->value();
     }
 
     private function hydrateDate(string $value): DateTimeImmutable
