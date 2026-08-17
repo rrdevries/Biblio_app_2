@@ -2,7 +2,7 @@
   "project": "Biblio V2",
   "root": "Biblio_app_2",
   "version": "v2.001",
-  "status": "canonical Fase-0 set; consistency checked",
+  "status": "canonical Fase-0 set with F1.1 migration infrastructure",
   "files": [
     "AGENTS.md",
     "README.md",
@@ -16,7 +16,8 @@
     "docs/decisions/ADR-001-single-site-tenancy.md",
     "docs/decisions/ADR-002-modular-monolith.md",
     "docs/decisions/ADR-003-biblio-core-owns-domain-logic.md",
-    "docs/decisions/ADR-004-fase-0-persistence-and-reading-sources.md"
+    "docs/decisions/ADR-004-fase-0-persistence-and-reading-sources.md",
+    "docs/decisions/ADR-005-formal-core-schema-migration-baseline.md"
   ],
   "assumptions": [
     "For v2.001 each user has at most one designated personal Privébibliotheek, auto-created on first relevant reading/borrowing action if absent."

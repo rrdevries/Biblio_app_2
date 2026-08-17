@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Tests\Integration;
 
-use Biblio\Core\Infrastructure\Persistence\WordPress\LibraryTableNames;
+use Biblio\Core\Infrastructure\Persistence\WordPress\CoreTableNames;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use wpdb;
@@ -12,7 +12,7 @@ use wpdb;
 abstract class PersistenceIntegrationTestCase extends TestCase
 {
     protected wpdb $database;
-    protected LibraryTableNames $tableNames;
+    protected CoreTableNames $tableNames;
 
     protected function setUp(): void
     {
@@ -27,7 +27,7 @@ abstract class PersistenceIntegrationTestCase extends TestCase
         }
 
         $this->database = $wpdb;
-        $this->tableNames = new LibraryTableNames($wpdb->prefix);
+        $this->tableNames = new CoreTableNames($wpdb->prefix);
         $this->resetLibraryTables();
     }
 

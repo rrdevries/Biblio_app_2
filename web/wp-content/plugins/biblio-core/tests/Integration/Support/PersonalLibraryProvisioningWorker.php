@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Biblio\Core\Application\Library\CreateLibraryService;
 use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
 use Biblio\Core\Identity\UserId;
-use Biblio\Core\Infrastructure\Persistence\WordPress\LibraryTableNames;
+use Biblio\Core\Infrastructure\Persistence\WordPress\CoreTableNames;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMembershipRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPersonalLibraryRepository;
@@ -22,7 +22,7 @@ if ($argc !== 4) {
 
 require dirname(__DIR__) . "/bootstrap.php";
 
-$tableNames = new LibraryTableNames($wpdb->prefix);
+$tableNames = new CoreTableNames($wpdb->prefix);
 $personalLibraryRepository = new WpdbPersonalLibraryRepository(
     $wpdb,
     $tableNames

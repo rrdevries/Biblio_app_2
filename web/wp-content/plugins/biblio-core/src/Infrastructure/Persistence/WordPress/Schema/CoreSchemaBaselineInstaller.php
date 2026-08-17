@@ -2,28 +2,37 @@
 
 declare(strict_types=1);
 
-namespace Biblio\Core\Infrastructure\Persistence\WordPress;
+namespace Biblio\Core\Infrastructure\Persistence\WordPress\Schema;
 
-use Biblio\Core\Infrastructure\Persistence\PersistenceException;
+use Biblio\Core\Infrastructure\Persistence\WordPress\CoreTableNames;
 use wpdb;
 
-final readonly class LibrarySchemaMigrator
+final readonly class CoreSchemaBaselineInstaller
 {
-    public const CURRENT_VERSION = 5;
-    public const VERSION_OPTION = "biblio_core_library_schema_version";
-
     public function __construct(
         private wpdb $database,
-        private LibraryTableNames $tableNames
+        private CoreTableNames $tableNames
     ) {
     }
 
-    public function migrate(): void
+    public function hasAnyCoreTable(): bool
     {
-        $installedVersion = (int) get_option(self::VERSION_OPTION, 0);
+        foreach ($this->tableNames->all() as $tableName) {
+            if ($this->tableExists($tableName)) {
+                return true;
+            }
+        }
 
-        if ($installedVersion >= self::CURRENT_VERSION) {
-            return;
+        return false;
+    }
+
+    public function install(): void
+    {
+        if ($this->hasAnyCoreTable()) {
+            throw new CoreSchemaHealthException(new CoreSchemaHealth([
+                "Formal baseline installation requires an empty Core schema; "
+                . "one or more Biblio Core tables already exist",
+            ]));
         }
 
         $libraries = $this->tableNames->libraries();
@@ -38,19 +47,21 @@ final readonly class LibrarySchemaMigrator
         $charsetCollate = $this->database->get_charset_collate();
 
         $this->execute(
-            "CREATE TABLE IF NOT EXISTS `{$libraries}` ("
+            "CREATE TABLE `{$libraries}` ("
             . "library_id VARCHAR(191) CHARACTER SET utf8mb4 "
             . "COLLATE utf8mb4_bin NOT NULL, "
             . "library_type VARCHAR(32) NOT NULL, "
             . "library_status VARCHAR(32) NOT NULL, "
             . "PRIMARY KEY (library_id), "
+            . "CONSTRAINT libraries_type_private "
             . "CHECK (library_type IN ('private_library')), "
+            . "CONSTRAINT libraries_status_active "
             . "CHECK (library_status IN ('active'))"
             . ") ENGINE=InnoDB {$charsetCollate}"
         );
 
         $this->execute(
-            "CREATE TABLE IF NOT EXISTS `{$memberships}` ("
+            "CREATE TABLE `{$memberships}` ("
             . "library_id VARCHAR(191) CHARACTER SET utf8mb4 "
             . "COLLATE utf8mb4_bin NOT NULL, "
             . "user_id VARCHAR(191) CHARACTER SET utf8mb4 "
@@ -70,16 +81,21 @@ final readonly class LibrarySchemaMigrator
             . "UNIQUE KEY one_active_owner (active_owner_library_id), "
             . "FOREIGN KEY (library_id) REFERENCES `{$libraries}` (library_id) "
             . "ON UPDATE RESTRICT ON DELETE RESTRICT, "
+            . "CONSTRAINT memberships_status_valid "
             . "CHECK (membership_status IN ('active', 'inactive')), "
+            . "CONSTRAINT memberships_role_valid "
             . "CHECK (management_role IN ('owner', 'manager', 'member')), "
+            . "CONSTRAINT memberships_access_valid "
             . "CHECK (use_access IN ('direct', 'borrow', 'view_only')), "
+            . "CONSTRAINT memberships_owner_direct "
             . "CHECK (management_role <> 'owner' OR use_access = 'direct'), "
+            . "CONSTRAINT memberships_permissions_json "
             . "CHECK (JSON_VALID(additional_permissions))"
             . ") ENGINE=InnoDB {$charsetCollate}"
         );
 
         $this->execute(
-            "CREATE TABLE IF NOT EXISTS `{$personalLibraryDesignations}` ("
+            "CREATE TABLE `{$personalLibraryDesignations}` ("
             . "user_id VARCHAR(191) CHARACTER SET utf8mb4 "
             . "COLLATE utf8mb4_bin NOT NULL, "
             . "library_id VARCHAR(191) CHARACTER SET utf8mb4 "
@@ -95,17 +111,18 @@ final readonly class LibrarySchemaMigrator
         );
 
         $this->execute(
-            "CREATE TABLE IF NOT EXISTS `{$works}` ("
+            "CREATE TABLE `{$works}` ("
             . "work_id VARCHAR(191) CHARACTER SET utf8mb4 "
             . "COLLATE utf8mb4_bin NOT NULL, "
             . "work_title VARCHAR(512) NOT NULL, "
             . "PRIMARY KEY (work_id), "
+            . "CONSTRAINT works_title_non_empty "
             . "CHECK (CHAR_LENGTH(TRIM(work_title)) > 0)"
             . ") ENGINE=InnoDB {$charsetCollate}"
         );
 
         $this->execute(
-            "CREATE TABLE IF NOT EXISTS `{$editions}` ("
+            "CREATE TABLE `{$editions}` ("
             . "edition_id VARCHAR(191) CHARACTER SET utf8mb4 "
             . "COLLATE utf8mb4_bin NOT NULL, "
             . "work_id VARCHAR(191) CHARACTER SET utf8mb4 "
@@ -118,7 +135,7 @@ final readonly class LibrarySchemaMigrator
         );
 
         $this->execute(
-            "CREATE TABLE IF NOT EXISTS `{$items}` ("
+            "CREATE TABLE `{$items}` ("
             . "item_id VARCHAR(191) CHARACTER SET utf8mb4 "
             . "COLLATE utf8mb4_bin NOT NULL, "
             . "library_id VARCHAR(191) CHARACTER SET utf8mb4 "
@@ -133,12 +150,13 @@ final readonly class LibrarySchemaMigrator
             . "ON UPDATE RESTRICT ON DELETE RESTRICT, "
             . "FOREIGN KEY (edition_id) REFERENCES `{$editions}` (edition_id) "
             . "ON UPDATE RESTRICT ON DELETE RESTRICT, "
+            . "CONSTRAINT items_status_active "
             . "CHECK (item_status IN ('active'))"
             . ") ENGINE=InnoDB {$charsetCollate}"
         );
 
         $this->execute(
-            "CREATE TABLE IF NOT EXISTS `{$externalLoans}` ("
+            "CREATE TABLE `{$externalLoans}` ("
             . "external_loan_id VARCHAR(191) CHARACTER SET utf8mb4 "
             . "COLLATE utf8mb4_bin NOT NULL, "
             . "user_id VARCHAR(191) CHARACTER SET utf8mb4 "
@@ -153,13 +171,15 @@ final readonly class LibrarySchemaMigrator
             . "KEY external_loans_by_work (work_id), "
             . "FOREIGN KEY (work_id) REFERENCES `{$works}` (work_id) "
             . "ON UPDATE RESTRICT ON DELETE RESTRICT, "
+            . "CONSTRAINT external_loans_user_non_empty "
             . "CHECK (CHAR_LENGTH(TRIM(user_id)) > 0), "
+            . "CONSTRAINT external_loans_status_active "
             . "CHECK (loan_status IN ('active'))"
             . ") ENGINE=InnoDB {$charsetCollate}"
         );
 
         $this->execute(
-            "CREATE TABLE IF NOT EXISTS `{$readingRounds}` ("
+            "CREATE TABLE `{$readingRounds}` ("
             . "reading_round_id VARCHAR(191) CHARACTER SET utf8mb4 "
             . "COLLATE utf8mb4_bin NOT NULL, "
             . "user_id VARCHAR(191) CHARACTER SET utf8mb4 "
@@ -198,24 +218,30 @@ final readonly class LibrarySchemaMigrator
             . "FOREIGN KEY (external_loan_id) "
             . "REFERENCES `{$externalLoans}` (external_loan_id) "
             . "ON UPDATE RESTRICT ON DELETE RESTRICT, "
+            . "CONSTRAINT reading_rounds_status_active "
             . "CHECK (round_status IN ('active')), "
+            . "CONSTRAINT reading_rounds_source_xor "
             . "CHECK ((item_id IS NOT NULL AND external_loan_id IS NULL) "
             . "OR (item_id IS NULL AND external_loan_id IS NOT NULL))"
             . ") ENGINE=InnoDB {$charsetCollate}"
         );
+    }
 
-        update_option(
-            self::VERSION_OPTION,
-            (string) self::CURRENT_VERSION,
-            false
-        );
+    private function tableExists(string $tableName): bool
+    {
+        return (int) $this->database->get_var($this->database->prepare(
+            "SELECT COUNT(*) FROM information_schema.TABLES "
+            . "WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s",
+            DB_NAME,
+            $tableName
+        )) === 1;
     }
 
     private function execute(string $sql): void
     {
         if ($this->database->query($sql) === false) {
-            throw new PersistenceException(
-                "Could not migrate Library schema: "
+            throw new CoreSchemaMigrationException(
+                "Could not install formal Biblio Core schema baseline: "
                 . $this->database->last_error
             );
         }

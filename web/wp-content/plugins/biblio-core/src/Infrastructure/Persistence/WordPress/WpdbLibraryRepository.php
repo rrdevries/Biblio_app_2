@@ -17,7 +17,7 @@ final readonly class WpdbLibraryRepository implements LibraryRepository
 {
     public function __construct(
         private wpdb $database,
-        private LibraryTableNames $tableNames
+        private CoreTableNames $tableNames
     ) {
     }
 

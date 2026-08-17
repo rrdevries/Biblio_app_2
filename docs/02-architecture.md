@@ -218,6 +218,22 @@ The requirement that a Library has at least one current Owner cannot be fully ex
 
 Biblio Core owns versioning and migrations for its Core tables. MariaDB DDL is not fully transactional, so migrations remain versioned, reproducible, rerunnable where possible and integration-tested against real MariaDB. The installed schema version is advanced only after successful migration steps.
 
+The formally supported Core schema history starts at baseline version `1000`.
+The earlier internal spike versions 1–5 are not production migration sources.
+Product version (`v2.001`), Core plugin/package version (`2.1.0`) and database
+schema version are independent. Plugin/package version `2.1.0` expects formal
+schema baseline `1000`.
+
+A fresh baseline installation is allowed only on an empty Core schema.
+Future changes are separate ordered forward migration steps with an explicit
+precondition, change and postcondition; each target version is recorded only
+after its postcondition succeeds.
+
+Schema health validates the essential baseline structures independently of
+the stored version. Unexpected drift fails closed with specific diagnostics
+and is not generically auto-repaired. See
+`docs/decisions/ADR-005-formal-core-schema-migration-baseline.md`.
+
 No source FK uses cascade-delete in a way that removes personal ReadingRound history when a physical source changes or ends.
 
 See `docs/decisions/ADR-004-fase-0-persistence-and-reading-sources.md`.

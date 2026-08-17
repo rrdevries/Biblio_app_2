@@ -265,3 +265,17 @@ WordPress + database + Biblio Core:
 Playwright for critical user flows and permission boundaries.
 
 Responsive E2E must verify same functionality, not pixel identity.
+
+## 21. Core schema migrations
+
+Acceptance:
+- an empty Core schema installs formal baseline version 1000;
+- a healthy current run is a schema and data no-op;
+- a forward migration preserves existing data;
+- a failed step does not record its target version;
+- retry is allowed only for an explicitly recognized safe partial state;
+- current version plus missing essential table, index or constraint is
+  unhealthy and is not automatically repaired;
+- legacy Fase-0 spike versions 1–5 are not treated as production upgrade
+  sources;
+- migration and health behavior is tested against the real MariaDB baseline.

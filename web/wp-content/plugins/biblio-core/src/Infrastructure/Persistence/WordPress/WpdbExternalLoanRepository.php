@@ -23,7 +23,7 @@ final readonly class WpdbExternalLoanRepository implements
 
     public function __construct(
         private wpdb $database,
-        private LibraryTableNames $tableNames
+        private CoreTableNames $tableNames
     ) {
     }
 

@@ -16,7 +16,7 @@ final readonly class WpdbEditionRepository implements EditionRepository
 {
     public function __construct(
         private wpdb $database,
-        private LibraryTableNames $tableNames
+        private CoreTableNames $tableNames
     ) {
     }
 

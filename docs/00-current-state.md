@@ -267,3 +267,29 @@ Initial technical attention points are limited to:
 - establish logging and audit boundaries.
 
 This does not yet define the complete Fase-1 implementation.
+
+### F1.1 — Versioned Core Migration Infrastructure
+
+Status: **Implemented**
+
+- the formal supported schema history starts at baseline version `1000`;
+- internal Fase-0 spike versions 1–5 are not production upgrade paths;
+- product `v2.001`, plugin/package `2.1.0` and schema version are independent;
+- baseline installation requires an empty Core schema;
+- future schema changes use ordered forward migration steps;
+- version bump occurs only after the step postcondition succeeds;
+- schema health checks essential tables, columns, constraints, indexes,
+  generated columns and foreign-key lifecycle rules;
+- unexpected drift fails closed without automatic repair;
+- real MariaDB tests prove fresh install, current no-op/data preservation,
+  failure without version bump, controlled retry and drift detection.
+
+Last verified F1.1 test baseline:
+- unit: 55 tests, 114 assertions;
+- integration: 60 tests, 274 assertions;
+- total: 115 tests, 388 assertions;
+- WordPress smoke: plugin active, Core loaded, init hook executed, HTTP 200.
+
+Automatic plugin activation/upgrade wiring remains work for F1.3.
+
+See `docs/decisions/ADR-005-formal-core-schema-migration-baseline.md`.
