@@ -48,8 +48,14 @@ Persistence blijft per domein beoordeeld volgens ADR-004.
 
 De formeel ondersteunde Core-schemahistorie begint op schema baseline `1000`.
 Productversie `v2.001`, plugin/packageversie `2.1.0` en schemaversie zijn
-onafhankelijk. Zie ADR-005. Automatische plugin install/upgrade-wiring volgt
-in F1.3 en is nog geen onderdeel van de pluginbootstrap.
+onafhankelijk. Zie ADR-005. Pluginactivation voert de formele migration en
+schema-healthcheck uit. Tijdens normale runtime controleert Core vroeg de
+schemaversie en gebruikt het een kortlevende health-cache; alleen een gezonde
+runtime publiceert de getypeerde application-serviceboundary.
+
+F1.3 bevat nog geen REST-, Abilities-, Elementor-, JetEngine- of andere
+productadapter. De WordPress identity resolver en volledig authenticated
+write-boundaries volgen pas in F1.4.
 
 ## Repository
 
