@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Infrastructure\Persistence\WordPress;
 
+use Biblio\Core\Catalog\CatalogRecordAlreadyExists;
 use Biblio\Core\Catalog\Work;
 use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Catalog\WritableWorkRepository;
@@ -38,6 +39,19 @@ final readonly class WpdbWorkRepository implements WritableWorkRepository
         }
 
         if ($result !== 1) {
+            $conflict = WpdbErrorTranslator::conflict(
+                $this->database->last_error
+            );
+
+            if ($conflict?->constraintName() === "PRIMARY") {
+                throw new CatalogRecordAlreadyExists(
+                    WpdbErrorTranslator::diagnostic(
+                        "Work insert",
+                        $this->database->last_error
+                    )
+                );
+            }
+
             throw WpdbErrorTranslator::writeFailure(
                 "Could not persist Work.",
                 $this->database->last_error

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Tests\Integration;
 
+use Biblio\Core\Catalog\CatalogRecordAlreadyExists;
 use Biblio\Core\Catalog\Edition;
 use Biblio\Core\Catalog\EditionId;
 use Biblio\Core\Catalog\Item;
@@ -11,6 +12,7 @@ use Biblio\Core\Catalog\ItemId;
 use Biblio\Core\Catalog\ItemStatus;
 use Biblio\Core\Catalog\Work;
 use Biblio\Core\Catalog\WorkId;
+use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Infrastructure\Persistence\PersistenceException;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbEditionRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbItemRepository;
@@ -126,7 +128,12 @@ final class CatalogPersistenceTest extends PersistenceIntegrationTestCase
                 "Duplicate Work"
             ));
             self::fail("Duplicate Work ID was accepted.");
-        } catch (PersistenceException) {
+        } catch (CatalogRecordAlreadyExists $exception) {
+            self::assertSame(
+                FailureReason::CatalogRecordAlreadyExists,
+                $exception->reason()
+            );
+            self::assertNotNull($exception->getPrevious());
             self::assertSame(1, $this->tableCount($this->tableNames->works()));
         }
 
@@ -136,7 +143,12 @@ final class CatalogPersistenceTest extends PersistenceIntegrationTestCase
                 new WorkId("work-w")
             ));
             self::fail("Duplicate Edition ID was accepted.");
-        } catch (PersistenceException) {
+        } catch (CatalogRecordAlreadyExists $exception) {
+            self::assertSame(
+                FailureReason::CatalogRecordAlreadyExists,
+                $exception->reason()
+            );
+            self::assertNotNull($exception->getPrevious());
             self::assertSame(1, $this->tableCount(
                 $this->tableNames->editions()
             ));
@@ -156,7 +168,12 @@ final class CatalogPersistenceTest extends PersistenceIntegrationTestCase
                 $editionId
             ));
             self::fail("Duplicate Item ID was accepted.");
-        } catch (PersistenceException) {
+        } catch (CatalogRecordAlreadyExists $exception) {
+            self::assertSame(
+                FailureReason::CatalogRecordAlreadyExists,
+                $exception->reason()
+            );
+            self::assertNotNull($exception->getPrevious());
             self::assertSame(1, $this->tableCount($this->tableNames->items()));
         }
     }

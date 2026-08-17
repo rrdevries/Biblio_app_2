@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Infrastructure\Persistence\WordPress;
 
+use Biblio\Core\Catalog\CatalogRecordAlreadyExists;
 use Biblio\Core\Catalog\Edition;
 use Biblio\Core\Catalog\EditionId;
 use Biblio\Core\Catalog\WritableEditionRepository;
@@ -39,6 +40,19 @@ final readonly class WpdbEditionRepository implements WritableEditionRepository
         }
 
         if ($result !== 1) {
+            $conflict = WpdbErrorTranslator::conflict(
+                $this->database->last_error
+            );
+
+            if ($conflict?->constraintName() === "PRIMARY") {
+                throw new CatalogRecordAlreadyExists(
+                    WpdbErrorTranslator::diagnostic(
+                        "Edition insert",
+                        $this->database->last_error
+                    )
+                );
+            }
+
             throw WpdbErrorTranslator::writeFailure(
                 "Could not persist Edition.",
                 $this->database->last_error

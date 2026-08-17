@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Infrastructure\Persistence\WordPress;
 
+use Biblio\Core\Catalog\CatalogRecordAlreadyExists;
 use Biblio\Core\Catalog\EditionId;
 use Biblio\Core\Catalog\Item;
 use Biblio\Core\Catalog\ItemId;
@@ -43,6 +44,19 @@ final readonly class WpdbItemRepository implements WritableItemRepository
         }
 
         if ($result !== 1) {
+            $conflict = WpdbErrorTranslator::conflict(
+                $this->database->last_error
+            );
+
+            if ($conflict?->constraintName() === "PRIMARY") {
+                throw new CatalogRecordAlreadyExists(
+                    WpdbErrorTranslator::diagnostic(
+                        "Item insert",
+                        $this->database->last_error
+                    )
+                );
+            }
+
             throw WpdbErrorTranslator::writeFailure(
                 "Could not persist Item.",
                 $this->database->last_error
