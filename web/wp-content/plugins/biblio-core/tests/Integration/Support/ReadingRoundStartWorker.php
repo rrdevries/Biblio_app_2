@@ -9,7 +9,7 @@ use Biblio\Core\Application\Reading\StartReadingFromLibraryItemService;
 use Biblio\Core\Authorization\LibraryAuthorizationPolicy;
 use Biblio\Core\Catalog\ItemId;
 use Biblio\Core\Identity\UserId;
-use Biblio\Core\Infrastructure\Persistence\WordPress\LibraryTableNames;
+use Biblio\Core\Infrastructure\Persistence\WordPress\CoreTableNames;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbEditionRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbItemRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMembershipRepository;
@@ -34,7 +34,7 @@ if ($argc !== 6) {
 
 require dirname(__DIR__) . "/bootstrap.php";
 
-$tableNames = new LibraryTableNames($wpdb->prefix);
+$tableNames = new CoreTableNames($wpdb->prefix);
 $repository = new WpdbReadingRoundRepository($wpdb, $tableNames);
 $barrierRepository = new class(
     $repository,

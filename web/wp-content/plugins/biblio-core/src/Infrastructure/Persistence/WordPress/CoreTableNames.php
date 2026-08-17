@@ -6,7 +6,7 @@ namespace Biblio\Core\Infrastructure\Persistence\WordPress;
 
 use InvalidArgumentException;
 
-final readonly class LibraryTableNames
+final readonly class CoreTableNames
 {
     private string $libraries;
     private string $memberships;
@@ -29,14 +29,9 @@ final readonly class LibraryTableNames
         $this->externalLoans = $prefix . "biblio_external_loans";
         $this->readingRounds = $prefix . "biblio_reading_rounds";
 
-        $this->assertSafe($this->libraries);
-        $this->assertSafe($this->memberships);
-        $this->assertSafe($this->personalLibraryDesignations);
-        $this->assertSafe($this->works);
-        $this->assertSafe($this->editions);
-        $this->assertSafe($this->items);
-        $this->assertSafe($this->externalLoans);
-        $this->assertSafe($this->readingRounds);
+        foreach ($this->all() as $tableName) {
+            $this->assertSafe($tableName);
+        }
     }
 
     public function libraries(): string
@@ -77,6 +72,21 @@ final readonly class LibraryTableNames
     public function readingRounds(): string
     {
         return $this->readingRounds;
+    }
+
+    /** @return list<string> */
+    public function all(): array
+    {
+        return [
+            $this->libraries,
+            $this->memberships,
+            $this->personalLibraryDesignations,
+            $this->works,
+            $this->editions,
+            $this->items,
+            $this->externalLoans,
+            $this->readingRounds,
+        ];
     }
 
     private function assertSafe(string $tableName): void

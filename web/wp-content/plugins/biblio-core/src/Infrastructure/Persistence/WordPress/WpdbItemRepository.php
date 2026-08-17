@@ -18,7 +18,7 @@ final readonly class WpdbItemRepository implements ItemRepository
 {
     public function __construct(
         private wpdb $database,
-        private LibraryTableNames $tableNames
+        private CoreTableNames $tableNames
     ) {
     }
 

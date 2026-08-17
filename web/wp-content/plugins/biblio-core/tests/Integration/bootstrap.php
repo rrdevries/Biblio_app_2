@@ -36,10 +36,10 @@ if (!defined("DB_NAME") || DB_NAME !== $expectedDatabase) {
     );
 }
 
-$tableNames = new \Biblio\Core\Infrastructure\Persistence\WordPress\LibraryTableNames(
+$tableNames = new \Biblio\Core\Infrastructure\Persistence\WordPress\CoreTableNames(
     $wpdb->prefix
 );
-$schemaMigrator = new \Biblio\Core\Infrastructure\Persistence\WordPress\LibrarySchemaMigrator(
+$schemaMigrator = new \Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrator(
     $wpdb,
     $tableNames
 );

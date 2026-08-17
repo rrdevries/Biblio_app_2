@@ -42,7 +42,14 @@ Biblio V2 wordt gebouwd als één WordPress-site met een custom Biblio Core-plug
 
 Biblio Core is eigenaar van business rules, autorisatie, bibliotheekcontext, lifecycle-transities en integriteitsregels.
 
-De definitieve keuze tussen CPT, CCT en eigen databasetabellen wordt pas gemaakt na de Fase-0 verticale spike.
+Biblio-owned custom tables zijn de in Fase 0 bewezen baseline voor
+integriteits-, scope-, transactie- en concurrencygevoelige Core-data.
+Persistence blijft per domein beoordeeld volgens ADR-004.
+
+De formeel ondersteunde Core-schemahistorie begint op schema baseline `1000`.
+Productversie `v2.001`, plugin/packageversie `2.1.0` en schemaversie zijn
+onafhankelijk. Zie ADR-005. Automatische plugin install/upgrade-wiring volgt
+in F1.3 en is nog geen onderdeel van de pluginbootstrap.
 
 ## Repository
 
