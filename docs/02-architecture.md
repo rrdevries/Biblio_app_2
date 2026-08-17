@@ -295,6 +295,50 @@ Abilities API may be an adapter if useful, not a Core dependency.
 
 External metadata sources are adapters and never a precondition for core data integrity.
 
+### Production composition and runtime boundary
+
+`ProductionComposition` is the single production composition root. It builds
+the shared WordPress database infrastructure, schema lifecycle, transaction
+connection/manager, repositories, authorization policy and current application
+services once per plugin request. The stateless `WpdbErrorTranslator` remains
+an internal repository/transaction infrastructure utility rather than a
+runtime service.
+
+Adapters receive only `CoreApplication`, either from a successfully initialized
+`Plugin` or as the argument of `biblio_core_initialized`. This boundary has
+explicit named accessors for the existing personal-Library, accessible Item,
+owned ExternalLoan/ReadingRound and Reading start services. It exposes no
+generic lookup and no concrete wpdb repository. Lower-level creation services
+remain internal composition details.
+
+Publishing this boundary does not itself authenticate a WordPress request.
+Until F1.4 provides the WordPress identity resolver and authenticated adapter
+boundaries, no transport endpoint may treat a caller-supplied `UserId` or
+`LibraryContext` as trusted.
+
+### Plugin lifecycle
+
+The activation hook synchronously runs formal migrations and schema health.
+Its exceptions are deliberately not swallowed: WordPress runs the hook before
+adding the plugin to `active_plugins`, so an unhealthy schema cannot produce a
+successful activation.
+
+At normal `init` priority 1, lifecycle boot always reads the cheap formal
+version option. A missing, older or otherwise non-current version enters the
+F1.1 migration runner. A current version uses a successful health result for
+at most 300 seconds; after expiry Core performs the full targeted schema
+inspection again. Therefore drift detection can be delayed by at most that
+cache window, but is never replaced by option-only trust.
+
+Migration or health failure suppresses `biblio_core_initialized` and leaves the
+application boundary unavailable while WordPress itself continues. The first
+failure is logged with its F1.2 reason and made available through
+`biblio_core_boot_failed`. A matching installed/expected-version failure is
+cached for 60 seconds to avoid repeating DDL or flooding logs on every request.
+Changing the version state bypasses that failure cache; otherwise retry occurs
+after expiry or immediately through explicit plugin activation, which clears
+the cache. No path performs unknown schema repair.
+
 ## 12. Configuration discipline
 
 Repository should version where practical:

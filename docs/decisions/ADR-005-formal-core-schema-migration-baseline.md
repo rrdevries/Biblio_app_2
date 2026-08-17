@@ -88,9 +88,27 @@ repair/migration worden ondersteund.
 
 ### WordPress lifecycle
 
-F1.1 levert de migration infrastructure en integratietests, maar sluit haar
-nog niet aan op pluginactivation, normale pluginboot of WP-CLI. Die wiring is
-onderdeel van F1.3.
+F1.3 sluit dezelfde migration infrastructure aan op pluginactivation en
+normale pluginboot. De activation hook voert synchronously `migrate()` en een
+aansluitende healthcheck uit. Exceptions blijven zichtbaar voor WordPress,
+dat de plugin pas na de activation hook als actief registreert.
+
+Normale pluginboot leest vroeg tijdens `init` altijd de goedkope formele
+version option. Alleen een ontbrekende of niet-actuele versie betreedt de
+migration runner. Bij een actuele versie mag een geslaagde volledige
+healthcheck maximaal 300 seconden worden hergebruikt; daarna volgt opnieuw de
+gerichte schema-inspectie. De transient is uitsluitend een performance-cache
+en vormt geen bewijs of alternatieve schemawaarheid.
+
+Een migration- of healthfailure maakt de Core application-boundary niet
+beschikbaar. Een failure met dezelfde installed/expected-versioncombinatie
+stelt een nieuwe poging 60 seconden uit, zodat niet ieder request opnieuw DDL
+probeert of dezelfde fout logt. Pluginactivation wist deze operationele caches
+en probeert expliciet opnieuw. Geen van deze paden adopteert legacy schema of
+repareert onbekende drift.
+
+WP-CLI-wiring is niet onderdeel van F1.3; een later command moet dezelfde
+lifecyclecoordinator hergebruiken.
 
 ## Consequences
 

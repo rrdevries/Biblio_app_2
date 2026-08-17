@@ -290,13 +290,11 @@ Last verified F1.1 test baseline:
 - total: 115 tests, 388 assertions;
 - WordPress smoke: plugin active, Core loaded, init hook executed, HTTP 200.
 
-Automatic plugin activation/upgrade wiring remains work for F1.3.
-
 See `docs/decisions/ADR-005-formal-core-schema-migration-baseline.md`.
 
 ### F1.2 — Consistent exception and transaction model
 
-Status: **Implemented — pending review/commit**
+Status: **Implemented**
 
 - expected Core failures use validation, authorization, conflict, persistence
   and transaction categories with stable reason codes;
@@ -324,3 +322,43 @@ Last verified F1.2 test baseline:
 
 HTTP/REST/Abilities mapping, UI copy and plugin composition remain outside
 F1.2.
+
+### F1.3 — Production plugin lifecycle and composition root
+
+Status: **Implemented — pending review/commit**
+
+- the plugin registers a real WordPress activation hook before activation;
+- activation runs the F1.1 migrator, validates schema health and lets failures
+  escape so WordPress does not record a false successful activation;
+- normal runtime checks the installed schema version at early `init` priority
+  1 and runs only missing explicit migrations;
+- a successful full health inspection is cached for 300 seconds, while a
+  matching lifecycle failure defers retries for 60 seconds;
+- the caches are operational throttles, never schema truth: migration and
+  health remain authoritative and activation always clears both caches;
+- unhealthy Core boot keeps WordPress available but publishes no Core
+  application boundary, logs a technical reason and shows a capability-gated
+  administrator notice without raw SQL;
+- `ProductionComposition` creates one shared dependency graph for migration,
+  transactions, repositories, authorization and the existing application
+  services;
+- `CoreApplication` exposes only named application services; concrete wpdb
+  repositories and lower-level write primitives are not adapter entrypoints;
+- successful initialization still fires `biblio_core_initialized`, now with
+  the `CoreApplication` boundary as its first argument;
+- plugin hook registration and lifecycle execution are idempotent per request.
+
+Last verified F1.3 test baseline:
+
+- unit: 66 tests, 149 assertions;
+- integration: 69 tests, 345 assertions;
+- total: 135 tests, 494 assertions;
+- lifecycle/activation: 8 tests, 50 assertions;
+- F1.1 migration regression: 9 tests, 52 assertions;
+- concurrency regression: 2 tests, 13 assertions;
+- F1.2 transaction regression: 8 tests, 26 assertions;
+- WordPress smoke: plugin active, Core loaded, init hook executed once, HTTP
+  200.
+
+F1.3 deliberately adds no REST/Abilities/UI/WP-CLI adapter. WordPress identity
+resolution and the authenticated transport/write boundary remain F1.4 work.

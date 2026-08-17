@@ -305,3 +305,30 @@ Acceptance:
 
 HTTP status mapping, REST/Abilities responses and UI copy are not part of this
 Core contract.
+
+## 23. Production plugin lifecycle and composition
+
+Acceptance:
+
+- a real plugin activation against an empty Core schema installs baseline 1000
+  and finishes with healthy schema;
+- activation on a healthy current schema preserves schema and representative
+  data;
+- runtime version checking executes only missing explicit formal migrations;
+- migration failure does not bump the version or remove existing data and a
+  matching immediate retry is temporarily deferred;
+- current version plus drift blocks the application boundary without repair;
+- a legacy Fase-0 version blocks activation and is not adopted;
+- production composition returns one stable `CoreApplication` graph with the
+  existing named services and no repository locator;
+- shared lower-level services are reused where both public use-cases depend on
+  them;
+- repeated plugin boot/initialize calls register and execute lifecycle only
+  once per request;
+- the existing initialization action still fires on healthy boot and receives
+  the application boundary;
+- an unhealthy boot leaves WordPress available, emits technical diagnostics
+  and shows only a sanitized notice to administrators who can activate plugins.
+
+REST endpoints, WordPress Abilities, UI adapters, WordPress identity resolution
+and the complete authenticated write boundary are not F1.3 acceptance scope.

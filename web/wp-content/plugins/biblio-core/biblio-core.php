@@ -19,6 +19,13 @@ if (!is_readable($autoloadPath)) {
 
     error_log($message);
 
+    register_activation_hook(
+        __FILE__,
+        static function () use ($message): void {
+            throw new \RuntimeException($message);
+        }
+    );
+
     add_action("admin_notices", static function () use ($message): void {
         echo '<div class="notice notice-error"><p>'
             . esc_html($message)
@@ -30,4 +37,4 @@ if (!is_readable($autoloadPath)) {
 
 require_once $autoloadPath;
 
-\Biblio\Core\Plugin::boot();
+(new \Biblio\Core\Plugin(__FILE__))->boot();
