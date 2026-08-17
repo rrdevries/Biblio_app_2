@@ -449,3 +449,47 @@ Acceptance:
 Legacy Fase-0 schema versions 1–5 are **N/A** as Fase-1 upgrade paths: ADR-005
 replaces them with the first formally supported baseline `1000`. See
 `docs/07-fase-1-exit-evidence.md` for the durable exit checklist and evidence.
+
+## 28. First catalog creation vertical slice
+
+Acceptance:
+
+- one production application service exposes explicit, invalid-combination-free
+  paths for existing Edition, new Edition under existing Work, and new
+  Work+Edition creation;
+- actor identity is resolved server-side per operation; no public method
+  accepts actor `UserId` or trusted `LibraryContext`;
+- target Library is explicit, and active Owner plus active Manager may mutate
+  its catalog regardless of `UseAccess`;
+- Member, inactive membership, foreign-Library actor and unauthenticated actor
+  fail with the appropriate stable authorization/authentication reason;
+- authorization occurs before central Work/Edition existence inspection;
+- the service constructs the Item with the authorized Library ID;
+- Work and Edition remain platform-wide, Edition references exactly one Work,
+  and Item references exactly one Library plus Edition;
+- Work without Edition remains schema-valid, multiple Items may reference one
+  Edition in one Library, and multiple Libraries may reuse that Edition;
+- existing-Edition creation writes only Item; compound paths commit as one
+  unit or leave no partial Work/Edition/Item rows after any failed step;
+- duplicate Work, Edition and Item primary IDs—including an independent-process
+  race—produce `catalog_record_already_exists`, with one race winner and one
+  conflict;
+- Item lookup never crosses Library scope, while a newly created Item can
+  immediately start a valid ReadingRound whose Work is derived through Edition;
+- `ProductionComposition` remains the only production constructor of wpdb
+  catalog repositories, and `CoreApplication` exposes only one named catalog
+  creation service, no repository or resolver;
+- no schema migration occurs and product `v2.001`, package `2.1.0` and schema
+  baseline `1000` remain unchanged;
+- the complete canonical quality gate stays green, including PHPStan,
+  MariaDB, all concurrency regressions, WordPress smoke, manifest and Git diff
+  validation.
+
+No-go:
+
+- a parallel LibraryItem aggregate or per-Library Work/Edition identity;
+- authorization based on caller-supplied context, UI state or physical
+  `UseAccess`;
+- a partial compound catalog chain after failure;
+- repository exposure through the production application boundary;
+- schema/table changes or expansion into deferred Fase-2 domains.

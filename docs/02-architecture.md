@@ -366,10 +366,9 @@ runtime service.
 
 Adapters receive only `CoreApplication`, either from a successfully initialized
 `Plugin` or as the argument of `biblio_core_initialized`. This boundary has
-explicit named accessors for the existing personal-Library, accessible Item,
-owned ExternalLoan/ReadingRound and Reading start services. It exposes no
-generic lookup and no concrete wpdb repository. Lower-level creation services
-remain internal composition details.
+explicit named accessors for personal-Library provisioning, catalog Item
+creation, accessible Item, owned ExternalLoan/ReadingRound and Reading start
+services. It exposes no generic lookup and no concrete wpdb repository.
 
 For Reading start, the internal creation service exposes only source-specific
 public entrypoints. It derives Work from an Item plus its Edition or from an
@@ -394,8 +393,10 @@ persistence adapters are separate, and `ProductionComposition` constructs only
 the reader. The authorization-neutral writer is a privileged persistence port,
 not a public self-service boundary. A future mutation service must authorize
 the operation and derive or validate its owner before receiving that port.
-Library, membership, Work, Edition and Item write adapters likewise remain
-unpublished until a dedicated authorized mutation use-case exists.
+Library and membership write adapters remain internal facilities. Work,
+Edition and Item writers are supplied only to the dedicated authorized
+`AddLibraryItemService`; they are not themselves published through
+`CoreApplication`.
 
 Foreign or unknown user-owned and Library-scoped reads disclose only absence
 through `null`. Reading starts deliberately collapse an inaccessible or unknown
@@ -504,6 +505,53 @@ spike versions 1–5 are deliberately not production migrations.
 This GO applies only to the implemented Core foundation. Product adapters and
 flows that are still described as deferred—including REST/Abilities/UI,
 ExternalLoan/InternalLoan creation and completion lifecycles, membership and
-catalog mutation use-cases, broader audit behavior and Fase 2—are not implied
-to be implemented. The criterion-by-criterion evidence is maintained in
+broader audit behavior—are not implied to be implemented. The first catalog
+mutation slice added later in F2.3 is described separately below. The
+criterion-by-criterion Fase-1 evidence is maintained in
 `docs/07-fase-1-exit-evidence.md`.
+
+## 16. First Fase-2 catalog vertical slice
+
+F2.3 keeps the Fase-1 catalog model authoritative. `Catalog\Work` and
+`Catalog\Edition` are platform-wide identities; `Catalog\Item` is the canonical
+Library-owned physical item. There is no parallel `LibraryItem` aggregate,
+Library-specific Work/Edition identity, new table or schema migration.
+
+`AddLibraryItemService` is the sole production catalog mutation boundary. Its
+three explicit methods represent only valid construction paths:
+
+1. add an Item for an existing Edition;
+2. atomically add Edition+Item under an existing Work;
+3. atomically add Work+Edition+Item.
+
+The target `LibraryId` is caller-selected scope, never authorization. At the
+start of every call, the service resolves the WordPress actor through
+`AuthenticatedUser`, constructs `LibraryContext`, and asks
+`LibraryAccessService::canManageCatalog()`. That permission requires an active
+Owner or Manager and deliberately ignores `UseAccess`, because physical use
+and catalog management are independent membership dimensions. Authorization
+precedes Work/Edition existence checks. The service then constructs the Item
+with the authorized Library ID.
+
+The existing writable Work, Edition and Item ports and wpdb adapters are
+reused. Compound writes run through the shared transaction manager. Repository
+duplicate-primary-key translation produces
+`catalog_record_already_exists`; unrelated constraint and database failures
+retain their persistence semantics. The database foreign keys continue to
+enforce Edition→Work and Item→Library/Edition, while absence of a uniqueness
+constraint on Item `(library_id, edition_id)` deliberately permits multiple
+physical copies and cross-Library reuse of one Edition.
+
+`ProductionComposition` owns all concrete construction and supplies the same
+authenticated-user, library-access, transaction and repository instances to
+the relevant services. `CoreApplication` adds exactly one named
+`libraryItemCreation()` accessor and exposes no repository or resolver. The
+existing Item→Edition→Work ReadingRound path is unchanged and immediately
+accepts an Item created through this boundary when the actor has direct use
+access.
+
+This slice does not solve bibliographic entity resolution or shared-record
+governance: callers must select existing central identities or deliberately
+request a new identity with a unique ID. Author/contributors, Series, rich
+metadata, search/entity resolution, taxonomy and all other deferred catalog or
+product lifecycles remain later work.

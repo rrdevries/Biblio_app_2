@@ -516,3 +516,48 @@ baseline: these remain `v2.001`, `2.1.0` and `1000`. Legacy spike versions 1–5
 remain unsupported migration sources under ADR-005, not unfinished Fase-1
 work. No REST/Abilities/UI adapter, new product behavior, new schema migration,
 CI pipeline or Fase-2 implementation is introduced.
+
+## Fase 2
+
+### F2.3 — First catalog vertical slice
+
+Status: **Implemented**
+
+The first production-supported catalog mutation reuses the existing canonical
+Work → Edition → `Catalog\Item` model and schema:
+
+- `AddLibraryItemService` exposes separate operations for an existing Edition,
+  a new Edition under an existing Work, and a new Work plus Edition;
+- the current actor is resolved server-side for every operation and the caller
+  selects only the target Library and catalog identifiers/data;
+- catalog management requires an active Owner or Manager membership and is
+  independent of physical `UseAccess`; Member, inactive and foreign-Library
+  actors are denied before central catalog existence is inspected;
+- the service creates the Item with the authorized Library identity and never
+  creates a Library-local Work or Edition identity;
+- all paths are transaction-managed; Edition+Item and Work+Edition+Item are
+  atomic and leave no partial rows after failure;
+- duplicate Work, Edition or Item primary identifiers map to the stable
+  `catalog_record_already_exists` conflict while retaining MariaDB diagnostics;
+- multiple Items may reference one Edition within a Library and the same
+  platform-wide Edition may be reused by multiple Libraries;
+- Item reads stay explicitly Library-scoped, and a newly created Item remains
+  a valid ReadingRound source whose Work is derived through Edition;
+- `CoreApplication::libraryItemCreation()` is the single new production
+  accessor; repositories and generic service-location remain unpublished.
+
+No schema migration, catalog table, aggregate or version change is part of
+F2.3. Product `v2.001`, plugin/package `2.1.0` and schema baseline `1000` remain
+unchanged. REST/Abilities/UI, Author/contributors, Series, extended metadata,
+search/entity resolution, taxonomy, Collections, Wishlist, Archive, lending,
+ratings/notes and reading goals remain outside this slice.
+
+Last verified F2.3 quality baseline:
+
+- PHPStan level 6 over production `src`: no errors;
+- unit: 132 tests, 298 assertions;
+- integration: 87 tests, 467 assertions;
+- total: 219 tests, 765 assertions;
+- independent-process catalog creation: one winner, one stable conflict;
+- WordPress smoke: plugin active, Core loaded, init hook executed, HTTP 200;
+- Composer, PHP syntax, manifest and Git diff checks: passed.
