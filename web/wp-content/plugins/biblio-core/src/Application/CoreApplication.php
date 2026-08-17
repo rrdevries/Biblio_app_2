@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Biblio\Core\Application;
 
 use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
+use Biblio\Core\Application\Catalog\AddLibraryItemService;
 use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
 use Biblio\Core\Application\Library\GetAccessibleLibraryItemService;
 use Biblio\Core\Application\Reading\GetOwnedReadingRoundService;
@@ -21,12 +22,18 @@ final readonly class CoreApplication
 {
     public function __construct(
         private EnsurePersonalPrivateLibraryService $personalLibraries,
+        private AddLibraryItemService $libraryItemCreation,
         private GetAccessibleLibraryItemService $accessibleLibraryItems,
         private GetOwnedExternalLoanService $ownedExternalLoans,
         private GetOwnedReadingRoundService $ownedReadingRounds,
         private StartReadingFromLibraryItemService $libraryItemReading,
         private StartReadingFromExternalLoanService $externalLoanReading
     ) {
+    }
+
+    public function libraryItemCreation(): AddLibraryItemService
+    {
+        return $this->libraryItemCreation;
     }
 
     public function personalLibraries(): EnsurePersonalPrivateLibraryService
