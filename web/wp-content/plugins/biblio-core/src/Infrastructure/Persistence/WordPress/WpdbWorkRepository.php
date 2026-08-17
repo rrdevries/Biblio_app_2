@@ -6,13 +6,13 @@ namespace Biblio\Core\Infrastructure\Persistence\WordPress;
 
 use Biblio\Core\Catalog\Work;
 use Biblio\Core\Catalog\WorkId;
-use Biblio\Core\Catalog\WorkRepository;
+use Biblio\Core\Catalog\WritableWorkRepository;
 use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Infrastructure\Persistence\PersistenceException;
 use Throwable;
 use wpdb;
 
-final readonly class WpdbWorkRepository implements WorkRepository
+final readonly class WpdbWorkRepository implements WritableWorkRepository
 {
     public function __construct(
         private wpdb $database,

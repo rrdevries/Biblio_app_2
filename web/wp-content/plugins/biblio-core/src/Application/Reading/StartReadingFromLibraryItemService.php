@@ -8,8 +8,7 @@ use Biblio\Core\Application\Library\GetAccessibleLibraryItemService;
 use Biblio\Core\Catalog\EditionRepository;
 use Biblio\Core\Catalog\ItemId;
 use Biblio\Core\Catalog\ItemStatus;
-use Biblio\Core\Identity\UserId;
-use Biblio\Core\Library\LibraryContext;
+use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Reading\ReadingRound;
 use Biblio\Core\Reading\ReadingSource;
 use Biblio\Core\Reading\ReadingSourceUnavailable;
@@ -25,14 +24,12 @@ final readonly class StartReadingFromLibraryItemService
     }
 
     public function start(
-        UserId $authenticatedUserId,
-        LibraryContext $context,
+        LibraryId $libraryId,
         ItemId $itemId,
         DateTimeImmutable $startedAt
     ): ReadingRound {
         $accessibleItem = $this->getAccessibleItem->get(
-            $authenticatedUserId,
-            $context,
+            $libraryId,
             $itemId
         );
 
@@ -52,7 +49,6 @@ final readonly class StartReadingFromLibraryItemService
         }
 
         return $this->createReadingRound->create(
-            $authenticatedUserId,
             $edition->workId(),
             ReadingSource::libraryItem($item->id()),
             $startedAt

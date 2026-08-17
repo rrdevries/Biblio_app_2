@@ -8,8 +8,6 @@ use Biblio\Core\Library\LibraryId;
 
 interface ItemRepository
 {
-    public function add(Item $item): void;
-
     public function findInLibrary(
         ItemId $itemId,
         LibraryId $libraryId

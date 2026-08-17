@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Application\Library;
 
+use Biblio\Core\Application\Identity\AuthenticatedUser;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Library\Library;
 use Biblio\Core\Library\LibraryId;
@@ -13,13 +14,15 @@ use Biblio\Core\Library\PersonalLibraryRepository;
 final readonly class EnsurePersonalPrivateLibraryService
 {
     public function __construct(
+        private AuthenticatedUser $authenticatedUser,
         private PersonalLibraryRepository $personalLibraryRepository,
         private CreateLibraryService $createLibraryService
     ) {
     }
 
-    public function ensure(UserId $userId): LibraryId
+    public function ensure(): LibraryId
     {
+        $userId = $this->authenticatedUser->requireUserId();
         $designatedLibraryId = $this->personalLibraryRepository
             ->findForUser($userId);
 

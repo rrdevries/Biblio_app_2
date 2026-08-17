@@ -8,11 +8,6 @@ use Biblio\Core\Identity\UserId;
 
 interface ReadingRoundRepository
 {
-    public function addForUser(
-        UserId $authenticatedUserId,
-        ReadingRound $readingRound
-    ): void;
-
     public function findForUser(
         ReadingRoundId $readingRoundId,
         UserId $userId

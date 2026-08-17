@@ -7,6 +7,7 @@ namespace Biblio\Core\Exception;
 enum FailureReason: string
 {
     case ValidationFailed = "validation_failed";
+    case AuthenticationRequired = "authentication_required";
     case AuthorizationDenied = "authorization_denied";
     case ReadingSourceUnavailable = "reading_source_unavailable";
     case ReadingRoundAlreadyActiveForSource =

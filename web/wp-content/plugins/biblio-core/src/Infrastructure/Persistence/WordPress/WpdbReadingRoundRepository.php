@@ -14,16 +14,16 @@ use Biblio\Core\Infrastructure\Persistence\PersistenceException;
 use Biblio\Core\Reading\ActiveReadingRoundAlreadyExists;
 use Biblio\Core\Reading\ReadingRound;
 use Biblio\Core\Reading\ReadingRoundId;
-use Biblio\Core\Reading\ReadingRoundRepository;
 use Biblio\Core\Reading\ReadingRoundStatus;
 use Biblio\Core\Reading\ReadingSource;
+use Biblio\Core\Reading\WritableReadingRoundRepository;
 use DateTimeImmutable;
 use DateTimeZone;
 use Throwable;
 use wpdb;
 
 final readonly class WpdbReadingRoundRepository implements
-    ReadingRoundRepository
+    WritableReadingRoundRepository
 {
     private const DATABASE_DATE_FORMAT = "Y-m-d H:i:s.u";
 

@@ -53,9 +53,13 @@ schema-healthcheck uit. Tijdens normale runtime controleert Core vroeg de
 schemaversie en gebruikt het een kortlevende health-cache; alleen een gezonde
 runtime publiceert de getypeerde application-serviceboundary.
 
-F1.3 bevat nog geen REST-, Abilities-, Elementor-, JetEngine- of andere
-productadapter. De WordPress identity resolver en volledig authenticated
-write-boundaries volgen pas in F1.4.
+F1.4 laat de bestaande production application services hun actor uitsluitend
+server-side via WordPress bepalen. Caller-input kan wel een Library als target
+selecteren, maar nooit de actor of een vertrouwde `LibraryContext` leveren.
+User-owned en Library-scoped reads en Reading-startflows gebruiken daardoor
+dezelfde authenticated identity; concrete repositories blijven intern aan de
+composition root. REST, Abilities, Elementor, JetEngine en UI-adapters zijn nog
+niet gebouwd.
 
 ## Repository
 

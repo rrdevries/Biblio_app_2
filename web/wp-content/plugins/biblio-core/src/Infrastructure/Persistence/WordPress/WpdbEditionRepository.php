@@ -6,14 +6,14 @@ namespace Biblio\Core\Infrastructure\Persistence\WordPress;
 
 use Biblio\Core\Catalog\Edition;
 use Biblio\Core\Catalog\EditionId;
-use Biblio\Core\Catalog\EditionRepository;
+use Biblio\Core\Catalog\WritableEditionRepository;
 use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Infrastructure\Persistence\PersistenceException;
 use Throwable;
 use wpdb;
 
-final readonly class WpdbEditionRepository implements EditionRepository
+final readonly class WpdbEditionRepository implements WritableEditionRepository
 {
     public function __construct(
         private wpdb $database,

@@ -11,16 +11,17 @@ use Biblio\Core\Identity\UserId;
 use Biblio\Core\Library\Library;
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Library\LibraryMembershipAssignment;
-use Biblio\Core\Library\LibraryRepository;
 use Biblio\Core\Library\ManagementRole;
 use Biblio\Core\Library\PersonalLibraryDesignationConflict;
 use Biblio\Core\Library\PersonalLibraryRepository;
 use Biblio\Core\Library\UseAccess;
 use Biblio\Core\Library\WritableLibraryMembershipRepository;
+use Biblio\Core\Library\WritableLibraryRepository;
+use Biblio\Core\Tests\Support\ControllableAuthenticatedUser;
 use PHPUnit\Framework\TestCase;
 
 final class PersonalLibraryInMemoryLibraryRepository implements
-    LibraryRepository
+    WritableLibraryRepository
 {
     private array $libraries = [];
 
@@ -114,11 +115,11 @@ final class EnsurePersonalPrivateLibraryServiceTest extends TestCase
     public function testProvisioningIsIdempotentWithoutUiDependencies(): void
     {
         $repositories = $this->repositories();
-        $service = $this->service(...$repositories);
         $userId = new UserId("user-x");
+        $service = $this->service($userId, ...$repositories);
 
-        $first = $service->ensure($userId);
-        $second = $service->ensure($userId);
+        $first = $service->ensure();
+        $second = $service->ensure();
         $membership = $repositories[1]->findFor($first, $userId);
 
         self::assertTrue($first->equals($second));
@@ -150,11 +151,12 @@ final class EnsurePersonalPrivateLibraryServiceTest extends TestCase
             $userId
         );
         $service = new EnsurePersonalPrivateLibraryService(
+            new ControllableAuthenticatedUser($userId),
             $repositories[2],
             $createLibraryService
         );
 
-        $personalLibraryId = $service->ensure($userId);
+        $personalLibraryId = $service->ensure();
 
         self::assertFalse($personalLibraryId->equals($otherLibraryId));
         self::assertSame(2, $repositories[0]->count());
@@ -172,11 +174,13 @@ final class EnsurePersonalPrivateLibraryServiceTest extends TestCase
     }
 
     private function service(
+        UserId $userId,
         PersonalLibraryInMemoryLibraryRepository $libraryRepository,
         PersonalLibraryInMemoryMembershipRepository $membershipRepository,
         PersonalLibraryInMemoryDesignationRepository $designationRepository
     ): EnsurePersonalPrivateLibraryService {
         return new EnsurePersonalPrivateLibraryService(
+            new ControllableAuthenticatedUser($userId),
             $designationRepository,
             $this->createLibraryService(
                 $libraryRepository,
@@ -186,7 +190,7 @@ final class EnsurePersonalPrivateLibraryServiceTest extends TestCase
     }
 
     private function createLibraryService(
-        LibraryRepository $libraryRepository,
+        WritableLibraryRepository $libraryRepository,
         WritableLibraryMembershipRepository $membershipRepository
     ): CreateLibraryService {
         return new CreateLibraryService(

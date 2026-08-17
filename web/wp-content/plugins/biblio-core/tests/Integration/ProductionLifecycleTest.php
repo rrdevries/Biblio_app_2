@@ -404,6 +404,13 @@ final class ProductionLifecycleTest extends PersistenceIntegrationTestCase
                 "getOwnedExternalLoan"
             )
         );
+        self::assertFalse(method_exists(
+            $this->privateProperty(
+                $application->ownedExternalLoans(),
+                "externalLoanRepository"
+            ),
+            "add"
+        ));
         self::assertSame(
             $this->privateProperty(
                 $application->ownedReadingRounds(),
@@ -415,6 +422,41 @@ final class ProductionLifecycleTest extends PersistenceIntegrationTestCase
                     "createReadingRound"
                 ),
                 "readingRoundRepository"
+            )
+        );
+        $authenticatedUser = $this->privateProperty(
+            $application->personalLibraries(),
+            "authenticatedUser"
+        );
+        self::assertSame(
+            $authenticatedUser,
+            $this->privateProperty(
+                $application->accessibleLibraryItems(),
+                "authenticatedUser"
+            )
+        );
+        self::assertSame(
+            $authenticatedUser,
+            $this->privateProperty(
+                $application->ownedExternalLoans(),
+                "authenticatedUser"
+            )
+        );
+        self::assertSame(
+            $authenticatedUser,
+            $this->privateProperty(
+                $application->ownedReadingRounds(),
+                "authenticatedUser"
+            )
+        );
+        self::assertSame(
+            $authenticatedUser,
+            $this->privateProperty(
+                $this->privateProperty(
+                    $application->libraryItemReading(),
+                    "createReadingRound"
+                ),
+                "authenticatedUser"
             )
         );
 

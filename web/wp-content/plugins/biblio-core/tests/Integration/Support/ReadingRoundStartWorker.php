@@ -14,13 +14,13 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbEditionRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbItemRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMembershipRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbReadingRoundRepository;
-use Biblio\Core\Library\LibraryContext;
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Reading\ActiveReadingRoundAlreadyExists;
 use Biblio\Core\Reading\ReadingRound;
 use Biblio\Core\Reading\ReadingRoundId;
-use Biblio\Core\Reading\ReadingRoundRepository;
 use Biblio\Core\Reading\ReadingSource;
+use Biblio\Core\Reading\WritableReadingRoundRepository;
+use Biblio\Core\Tests\Support\ControllableAuthenticatedUser;
 
 if ($argc !== 6) {
     fwrite(
@@ -40,9 +40,9 @@ $barrierRepository = new class(
     $repository,
     $readyPath,
     $releasePath
-) implements ReadingRoundRepository {
+) implements WritableReadingRoundRepository {
     public function __construct(
-        private ReadingRoundRepository $repository,
+        private WritableReadingRoundRepository $repository,
         private string $readyPath,
         private string $releasePath
     ) {
@@ -88,6 +88,7 @@ $barrierRepository = new class(
 };
 $service = new StartReadingFromLibraryItemService(
     new GetAccessibleLibraryItemService(
+        new ControllableAuthenticatedUser(new UserId($userValue)),
         new WpdbItemRepository($wpdb, $tableNames),
         new LibraryAccessService(
             new WpdbLibraryMembershipRepository($wpdb, $tableNames),
@@ -95,14 +96,14 @@ $service = new StartReadingFromLibraryItemService(
         )
     ),
     new WpdbEditionRepository($wpdb, $tableNames),
-    new CreateActiveReadingRoundService($barrierRepository)
+    new CreateActiveReadingRoundService(
+        new ControllableAuthenticatedUser(new UserId($userValue)),
+        $barrierRepository
+    )
 );
-$userId = new UserId($userValue);
-
 try {
     $round = $service->start(
-        $userId,
-        new LibraryContext(new LibraryId($libraryValue), $userId),
+        new LibraryId($libraryValue),
         new ItemId($itemValue),
         new DateTimeImmutable("2026-08-16T10:00:00.000000+00:00")
     );

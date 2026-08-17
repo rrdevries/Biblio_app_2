@@ -12,7 +12,6 @@ use Biblio\Core\Catalog\Item;
 use Biblio\Core\Catalog\ItemId;
 use Biblio\Core\Catalog\ItemRepository;
 use Biblio\Core\Identity\UserId;
-use Biblio\Core\Library\LibraryContext;
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Library\LibraryMembership;
 use Biblio\Core\Library\LibraryMembershipAssignment;
@@ -20,6 +19,7 @@ use Biblio\Core\Library\LibraryMembershipRepository;
 use Biblio\Core\Library\ManagementRole;
 use Biblio\Core\Library\MembershipStatus;
 use Biblio\Core\Library\UseAccess;
+use Biblio\Core\Tests\Support\ControllableAuthenticatedUser;
 use PHPUnit\Framework\TestCase;
 
 final class ItemAccessInMemoryItemRepository implements ItemRepository
@@ -75,7 +75,7 @@ final class GetAccessibleLibraryItemServiceTest extends TestCase
 {
     public function testVisibleItemAndDirectUseRemainSeparate(): void
     {
-        [$service, $items, $memberships] = $this->fixture();
+        [$service, $actor, $items, $memberships] = $this->fixture();
         $libraryId = new LibraryId("library-a");
         $item = Item::active(
             new ItemId("item-a"),
@@ -98,16 +98,10 @@ final class GetAccessibleLibraryItemServiceTest extends TestCase
             UseAccess::Direct
         ));
 
-        $borrowAccess = $service->get(
-            $borrowUser,
-            new LibraryContext($libraryId, $borrowUser),
-            $item->id()
-        );
-        $directAccess = $service->get(
-            $directUser,
-            new LibraryContext($libraryId, $directUser),
-            $item->id()
-        );
+        $actor->authenticateAs($borrowUser);
+        $borrowAccess = $service->get($libraryId, $item->id());
+        $actor->authenticateAs($directUser);
+        $directAccess = $service->get($libraryId, $item->id());
 
         self::assertNotNull($borrowAccess);
         self::assertFalse($borrowAccess->canUseAsDirectSource());
@@ -117,7 +111,7 @@ final class GetAccessibleLibraryItemServiceTest extends TestCase
 
     public function testItemCannotCrossLibraryContext(): void
     {
-        [$service, $items, $memberships] = $this->fixture();
+        [$service, $actor, $items, $memberships] = $this->fixture();
         $libraryA = new LibraryId("library-a");
         $libraryB = new LibraryId("library-b");
         $user = new UserId("user-x");
@@ -134,16 +128,14 @@ final class GetAccessibleLibraryItemServiceTest extends TestCase
             UseAccess::Direct
         ));
 
-        self::assertNull($service->get(
-            $user,
-            new LibraryContext($libraryB, $user),
-            $item->id()
-        ));
+        $actor->authenticateAs($user);
+
+        self::assertNull($service->get($libraryB, $item->id()));
     }
 
-    public function testAuthenticatedUserMustMatchContextUser(): void
+    public function testActorCannotUseAnotherUsersMembership(): void
     {
-        [$service, $items, $memberships] = $this->fixture();
+        [$service, $actor, $items, $memberships] = $this->fixture();
         $libraryId = new LibraryId("library-a");
         $contextUser = new UserId("context-user");
         $item = Item::active(
@@ -159,11 +151,9 @@ final class GetAccessibleLibraryItemServiceTest extends TestCase
             UseAccess::Direct
         ));
 
-        self::assertNull($service->get(
-            new UserId("authenticated-user"),
-            new LibraryContext($libraryId, $contextUser),
-            $item->id()
-        ));
+        $actor->authenticateAs(new UserId("authenticated-user"));
+
+        self::assertNull($service->get($libraryId, $item->id()));
     }
 
     public function testForeignItemReturnedByRepositoryIsRejected(): void
@@ -199,6 +189,7 @@ final class GetAccessibleLibraryItemServiceTest extends TestCase
             }
         };
         $service = new GetAccessibleLibraryItemService(
+            new ControllableAuthenticatedUser($user),
             $unscopedRepository,
             new LibraryAccessService(
                 $memberships,
@@ -206,26 +197,25 @@ final class GetAccessibleLibraryItemServiceTest extends TestCase
             )
         );
 
-        self::assertNull($service->get(
-            $user,
-            new LibraryContext($contextLibrary, $user),
-            $foreignItem->id()
-        ));
+        self::assertNull($service->get($contextLibrary, $foreignItem->id()));
     }
 
     private function fixture(): array
     {
         $items = new ItemAccessInMemoryItemRepository();
         $memberships = new ItemAccessInMemoryMembershipRepository();
+        $actor = new ControllableAuthenticatedUser();
 
         return [
             new GetAccessibleLibraryItemService(
+                $actor,
                 $items,
                 new LibraryAccessService(
                     $memberships,
                     new LibraryAuthorizationPolicy()
                 )
             ),
+            $actor,
             $items,
             $memberships,
         ];

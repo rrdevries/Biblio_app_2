@@ -9,13 +9,13 @@ use Biblio\Core\Identity\UserId;
 use Biblio\Core\Library\Library;
 use Biblio\Core\Library\LibraryMembership;
 use Biblio\Core\Library\LibraryMembershipAssignment;
-use Biblio\Core\Library\LibraryRepository;
 use Biblio\Core\Library\WritableLibraryMembershipRepository;
+use Biblio\Core\Library\WritableLibraryRepository;
 
 final readonly class CreateLibraryService
 {
     public function __construct(
-        private LibraryRepository $libraryRepository,
+        private WritableLibraryRepository $libraryRepository,
         private WritableLibraryMembershipRepository $membershipRepository,
         private TransactionManager $transactionManager
     ) {
