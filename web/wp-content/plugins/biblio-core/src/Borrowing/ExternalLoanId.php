@@ -4,17 +4,13 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Borrowing;
 
-use Biblio\Core\Exception\ValidationException;
+use Biblio\Core\Identity\IdentifierConstraints;
 
 final readonly class ExternalLoanId
 {
     public function __construct(private string $value)
     {
-        if (trim($this->value) === "") {
-            throw new ValidationException(
-                "External Loan ID must not be empty."
-            );
-        }
+        IdentifierConstraints::assertValid($this->value, "External Loan ID");
     }
 
     public function value(): string

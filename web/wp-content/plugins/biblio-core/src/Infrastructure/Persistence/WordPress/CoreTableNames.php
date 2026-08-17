@@ -8,6 +8,8 @@ use Biblio\Core\Exception\ValidationException;
 
 final readonly class CoreTableNames
 {
+    private const MAX_TABLE_NAME_LENGTH = 64;
+
     private string $libraries;
     private string $memberships;
     private string $personalLibraryDesignations;
@@ -91,7 +93,10 @@ final readonly class CoreTableNames
 
     private function assertSafe(string $tableName): void
     {
-        if (preg_match('/^[a-zA-Z0-9_]+$/', $tableName) !== 1) {
+        if (
+            preg_match('/^[a-zA-Z0-9_]+$/', $tableName) !== 1
+            || strlen($tableName) > self::MAX_TABLE_NAME_LENGTH
+        ) {
             throw new ValidationException("Unsafe database table name.");
         }
     }

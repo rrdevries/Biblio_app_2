@@ -6,6 +6,7 @@ namespace Biblio\Core\Reading;
 
 use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Identity\UserId;
+use Biblio\Core\Temporal\PersistedDateTimeConstraints;
 use DateTimeImmutable;
 
 final readonly class ReadingRound
@@ -18,6 +19,10 @@ final readonly class ReadingRound
         private ReadingRoundStatus $status,
         private DateTimeImmutable $startedAt
     ) {
+        PersistedDateTimeConstraints::assertSupported(
+            $this->startedAt,
+            "Reading Round start date"
+        );
     }
 
     public static function active(

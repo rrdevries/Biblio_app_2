@@ -15,7 +15,6 @@ use Biblio\Core\Authorization\LibraryAuthorizationPolicy;
 use Biblio\Core\Borrowing\ExternalLoan;
 use Biblio\Core\Borrowing\ExternalLoanId;
 use Biblio\Core\Borrowing\ExternalLoanRepository;
-use Biblio\Core\Borrowing\ExternalLoanStatus;
 use Biblio\Core\Catalog\Edition;
 use Biblio\Core\Catalog\EditionId;
 use Biblio\Core\Catalog\EditionRepository;
@@ -295,7 +294,7 @@ final class StartReadingServicesTest extends TestCase
     {
         $user = new UserId("user-x");
         [$service, $rounds, $loans] = $this->externalLoanFixture($user);
-        $loan = $this->loan($user, ExternalLoanStatus::Active);
+        $loan = $this->loan($user);
         $loans->add($loan);
 
         $round = $service->start(
@@ -311,13 +310,13 @@ final class StartReadingServicesTest extends TestCase
         self::assertCount(1, $rounds->rounds);
     }
 
-    public function testExternalLoanFlowRejectsForeignAndInactiveLoan(): void
+    public function testExternalLoanFlowRejectsForeignAndUnknownLoan(): void
     {
         $owner = new UserId("user-x");
         [$service, $rounds, $loans, $actor] =
             $this->externalLoanFixture($owner);
         $foreignUser = new UserId("user-y");
-        $active = $this->loan($owner, ExternalLoanStatus::Active);
+        $active = $this->loan($owner);
         $loans->add($active);
 
         $actor->authenticateAs($foreignUser);
@@ -332,23 +331,14 @@ final class StartReadingServicesTest extends TestCase
             self::assertCount(0, $rounds->rounds);
         }
 
-        $inactive = new ExternalLoan(
-            new ExternalLoanId("loan-inactive"),
-            $owner,
-            new WorkId("work-from-loan"),
-            ExternalLoanStatus::Inactive,
-            new DateTimeImmutable(self::STARTED_AT),
-            null
-        );
-        $loans->add($inactive);
         $actor->authenticateAs($owner);
 
         try {
             $service->start(
-                $inactive->id(),
+                new ExternalLoanId("unknown-loan"),
                 new DateTimeImmutable(self::STARTED_AT)
             );
-            self::fail("Inactive loan was accepted.");
+            self::fail("Unknown loan was accepted.");
         } catch (ReadingSourceUnavailable) {
             self::assertCount(0, $rounds->rounds);
         }
@@ -365,7 +355,7 @@ final class StartReadingServicesTest extends TestCase
 
         try {
             $service->createFromExternalLoan(
-                $this->loan($owner, ExternalLoanStatus::Active),
+                $this->loan($owner),
                 new DateTimeImmutable(self::STARTED_AT)
             );
             self::fail("Foreign External Loan was accepted by creator.");
@@ -471,17 +461,13 @@ final class StartReadingServicesTest extends TestCase
         );
     }
 
-    private function loan(
-        UserId $userId,
-        ExternalLoanStatus $status
-    ): ExternalLoan {
-        return new ExternalLoan(
+    private function loan(UserId $userId): ExternalLoan
+    {
+        return ExternalLoan::active(
             new ExternalLoanId("loan-l"),
             $userId,
             new WorkId("work-from-loan"),
-            $status,
-            new DateTimeImmutable(self::STARTED_AT),
-            null
+            new DateTimeImmutable(self::STARTED_AT)
         );
     }
 }

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Biblio\Core\Tests\Integration;
 
 use Biblio\Core\Identity\UserId;
+use Biblio\Core\Exception\FailureReason;
+use Biblio\Core\Infrastructure\Persistence\PersistenceException;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMembershipRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryRepository;
 use Biblio\Core\Library\AdditionalPermissions;
@@ -92,6 +94,98 @@ final class LibraryMembershipPersistenceTest extends
         self::assertNull($repository->findFor($libraryB, $userX));
         self::assertNull($repository->findFor($libraryA, $userY));
         self::assertNull($repository->findFor($libraryB, $userY));
+    }
+
+    public function testCorruptPersistedPermissionsFailAsControlledRead(): void
+    {
+        $libraryId = new LibraryId("library-a");
+        $userId = new UserId("manager");
+        $this->libraryRepository()->add(Library::privateLibrary($libraryId));
+        $repository = $this->membershipRepository();
+        $repository->add(new LibraryMembershipAssignment(
+            $libraryId,
+            $userId,
+            new LibraryMembership(
+                ManagementRole::Manager,
+                UseAccess::Direct,
+                MembershipStatus::Active,
+                AdditionalPermissions::fromValues("lending")
+            )
+        ));
+
+        foreach ([
+            '{}',
+            '[""]',
+            '["lending","lending"]',
+            '[1]',
+        ] as $corruptPayload) {
+            self::assertSame(1, $this->database->update(
+                $this->tableNames->memberships(),
+                ["additional_permissions" => $corruptPayload],
+                [
+                    "library_id" => $libraryId->value(),
+                    "user_id" => $userId->value(),
+                ],
+                ["%s"],
+                ["%s", "%s"]
+            ));
+
+            try {
+                $repository->findFor($libraryId, $userId);
+                self::fail("Corrupt permissions were hydrated.");
+            } catch (PersistenceException $exception) {
+                self::assertSame(
+                    FailureReason::PersistenceReadFailed,
+                    $exception->reason()
+                );
+            }
+        }
+    }
+
+    public function testInvalidJsonPermissionsFailAsControlledRead(): void
+    {
+        $libraryId = new LibraryId("library-a");
+        $userId = new UserId("manager");
+        $this->libraryRepository()->add(Library::privateLibrary($libraryId));
+        $repository = $this->membershipRepository();
+        $repository->add(new LibraryMembershipAssignment(
+            $libraryId,
+            $userId,
+            new LibraryMembership(
+                ManagementRole::Manager,
+                UseAccess::Direct,
+                MembershipStatus::Active
+            )
+        ));
+
+        $this->database->query("SET SESSION check_constraint_checks = OFF");
+
+        try {
+            self::assertSame(1, $this->database->update(
+                $this->tableNames->memberships(),
+                ["additional_permissions" => "{"],
+                [
+                    "library_id" => $libraryId->value(),
+                    "user_id" => $userId->value(),
+                ],
+                ["%s"],
+                ["%s", "%s"]
+            ));
+        } finally {
+            $this->database->query(
+                "SET SESSION check_constraint_checks = ON"
+            );
+        }
+
+        try {
+            $repository->findFor($libraryId, $userId);
+            self::fail("Invalid JSON permissions were hydrated.");
+        } catch (PersistenceException $exception) {
+            self::assertSame(
+                FailureReason::PersistenceReadFailed,
+                $exception->reason()
+            );
+        }
     }
 
     private function assertRoundTrip(

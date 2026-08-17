@@ -69,6 +69,14 @@ ReadingSource. De database behoudt de ADR-004-baseline met XOR, foreign keys en
 uniekheid per gebruiker + concrete bron; de repository controleert aanvullend
 dat de bron werkelijk bij het afgeleide Work hoort.
 
+F1.6 laat publiek geldige domainstate aansluiten op de huidige persistence:
+persistente Core-ID's zijn niet leeg, geldige UTF-8 en maximaal 191 tekens;
+ExternalLoan, Item, Library en ReadingRound zijn in de huidige technische scope
+active-only; en aanvullende membershippermissions zijn een geordende lijst van
+unieke, niet-lege UTF-8-identifiers die zonder normalisatie roundtrippen.
+Productversie `v2.001`, plugin/packageversie `2.1.0` en schemabaseline `1000`
+blijven onafhankelijke versiedimensies.
+
 ## Repository
 
 WordPress Core, lokale secrets, uploads en gelicentieerde pluginpackages worden niet in Git opgeslagen.

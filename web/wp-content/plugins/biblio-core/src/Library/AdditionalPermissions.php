@@ -14,6 +14,12 @@ final readonly class AdditionalPermissions
         $seen = [];
 
         foreach ($this->values as $value) {
+            if (preg_match('//u', $value) !== 1) {
+                throw new ValidationException(
+                    "Additional permission must be valid UTF-8."
+                );
+            }
+
             if (trim($value) === "") {
                 throw new ValidationException(
                     "Additional permission must not be empty."

@@ -6,6 +6,7 @@ namespace Biblio\Core\Borrowing;
 
 use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Identity\UserId;
+use Biblio\Core\Temporal\PersistedDateTimeConstraints;
 use DateTimeImmutable;
 
 final readonly class ExternalLoan
@@ -18,6 +19,17 @@ final readonly class ExternalLoan
         private DateTimeImmutable $borrowedAt,
         private ?DateTimeImmutable $dueAt
     ) {
+        PersistedDateTimeConstraints::assertSupported(
+            $this->borrowedAt,
+            "External Loan borrowed date"
+        );
+
+        if ($this->dueAt !== null) {
+            PersistedDateTimeConstraints::assertSupported(
+                $this->dueAt,
+                "External Loan due date"
+            );
+        }
     }
 
     public static function active(

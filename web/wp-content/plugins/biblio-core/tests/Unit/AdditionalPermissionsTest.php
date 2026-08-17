@@ -41,4 +41,24 @@ final class AdditionalPermissionsTest extends TestCase
 
         AdditionalPermissions::fromValues("lending", "lending");
     }
+
+    public function testWhitespaceAndOrderArePreservedWithoutNormalization(): void
+    {
+        $permissions = AdditionalPermissions::fromValues(
+            " lending ",
+            "collections"
+        );
+
+        self::assertSame(
+            [" lending ", "collections"],
+            $permissions->values()
+        );
+    }
+
+    public function testInvalidUtf8PermissionIsRejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        AdditionalPermissions::fromValues("invalid-\xFF");
+    }
 }

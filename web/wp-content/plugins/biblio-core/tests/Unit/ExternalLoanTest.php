@@ -48,6 +48,53 @@ final class ExternalLoanTest extends TestCase
         self::assertNull($loan->dueAt());
     }
 
+    public function testExternalLoanModelIsExplicitlyActiveOnly(): void
+    {
+        self::assertSame(
+            [ExternalLoanStatus::Active],
+            ExternalLoanStatus::cases()
+        );
+    }
+
+    public function testPersistableDateBoundariesAreAccepted(): void
+    {
+        $loan = ExternalLoan::active(
+            new ExternalLoanId("loan-x"),
+            new UserId("user-x"),
+            new WorkId("work-w"),
+            $this->utc("1000-01-01 00:00:00.000000"),
+            $this->utc("9999-12-31 23:59:59.999999")
+        );
+
+        self::assertSame(1000, (int) $loan->borrowedAt()->format("Y"));
+        self::assertSame(9999, (int) $loan->dueAt()?->format("Y"));
+    }
+
+    public function testBorrowedDateOutsideUtcPersistenceRangeIsRejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        ExternalLoan::active(
+            new ExternalLoanId("loan-x"),
+            new UserId("user-x"),
+            new WorkId("work-w"),
+            new DateTimeImmutable("1000-01-01T00:00:00+02:00")
+        );
+    }
+
+    public function testDueDateOutsideUtcPersistenceRangeIsRejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        ExternalLoan::active(
+            new ExternalLoanId("loan-x"),
+            new UserId("user-x"),
+            new WorkId("work-w"),
+            $this->utc("2026-08-10 09:30:00.000000"),
+            new DateTimeImmutable("9999-12-31T23:00:00-02:00")
+        );
+    }
+
     public function testExternalLoanIdRejectsEmptyValue(): void
     {
         $this->expectException(InvalidArgumentException::class);
