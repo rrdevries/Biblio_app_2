@@ -8,13 +8,13 @@ use Biblio\Core\Infrastructure\Persistence\PersistenceException;
 use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Library\Library;
 use Biblio\Core\Library\LibraryId;
-use Biblio\Core\Library\LibraryRepository;
+use Biblio\Core\Library\WritableLibraryRepository;
 use Biblio\Core\Library\LibraryStatus;
 use Biblio\Core\Library\LibraryType;
 use Throwable;
 use wpdb;
 
-final readonly class WpdbLibraryRepository implements LibraryRepository
+final readonly class WpdbLibraryRepository implements WritableLibraryRepository
 {
     public function __construct(
         private wpdb $database,

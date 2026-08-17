@@ -12,6 +12,7 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPersonalLibraryReposito
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionManager;
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Library\PersonalLibraryRepository;
+use Biblio\Core\Tests\Support\ControllableAuthenticatedUser;
 
 if ($argc !== 4) {
     fwrite(STDERR, "Expected user, ready path and release path.\n");
@@ -69,12 +70,13 @@ $createLibraryService = new CreateLibraryService(
     new WpdbTransactionManager($wpdb)
 );
 $service = new EnsurePersonalPrivateLibraryService(
+    new ControllableAuthenticatedUser(new UserId($userValue)),
     $barrierRepository,
     $createLibraryService
 );
 
 try {
-    fwrite(STDOUT, $service->ensure(new UserId($userValue))->value());
+    fwrite(STDOUT, $service->ensure()->value());
     exit(0);
 } catch (Throwable $exception) {
     fwrite(STDERR, $exception::class . ": " . $exception->getMessage());

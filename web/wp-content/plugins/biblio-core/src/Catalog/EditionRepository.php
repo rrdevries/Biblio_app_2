@@ -6,7 +6,5 @@ namespace Biblio\Core\Catalog;
 
 interface EditionRepository
 {
-    public function add(Edition $edition): void;
-
     public function find(EditionId $editionId): ?Edition;
 }

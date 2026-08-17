@@ -7,7 +7,7 @@ namespace Biblio\Core\Infrastructure\Persistence\WordPress;
 use Biblio\Core\Catalog\EditionId;
 use Biblio\Core\Catalog\Item;
 use Biblio\Core\Catalog\ItemId;
-use Biblio\Core\Catalog\ItemRepository;
+use Biblio\Core\Catalog\WritableItemRepository;
 use Biblio\Core\Catalog\ItemStatus;
 use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Infrastructure\Persistence\PersistenceException;
@@ -15,7 +15,7 @@ use Biblio\Core\Library\LibraryId;
 use Throwable;
 use wpdb;
 
-final readonly class WpdbItemRepository implements ItemRepository
+final readonly class WpdbItemRepository implements WritableItemRepository
 {
     public function __construct(
         private wpdb $database,

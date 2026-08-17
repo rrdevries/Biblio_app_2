@@ -10,6 +10,7 @@ use Biblio\Core\Borrowing\ExternalLoanId;
 use Biblio\Core\Borrowing\ExternalLoanRepository;
 use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Identity\UserId;
+use Biblio\Core\Tests\Support\ControllableAuthenticatedUser;
 use DateTimeImmutable;
 use DateTimeZone;
 use PHPUnit\Framework\TestCase;
@@ -44,15 +45,12 @@ final class GetOwnedExternalLoanServiceTest extends TestCase
         $repository = new InMemoryExternalLoanRepository();
         $loan = $this->loan(new UserId("user-x"));
         $repository->add($loan);
-        $service = new GetOwnedExternalLoanService($repository);
+        $actor = new ControllableAuthenticatedUser(new UserId("user-x"));
+        $service = new GetOwnedExternalLoanService($actor, $repository);
 
-        self::assertSame(
-            $loan,
-            $service->get(new UserId("user-x"), $loan->id())
-        );
-        self::assertNull(
-            $service->get(new UserId("user-y"), $loan->id())
-        );
+        self::assertSame($loan, $service->get($loan->id()));
+        $actor->authenticateAs(new UserId("user-y"));
+        self::assertNull($service->get($loan->id()));
     }
 
     public function testForeignLoanFromFaultyAdapterIsRejected(): void
@@ -63,10 +61,6 @@ final class GetOwnedExternalLoanServiceTest extends TestCase
             {
             }
 
-            public function add(ExternalLoan $externalLoan): void
-            {
-            }
-
             public function findForUser(
                 ExternalLoanId $externalLoanId,
                 UserId $userId
@@ -74,11 +68,12 @@ final class GetOwnedExternalLoanServiceTest extends TestCase
                 return $this->loan;
             }
         };
-        $service = new GetOwnedExternalLoanService($faultyRepository);
-
-        self::assertNull(
-            $service->get(new UserId("user-y"), $loan->id())
+        $service = new GetOwnedExternalLoanService(
+            new ControllableAuthenticatedUser(new UserId("user-y")),
+            $faultyRepository
         );
+
+        self::assertNull($service->get($loan->id()));
     }
 
     private function loan(UserId $userId): ExternalLoan

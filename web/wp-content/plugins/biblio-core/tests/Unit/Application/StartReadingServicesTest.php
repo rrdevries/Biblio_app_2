@@ -37,6 +37,8 @@ use Biblio\Core\Reading\ReadingRoundId;
 use Biblio\Core\Reading\ReadingRoundRepository;
 use Biblio\Core\Reading\ReadingSource;
 use Biblio\Core\Reading\ReadingSourceUnavailable;
+use Biblio\Core\Reading\WritableReadingRoundRepository;
+use Biblio\Core\Tests\Support\ControllableAuthenticatedUser;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 
@@ -122,7 +124,8 @@ final class ReadingInMemoryExternalLoanRepository implements
     }
 }
 
-final class ReadingInMemoryRoundRepository implements ReadingRoundRepository
+final class ReadingInMemoryRoundRepository implements
+    WritableReadingRoundRepository
 {
     public array $rounds = [];
 
@@ -169,9 +172,9 @@ final class StartReadingServicesTest extends TestCase
 
     public function testLibraryItemFlowDerivesWorkFromAuthorizedSource(): void
     {
-        [$service, $rounds, $items, $editions, $memberships] =
-            $this->libraryFixture();
         $user = new UserId("user-x");
+        [$service, $rounds, $items, $editions, $memberships] =
+            $this->libraryFixture($user);
         $library = new LibraryId("library-a");
         $edition = new Edition(
             new EditionId("edition-e"),
@@ -187,8 +190,7 @@ final class StartReadingServicesTest extends TestCase
         ));
 
         $round = $service->start(
-            $user,
-            new LibraryContext($library, $user),
+            $library,
             $item->id(),
             new DateTimeImmutable(self::STARTED_AT)
         );
@@ -200,9 +202,9 @@ final class StartReadingServicesTest extends TestCase
 
     public function testLibraryItemFlowRejectsNonDirectAndWrongContext(): void
     {
-        [$service, $rounds, $items, $editions, $memberships] =
-            $this->libraryFixture();
         $user = new UserId("user-x");
+        [$service, $rounds, $items, $editions, $memberships] =
+            $this->libraryFixture($user);
         $libraryA = new LibraryId("library-a");
         $libraryB = new LibraryId("library-b");
         $edition = new Edition(new EditionId("edition-e"), new WorkId("work-w"));
@@ -218,8 +220,7 @@ final class StartReadingServicesTest extends TestCase
         foreach ([$libraryA, $libraryB] as $contextLibrary) {
             try {
                 $service->start(
-                    $user,
-                    new LibraryContext($contextLibrary, $user),
+                    $contextLibrary,
                     $item->id(),
                     new DateTimeImmutable(self::STARTED_AT)
                 );
@@ -232,8 +233,9 @@ final class StartReadingServicesTest extends TestCase
 
     public function testMissingEditionLeavesNoRound(): void
     {
-        [$service, $rounds, $items, , $memberships] = $this->libraryFixture();
         $user = new UserId("user-x");
+        [$service, $rounds, $items, , $memberships] =
+            $this->libraryFixture($user);
         $library = new LibraryId("library-a");
         $item = Item::active(
             new ItemId("item-a"),
@@ -249,8 +251,7 @@ final class StartReadingServicesTest extends TestCase
 
         try {
             $service->start(
-                $user,
-                new LibraryContext($library, $user),
+                $library,
                 $item->id(),
                 new DateTimeImmutable(self::STARTED_AT)
             );
@@ -262,13 +263,12 @@ final class StartReadingServicesTest extends TestCase
 
     public function testExternalLoanFlowDerivesWorkWithoutLibraryContext(): void
     {
-        [$service, $rounds, $loans] = $this->externalLoanFixture();
         $user = new UserId("user-x");
+        [$service, $rounds, $loans] = $this->externalLoanFixture($user);
         $loan = $this->loan($user, ExternalLoanStatus::Active);
         $loans->add($loan);
 
         $round = $service->start(
-            $user,
             $loan->id(),
             new DateTimeImmutable(self::STARTED_AT)
         );
@@ -283,15 +283,17 @@ final class StartReadingServicesTest extends TestCase
 
     public function testExternalLoanFlowRejectsForeignAndInactiveLoan(): void
     {
-        [$service, $rounds, $loans] = $this->externalLoanFixture();
         $owner = new UserId("user-x");
+        [$service, $rounds, $loans, $actor] =
+            $this->externalLoanFixture($owner);
         $foreignUser = new UserId("user-y");
         $active = $this->loan($owner, ExternalLoanStatus::Active);
         $loans->add($active);
 
+        $actor->authenticateAs($foreignUser);
+
         try {
             $service->start(
-                $foreignUser,
                 $active->id(),
                 new DateTimeImmutable(self::STARTED_AT)
             );
@@ -309,10 +311,10 @@ final class StartReadingServicesTest extends TestCase
             null
         );
         $loans->add($inactive);
+        $actor->authenticateAs($owner);
 
         try {
             $service->start(
-                $owner,
                 $inactive->id(),
                 new DateTimeImmutable(self::STARTED_AT)
             );
@@ -336,12 +338,6 @@ final class StartReadingServicesTest extends TestCase
             {
             }
 
-            public function addForUser(
-                UserId $authenticatedUserId,
-                ReadingRound $readingRound
-            ): void {
-            }
-
             public function findForUser(
                 ReadingRoundId $readingRoundId,
                 UserId $userId
@@ -358,17 +354,20 @@ final class StartReadingServicesTest extends TestCase
         };
 
         self::assertNull((new GetOwnedReadingRoundService(
+            new ControllableAuthenticatedUser(new UserId("user-y")),
             $faultyRepository
-        ))->get(new UserId("user-y"), $round->id()));
+        ))->get($round->id()));
     }
 
-    private function libraryFixture(): array
+    private function libraryFixture(UserId $userId): array
     {
         $items = new ReadingInMemoryItemRepository();
         $editions = new ReadingInMemoryEditionRepository();
         $memberships = new ReadingInMemoryMembershipRepository();
         $rounds = new ReadingInMemoryRoundRepository();
+        $actor = new ControllableAuthenticatedUser($userId);
         $access = new GetAccessibleLibraryItemService(
+            $actor,
             $items,
             new LibraryAccessService(
                 $memberships,
@@ -380,7 +379,7 @@ final class StartReadingServicesTest extends TestCase
             new StartReadingFromLibraryItemService(
                 $access,
                 $editions,
-                new CreateActiveReadingRoundService($rounds)
+                new CreateActiveReadingRoundService($actor, $rounds)
             ),
             $rounds,
             $items,
@@ -389,18 +388,20 @@ final class StartReadingServicesTest extends TestCase
         ];
     }
 
-    private function externalLoanFixture(): array
+    private function externalLoanFixture(UserId $userId): array
     {
         $loans = new ReadingInMemoryExternalLoanRepository();
         $rounds = new ReadingInMemoryRoundRepository();
+        $actor = new ControllableAuthenticatedUser($userId);
 
         return [
             new StartReadingFromExternalLoanService(
-                new GetOwnedExternalLoanService($loans),
-                new CreateActiveReadingRoundService($rounds)
+                new GetOwnedExternalLoanService($actor, $loans),
+                new CreateActiveReadingRoundService($actor, $rounds)
             ),
             $rounds,
             $loans,
+            $actor,
         ];
     }
 

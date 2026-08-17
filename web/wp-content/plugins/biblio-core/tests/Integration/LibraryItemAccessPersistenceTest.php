@@ -23,13 +23,13 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionManager;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbWorkRepository;
 use Biblio\Core\Library\Library;
-use Biblio\Core\Library\LibraryContext;
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Library\LibraryMembership;
 use Biblio\Core\Library\LibraryMembershipAssignment;
 use Biblio\Core\Library\ManagementRole;
 use Biblio\Core\Library\MembershipStatus;
 use Biblio\Core\Library\UseAccess;
+use Biblio\Core\Tests\Support\ControllableAuthenticatedUser;
 
 final class LibraryItemAccessPersistenceTest extends
     PersistenceIntegrationTestCase
@@ -52,38 +52,18 @@ final class LibraryItemAccessPersistenceTest extends
             $libraryA,
             $libraryB
         );
-        $service = $this->accessService();
+        $serviceX = $this->accessService($userX);
+        $serviceY = $this->accessService($userY);
 
-        $allowed = $service->get(
-            $userX,
-            new LibraryContext($libraryA, $userX),
-            $itemA->id()
-        );
+        $allowed = $serviceX->get($libraryA, $itemA->id());
 
         self::assertNotNull($allowed);
         self::assertTrue($allowed->canUseAsDirectSource());
         self::assertTrue($itemA->id()->equals($allowed->item()->id()));
 
-        self::assertNull($service->get(
-            $userX,
-            new LibraryContext($libraryB, $userX),
-            $itemA->id()
-        ));
-        self::assertNull($service->get(
-            $userX,
-            new LibraryContext($libraryA, $userX),
-            $itemB->id()
-        ));
-        self::assertNull($service->get(
-            $userY,
-            new LibraryContext($libraryA, $userY),
-            $itemA->id()
-        ));
-        self::assertNull($service->get(
-            $userY,
-            new LibraryContext($libraryA, $userX),
-            $itemA->id()
-        ));
+        self::assertNull($serviceX->get($libraryB, $itemA->id()));
+        self::assertNull($serviceX->get($libraryA, $itemB->id()));
+        self::assertNull($serviceY->get($libraryA, $itemA->id()));
     }
 
     public function testUseAccessNotManagementRoleControlsDirectUse(): void
@@ -112,34 +92,28 @@ final class LibraryItemAccessPersistenceTest extends
             );
         }
 
-        $service = $this->accessService();
-        $ownerAccess = $this->getAccess($service, $libraryId, $owner, $item);
+        $ownerAccess = $this->getAccess($libraryId, $owner, $item);
         $memberDirect = $this->getAccess(
-            $service,
             $libraryId,
             new UserId("member-direct"),
             $item
         );
         $memberBorrow = $this->getAccess(
-            $service,
             $libraryId,
             new UserId("member-borrow"),
             $item
         );
         $memberView = $this->getAccess(
-            $service,
             $libraryId,
             new UserId("member-view"),
             $item
         );
         $managerDirect = $this->getAccess(
-            $service,
             $libraryId,
             new UserId("manager-direct"),
             $item
         );
         $managerBorrow = $this->getAccess(
-            $service,
             $libraryId,
             new UserId("manager-borrow"),
             $item
@@ -158,7 +132,6 @@ final class LibraryItemAccessPersistenceTest extends
         self::assertNotNull($managerBorrow);
         self::assertFalse($managerBorrow->canUseAsDirectSource());
         self::assertNull($this->getAccess(
-            $service,
             $libraryId,
             new UserId("inactive-direct"),
             $item
@@ -166,16 +139,11 @@ final class LibraryItemAccessPersistenceTest extends
     }
 
     private function getAccess(
-        GetAccessibleLibraryItemService $service,
         LibraryId $libraryId,
         UserId $userId,
         Item $item
     ): ?AccessibleLibraryItem {
-        return $service->get(
-            $userId,
-            new LibraryContext($libraryId, $userId),
-            $item->id()
-        );
+        return $this->accessService($userId)->get($libraryId, $item->id());
     }
 
     private function createSharedCatalogItems(
@@ -237,9 +205,12 @@ final class LibraryItemAccessPersistenceTest extends
         );
     }
 
-    private function accessService(): GetAccessibleLibraryItemService
+    private function accessService(
+        UserId $userId
+    ): GetAccessibleLibraryItemService
     {
         return new GetAccessibleLibraryItemService(
+            new ControllableAuthenticatedUser($userId),
             $this->itemRepository(),
             new LibraryAccessService(
                 $this->membershipRepository(),

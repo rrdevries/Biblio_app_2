@@ -8,8 +8,6 @@ use Biblio\Core\Identity\UserId;
 
 interface ExternalLoanRepository
 {
-    public function add(ExternalLoan $externalLoan): void;
-
     public function findForUser(
         ExternalLoanId $externalLoanId,
         UserId $userId

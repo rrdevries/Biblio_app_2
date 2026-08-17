@@ -27,6 +27,7 @@ use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbEditionRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbExternalLoanRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbExternalLoanWriter;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbItemRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMembershipRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryRepository;
@@ -34,7 +35,6 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbReadingRoundRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionManager;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbWorkRepository;
 use Biblio\Core\Library\Library;
-use Biblio\Core\Library\LibraryContext;
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Library\LibraryMembership;
 use Biblio\Core\Library\LibraryMembershipAssignment;
@@ -46,6 +46,7 @@ use Biblio\Core\Reading\ReadingRound;
 use Biblio\Core\Reading\ReadingRoundId;
 use Biblio\Core\Reading\ReadingSource;
 use Biblio\Core\Reading\ReadingSourceUnavailable;
+use Biblio\Core\Tests\Support\ControllableAuthenticatedUser;
 use DateTimeImmutable;
 use DateTimeZone;
 
@@ -63,11 +64,10 @@ final class ReadingRoundPersistenceTest extends PersistenceIntegrationTestCase
         $this->addMembership($library, $borrow, UseAccess::Borrow);
         $this->addMembership($library, $viewOnly, UseAccess::ViewOnly);
         $item = $this->persistItem($library, "work-w", "edition-e", "item-a");
-        $service = $this->itemService();
+        $service = $this->itemService($direct);
 
         $round = $service->start(
-            $direct,
-            new LibraryContext($library, $direct),
+            $library,
             $item->id(),
             $this->startedAt()
         );
@@ -82,9 +82,8 @@ final class ReadingRoundPersistenceTest extends PersistenceIntegrationTestCase
 
         foreach ([$borrow, $viewOnly] as $user) {
             $this->assertItemStartRejected(
-                $service,
-                $user,
-                new LibraryContext($library, $user),
+                $this->itemService($user),
+                $library,
                 $item->id()
             );
         }
@@ -107,18 +106,14 @@ final class ReadingRoundPersistenceTest extends PersistenceIntegrationTestCase
             "edition-e",
             "item-a"
         );
-        $service = $this->itemService();
-
         $this->assertItemStartRejected(
-            $service,
-            $user,
-            new LibraryContext($libraryB, $user),
+            $this->itemService($user),
+            $libraryB,
             $item->id()
         );
         $this->assertItemStartRejected(
-            $service,
-            $user,
-            new LibraryContext($libraryA, $user),
+            $this->itemService($user),
+            $libraryA,
             new ItemId("unknown-item")
         );
 
@@ -131,8 +126,7 @@ final class ReadingRoundPersistenceTest extends PersistenceIntegrationTestCase
         $work = $this->persistWork("work-w");
         $loan = $this->persistLoan($user, $work->id(), "loan-l");
 
-        $round = $this->loanService()->start(
-            $user,
+        $round = $this->loanService($user)->start(
             $loan->id(),
             $this->startedAt()
         );
@@ -153,15 +147,16 @@ final class ReadingRoundPersistenceTest extends PersistenceIntegrationTestCase
         $work = $this->persistWork("work-w");
         $active = $this->persistLoan($owner, $work->id(), "loan-active");
         $this->createLibrary(new LibraryId("library-a"), $foreign);
-        $service = $this->loanService();
-
         foreach ([$active->id(), new ExternalLoanId("unknown")] as $loanId) {
             $actingUser = $loanId->equals($active->id())
                 ? $foreign
                 : $owner;
 
             try {
-                $service->start($actingUser, $loanId, $this->startedAt());
+                $this->loanService($actingUser)->start(
+                    $loanId,
+                    $this->startedAt()
+                );
                 self::fail("Unavailable External Loan source was accepted.");
             } catch (ReadingSourceUnavailable) {
                 self::assertSame(0, $this->roundCount());
@@ -181,14 +176,12 @@ final class ReadingRoundPersistenceTest extends PersistenceIntegrationTestCase
             "loan-l"
         );
 
-        $itemRound = $this->itemService()->start(
-            $user,
-            new LibraryContext($library, $user),
+        $itemRound = $this->itemService($user)->start(
+            $library,
             $item->id(),
             $this->startedAt()
         );
-        $loanRound = $this->loanService()->start(
-            $user,
+        $loanRound = $this->loanService($user)->start(
             $loan->id(),
             $this->startedAt()
         );
@@ -215,11 +208,10 @@ final class ReadingRoundPersistenceTest extends PersistenceIntegrationTestCase
             $itemA->editionId()
         );
         $this->itemRepository()->add($itemB);
-        $service = $this->itemService();
-        $context = new LibraryContext($library, $user);
+        $service = $this->itemService($user);
 
-        $service->start($user, $context, $itemA->id(), $this->startedAt());
-        $service->start($user, $context, $itemB->id(), $this->startedAt());
+        $service->start($library, $itemA->id(), $this->startedAt());
+        $service->start($library, $itemB->id(), $this->startedAt());
 
         self::assertSame(2, $this->roundCount());
     }
@@ -235,21 +227,18 @@ final class ReadingRoundPersistenceTest extends PersistenceIntegrationTestCase
             new WorkId("work-w"),
             "loan-l"
         );
-        $itemService = $this->itemService();
-        $context = new LibraryContext($library, $user);
-        $loanService = $this->loanService();
-        $itemService->start($user, $context, $item->id(), $this->startedAt());
-        $loanService->start($user, $loan->id(), $this->startedAt());
+        $itemService = $this->itemService($user);
+        $loanService = $this->loanService($user);
+        $itemService->start($library, $item->id(), $this->startedAt());
+        $loanService->start($loan->id(), $this->startedAt());
 
         foreach ([
             fn () => $itemService->start(
-                $user,
-                $context,
+                $library,
                 $item->id(),
                 $this->startedAt()
             ),
             fn () => $loanService->start(
-                $user,
                 $loan->id(),
                 $this->startedAt()
             ),
@@ -282,12 +271,9 @@ final class ReadingRoundPersistenceTest extends PersistenceIntegrationTestCase
         $this->addMembership($library, $userX, UseAccess::Direct);
         $this->addMembership($library, $userY, UseAccess::Direct);
         $item = $this->persistItem($library, "work-w", "edition-e", "item-a");
-        $service = $this->itemService();
-
         foreach ([$userX, $userY] as $user) {
-            $service->start(
-                $user,
-                new LibraryContext($library, $user),
+            $this->itemService($user)->start(
+                $library,
                 $item->id(),
                 $this->startedAt()
             );
@@ -311,17 +297,22 @@ final class ReadingRoundPersistenceTest extends PersistenceIntegrationTestCase
         );
         $this->addMembership($library, $reader, UseAccess::Direct);
         $item = $this->persistItem($library, "work-w", "edition-e", "item-a");
-        $round = $this->itemService()->start(
-            $reader,
-            new LibraryContext($library, $reader),
+        $round = $this->itemService($reader)->start(
+            $library,
             $item->id(),
             $this->startedAt()
         );
-        $service = new GetOwnedReadingRoundService($this->roundRepository());
+        $actor = new ControllableAuthenticatedUser($reader);
+        $service = new GetOwnedReadingRoundService(
+            $actor,
+            $this->roundRepository()
+        );
 
-        self::assertNotNull($service->get($reader, $round->id()));
-        self::assertNull($service->get($owner, $round->id()));
-        self::assertNull($service->get($manager, $round->id()));
+        self::assertNotNull($service->get($round->id()));
+        $actor->authenticateAs($owner);
+        self::assertNull($service->get($round->id()));
+        $actor->authenticateAs($manager);
+        self::assertNull($service->get($round->id()));
         self::assertNull($this->roundRepository()->findForUser(
             $round->id(),
             new UserId("unrelated-user")
@@ -398,9 +389,8 @@ final class ReadingRoundPersistenceTest extends PersistenceIntegrationTestCase
         $user = new UserId("user-x");
         $this->createLibrary($library, $user);
         $item = $this->persistItem($library, "work-w", "edition-e", "item-a");
-        $this->itemService()->start(
-            $user,
-            new LibraryContext($library, $user),
+        $this->itemService($user)->start(
+            $library,
             $item->id(),
             $this->startedAt()
         );
@@ -420,10 +410,13 @@ final class ReadingRoundPersistenceTest extends PersistenceIntegrationTestCase
         self::assertSame(1, $this->roundCount());
     }
 
-    private function itemService(): StartReadingFromLibraryItemService
+    private function itemService(UserId $actor): StartReadingFromLibraryItemService
     {
+        $authenticatedUser = new ControllableAuthenticatedUser($actor);
+
         return new StartReadingFromLibraryItemService(
             new GetAccessibleLibraryItemService(
+                $authenticatedUser,
                 $this->itemRepository(),
                 new LibraryAccessService(
                     $this->membershipRepository(),
@@ -431,20 +424,27 @@ final class ReadingRoundPersistenceTest extends PersistenceIntegrationTestCase
                 )
             ),
             new WpdbEditionRepository($this->database, $this->tableNames),
-            new CreateActiveReadingRoundService($this->roundRepository())
+            new CreateActiveReadingRoundService(
+                $authenticatedUser,
+                $this->roundRepository()
+            )
         );
     }
 
-    private function loanService(): StartReadingFromExternalLoanService
+    private function loanService(UserId $actor): StartReadingFromExternalLoanService
     {
+        $authenticatedUser = new ControllableAuthenticatedUser($actor);
         $loans = new WpdbExternalLoanRepository(
             $this->database,
             $this->tableNames
         );
 
         return new StartReadingFromExternalLoanService(
-            new GetOwnedExternalLoanService($loans),
-            new CreateActiveReadingRoundService($this->roundRepository())
+            new GetOwnedExternalLoanService($authenticatedUser, $loans),
+            new CreateActiveReadingRoundService(
+                $authenticatedUser,
+                $this->roundRepository()
+            )
         );
     }
 
@@ -519,7 +519,7 @@ final class ReadingRoundPersistenceTest extends PersistenceIntegrationTestCase
             $this->startedAt(),
             null
         );
-        (new WpdbExternalLoanRepository(
+        (new WpdbExternalLoanWriter(
             $this->database,
             $this->tableNames
         ))->add($loan);
@@ -550,12 +550,11 @@ final class ReadingRoundPersistenceTest extends PersistenceIntegrationTestCase
 
     private function assertItemStartRejected(
         StartReadingFromLibraryItemService $service,
-        UserId $user,
-        LibraryContext $context,
+        LibraryId $libraryId,
         ItemId $itemId
     ): void {
         try {
-            $service->start($user, $context, $itemId, $this->startedAt());
+            $service->start($libraryId, $itemId, $this->startedAt());
             self::fail("Unavailable Item source was accepted.");
         } catch (ReadingSourceUnavailable) {
             self::assertTrue(true);

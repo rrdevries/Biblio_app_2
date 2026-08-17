@@ -30,6 +30,7 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrator;
 use Biblio\Core\Infrastructure\WordPress\Lifecycle\CoreLifecycleCoordinator;
 use Biblio\Core\Infrastructure\WordPress\Lifecycle\LifecycleStateStore;
 use Biblio\Core\Infrastructure\WordPress\Lifecycle\WpTransientLifecycleStateStore;
+use Biblio\Core\Infrastructure\WordPress\Identity\WordPressAuthenticatedUser;
 use wpdb;
 
 final class ProductionComposition
@@ -44,6 +45,7 @@ final class ProductionComposition
         array $migrations = []
     ) {
         $tableNames = new CoreTableNames($database->prefix);
+        $authenticatedUser = new WordPressAuthenticatedUser();
         $transactionConnection = new WpdbTransactionConnection($database);
         $transactionManager = new WpdbTransactionManager(
             $transactionConnection
@@ -76,6 +78,7 @@ final class ProductionComposition
             $transactionManager
         );
         $personalLibraries = new EnsurePersonalPrivateLibraryService(
+            $authenticatedUser,
             $personalLibraryRepository,
             $createLibrary
         );
@@ -84,16 +87,20 @@ final class ProductionComposition
             new LibraryAuthorizationPolicy()
         );
         $accessibleItems = new GetAccessibleLibraryItemService(
+            $authenticatedUser,
             $itemRepository,
             $libraryAccess
         );
         $ownedExternalLoans = new GetOwnedExternalLoanService(
+            $authenticatedUser,
             $externalLoanRepository
         );
         $createReadingRound = new CreateActiveReadingRoundService(
+            $authenticatedUser,
             $readingRoundRepository
         );
         $ownedReadingRounds = new GetOwnedReadingRoundService(
+            $authenticatedUser,
             $readingRoundRepository
         );
         $libraryItemReading = new StartReadingFromLibraryItemService(

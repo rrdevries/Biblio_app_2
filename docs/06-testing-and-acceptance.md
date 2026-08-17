@@ -332,3 +332,34 @@ Acceptance:
 
 REST endpoints, WordPress Abilities, UI adapters, WordPress identity resolution
 and the complete authenticated write boundary are not F1.3 acceptance scope.
+
+## 24. Authenticated identity and scoped production boundaries
+
+Acceptance:
+
+- a valid current WordPress user maps server-side to the corresponding domain
+  `UserId`, while no current/valid user fails with
+  `authentication_required`;
+- production operation signatures accept no caller-supplied actor `UserId` or
+  trusted `LibraryContext`;
+- all public services in one production composition share the same
+  authenticated-identity dependency;
+- personal-Library provisioning creates or returns only the authenticated
+  actor's designation and remains idempotent, transactional and
+  concurrency-safe;
+- owned ExternalLoan and ReadingRound reads resolve the actor internally and
+  reveal foreign records only as `null`;
+- Library-scoped Item access derives context from trusted actor plus target
+  Library and checks both membership authorization and Item Library scope;
+- Library Item and ExternalLoan Reading starts persist the authenticated actor
+  as ReadingRound owner and cannot start on a foreign source;
+- ExternalLoan read/write adapters are separate and the writer is absent from
+  production composition; ReadingRound writes reject mismatched owners;
+- `CoreApplication` exposes named services only, no repositories, generic
+  resolver or arbitrary-owner mutation route;
+- zero-Library user-owned behavior stays supported;
+- cross-user, cross-Library, concurrency, migration, lifecycle/activation,
+  transaction and smoke regressions stay green.
+
+REST/Abilities/UI, a public ExternalLoan creation lifecycle, membership/catalog
+CRUD and F1.5 ReadingRound source/Work hardening are outside F1.4.

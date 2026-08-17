@@ -325,7 +325,7 @@ F1.2.
 
 ### F1.3 — Production plugin lifecycle and composition root
 
-Status: **Implemented — pending review/commit**
+Status: **Implemented**
 
 - the plugin registers a real WordPress activation hook before activation;
 - activation runs the F1.1 migrator, validates schema health and lets failures
@@ -360,5 +360,44 @@ Last verified F1.3 test baseline:
 - WordPress smoke: plugin active, Core loaded, init hook executed once, HTTP
   200.
 
-F1.3 deliberately adds no REST/Abilities/UI/WP-CLI adapter. WordPress identity
-resolution and the authenticated transport/write boundary remain F1.4 work.
+F1.3 deliberately adds no REST/Abilities/UI/WP-CLI adapter.
+
+### F1.4 — Authenticated identity and scoped boundaries
+
+Status: **Implemented — pending review/commit**
+
+- application services resolve the current actor through the small
+  `AuthenticatedUser` port; the WordPress adapter accepts no actor input and
+  maps only the current valid WordPress user to the domain `UserId`;
+- unauthenticated use fails explicitly with `authentication_required`;
+- production-facing self-service signatures no longer accept `UserId` as an
+  actor or accept a caller-constructed `LibraryContext`;
+- a caller may select a Library ID as target, after which Core constructs the
+  context from that ID plus the trusted actor and separately verifies both
+  membership permission and Item record scope;
+- personal-Library provisioning, owned ExternalLoan/ReadingRound reads and
+  both existing Reading startflows use the same authenticated actor dependency;
+- user-owned flows retain the valid zero-Library state and never gain access
+  through Library roles;
+- read and write repository ports are separated for Library, Work, Edition,
+  Item, ExternalLoan and ReadingRound where existing contracts previously
+  exposed unused writes;
+- ExternalLoan read and write persistence adapters are separate; the
+  authorization-neutral writer is not constructed by the production
+  composition because no ExternalLoan creation use-case is exposed;
+- Library, membership and catalog persistence primitives remain internal
+  composition/test facilities until an explicitly authorized mutation service
+  is implemented;
+- foreign or unknown owned/scoped reads remain non-enumerating `null`; start
+  flows report `reading_source_unavailable`; authentication itself has the
+  distinct stable reason `authentication_required`.
+
+Last verified F1.4 test baseline:
+
+- unit: 68 tests, 161 assertions;
+- integration: 73 tests, 372 assertions;
+- total: 141 tests, 533 assertions.
+
+F1.4 adds no REST/Abilities/UI/WP-CLI adapter and no new ExternalLoan,
+membership or catalog product lifecycle. Full ReadingRound source/Work
+invariant hardening remains F1.5.

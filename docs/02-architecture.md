@@ -164,11 +164,28 @@ Historical closed rounds may retain an unknown source.
 
 Rules:
 - UI visibility never authorizes;
-- Library-scoped endpoints/services check Library Context;
-- private endpoints/services check user ownership;
+- the current actor is resolved through the application `AuthenticatedUser`
+  port; in WordPress only the server-side current-user adapter maps a valid
+  `wp_users.ID` to the domain `UserId`;
+- caller input never determines the actor for a self-service operation;
+- Library-scoped application services accept a target `LibraryId`, construct
+  `LibraryContext` internally from that target and the trusted actor, then
+  check membership permission and record scope independently;
+- private application services check ownership against the trusted actor;
 - support access is explicit and does not grant private user-data access;
 - platform rights do not imply Library content access;
 - Beheerder self-escalation is blocked in domain authorization.
+
+The actor is the authenticated user performing an operation. A subject, owner
+or target is data the operation concerns. Current self-service use-cases always
+derive their owner from the actor; a future act-on-behalf use-case needs its own
+explicit permission model and must not reintroduce a caller-supplied actor.
+
+`UserId` remains a Biblio domain value object. Its WordPress representation is
+an adapter concern, and F1.4 introduces no foreign key to `wp_users`.
+
+User-owned and Library-scoped boundaries remain distinct. An authenticated
+user may use permitted user-owned behavior without first having a Library.
 
 ## 8. Audit
 
@@ -311,10 +328,32 @@ owned ExternalLoan/ReadingRound and Reading start services. It exposes no
 generic lookup and no concrete wpdb repository. Lower-level creation services
 remain internal composition details.
 
-Publishing this boundary does not itself authenticate a WordPress request.
-Until F1.4 provides the WordPress identity resolver and authenticated adapter
-boundaries, no transport endpoint may treat a caller-supplied `UserId` or
-`LibraryContext` as trusted.
+All exposed services share one `AuthenticatedUser` dependency created by the
+composition root. The WordPress implementation reads `get_current_user_id()`
+at operation time, validates that the user still exists, and returns
+`authentication_required` when it cannot establish an actor. It consumes no
+request, form, query or body actor field.
+
+Public production operation signatures accept only resource/source targets;
+they accept neither an actor `UserId` nor a trusted `LibraryContext`.
+Repository read and write roles are split where useful. Concrete write
+adapters remain construction details and `CoreApplication` offers no `get()` or
+`resolve()` service locator.
+
+ExternalLoan creation is not yet a public application use-case. Read and write
+persistence adapters are separate, and `ProductionComposition` constructs only
+the reader. The authorization-neutral writer is a privileged persistence port,
+not a public self-service boundary. A future mutation service must authorize
+the operation and derive or validate its owner before receiving that port.
+Library, membership, Work, Edition and Item write adapters likewise remain
+unpublished until a dedicated authorized mutation use-case exists.
+
+Foreign or unknown user-owned and Library-scoped reads disclose only absence
+through `null`. Reading starts deliberately collapse an inaccessible or unknown
+source to `reading_source_unavailable`. Authentication is distinguishable as
+`authentication_required`; authorization failures use stable Core reasons and
+never expose MariaDB details. Transport status and UI-copy mapping remain an
+adapter responsibility.
 
 ### Plugin lifecycle
 

@@ -14,6 +14,7 @@ use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Persistence\PersistenceException;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbExternalLoanRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbExternalLoanWriter;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMembershipRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionManager;
@@ -25,6 +26,7 @@ use Biblio\Core\Library\LibraryMembershipAssignment;
 use Biblio\Core\Library\ManagementRole;
 use Biblio\Core\Library\MembershipStatus;
 use Biblio\Core\Library\UseAccess;
+use Biblio\Core\Tests\Support\ControllableAuthenticatedUser;
 use DateTimeImmutable;
 use DateTimeZone;
 
@@ -41,7 +43,7 @@ final class ExternalLoanPersistenceTest extends PersistenceIntegrationTestCase
         );
         $repository = $this->externalLoanRepository();
 
-        $repository->add($loan);
+        $this->externalLoanWriter()->add($loan);
         $stored = $repository->findForUser(
             $loan->id(),
             $loan->userId()
@@ -71,7 +73,7 @@ final class ExternalLoanPersistenceTest extends PersistenceIntegrationTestCase
         );
         $repository = $this->externalLoanRepository();
 
-        $repository->add($loan);
+        $this->externalLoanWriter()->add($loan);
         $stored = $repository->findForUser(
             $loan->id(),
             $loan->userId()
@@ -106,12 +108,12 @@ final class ExternalLoanPersistenceTest extends PersistenceIntegrationTestCase
             $this->utc("2026-08-10 09:30:00.000000")
         );
         $repository = $this->externalLoanRepository();
-        $repository->add($loan);
+        $this->externalLoanWriter()->add($loan);
 
-        $stored = (new GetOwnedExternalLoanService($repository))->get(
-            $userId,
-            $loan->id()
-        );
+        $stored = (new GetOwnedExternalLoanService(
+            new ControllableAuthenticatedUser($userId),
+            $repository
+        ))->get($loan->id());
 
         self::assertNotNull($stored);
         self::assertTrue($userId->equals($stored->userId()));
@@ -141,7 +143,7 @@ final class ExternalLoanPersistenceTest extends PersistenceIntegrationTestCase
             $this->utc("2026-08-10 09:30:00.000000")
         );
         $repository = $this->externalLoanRepository();
-        $repository->add($loan);
+        $this->externalLoanWriter()->add($loan);
         $libraryId = new LibraryId("library-a");
         $this->createLibrary($libraryId, $libraryOwner);
         $this->addMembership(
@@ -156,12 +158,15 @@ final class ExternalLoanPersistenceTest extends PersistenceIntegrationTestCase
             ManagementRole::Member,
             UseAccess::Direct
         );
-        $service = new GetOwnedExternalLoanService($repository);
+        $actor = new ControllableAuthenticatedUser($ownerX);
+        $service = new GetOwnedExternalLoanService($actor, $repository);
 
-        self::assertNotNull($service->get($ownerX, $loan->id()));
-        self::assertNull($service->get($libraryOwner, $loan->id()));
-        self::assertNull($service->get($manager, $loan->id()));
-        self::assertNull($service->get($directMember, $loan->id()));
+        self::assertNotNull($service->get($loan->id()));
+
+        foreach ([$libraryOwner, $manager, $directMember] as $foreignActor) {
+            $actor->authenticateAs($foreignActor);
+            self::assertNull($service->get($loan->id()));
+        }
         self::assertNull($repository->findForUser(
             $loan->id(),
             $libraryOwner
@@ -171,12 +176,13 @@ final class ExternalLoanPersistenceTest extends PersistenceIntegrationTestCase
     public function testUnknownWorkIsRejected(): void
     {
         try {
-            $this->externalLoanRepository()->add(ExternalLoan::active(
+            $loan = ExternalLoan::active(
                 new ExternalLoanId("loan-x"),
                 new UserId("user-x"),
                 new WorkId("missing-work"),
                 $this->utc("2026-08-10 09:30:00.000000")
-            ));
+            );
+            $this->externalLoanWriter()->add($loan);
             self::fail("External Loan without Work was accepted.");
         } catch (PersistenceException) {
             self::assertSame(0, $this->tableCount(
@@ -202,8 +208,8 @@ final class ExternalLoanPersistenceTest extends PersistenceIntegrationTestCase
             $this->utc("2026-08-11 10:00:00.000000")
         );
 
-        $repository->add($loanX);
-        $repository->add($loanY);
+        $this->externalLoanWriter()->add($loanX);
+        $this->externalLoanWriter()->add($loanY);
 
         self::assertNotNull($repository->findForUser(
             $loanX->id(),
@@ -223,26 +229,40 @@ final class ExternalLoanPersistenceTest extends PersistenceIntegrationTestCase
     {
         $work = $this->persistWork();
         $repository = $this->externalLoanRepository();
-        $repository->add(ExternalLoan::active(
+        $firstLoan = ExternalLoan::active(
             new ExternalLoanId("loan-shared"),
             new UserId("user-x"),
             $work->id(),
             $this->utc("2026-08-10 09:30:00.000000")
-        ));
+        );
+        $this->externalLoanWriter()->add($firstLoan);
 
         try {
-            $repository->add(ExternalLoan::active(
+            $secondLoan = ExternalLoan::active(
                 new ExternalLoanId("loan-shared"),
                 new UserId("user-y"),
                 $work->id(),
                 $this->utc("2026-08-11 09:30:00.000000")
-            ));
+            );
+            $this->externalLoanWriter()->add($secondLoan);
             self::fail("Duplicate External Loan ID was accepted.");
         } catch (PersistenceException) {
             self::assertSame(1, $this->tableCount(
                 $this->tableNames->externalLoans()
             ));
         }
+    }
+
+    public function testReadAndWritePersistenceAdaptersAreSeparated(): void
+    {
+        self::assertFalse(method_exists(
+            $this->externalLoanRepository(),
+            "add"
+        ));
+        self::assertFalse(method_exists(
+            $this->externalLoanWriter(),
+            "findForUser"
+        ));
     }
 
     private function persistWork(): Work
@@ -287,6 +307,14 @@ final class ExternalLoanPersistenceTest extends PersistenceIntegrationTestCase
     private function externalLoanRepository(): WpdbExternalLoanRepository
     {
         return new WpdbExternalLoanRepository(
+            $this->database,
+            $this->tableNames
+        );
+    }
+
+    private function externalLoanWriter(): WpdbExternalLoanWriter
+    {
+        return new WpdbExternalLoanWriter(
             $this->database,
             $this->tableNames
         );
