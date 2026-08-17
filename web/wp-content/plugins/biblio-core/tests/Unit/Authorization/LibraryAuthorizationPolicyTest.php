@@ -14,10 +14,67 @@ use Biblio\Core\Library\ManagementRole;
 use Biblio\Core\Library\MembershipStatus;
 use Biblio\Core\Library\UseAccess;
 use DomainException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class LibraryAuthorizationPolicyTest extends TestCase
 {
+    #[DataProvider("catalogManagementCases")]
+    public function testCatalogManagementDependsOnlyOnActiveManagementRole(
+        ManagementRole $role,
+        UseAccess $useAccess,
+        MembershipStatus $status,
+        bool $expected
+    ): void {
+        [$context, $assignment] = $this->membership(
+            $useAccess,
+            $status,
+            $role
+        );
+
+        self::assertSame(
+            $expected,
+            (new LibraryAuthorizationPolicy())->canManageCatalog(
+                $context,
+                $assignment
+            )
+        );
+    }
+
+    public static function catalogManagementCases(): iterable
+    {
+        yield "active owner direct" => [
+            ManagementRole::Owner,
+            UseAccess::Direct,
+            MembershipStatus::Active,
+            true,
+        ];
+        yield "inactive owner direct" => [
+            ManagementRole::Owner,
+            UseAccess::Direct,
+            MembershipStatus::Inactive,
+            false,
+        ];
+
+        foreach ([ManagementRole::Manager, ManagementRole::Member] as $role) {
+            foreach (UseAccess::cases() as $useAccess) {
+                foreach (MembershipStatus::cases() as $status) {
+                    yield implode(" ", [
+                        $status->value,
+                        $role->value,
+                        $useAccess->value,
+                    ]) => [
+                        $role,
+                        $useAccess,
+                        $status,
+                        $role === ManagementRole::Manager
+                            && $status === MembershipStatus::Active,
+                    ];
+                }
+            }
+        }
+    }
+
     public function testViewOnlyMayViewButCannotUseOrBorrow(): void
     {
         [$context, $assignment] = $this->membership(UseAccess::ViewOnly);
@@ -78,7 +135,8 @@ final class LibraryAuthorizationPolicyTest extends TestCase
 
     private function membership(
         UseAccess $useAccess,
-        MembershipStatus $status = MembershipStatus::Active
+        MembershipStatus $status = MembershipStatus::Active,
+        ManagementRole $role = ManagementRole::Member
     ): array {
         $userId = new UserId("user-1");
         $libraryId = new LibraryId("library-a");
@@ -89,7 +147,7 @@ final class LibraryAuthorizationPolicyTest extends TestCase
                 $libraryId,
                 $userId,
                 new LibraryMembership(
-                    ManagementRole::Member,
+                    $role,
                     $useAccess,
                     $status
                 )

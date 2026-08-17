@@ -45,6 +45,27 @@ final class InMemoryLibraryMembershipRepository implements LibraryMembershipRepo
 
 final class LibraryAccessServiceTest extends TestCase
 {
+    public function testCatalogManagementUsesRoleAndIgnoresUseAccess(): void
+    {
+        $userId = new UserId("user-1");
+        $libraryId = new LibraryId("library-a");
+        $repository = new InMemoryLibraryMembershipRepository();
+        $repository->add($this->assignment(
+            $libraryId,
+            $userId,
+            UseAccess::ViewOnly,
+            ManagementRole::Manager
+        ));
+        $service = new LibraryAccessService(
+            $repository,
+            new LibraryAuthorizationPolicy()
+        );
+
+        self::assertTrue($service->canManageCatalog(
+            new LibraryContext($libraryId, $userId)
+        ));
+    }
+
     public function testAccessForSameUserIsScopedByLibrary(): void
     {
         $userId = new UserId("user-1");
@@ -95,6 +116,7 @@ final class LibraryAccessServiceTest extends TestCase
         );
 
         self::assertFalse($service->canViewCollection($context));
+        self::assertFalse($service->canManageCatalog($context));
         self::assertFalse($service->canUseItemDirectly($context));
         self::assertFalse($service->canReceiveInternalLoan($context));
     }
@@ -174,13 +196,14 @@ final class LibraryAccessServiceTest extends TestCase
     private function assignment(
         LibraryId $libraryId,
         UserId $userId,
-        UseAccess $useAccess
+        UseAccess $useAccess,
+        ManagementRole $role = ManagementRole::Member
     ): LibraryMembershipAssignment {
         return new LibraryMembershipAssignment(
             $libraryId,
             $userId,
             new LibraryMembership(
-                ManagementRole::Member,
+                $role,
                 $useAccess,
                 MembershipStatus::Active
             )
