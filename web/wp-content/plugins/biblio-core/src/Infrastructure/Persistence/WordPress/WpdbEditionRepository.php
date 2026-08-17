@@ -8,6 +8,7 @@ use Biblio\Core\Catalog\Edition;
 use Biblio\Core\Catalog\EditionId;
 use Biblio\Core\Catalog\EditionRepository;
 use Biblio\Core\Catalog\WorkId;
+use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Infrastructure\Persistence\PersistenceException;
 use Throwable;
 use wpdb;
@@ -38,8 +39,9 @@ final readonly class WpdbEditionRepository implements EditionRepository
         }
 
         if ($result !== 1) {
-            throw new PersistenceException(
-                "Could not persist Edition: " . $this->database->last_error
+            throw WpdbErrorTranslator::writeFailure(
+                "Could not persist Edition.",
+                $this->database->last_error
             );
         }
     }
@@ -65,7 +67,8 @@ final readonly class WpdbEditionRepository implements EditionRepository
             throw new PersistenceException(
                 "Stored Edition data is invalid.",
                 0,
-                $exception
+                $exception,
+                FailureReason::PersistenceReadFailed
             );
         }
     }

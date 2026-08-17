@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Reading;
 
-use InvalidArgumentException;
+use Biblio\Core\Exception\ValidationException;
 
 final readonly class ReadingRoundId
 {
     public function __construct(private string $value)
     {
         if (trim($this->value) === "") {
-            throw new InvalidArgumentException(
+            throw new ValidationException(
                 "Reading Round ID must not be empty."
             );
         }

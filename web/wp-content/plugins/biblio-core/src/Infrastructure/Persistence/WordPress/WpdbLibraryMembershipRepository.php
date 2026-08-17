@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Biblio\Core\Infrastructure\Persistence\WordPress;
 
 use Biblio\Core\Identity\UserId;
+use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Infrastructure\Persistence\PersistenceException;
 use Biblio\Core\Library\AdditionalPermissions;
 use Biblio\Core\Library\LibraryId;
@@ -63,9 +64,9 @@ final readonly class WpdbLibraryMembershipRepository implements
         }
 
         if ($result !== 1) {
-            throw new PersistenceException(
-                "Could not persist Library membership: "
-                . $this->database->last_error
+            throw WpdbErrorTranslator::writeFailure(
+                "Could not persist Library membership.",
+                $this->database->last_error
             );
         }
     }
@@ -119,7 +120,8 @@ final readonly class WpdbLibraryMembershipRepository implements
             throw new PersistenceException(
                 "Stored Library membership data is invalid.",
                 0,
-                $exception
+                $exception,
+                FailureReason::PersistenceReadFailed
             );
         }
     }

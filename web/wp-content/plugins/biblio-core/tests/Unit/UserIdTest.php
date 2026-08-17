@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Tests\Unit;
 
+use Biblio\Core\Exception\FailureReason;
+use Biblio\Core\Exception\ValidationException;
 use Biblio\Core\Identity\UserId;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
@@ -19,9 +21,16 @@ final class UserIdTest extends TestCase
 
     public function testEmptyUserIdIsRejected(): void
     {
-        $this->expectException(InvalidArgumentException::class);
-
-        new UserId("");
+        try {
+            new UserId("");
+            self::fail("Empty User ID was accepted.");
+        } catch (ValidationException $exception) {
+            self::assertInstanceOf(InvalidArgumentException::class, $exception);
+            self::assertSame(
+                FailureReason::ValidationFailed,
+                $exception->reason()
+            );
+        }
     }
 
     public function testWhitespaceOnlyUserIdIsRejected(): void

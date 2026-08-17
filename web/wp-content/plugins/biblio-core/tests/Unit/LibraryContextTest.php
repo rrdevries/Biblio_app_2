@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Tests\Unit;
 
+use Biblio\Core\Exception\AuthorizationException;
+use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Library\LibraryContext;
 use Biblio\Core\Library\LibraryId;
@@ -80,8 +82,16 @@ final class LibraryContextTest extends TestCase
             LibraryMembership::safeDefault()
         );
 
-        $this->expectException(DomainException::class);
-        $context->assertMembershipApplies($assignment);
+        try {
+            $context->assertMembershipApplies($assignment);
+            self::fail("Foreign Library membership was accepted.");
+        } catch (AuthorizationException $exception) {
+            self::assertInstanceOf(DomainException::class, $exception);
+            self::assertSame(
+                FailureReason::AuthorizationDenied,
+                $exception->reason()
+            );
+        }
     }
 
     public function testContextRejectsMembershipFromAnotherUser(): void

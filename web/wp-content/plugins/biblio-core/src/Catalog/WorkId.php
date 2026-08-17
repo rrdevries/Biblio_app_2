@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Catalog;
 
-use InvalidArgumentException;
+use Biblio\Core\Exception\ValidationException;
 
 final readonly class WorkId
 {
     public function __construct(private string $value)
     {
         if (trim($this->value) === "") {
-            throw new InvalidArgumentException("Work ID must not be empty.");
+            throw new ValidationException("Work ID must not be empty.");
         }
     }
 

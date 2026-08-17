@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Tests\Integration;
 
+use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Application\Library\CreateLibraryService;
 use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
 use Biblio\Core\Identity\UserId;
@@ -147,7 +148,12 @@ final class PersonalLibraryProvisioningTest extends
         try {
             $repository->designate($userX, $otherLibraryId);
             self::fail("A second designation for one user was accepted.");
-        } catch (PersonalLibraryDesignationConflict) {
+        } catch (PersonalLibraryDesignationConflict $exception) {
+            self::assertSame(
+                FailureReason::PersonalLibraryAlreadyProvisioned,
+                $exception->reason()
+            );
+            self::assertNotNull($exception->getPrevious());
             self::assertTrue($personalLibraryId->equals(
                 $repository->findForUser($userX)
             ));
@@ -164,7 +170,12 @@ final class PersonalLibraryProvisioningTest extends
         try {
             $repository->designate($userY, $personalLibraryId);
             self::fail("One Library was designated to two users.");
-        } catch (PersonalLibraryDesignationConflict) {
+        } catch (PersonalLibraryDesignationConflict $exception) {
+            self::assertSame(
+                FailureReason::PersonalLibraryDesignationConflict,
+                $exception->reason()
+            );
+            self::assertNotNull($exception->getPrevious());
             self::assertNull($repository->findForUser($userY));
         }
 
@@ -180,7 +191,16 @@ final class PersonalLibraryProvisioningTest extends
         try {
             $repository->designate($userId, $libraryId);
             self::fail("Designation without a Library was accepted.");
-        } catch (PersistenceException) {
+        } catch (PersistenceException $exception) {
+            self::assertSame(
+                FailureReason::PersistenceWriteFailed,
+                $exception->reason()
+            );
+            self::assertStringNotContainsString(
+                "foreign key constraint fails",
+                strtolower($exception->getMessage())
+            );
+            self::assertNotNull($exception->getPrevious());
             self::assertSame(0, $this->designationCount());
         }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Tests\Integration;
 
+use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Infrastructure\Persistence\WordPress\CoreTableNames;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaHealthException;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigration;
@@ -203,6 +204,10 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
             $migrator->migrate();
             self::fail("Forced forward-migration failure did not occur.");
         } catch (CoreSchemaMigrationException $exception) {
+            self::assertSame(
+                FailureReason::SchemaMigrationFailed,
+                $exception->reason()
+            );
             self::assertStringContainsString(
                 "failed before the version bump",
                 $exception->getMessage()
@@ -394,6 +399,10 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
             $this->migrator()->migrate();
             self::fail("Legacy spike version was silently adopted.");
         } catch (CoreSchemaMigrationException $exception) {
+            self::assertSame(
+                FailureReason::SchemaMigrationFailed,
+                $exception->reason()
+            );
             self::assertStringContainsString(
                 "not a supported production migration source",
                 $exception->getMessage()
@@ -422,6 +431,10 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
             $this->migrator()->migrate();
             self::fail("Unexpected schema drift was silently accepted.");
         } catch (CoreSchemaHealthException $exception) {
+            self::assertSame(
+                FailureReason::SchemaHealthFailed,
+                $exception->reason()
+            );
             self::assertStringContainsString(
                 "no automatic repair was attempted",
                 $exception->getMessage()

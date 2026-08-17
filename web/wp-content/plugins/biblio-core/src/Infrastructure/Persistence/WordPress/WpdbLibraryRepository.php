@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Biblio\Core\Infrastructure\Persistence\WordPress;
 
 use Biblio\Core\Infrastructure\Persistence\PersistenceException;
+use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Library\Library;
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Library\LibraryRepository;
@@ -40,8 +41,9 @@ final readonly class WpdbLibraryRepository implements LibraryRepository
         }
 
         if ($result !== 1) {
-            throw new PersistenceException(
-                "Could not persist Library: " . $this->database->last_error
+            throw WpdbErrorTranslator::writeFailure(
+                "Could not persist Library.",
+                $this->database->last_error
             );
         }
     }
@@ -69,7 +71,8 @@ final readonly class WpdbLibraryRepository implements LibraryRepository
             throw new PersistenceException(
                 "Stored Library data is invalid.",
                 0,
-                $exception
+                $exception,
+                FailureReason::PersistenceReadFailed
             );
         }
     }

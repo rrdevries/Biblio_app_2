@@ -22,8 +22,9 @@ use Biblio\Core\Catalog\Item;
 use Biblio\Core\Catalog\ItemId;
 use Biblio\Core\Catalog\Work;
 use Biblio\Core\Catalog\WorkId;
+use Biblio\Core\Exception\AuthorizationException;
+use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Identity\UserId;
-use Biblio\Core\Infrastructure\Persistence\PersistenceException;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbEditionRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbExternalLoanRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbItemRepository;
@@ -261,6 +262,11 @@ final class ReadingRoundPersistenceTest extends PersistenceIntegrationTestCase
                     "An active Reading Round already exists for this source.",
                     $exception->getMessage()
                 );
+                self::assertSame(
+                    FailureReason::ReadingRoundAlreadyActiveForSource,
+                    $exception->reason()
+                );
+                self::assertNotNull($exception->getPrevious());
             }
         }
 
@@ -346,7 +352,11 @@ final class ReadingRoundPersistenceTest extends PersistenceIntegrationTestCase
                 $round
             );
             self::fail("Foreign user write was accepted.");
-        } catch (PersistenceException) {
+        } catch (AuthorizationException $exception) {
+            self::assertSame(
+                FailureReason::AuthorizationDenied,
+                $exception->reason()
+            );
             self::assertSame(0, $this->roundCount());
         }
     }
