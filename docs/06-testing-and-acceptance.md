@@ -392,3 +392,32 @@ Acceptance:
 
 InternalLoan, a new source representation, database triggers, denormalization,
 REST/Abilities/UI and source-creation lifecycles are outside F1.5.
+
+## 26. Domain/persistence contract alignment
+
+Acceptance:
+
+- every persistent User, Library, Work, Edition, Item, ExternalLoan and
+  ReadingRound ID accepts 191 Unicode characters and rejects 192 characters
+  with `validation_failed` before a database call;
+- empty or invalid UTF-8 identifiers are rejected by the same shared contract;
+- a valid 512-character Work title roundtrips and an overlong or invalid UTF-8
+  title fails validation;
+- ExternalLoan exposes only the currently persistable active state;
+- ExternalLoan borrowed/due dates and ReadingRound start date reject values
+  outside MariaDB `DATETIME(6)`'s supported UTC year range;
+- AdditionalPermissions rejects empty, duplicate or invalid UTF-8 values while
+  preserving order, whitespace and exact values;
+- valid permissions JSON roundtrips without meaning loss;
+- stored permission objects, non-string list elements, empty identifiers,
+  duplicates and invalid JSON fail as `persistence_read_failed` without silent
+  coercion or partial hydration;
+- Library, Membership, Work, Edition, Item, ExternalLoan and ReadingRound
+  current persistable states roundtrip to equivalent domain state;
+- Core-wide infrastructure has no misleading remaining `LibrarySchema*`,
+  `LibraryTableNames` or Library-only reset name;
+- product, plugin/package and schema versions remain independent and unchanged;
+- all F1.1–F1.5 regressions remain green.
+
+ExternalLoan/ReadingRound completion, Item archive, membership mutation,
+new permission functionality, REST/UI and F1.7 quality gates are outside F1.6.

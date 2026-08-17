@@ -266,6 +266,34 @@ the stored version. Unexpected drift fails closed with specific diagnostics
 and is not generically auto-repaired. See
 `docs/decisions/ADR-005-formal-core-schema-migration-baseline.md`.
 
+### Persistable domain contracts
+
+Publicly valid state supported by the current repositories must be
+representable by the formal schema and hydrate to equivalent domain state.
+Current persistent Core identifiers therefore use one shared contract:
+non-empty valid UTF-8 with at most 191 characters, matching their
+`VARCHAR(191)` columns. Work title similarly follows its 512-character schema
+limit. Persisted ExternalLoan and ReadingRound dates are validated against the
+UTC 1000–9999 range of MariaDB `DATETIME(6)`.
+
+Additional membership permissions are not arbitrary JSON and are not a
+catalogue of product permissions. They are an ordered list of unique,
+non-empty valid UTF-8 identifiers. Persistence preserves values, whitespace
+and order exactly. Hydration distinguishes a JSON array from an object,
+requires every element to be a string and reapplies the domain invariants;
+corrupt data fails as a controlled persistence read.
+
+The current Library, Item, ExternalLoan and ReadingRound persistence models
+represent only their active technical state. Membership is different: active
+and inactive membership states are already present in both domain and schema.
+Removing unsupported states is contract alignment, not implementation of the
+deferred ExternalLoan, ReadingRound, Item archive or membership mutation
+lifecycles.
+
+These constraints require no schema migration: they align public construction
+and hydration with the already formalized baseline. Product version `v2.001`,
+plugin/package version `2.1.0` and schema baseline `1000` remain independent.
+
 No source FK uses cascade-delete in a way that removes personal ReadingRound history when a physical source changes or ends.
 
 See `docs/decisions/ADR-004-fase-0-persistence-and-reading-sources.md`.

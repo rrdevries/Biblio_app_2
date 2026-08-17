@@ -403,7 +403,7 @@ membership or catalog product lifecycle.
 
 ### F1.5 — ReadingRound source and Work invariants
 
-Status: **Implemented — pending review/commit**
+Status: **Implemented**
 
 - supported Reading-start operations accept a concrete source target, never a
   caller-selected `WorkId` plus `ReadingSource` combination;
@@ -434,3 +434,46 @@ Last verified F1.5 test baseline:
 
 F1.5 adds no REST/Abilities/UI/WP-CLI adapter and no ExternalLoan, InternalLoan,
 membership or catalog creation lifecycle.
+
+### F1.6 — Domain/persistence contracts and naming
+
+Status: **Implemented — pending review/commit**
+
+- every currently persisted Core identifier is non-empty valid UTF-8 with a
+  maximum of 191 characters, matching the actual `VARCHAR(191)` columns;
+- Work title is valid UTF-8 and at most 512 characters, matching
+  `work_title VARCHAR(512)`;
+- ExternalLoan and ReadingRound dates must fall inside MariaDB `DATETIME(6)`'s
+  supported UTC year range 1000–9999 before persistence;
+- the non-persistable `ExternalLoanStatus::Inactive` state is removed; the
+  current ExternalLoan model is explicitly active-only;
+- AdditionalPermissions is an ordered list of unique, non-empty valid UTF-8
+  strings. Values and whitespace are preserved exactly; no normalization or
+  permission catalogue is introduced;
+- membership hydration accepts only a JSON array of strings and then applies
+  all domain invariants. Objects, non-string elements, empty identifiers,
+  duplicates and invalid JSON fail as `persistence_read_failed` rather than
+  being normalized or partially hydrated;
+- Library, Item and ReadingRound likewise remain active-only technical models
+  in the current Core implementation. Membership already supports both active
+  and inactive states in domain and persistence;
+- the Core-wide integration reset helper no longer carries the misleading old
+  Library-only name. No `LibrarySchema*` or `LibraryTableNames` production
+  infrastructure remains;
+- product `v2.001`, plugin/package `2.1.0` and formal schema baseline `1000`
+  remain separate and no version number or schema is changed by F1.6.
+
+The database schema already expressed the intended current state, so F1.6
+narrows domain contracts and hardens hydration without a migration. Completed
+ExternalLoan/ReadingRound, Item archive and membership mutation lifecycles stay
+deferred until their actual application behavior and historical data are
+implemented.
+
+Last verified F1.6 test baseline:
+
+- unit: 105 tests, 206 assertions;
+- integration: 79 tests, 396 assertions;
+- total: 184 tests, 602 assertions.
+
+F1.6 adds no lifecycle transitions, new permission functionality, REST/UI,
+schema migration or new failure reason.

@@ -91,15 +91,28 @@ final readonly class WpdbLibraryMembershipRepository implements
         try {
             $permissionValues = json_decode(
                 $row->additional_permissions,
-                true,
+                false,
                 512,
                 JSON_THROW_ON_ERROR
             );
 
-            if (!is_array($permissionValues) || !array_is_list($permissionValues)) {
+            if (
+                !is_array($permissionValues)
+                || !array_is_list($permissionValues)
+            ) {
                 throw new PersistenceException(
-                    "Stored additional permissions are not a list."
+                    "Stored additional permissions are not a list.",
+                    failureReason: FailureReason::PersistenceReadFailed
                 );
+            }
+
+            foreach ($permissionValues as $permissionValue) {
+                if (!is_string($permissionValue)) {
+                    throw new PersistenceException(
+                        "Stored additional permission is not a string.",
+                        failureReason: FailureReason::PersistenceReadFailed
+                    );
+                }
             }
 
             return new LibraryMembershipAssignment(

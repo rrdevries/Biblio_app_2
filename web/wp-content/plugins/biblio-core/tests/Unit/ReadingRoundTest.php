@@ -56,4 +56,17 @@ final class ReadingRoundTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         new ReadingRoundId("  ");
     }
+
+    public function testStartDateOutsideUtcPersistenceRangeIsRejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        ReadingRound::active(
+            new ReadingRoundId("round-a"),
+            new UserId("user-x"),
+            new WorkId("work-w"),
+            ReadingSource::libraryItem(new ItemId("item-a")),
+            new DateTimeImmutable("1000-01-01T00:00:00+02:00")
+        );
+    }
 }

@@ -28,19 +28,19 @@ abstract class PersistenceIntegrationTestCase extends TestCase
 
         $this->database = $wpdb;
         $this->tableNames = new CoreTableNames($wpdb->prefix);
-        $this->resetLibraryTables();
+        $this->resetCoreTables();
     }
 
     protected function tearDown(): void
     {
         try {
-            $this->resetLibraryTables();
+            $this->resetCoreTables();
         } finally {
             parent::tearDown();
         }
     }
 
-    protected function resetLibraryTables(): void
+    protected function resetCoreTables(): void
     {
         $readingRounds = $this->tableNames->readingRounds();
         $externalLoans = $this->tableNames->externalLoans();

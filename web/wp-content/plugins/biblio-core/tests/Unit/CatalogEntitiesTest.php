@@ -24,6 +24,33 @@ final class CatalogEntitiesTest extends TestCase
         new Work(new WorkId("work-w"), "   ");
     }
 
+    public function testWorkAcceptsMaximumPersistedTitleLength(): void
+    {
+        $title = str_repeat("é", Work::MAX_TITLE_LENGTH);
+
+        self::assertSame(
+            $title,
+            (new Work(new WorkId("work-w"), $title))->title()
+        );
+    }
+
+    public function testWorkRejectsOverlongTitleBeforePersistence(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        new Work(
+            new WorkId("work-w"),
+            str_repeat("é", Work::MAX_TITLE_LENGTH + 1)
+        );
+    }
+
+    public function testWorkRejectsInvalidUtf8Title(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        new Work(new WorkId("work-w"), "invalid-\xFF");
+    }
+
     public function testCatalogIdentifiersRejectEmptyValues(): void
     {
         foreach ([WorkId::class, EditionId::class, ItemId::class] as $class) {

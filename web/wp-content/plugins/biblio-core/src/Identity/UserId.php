@@ -4,17 +4,11 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Identity;
 
-use Biblio\Core\Exception\ValidationException;
-
 final readonly class UserId
 {
     public function __construct(private string $value)
     {
-        if (trim($this->value) === "") {
-            throw new ValidationException(
-                "User ID must not be empty."
-            );
-        }
+        IdentifierConstraints::assertValid($this->value, "User ID");
     }
 
     public function value(): string
