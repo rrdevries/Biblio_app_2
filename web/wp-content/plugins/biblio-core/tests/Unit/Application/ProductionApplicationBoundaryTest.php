@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Biblio\Core\Tests\Unit\Application;
 
 use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
+use Biblio\Core\Application\Catalog\AddLibraryItemService;
 use Biblio\Core\Application\CoreApplication;
 use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
 use Biblio\Core\Application\Library\GetAccessibleLibraryItemService;
@@ -27,6 +28,12 @@ final class ProductionApplicationBoundaryTest extends TestCase
     {
         foreach ([
             [EnsurePersonalPrivateLibraryService::class, "ensure"],
+            [AddLibraryItemService::class, "addForExistingEdition"],
+            [
+                AddLibraryItemService::class,
+                "addWithNewEditionForExistingWork",
+            ],
+            [AddLibraryItemService::class, "addWithNewWorkAndEdition"],
             [GetAccessibleLibraryItemService::class, "get"],
             [GetOwnedExternalLoanService::class, "get"],
             [GetOwnedReadingRoundService::class, "get"],
@@ -63,6 +70,7 @@ final class ProductionApplicationBoundaryTest extends TestCase
             "__construct",
             "accessibleLibraryItems",
             "externalLoanReading",
+            "libraryItemCreation",
             "libraryItemReading",
             "ownedExternalLoans",
             "ownedReadingRounds",
@@ -70,6 +78,28 @@ final class ProductionApplicationBoundaryTest extends TestCase
         ], $publicMethods);
         self::assertNotContains("get", $publicMethods);
         self::assertNotContains("resolve", $publicMethods);
+    }
+
+    public function testCoreApplicationDoesNotExposeRepositoryTypes(): void
+    {
+        foreach ((new ReflectionClass(CoreApplication::class))->getMethods(
+            ReflectionMethod::IS_PUBLIC
+        ) as $method) {
+            if ($method->getName() === "__construct") {
+                continue;
+            }
+
+            $returnType = $method->getReturnType();
+            self::assertInstanceOf(ReflectionNamedType::class, $returnType);
+            self::assertStringStartsWith(
+                "Biblio\\Core\\Application\\",
+                $returnType->getName()
+            );
+            self::assertStringNotContainsString(
+                "Repository",
+                $returnType->getName()
+            );
+        }
     }
 
     public function testReadingCreationHasOnlySourceSpecificPublicMethods(): void

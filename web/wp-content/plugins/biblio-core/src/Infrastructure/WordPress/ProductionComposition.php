@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Biblio\Core\Infrastructure\WordPress;
 
 use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
+use Biblio\Core\Application\Catalog\AddLibraryItemService;
 use Biblio\Core\Application\CoreApplication;
 use Biblio\Core\Application\Library\CreateLibraryService;
 use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
@@ -25,6 +26,7 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPersonalLibraryReposito
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbReadingRoundRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionConnection;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionManager;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbWorkRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigration;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrator;
 use Biblio\Core\Infrastructure\WordPress\Lifecycle\CoreLifecycleCoordinator;
@@ -62,6 +64,7 @@ final class ProductionComposition
             $database,
             $tableNames
         );
+        $workRepository = new WpdbWorkRepository($database, $tableNames);
         $editionRepository = new WpdbEditionRepository($database, $tableNames);
         $itemRepository = new WpdbItemRepository($database, $tableNames);
         $externalLoanRepository = new WpdbExternalLoanRepository(
@@ -85,6 +88,14 @@ final class ProductionComposition
         $libraryAccess = new LibraryAccessService(
             $membershipRepository,
             new LibraryAuthorizationPolicy()
+        );
+        $libraryItemCreation = new AddLibraryItemService(
+            $authenticatedUser,
+            $libraryAccess,
+            $workRepository,
+            $editionRepository,
+            $itemRepository,
+            $transactionManager
         );
         $accessibleItems = new GetAccessibleLibraryItemService(
             $authenticatedUser,
@@ -115,6 +126,7 @@ final class ProductionComposition
 
         $this->application = new CoreApplication(
             $personalLibraries,
+            $libraryItemCreation,
             $accessibleItems,
             $ownedExternalLoans,
             $ownedReadingRounds,
