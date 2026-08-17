@@ -7,7 +7,6 @@ namespace Biblio\Core\Application\Reading;
 use Biblio\Core\Application\Library\GetAccessibleLibraryItemService;
 use Biblio\Core\Catalog\EditionRepository;
 use Biblio\Core\Catalog\ItemId;
-use Biblio\Core\Catalog\ItemStatus;
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Reading\ReadingRound;
 use Biblio\Core\Reading\ReadingSourceUnavailable;
@@ -35,7 +34,6 @@ final readonly class StartReadingFromLibraryItemService
         if (
             $accessibleItem === null
             || !$accessibleItem->canUseAsDirectSource()
-            || $accessibleItem->item()->status() !== ItemStatus::Active
         ) {
             throw new ReadingSourceUnavailable();
         }

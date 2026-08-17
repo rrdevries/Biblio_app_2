@@ -6,7 +6,6 @@ namespace Biblio\Core\Application\Reading;
 
 use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
 use Biblio\Core\Borrowing\ExternalLoanId;
-use Biblio\Core\Borrowing\ExternalLoanStatus;
 use Biblio\Core\Reading\ReadingRound;
 use Biblio\Core\Reading\ReadingSourceUnavailable;
 use DateTimeImmutable;
@@ -27,10 +26,7 @@ final readonly class StartReadingFromExternalLoanService
             $externalLoanId
         );
 
-        if (
-            $externalLoan === null
-            || $externalLoan->status() !== ExternalLoanStatus::Active
-        ) {
+        if ($externalLoan === null) {
             throw new ReadingSourceUnavailable();
         }
 

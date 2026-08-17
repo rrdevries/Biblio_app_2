@@ -12,6 +12,8 @@
   },
   "license": ["proprietary"],
   "require-dev": {
-    "phpunit/phpunit": "^12.5"
+    "phpunit/phpunit": "^12.5",
+    "php-stubs/wordpress-stubs": "^6.9",
+    "phpstan/phpstan": "^2.1"
   }
 }

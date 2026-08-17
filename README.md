@@ -21,20 +21,29 @@ Installeer na een verse checkout eerst de vastgelegde Composer-dependencies:
 
 ```bash
 ddev composer --working-dir=web/wp-content/plugins/biblio-core install
+./scripts/bootstrap-wordpress.sh
+ddev wp plugin activate biblio-core
 ```
 
-Voer de tests uit vanaf de projectroot:
+Voer daarna de canonieke volledige quality gate uit vanaf de projectroot:
 
 ```bash
-./scripts/test-biblio-core-unit.sh
-./scripts/test-biblio-core-integration.sh
 ./scripts/test-biblio-core-all.sh
 ```
+
+Deze ene opdracht valideert Composer-metadata en platformrequirements, lint alle
+plugin-PHP, analyseert `src` met PHPStan, draait de volledige unit- en
+integratiesuites, voert de WordPress-smoke uit, valideert `manifest.json` en
+controleert beide Git-diffs op whitespacefouten. De gate faalt bij de eerste
+fout en controleert bij afsluiten dat zij de zichtbare repositorystatus niet
+heeft gewijzigd. De afzonderlijke unit-, integratie- en smoke-scripts blijven
+beschikbaar voor gericht lokaal werk.
 
 De integratietest gebruikt uitsluitend de wegwerpdatabase
 `biblio_core_test`. Het script bouwt die database per run opnieuw op en
 verwijdert haar ook wanneer de test faalt. De normale DDEV-database `db`
-wordt niet als testdatabase gebruikt.
+wordt niet als testdatabase gebruikt; de smoke leest de reeds ingerichte lokale
+WordPress-runtime alleen uit.
 
 ## Architectuur
 
@@ -76,6 +85,13 @@ active-only; en aanvullende membershippermissions zijn een geordende lijst van
 unieke, niet-lege UTF-8-identifiers die zonder normalisatie roundtrippen.
 Productversie `v2.001`, plugin/packageversie `2.1.0` en schemabaseline `1000`
 blijven onafhankelijke versiedimensies.
+
+F1.7 sluit Fase 1 af met één reproduceerbare root-quality-gate, gelockte
+PHPStan/WordPress-analysisdependencies en expliciete Fase-1-exit-evidence. De
+gate analyseert production `src` op niveau 6 zonder baseline of genegeerde
+fouten en borgt dat verificatie geen zichtbare repositorymutaties achterlaat.
+De bewezen status en bewuste deferred scope staan in
+`docs/07-fase-1-exit-evidence.md`.
 
 ## Repository
 

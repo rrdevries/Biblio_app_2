@@ -3,6 +3,10 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+if [ "${BIBLIO_DDEV_STARTED:-0}" != "1" ]; then
+  ddev start >/dev/null
+fi
+
 STATUS="$(ddev wp plugin get biblio-core --field=status)"
 if [ "$STATUS" != "active" ]; then
   echo "FOUT: Biblio Core is niet actief."
