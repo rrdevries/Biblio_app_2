@@ -653,3 +653,202 @@ Nadelen / bewuste trade-offs:
 - termmutaties hebben voorlopig geen eigen lost-update-detectie.
 
 Deze trade-offs zijn voor v2.001 geaccepteerd.
+
+## 29. Bootstrap van standaardclassificaties
+
+Standaard Boeksoorten en Genres worden eager gebootstrapt bij het aanmaken van
+een nieuwe Library.
+
+Er is geen lazy initialization bij eerste catalogusgebruik.
+
+Onderwerp heeft geen standaardset en wordt daarom niet gebootstrapt.
+
+De gebootstrapte waarden zijn gewone Library-owned classificatietermen met
+stabiele Library-lokale IDs.
+
+Na bootstrap mogen Owner of een expliciet bevoegde Manager deze termen volgens
+de normale lifecycle:
+
+- hernoemen;
+- inactiveren;
+- heractiveren.
+
+Een standaardterm is na bootstrap functioneel niet specialer dan een
+Library-eigen toegevoegde term.
+
+Bootstrap moet transactioneel, idempotent en concurrency-safe zijn.
+
+## 30. Seed keys
+
+Iedere standaard Boeksoort en ieder standaard Genre krijgt een immutable
+technische `seed_key`.
+
+Voorbeelden van de bedoelde vorm:
+
+    book_type.reading_book
+    book_type.cookbook
+    genre.fantasy
+
+De definitieve concrete keys worden bij implementatie vastgesteld.
+
+Een `seed_key`:
+
+- dient voor technische herkenning, migrations en tests;
+- is niet bedoeld voor presentatie;
+- vervangt de Library-owned term-ID niet;
+- vormt geen platformbrede classificatie-identiteit;
+- verandert niet wanneer de lokale displaynaam verandert;
+- verandert niet wanneer de term wordt geïnactiveerd of heractiveerd.
+
+De Library-owned term-ID blijft de domeinidentiteit binnen de Library.
+
+## 31. Bootstrap van bestaande Libraries
+
+Bij introductie van F2.5 worden de standaard Boeksoorten en Genres ook
+idempotent beschikbaar gemaakt voor reeds bestaande Libraries.
+
+Daarbij geldt:
+
+- ontbrekende standaardterm -> toevoegen;
+- ondubbelzinnig genormaliseerd equivalente bestaande lokale term -> behouden;
+- geen tweede duplicate term creëren;
+- inactieve bestaande equivalente term -> niet automatisch heractiveren;
+- bestaande displaynaam -> niet stilzwijgend vervangen door de Biblio-default;
+- bestaande classificatiekoppelingen -> niet wijzigen.
+
+De bootstrap/migration mag dus geen lokale classificatiekeuzes terugzetten naar
+centrale defaults.
+
+## 32. Evolutie van seedsets
+
+De Biblio-seedset is een startpunt voor een Library en geen centraal
+classificatiebeleid.
+
+Latere wijzigingen aan de Biblio-defaultset worden additief en idempotent
+toegepast.
+
+Wanneer een latere Biblio-versie een nieuwe standaardterm introduceert:
+
+1. bestaat de betreffende `seed_key` al in de Library:
+   - niets wijzigen;
+
+2. bestaat precies één ondubbelzinnig equivalente lokale term zonder
+   `seed_key`:
+   - bestaande lokale term behouden;
+   - veilige seed-adoptie mag plaatsvinden volgens §33;
+
+3. bestaat geen equivalente term:
+   - nieuwe Library-owned seedterm toevoegen.
+
+Lokale autonomie heeft voorrang op latere Biblio-defaults.
+
+Daarom geldt:
+
+- een lokaal hernoemde seeded term wordt niet terug hernoemd;
+- een lokaal geïnactiveerde seeded term wordt niet automatisch heractiveerd;
+- een gewijzigde Biblio-defaultnaam geldt alleen als default voor nieuwe
+  Libraries;
+- een term die later uit de Biblio-seedset verdwijnt wordt in bestaande
+  Libraries niet automatisch verwijderd of geïnactiveerd;
+- migrations veranderen geen bestaande LibraryCatalogContext-koppelingen alleen
+  vanwege wijzigingen in de standaardset.
+
+Onderwerp valt buiten seed-evolutie zolang Onderwerp geen standaardset heeft.
+
+## 33. Adoptie van bestaande lokale termen als seedterm
+
+Een bestaande Library-owned classificatieterm zonder `seed_key` mag alleen
+automatisch een nieuwe `seed_key` adopteren wanneer de match technisch
+ondubbelzinnig is.
+
+Automatische adoptie vereist minimaal:
+
+- de `seed_key` bestaat nog niet binnen de betreffende Library en het
+  betreffende taxonomietype;
+- het taxonomietype komt overeen;
+- er bestaat precies één lokale kandidaat zonder `seed_key`;
+- die kandidaat is volgens dezelfde conservatieve harde
+  duplicate-normalisatie als §11 equivalent aan de seedterm;
+- er bestaat geen tweede kandidaat.
+
+Bij veilige adoptie:
+
+- blijft de bestaande lokale term-ID behouden;
+- wordt alleen de technische `seed_key` toegevoegd;
+- verandert de displaynaam niet;
+- verandert active/inactive-status niet;
+- veranderen bestaande LibraryCatalogContext-koppelingen niet;
+- wordt geen nieuwe classificatieterm aangemaakt.
+
+Semantische gelijkenis is onvoldoende voor automatische seed-adoptie.
+
+Synoniemen, afkortingen, vertalingen of inhoudelijk vergelijkbare termen mogen
+niet automatisch aan een seed worden gekoppeld.
+
+Seed-adoptie is geen term-merge.
+
+## 34. Ambigue seed-adoptie
+
+Wanneer een seedterm niet ondubbelzinnig aan precies één bestaande lokale term
+kan worden gekoppeld, doet de migration geen automatische inhoudelijke
+mutatie.
+
+Ambiguïteit betekent:
+
+    geen gok, wel technisch zichtbaar
+
+De migration zelf mag succesvol blijven.
+
+De situatie wordt geregistreerd als non-blocking technische warning.
+
+Schema-health moet hiervoor een afzonderlijke warning kunnen rapporteren,
+bijvoorbeeld:
+
+    classification_seed_adoption_ambiguous
+
+De warning bevat minimaal voldoende technische identificatie voor diagnose:
+
+- Library-ID;
+- taxonomietype;
+- seed-key;
+- kandidaat-term-IDs.
+
+Displaynamen worden alleen opgenomen wanneer dit technisch noodzakelijk is.
+
+Een ambigue seed-warning:
+
+- blokkeert de installatie niet;
+- blokkeert volgende migrations niet;
+- veroorzaakt geen automatische merge;
+- veroorzaakt geen automatische rename;
+- veroorzaakt geen automatische statuswijziging;
+- veroorzaakt geen wijziging aan LibraryCatalogContext.
+
+F2.5 introduceert hiervoor geen gebruikers- of Bibliotheekbeheerworkflow.
+
+Een toekomstige maintenance/admin-tool mag deze warnings eventueel helpen
+beoordelen of oplossen.
+
+## 35. Aanvullende acceptatie-intentie voor bootstrap en seed-evolutie
+
+Naast §26 moet F2.5 minimaal bewijzen dat:
+
+1. een nieuwe Library automatisch de volledige actuele Boeksoort-seedset
+   krijgt;
+2. een nieuwe Library automatisch de volledige actuele Genre-seedset krijgt;
+3. Onderwerp niet automatisch wordt gevuld;
+4. bootstrap transactioneel en idempotent is;
+5. concurrent bootstrap geen duplicate termen creëert;
+6. iedere seedterm een stabiele immutable `seed_key` heeft;
+7. lokaal hernoemen de `seed_key` niet wijzigt;
+8. inactiveren/heractiveren de `seed_key` niet wijzigt;
+9. migration van bestaande Libraries geen lokale displaynamen of statussen
+   overschrijft;
+10. een ontbrekende latere seedterm veilig kan worden toegevoegd;
+11. precies één harde normalized match veilig dezelfde bestaande lokale term-ID
+    adopteert;
+12. semantische of ambigue matches niet automatisch worden geadopteerd;
+13. ambigue matches als non-blocking schema-health warning zichtbaar zijn;
+14. seed-evolutie geen bestaande LibraryCatalogContext-classificaties wijzigt;
+15. herhaald uitvoeren van bootstrap/migration dezelfde geldige eindtoestand
+    behoudt.
