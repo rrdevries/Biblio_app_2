@@ -852,3 +852,125 @@ Naast §26 moet F2.5 minimaal bewijzen dat:
 14. seed-evolutie geen bestaande LibraryCatalogContext-classificaties wijzigt;
 15. herhaald uitvoeren van bootstrap/migration dezelfde geldige eindtoestand
     behoudt.
+
+## 36. Configureerbare classificatiebevoegdheden
+
+F2.5 onderscheidt twee configureerbare managementrechten:
+
+1. Item toevoegen;
+2. Classificatie beheren.
+
+Owner beschikt over beide rechten.
+
+Voor Manager kunnen beide rechten afzonderlijk worden toegekend.
+
+UseAccess, leesrechten of leenrechten verlenen deze managementrechten niet
+impliciet.
+
+### Item toevoegen
+
+`Item toevoegen` geeft recht om een Item aan de betreffende Library toe te
+voegen.
+
+Wanneer voor de betreffende Library + Work-combinatie nog geen
+LibraryCatalogContext bestaat, mag binnen precies die geautoriseerde
+Item-add-operatie tevens de ontbrekende context worden geïnitialiseerd met:
+
+- exact één bestaande actieve Boeksoort;
+- 0..n bestaande actieve Genres;
+- 0..n bestaande actieve Onderwerpen.
+
+Deze contextinitialisatie is geen zelfstandig beheerrecht.
+
+`Item toevoegen` geeft daarom geen recht om:
+
+- een bestaande LibraryCatalogContext te wijzigen;
+- willekeurige LibraryCatalogContexts aan te maken;
+- classificatietermen te creëren, hernoemen, inactiveren of heractiveren.
+
+Contextinitialisatie binnen Item-add wordt niet als derde configureerbare
+permission gemodelleerd.
+
+### Classificatie beheren
+
+`Classificatie beheren` geeft recht om:
+
+- bestaande LibraryCatalogContexts te wijzigen;
+- ontbrekende contexten voor reeds in de Library vertegenwoordigde Works
+  expliciet aan te maken;
+- Boeksoort, Genre en Onderwerp te beheren volgens de in deze ADR vastgelegde
+  governance.
+
+Het toekomstige aanvragen van een nieuwe Boeksoort wordt in F2.5 niet als
+afzonderlijke Library-permission gemodelleerd. De authorization van die
+deferred workflow wordt bepaald wanneer die workflow wordt ontworpen.
+
+## 37. Classificeren van bestaande contextloze Works
+
+Een actor met `Classificatie beheren` hoeft niet tevens `Item toevoegen` te
+hebben om een ontbrekende LibraryCatalogContext voor bestaande catalogusdata
+aan te maken.
+
+Dit is onder andere het expliciete classificatiepad voor pre-F2.5-data waarbij
+een Work al in de Library vertegenwoordigd is maar nog geen
+LibraryCatalogContext heeft.
+
+Contextcreatie via classificatiebeheer is alleen toegestaan wanneer het Work
+aantoonbaar reeds door de betreffende Library wordt vertegenwoordigd via de
+catalogusrelaties.
+
+`Classificatie beheren` geeft geen recht om LibraryCatalogContexts voor
+willekeurige centrale Works vooruit aan te maken.
+
+Hiermee wordt voorkomen dat LibraryCatalogContexts ontstaan voor Works die
+feitelijk geen relatie met de Library hebben.
+
+Bij creatie van zo'n ontbrekende context gelden de normale invarianten:
+
+- exact één actieve Boeksoort is verplicht;
+- Genres zijn optioneel en moeten bij nieuwe selectie actief zijn;
+- Onderwerpen zijn optioneel en moeten bij nieuwe selectie actief zijn;
+- authorization wordt vóór disclosure of mutatie afgedwongen.
+
+De precieze betekenis van Library-representatie wanneer later Archive- en
+andere Item-lifecycles worden geïntroduceerd, wordt in die toekomstige slice
+nader aangescherpt.
+
+F2.5 loopt niet vooruit op die lifecycle.
+
+## 38. Item-add bij bestaande context met inactieve Boeksoort
+
+Wanneer voor Library + Work al een LibraryCatalogContext bestaat, hergebruikt
+Item-add deze bestaande context zonder deze stilzwijgend te wijzigen.
+
+Dit geldt ook wanneer de aan de context gekoppelde Boeksoort inmiddels
+inactief is.
+
+In dat geval:
+
+- blijft Item-add toegestaan;
+- wordt de Boeksoort niet opnieuw gekozen;
+- blijft de bestaande context ongewijzigd;
+- ontstaat geen LibraryCatalogContext-version increment;
+- ontstaat geen classificatie-ActivityEvent;
+- krijgt een actor met alleen `Item toevoegen` geen mogelijkheid om via deze
+  flow de bestaande classificatie te wijzigen.
+
+De lifecyclebetekenis is daarmee:
+
+- een inactieve term mag niet worden geselecteerd voor een nieuwe koppeling;
+- een bestaande koppeling aan een inmiddels inactieve term blijft geldig;
+- hergebruik van een bestaande context is geen nieuwe classificatiekeuze.
+
+Wanneer een bestaande LibraryCatalogContext later bewust wordt bewerkt, moet
+bij opslaan een actieve Boeksoort zijn geselecteerd conform §14.
+
+Een bevoegde beheerder mag bij Item-add een non-blocking informatieve
+waarschuwing krijgen dat de bestaande Boeksoort inactief is.
+
+Deze waarschuwing:
+
+- blokkeert Item-add niet;
+- verandert de context niet;
+- heractiveert de term niet;
+- veroorzaakt geen audit-event.
