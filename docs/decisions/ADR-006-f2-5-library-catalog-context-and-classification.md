@@ -974,3 +974,187 @@ Deze waarschuwing:
 - verandert de context niet;
 - heractiveert de term niet;
 - veroorzaakt geen audit-event.
+
+## 39. Semantische no-op bij contextmutatie
+
+Een gevraagde LibraryCatalogContext-mutatie is een semantische no-op wanneer:
+
+- de Boeksoort-ID gelijk blijft;
+- de set Genre-IDs gelijk blijft;
+- de set Onderwerp-IDs gelijk blijft.
+
+De volgorde van Genre- en Onderwerp-IDs heeft geen domeinbetekenis en telt
+daarom niet als wijziging.
+
+Een semantische no-op:
+
+- is een geldige succesvolle uitkomst;
+- veroorzaakt geen database-update;
+- verhoogt LibraryCatalogContext.version niet;
+- creëert geen ActivityEvent;
+- vereist geen aanvullende Boeksoort-confirmatie.
+
+Hiermee veroorzaken handelingen zonder feitelijke statewijziging geen
+kunstmatige auditruis of concurrency-conflicten.
+
+## 40. Stale version bij reeds bereikte gewenste toestand
+
+Optimistic locking voorkomt nieuwe mutaties op basis van verouderde state,
+maar veroorzaakt geen conflict wanneer de gewenste eindtoestand reeds exact
+de actuele opgeslagen toestand is.
+
+Daarom geldt:
+
+- expected version = current version + gewijzigde state:
+  mutatie, version +1 en één ActivityEvent;
+- expected version = current version + identieke state:
+  no-op-succes;
+- expected version != current version + gewenste state semantisch identiek aan
+  actuele state:
+  no-op-succes;
+- expected version != current version + gewenste state verschilt van actuele
+  state:
+  expliciet concurrency-conflict.
+
+Een stale no-op:
+
+- veroorzaakt geen write;
+- verhoogt de version niet;
+- creëert geen ActivityEvent;
+- voert geen automatische merge uit.
+
+De application response retourneert de actuele LibraryCatalogContext inclusief
+de actuele version, zodat de caller zijn lokale state kan synchroniseren.
+
+Er wordt geen three-way merge uitgevoerd en Biblio probeert parallelle
+wijzigingen niet automatisch te combineren.
+
+De kerninvariant is:
+
+    een stale version verhindert iedere nieuwe mutatie, maar is geen conflict
+    wanneer de gevraagde eindtoestand al bereikt is.
+
+## 41. Rename-conflicten bij classificatietermen
+
+Genormaliseerde naamuniciteit voor Boeksoort, Genre en Onderwerp geldt over
+actieve én inactieve termen.
+
+Een poging om een term te hernoemen naar een normalized naam die reeds bij een
+andere term van hetzelfde taxonomietype binnen dezelfde Library hoort, wordt
+geweigerd met een stabiele conflictuitkomst.
+
+Dit geldt ongeacht of de bestaande andere term actief of inactief is.
+
+Bij een rename-conflict:
+
+- vindt geen rename plaats;
+- vindt geen automatische merge plaats;
+- vindt geen automatische heractivering plaats;
+- wijzigen geen LibraryCatalogContext-koppelingen;
+- ontstaat geen ActivityEvent;
+- blijven beide bestaande term-IDs behouden.
+
+Een rename naar een technisch equivalente naam van dezelfde term mag als
+semantische no-op worden behandeld.
+
+Semantische gelijkenis die niet onder de conservatieve harde
+duplicate-normalisatie valt, veroorzaakt geen hard duplicate-conflict.
+
+Een eventuele toekomstige term-merge is een afzonderlijke expliciete use-case
+en valt buiten F2.5.
+
+## 42. Inactiveren van de laatste actieve Boeksoort
+
+Een bevoegde beheerder mag de laatste actieve Boeksoort van een Library
+inactiveren.
+
+Een Library met nul actieve Boeksoorten is een geldige bedrijfsstatus en geen
+schema-healthfout.
+
+Vóór het inactiveren van de laatste actieve Boeksoort moet de beheerflow
+expliciet waarschuwen dat daarna geen nieuwe LibraryCatalogContext kan worden
+aangemaakt totdat opnieuw een Boeksoort actief is.
+
+De beheerder moet deze impact bewust bevestigen.
+
+Na succesvolle inactivatie:
+
+- blijven bestaande LibraryCatalogContexts geldig;
+- blijven bestaande Items geldig;
+- blijven bestaande koppelingen aan de inactieve Boeksoort intact;
+- blijft Item-add voor Works met een reeds bestaande LibraryCatalogContext
+  toegestaan;
+- kan geen nieuwe LibraryCatalogContext worden aangemaakt zolang geen actieve
+  Boeksoort beschikbaar is.
+
+Een nieuwe Boeksoort creëren of een bestaande Boeksoort heractiveren maakt
+contextcreatie weer mogelijk.
+
+Deze bedrijfsstatus veroorzaakt geen schema-health warning.
+
+Een succesvolle inactivatie creëert het normale term-deactivated
+ActivityEvent.
+
+Annuleren bij de impactwaarschuwing veroorzaakt geen mutatie en geen
+ActivityEvent.
+
+## 43. Atomiciteit van classificatieterm-mutaties en audit
+
+Create, rename, deactivate en reactivate van Boeksoort, Genre en Onderwerp zijn
+betekenisvolle gedeelde Library-mutaties.
+
+De termmutatie en het bijbehorende immutable ActivityEvent vormen daarom één
+transactionele eenheid.
+
+Conceptuele volgorde:
+
+    authorize
+    -> validate/current state
+    -> mutate term
+    -> append ActivityEvent
+    -> commit
+
+Daarbij geldt:
+
+- termmutatie + ActivityEvent slagen -> commit;
+- termmutatie faalt -> rollback en geen ActivityEvent;
+- ActivityEvent-write faalt -> rollback van de termmutatie;
+- authorization failure -> geen inhoudelijke write;
+- duplicate- of rename-conflict -> geen mutatie en geen ActivityEvent;
+- semantische no-op -> geen mutatie en geen ActivityEvent;
+- annuleren van een voorafgaande confirmatiestap -> geen mutatie en geen
+  ActivityEvent.
+
+Operationele logging van technische database- of transactiefouten is geen
+Library ActivityEvent en hoeft niet atomair met de mislukte domeinmutatie te
+worden geschreven.
+
+De kerninvariant is:
+
+    geen gecommitte gedeelde classificatieterm-mutatie zonder het
+    bijbehorende immutable ActivityEvent.
+
+## 44. Aanvullende acceptatie-intentie voor mutatie en concurrency
+
+Naast de eerdere acceptatiecriteria moet F2.5 bewijzen dat:
+
+1. een semantisch identieke context-save geen write veroorzaakt;
+2. Genre- en Onderwerpvolgorde geen statewijziging veroorzaakt;
+3. een no-op geen version increment veroorzaakt;
+4. een no-op geen ActivityEvent creëert;
+5. stale version + reeds bereikte gewenste toestand als no-op-succes eindigt;
+6. stale version + afwijkende gewenste toestand als concurrency-conflict
+   eindigt;
+7. stale no-op de actuele context en actuele version retourneert;
+8. rename naar een bestaande normalized termnaam stabiel wordt geweigerd;
+9. rename-conflict geen merge, reactivering of contextmutatie veroorzaakt;
+10. de laatste actieve Boeksoort na expliciete bevestiging geïnactiveerd kan
+    worden;
+11. nul actieve Boeksoorten geen schema-healthfout veroorzaakt;
+12. bestaande contexten en Item-add met bestaande context bruikbaar blijven
+    bij nul actieve Boeksoorten;
+13. nieuwe contextcreatie zonder actieve Boeksoort wordt geweigerd;
+14. iedere geslaagde create/rename/deactivate/reactivate-termoperatie exact
+    het vereiste ActivityEvent atomair vastlegt;
+15. een mislukte ActivityEvent-write de bijbehorende termmutatie volledig
+    terugdraait.
