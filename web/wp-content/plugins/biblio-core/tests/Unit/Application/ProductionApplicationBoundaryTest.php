@@ -6,6 +6,11 @@ namespace Biblio\Core\Tests\Unit\Application;
 
 use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
 use Biblio\Core\Application\Catalog\AddLibraryItemService;
+use Biblio\Core\Application\Catalog\Classification\CreateLibraryCatalogContextService;
+use Biblio\Core\Application\Catalog\Classification\ManageLibraryBookTypesService;
+use Biblio\Core\Application\Catalog\Classification\ManageLibraryGenresService;
+use Biblio\Core\Application\Catalog\Classification\ManageLibrarySubjectsService;
+use Biblio\Core\Application\Catalog\Classification\SaveLibraryCatalogContextService;
 use Biblio\Core\Application\CoreApplication;
 use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
 use Biblio\Core\Application\Library\GetAccessibleLibraryItemService;
@@ -39,6 +44,23 @@ final class ProductionApplicationBoundaryTest extends TestCase
             [GetOwnedReadingRoundService::class, "get"],
             [StartReadingFromLibraryItemService::class, "start"],
             [StartReadingFromExternalLoanService::class, "start"],
+            [
+                CreateLibraryCatalogContextService::class,
+                "createForRepresentedWork",
+            ],
+            [SaveLibraryCatalogContextService::class, "save"],
+            [ManageLibraryBookTypesService::class, "create"],
+            [ManageLibraryBookTypesService::class, "rename"],
+            [ManageLibraryBookTypesService::class, "deactivate"],
+            [ManageLibraryBookTypesService::class, "reactivate"],
+            [ManageLibraryGenresService::class, "create"],
+            [ManageLibraryGenresService::class, "rename"],
+            [ManageLibraryGenresService::class, "deactivate"],
+            [ManageLibraryGenresService::class, "reactivate"],
+            [ManageLibrarySubjectsService::class, "create"],
+            [ManageLibrarySubjectsService::class, "rename"],
+            [ManageLibrarySubjectsService::class, "deactivate"],
+            [ManageLibrarySubjectsService::class, "reactivate"],
         ] as [$class, $method]) {
             foreach ((new ReflectionMethod($class, $method))->getParameters()
                 as $parameter) {
@@ -69,12 +91,17 @@ final class ProductionApplicationBoundaryTest extends TestCase
         self::assertSame([
             "__construct",
             "accessibleLibraryItems",
+            "bookTypeManagement",
+            "catalogContextCreation",
+            "catalogContextManagement",
             "externalLoanReading",
+            "genreManagement",
             "libraryItemCreation",
             "libraryItemReading",
             "ownedExternalLoans",
             "ownedReadingRounds",
             "personalLibraries",
+            "subjectManagement",
         ], $publicMethods);
         self::assertNotContains("get", $publicMethods);
         self::assertNotContains("resolve", $publicMethods);
