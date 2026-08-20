@@ -7,6 +7,7 @@ namespace Biblio\Core\Tests\Unit\Application;
 use Biblio\Core\Application\Library\LibraryAccessService;
 use Biblio\Core\Authorization\LibraryAuthorizationPolicy;
 use Biblio\Core\Identity\UserId;
+use Biblio\Core\Library\AdditionalPermissions;
 use Biblio\Core\Library\LibraryContext;
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Library\LibraryMembership;
@@ -45,7 +46,7 @@ final class InMemoryLibraryMembershipRepository implements LibraryMembershipRepo
 
 final class LibraryAccessServiceTest extends TestCase
 {
-    public function testCatalogManagementUsesRoleAndIgnoresUseAccess(): void
+    public function testCatalogManagementPermissionsRemainIndependent(): void
     {
         $userId = new UserId("user-1");
         $libraryId = new LibraryId("library-a");
@@ -54,16 +55,44 @@ final class LibraryAccessServiceTest extends TestCase
             $libraryId,
             $userId,
             UseAccess::ViewOnly,
-            ManagementRole::Manager
+            ManagementRole::Manager,
+            AdditionalPermissions::fromValues(
+                AdditionalPermissions::CATALOG_ITEM_ADD
+            )
         ));
         $service = new LibraryAccessService(
             $repository,
             new LibraryAuthorizationPolicy()
         );
 
-        self::assertTrue($service->canManageCatalog(
-            new LibraryContext($libraryId, $userId)
+        $context = new LibraryContext($libraryId, $userId);
+        self::assertTrue($service->canAddCatalogItem($context));
+        self::assertTrue(
+            $service->canInitializeCatalogContextDuringItemAdd($context)
+        );
+        self::assertFalse(
+            $service->canModifyLibraryCatalogContext($context)
+        );
+        self::assertFalse($service->canManageClassificationTerms($context));
+
+        $repository->add($this->assignment(
+            $libraryId,
+            $userId,
+            UseAccess::ViewOnly,
+            ManagementRole::Manager,
+            AdditionalPermissions::fromValues(
+                AdditionalPermissions::CATALOG_CLASSIFICATION_MANAGE
+            )
         ));
+
+        self::assertFalse($service->canAddCatalogItem($context));
+        self::assertFalse(
+            $service->canInitializeCatalogContextDuringItemAdd($context)
+        );
+        self::assertTrue(
+            $service->canModifyLibraryCatalogContext($context)
+        );
+        self::assertTrue($service->canManageClassificationTerms($context));
     }
 
     public function testAccessForSameUserIsScopedByLibrary(): void
@@ -116,7 +145,14 @@ final class LibraryAccessServiceTest extends TestCase
         );
 
         self::assertFalse($service->canViewCollection($context));
-        self::assertFalse($service->canManageCatalog($context));
+        self::assertFalse($service->canAddCatalogItem($context));
+        self::assertFalse(
+            $service->canInitializeCatalogContextDuringItemAdd($context)
+        );
+        self::assertFalse(
+            $service->canModifyLibraryCatalogContext($context)
+        );
+        self::assertFalse($service->canManageClassificationTerms($context));
         self::assertFalse($service->canUseItemDirectly($context));
         self::assertFalse($service->canReceiveInternalLoan($context));
     }
@@ -197,7 +233,8 @@ final class LibraryAccessServiceTest extends TestCase
         LibraryId $libraryId,
         UserId $userId,
         UseAccess $useAccess,
-        ManagementRole $role = ManagementRole::Member
+        ManagementRole $role = ManagementRole::Member,
+        ?AdditionalPermissions $permissions = null
     ): LibraryMembershipAssignment {
         return new LibraryMembershipAssignment(
             $libraryId,
@@ -205,7 +242,8 @@ final class LibraryAccessServiceTest extends TestCase
             new LibraryMembership(
                 $role,
                 $useAccess,
-                MembershipStatus::Active
+                MembershipStatus::Active,
+                $permissions
             )
         );
     }

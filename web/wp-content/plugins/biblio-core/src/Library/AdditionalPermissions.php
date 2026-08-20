@@ -9,6 +9,8 @@ use Biblio\Core\Exception\ValidationException;
 final readonly class AdditionalPermissions
 {
     public const CATALOG_ITEM_ADD = "catalog.item_add";
+    public const CATALOG_CLASSIFICATION_MANAGE =
+        "catalog.classification_manage";
 
     /** @param list<string> $values */
     private function __construct(private array $values)

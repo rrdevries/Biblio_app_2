@@ -17,7 +17,7 @@ final readonly class LibraryAccessService
     ) {
     }
 
-    public function canManageCatalog(LibraryContext $context): bool
+    public function canAddCatalogItem(LibraryContext $context): bool
     {
         $assignment = $this->findMembership($context);
 
@@ -25,7 +25,53 @@ final readonly class LibraryAccessService
             return false;
         }
 
-        return $this->authorizationPolicy->canManageCatalog(
+        return $this->authorizationPolicy->canAddCatalogItem(
+            $context,
+            $assignment
+        );
+    }
+
+    public function canInitializeCatalogContextDuringItemAdd(
+        LibraryContext $context
+    ): bool {
+        $assignment = $this->findMembership($context);
+
+        if ($assignment === null) {
+            return false;
+        }
+
+        return $this->authorizationPolicy
+            ->canInitializeCatalogContextDuringItemAdd(
+                $context,
+                $assignment
+            );
+    }
+
+    public function canModifyLibraryCatalogContext(
+        LibraryContext $context
+    ): bool {
+        $assignment = $this->findMembership($context);
+
+        if ($assignment === null) {
+            return false;
+        }
+
+        return $this->authorizationPolicy->canModifyLibraryCatalogContext(
+            $context,
+            $assignment
+        );
+    }
+
+    public function canManageClassificationTerms(
+        LibraryContext $context
+    ): bool {
+        $assignment = $this->findMembership($context);
+
+        if ($assignment === null) {
+            return false;
+        }
+
+        return $this->authorizationPolicy->canManageClassificationTerms(
             $context,
             $assignment
         );

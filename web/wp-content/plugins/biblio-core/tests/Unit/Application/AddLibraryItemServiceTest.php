@@ -22,6 +22,7 @@ use Biblio\Core\Exception\AuthorizationException;
 use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Exception\ValidationException;
 use Biblio\Core\Identity\UserId;
+use Biblio\Core\Library\AdditionalPermissions;
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Library\LibraryMembership;
 use Biblio\Core\Library\LibraryMembershipAssignment;
@@ -211,7 +212,11 @@ final class AddLibraryItemServiceTest extends TestCase
     {
         [$service, , $store, , $transaction] = $this->fixture(
             ManagementRole::Manager,
-            UseAccess::ViewOnly
+            UseAccess::ViewOnly,
+            MembershipStatus::Active,
+            AdditionalPermissions::fromValues(
+                AdditionalPermissions::CATALOG_ITEM_ADD
+            )
         );
         $work = new Work(new WorkId("work-existing"), "Existing Work");
         $store->works[$work->id()->value()] = $work;
@@ -272,6 +277,36 @@ final class AddLibraryItemServiceTest extends TestCase
             self::assertSame(0, $store->workFindCount);
             self::assertSame(0, $store->editionFindCount);
             self::assertSame([], $store->operations);
+        }
+    }
+
+    public function testClassificationPermissionCannotAuthorizeItemAdd(): void
+    {
+        [$service, , $store, , $transaction] = $this->fixture(
+            ManagementRole::Manager,
+            UseAccess::Direct,
+            MembershipStatus::Active,
+            AdditionalPermissions::fromValues(
+                AdditionalPermissions::CATALOG_CLASSIFICATION_MANAGE
+            )
+        );
+
+        try {
+            $service->addForExistingEdition(
+                new LibraryId("library-a"),
+                new ItemId("item-new"),
+                new EditionId("edition-secret")
+            );
+            self::fail("Classification management authorized Item-add.");
+        } catch (AuthorizationException $exception) {
+            self::assertSame(
+                FailureReason::AuthorizationDenied,
+                $exception->reason()
+            );
+            self::assertSame(0, $store->editionFindCount);
+            self::assertSame(0, $store->workFindCount);
+            self::assertSame([], $store->operations);
+            self::assertSame(0, $transaction->runCount);
         }
     }
 
@@ -378,7 +413,8 @@ final class AddLibraryItemServiceTest extends TestCase
     private function fixture(
         ManagementRole $role = ManagementRole::Owner,
         UseAccess $useAccess = UseAccess::Direct,
-        MembershipStatus $status = MembershipStatus::Active
+        MembershipStatus $status = MembershipStatus::Active,
+        ?AdditionalPermissions $permissions = null
     ): array {
         $libraryId = new LibraryId("library-a");
         $userId = new UserId("user-1");
@@ -388,7 +424,7 @@ final class AddLibraryItemServiceTest extends TestCase
         $memberships->add(new LibraryMembershipAssignment(
             $libraryId,
             $userId,
-            new LibraryMembership($role, $useAccess, $status)
+            new LibraryMembership($role, $useAccess, $status, $permissions)
         ));
         $transaction = new CatalogApplicationTransactionManager($store);
 

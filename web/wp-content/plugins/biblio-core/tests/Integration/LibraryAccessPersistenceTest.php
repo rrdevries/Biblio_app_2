@@ -9,6 +9,7 @@ use Biblio\Core\Authorization\LibraryAuthorizationPolicy;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMembershipRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryRepository;
+use Biblio\Core\Library\AdditionalPermissions;
 use Biblio\Core\Library\Library;
 use Biblio\Core\Library\LibraryContext;
 use Biblio\Core\Library\LibraryId;
@@ -82,7 +83,11 @@ final class LibraryAccessPersistenceTest extends PersistenceIntegrationTestCase
             new LibraryMembership(
                 ManagementRole::Manager,
                 UseAccess::Borrow,
-                MembershipStatus::Inactive
+                MembershipStatus::Inactive,
+                AdditionalPermissions::fromValues(
+                    AdditionalPermissions::CATALOG_ITEM_ADD,
+                    AdditionalPermissions::CATALOG_CLASSIFICATION_MANAGE
+                )
             )
         ));
         $service = new LibraryAccessService(
@@ -92,14 +97,23 @@ final class LibraryAccessPersistenceTest extends PersistenceIntegrationTestCase
         $context = new LibraryContext($libraryId, $userId);
 
         self::assertFalse($service->canViewCollection($context));
+        self::assertFalse($service->canAddCatalogItem($context));
+        self::assertFalse(
+            $service->canInitializeCatalogContextDuringItemAdd($context)
+        );
+        self::assertFalse(
+            $service->canModifyLibraryCatalogContext($context)
+        );
+        self::assertFalse($service->canManageClassificationTerms($context));
         self::assertFalse($service->canUseItemDirectly($context));
         self::assertFalse($service->canReceiveInternalLoan($context));
     }
 
-    public function testManagerRoleAndBorrowAccessRemainIndependent(): void
+    public function testPersistedManagerPermissionsRemainIndependent(): void
     {
         $libraryId = new LibraryId("library-a");
-        $userId = new UserId("manager");
+        $itemManager = new UserId("item-manager");
+        $classificationManager = new UserId("classification-manager");
         (new WpdbLibraryRepository(
             $this->database,
             $this->tableNames
@@ -110,21 +124,61 @@ final class LibraryAccessPersistenceTest extends PersistenceIntegrationTestCase
         );
         $repository->add(new LibraryMembershipAssignment(
             $libraryId,
-            $userId,
+            $itemManager,
             new LibraryMembership(
                 ManagementRole::Manager,
                 UseAccess::Borrow,
-                MembershipStatus::Active
+                MembershipStatus::Active,
+                AdditionalPermissions::fromValues(
+                    AdditionalPermissions::CATALOG_ITEM_ADD
+                )
+            )
+        ));
+        $repository->add(new LibraryMembershipAssignment(
+            $libraryId,
+            $classificationManager,
+            new LibraryMembership(
+                ManagementRole::Manager,
+                UseAccess::ViewOnly,
+                MembershipStatus::Active,
+                AdditionalPermissions::fromValues(
+                    AdditionalPermissions::CATALOG_CLASSIFICATION_MANAGE
+                )
             )
         ));
         $service = new LibraryAccessService(
             $repository,
             new LibraryAuthorizationPolicy()
         );
-        $context = new LibraryContext($libraryId, $userId);
+        $itemContext = new LibraryContext($libraryId, $itemManager);
+        $classificationContext = new LibraryContext(
+            $libraryId,
+            $classificationManager
+        );
 
-        self::assertTrue($service->canViewCollection($context));
-        self::assertFalse($service->canUseItemDirectly($context));
-        self::assertTrue($service->canReceiveInternalLoan($context));
+        self::assertTrue($service->canAddCatalogItem($itemContext));
+        self::assertTrue(
+            $service->canInitializeCatalogContextDuringItemAdd($itemContext)
+        );
+        self::assertFalse(
+            $service->canModifyLibraryCatalogContext($itemContext)
+        );
+        self::assertFalse(
+            $service->canManageClassificationTerms($itemContext)
+        );
+        self::assertFalse(
+            $service->canAddCatalogItem($classificationContext)
+        );
+        self::assertFalse(
+            $service->canInitializeCatalogContextDuringItemAdd(
+                $classificationContext
+            )
+        );
+        self::assertTrue(
+            $service->canModifyLibraryCatalogContext($classificationContext)
+        );
+        self::assertTrue(
+            $service->canManageClassificationTerms($classificationContext)
+        );
     }
 }
