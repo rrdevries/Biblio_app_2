@@ -42,7 +42,11 @@ $tableNames = new \Biblio\Core\Infrastructure\Persistence\WordPress\CoreTableNam
 );
 $schemaMigrator = new \Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrator(
     $wpdb,
-    $tableNames
+    $tableNames,
+    \Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrationRegistry::production(
+        $wpdb,
+        $tableNames
+    )->migrations()
 );
 $schemaMigrator->migrate();
 

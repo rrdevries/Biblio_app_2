@@ -39,12 +39,12 @@ final class LifecycleProbeMigration implements CoreSchemaMigration
 
     public function sourceVersion(): int
     {
-        return CoreSchemaMigrator::FORMAL_BASELINE_VERSION;
+        return CoreSchemaMigrator::CURRENT_VERSION;
     }
 
     public function targetVersion(): int
     {
-        return CoreSchemaMigrator::FORMAL_BASELINE_VERSION + 1;
+        return CoreSchemaMigrator::CURRENT_VERSION + 1;
     }
 
     public function assertPrecondition(): void
@@ -149,13 +149,13 @@ final class ProductionLifecycleTest extends PersistenceIntegrationTestCase
             $composition->lifecycle()->activate();
 
             $migrator = $this->migrator();
-            self::assertSame(8, $this->existingCoreTableCount());
-            self::assertSame(1000, $migrator->installedVersion());
+            self::assertSame(15, $this->existingCoreTableCount());
+            self::assertSame(1001, $migrator->installedVersion());
             self::assertTrue(
                 $migrator->health()->isHealthy(),
                 $migrator->health()->summary()
             );
-            self::assertTrue($this->state->isHealthCurrent(1000));
+            self::assertTrue($this->state->isHealthCurrent(1001));
         } finally {
             $this->ensureBaseline();
         }
@@ -168,11 +168,10 @@ final class ProductionLifecycleTest extends PersistenceIntegrationTestCase
             $this->tableNames
         );
 
-        self::assertSame(
-            CoreSchemaMigrator::FORMAL_BASELINE_VERSION,
-            CoreSchemaMigrator::CURRENT_VERSION
-        );
-        self::assertSame([], $registry->migrations());
+        self::assertSame(1001, CoreSchemaMigrator::CURRENT_VERSION);
+        self::assertCount(1, $registry->migrations());
+        self::assertSame(1000, $registry->migrations()[0]->sourceVersion());
+        self::assertSame(1001, $registry->migrations()[0]->targetVersion());
     }
 
     public function testActivationOfCurrentSchemaIsSchemaAndDataNoOp(): void
@@ -209,11 +208,11 @@ final class ProductionLifecycleTest extends PersistenceIntegrationTestCase
             $composition->lifecycle()->boot();
 
             self::assertSame(1, $migration->attempts());
-            self::assertSame(1001, $this->migrator()->installedVersion());
-            self::assertTrue($this->state->isHealthCurrent(1001));
+            self::assertSame(1002, $this->migrator()->installedVersion());
+            self::assertTrue($this->state->isHealthCurrent(1002));
         } finally {
             $migration->remove();
-            update_option(CoreSchemaMigrator::VERSION_OPTION, "1000", false);
+            update_option(CoreSchemaMigrator::VERSION_OPTION, "1001", false);
         }
     }
 
@@ -244,7 +243,7 @@ final class ProductionLifecycleTest extends PersistenceIntegrationTestCase
             }
 
             self::assertSame(1, $migration->attempts());
-            self::assertSame(1000, $this->migrator()->installedVersion());
+            self::assertSame(1001, $this->migrator()->installedVersion());
             self::assertSame(
                 "Preserved",
                 $this->database->get_var($this->database->prepare(
@@ -269,10 +268,10 @@ final class ProductionLifecycleTest extends PersistenceIntegrationTestCase
             $this->state->clear();
             $composition->lifecycle()->boot();
             self::assertSame(2, $migration->attempts());
-            self::assertSame(1001, $this->migrator()->installedVersion());
+            self::assertSame(1002, $this->migrator()->installedVersion());
         } finally {
             $migration->remove();
-            update_option(CoreSchemaMigrator::VERSION_OPTION, "1000", false);
+            update_option(CoreSchemaMigrator::VERSION_OPTION, "1001", false);
         }
     }
 
@@ -531,23 +530,43 @@ final class ProductionLifecycleTest extends PersistenceIntegrationTestCase
     /** @param list<CoreSchemaMigration> $migrations */
     private function composition(array $migrations = []): ProductionComposition
     {
+        $registry = null;
+
+        if ($migrations !== []) {
+            $productionMigrations = CoreSchemaMigrationRegistry::production(
+                $this->database,
+                $this->tableNames
+            )->migrations();
+            $registry = CoreSchemaMigrationRegistry::explicit(
+                ...$productionMigrations,
+                ...$migrations
+            );
+        }
+
         return new ProductionComposition(
             $this->database,
             $this->state,
-            CoreSchemaMigrationRegistry::explicit(...$migrations)
+            $registry
         );
     }
 
     private function migrator(): CoreSchemaMigrator
     {
-        return new CoreSchemaMigrator($this->database, $this->tableNames);
+        return new CoreSchemaMigrator(
+            $this->database,
+            $this->tableNames,
+            CoreSchemaMigrationRegistry::production(
+                $this->database,
+                $this->tableNames
+            )->migrations()
+        );
     }
 
     private function ensureBaseline(): void
     {
         delete_option(CoreSchemaMigrator::LEGACY_VERSION_OPTION);
 
-        if ($this->existingCoreTableCount() !== 8) {
+        if ($this->existingCoreTableCount() !== 15) {
             $this->dropCoreSchema();
             $this->migrator()->migrate();
         }
@@ -555,7 +574,7 @@ final class ProductionLifecycleTest extends PersistenceIntegrationTestCase
 
     private function dropCoreSchema(): void
     {
-        foreach (array_reverse($this->tableNames->all()) as $table) {
+        foreach (array_reverse($this->tableNames->schema1001()) as $table) {
             $this->database->query("DROP TABLE IF EXISTS `{$table}`");
         }
 
@@ -568,7 +587,7 @@ final class ProductionLifecycleTest extends PersistenceIntegrationTestCase
     {
         $count = 0;
 
-        foreach ($this->tableNames->all() as $table) {
+        foreach ($this->tableNames->schema1001() as $table) {
             $count += (int) $this->database->get_var($this->database->prepare(
                 "SELECT COUNT(*) FROM information_schema.TABLES "
                     . "WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s",

@@ -47,7 +47,7 @@ final readonly class CoreSchemaMigrationRegistry
         wpdb $database,
         CoreTableNames $tableNames
     ): array {
-        return [];
+        return [new CoreSchema1001Migration($database, $tableNames)];
     }
 
     private function assertProductionChainTargetsCurrentVersion(): void

@@ -8,6 +8,8 @@ use Biblio\Core\Exception\ValidationException;
 
 final readonly class AdditionalPermissions
 {
+    public const CATALOG_ITEM_ADD = "catalog.item_add";
+
     /** @param list<string> $values */
     private function __construct(private array $values)
     {
@@ -50,5 +52,19 @@ final readonly class AdditionalPermissions
     public function values(): array
     {
         return $this->values;
+    }
+
+    public function contains(string $permission): bool
+    {
+        return in_array($permission, $this->values, true);
+    }
+
+    public function with(string $permission): self
+    {
+        if ($this->contains($permission)) {
+            return $this;
+        }
+
+        return new self([...$this->values, $permission]);
     }
 }
