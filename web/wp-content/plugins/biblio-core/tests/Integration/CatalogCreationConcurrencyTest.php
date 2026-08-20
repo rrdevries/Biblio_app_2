@@ -224,6 +224,7 @@ final class CatalogCreationConcurrencyTest extends PersistenceIntegrationTestCas
                 $this->database,
                 $this->tableNames
             ),
+            $this->classificationSeedEvolution(),
             new WpdbTransactionManager($this->database)
         ))->create(
             Library::privateLibrary($libraryId),

@@ -185,6 +185,7 @@ final class LibraryItemAccessPersistenceTest extends
         (new CreateLibraryService(
             new WpdbLibraryRepository($this->database, $this->tableNames),
             $this->membershipRepository(),
+            $this->classificationSeedEvolution(),
             new WpdbTransactionManager($this->database)
         ))->create(Library::privateLibrary($libraryId), $owner);
     }

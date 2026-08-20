@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Biblio\Core\Application\Library;
 
 use Biblio\Core\Application\TransactionManager;
+use Biblio\Core\Catalog\Classification\ClassificationSeedEvolution;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Library\Library;
 use Biblio\Core\Library\LibraryMembership;
@@ -17,6 +18,7 @@ final readonly class CreateLibraryService
     public function __construct(
         private WritableLibraryRepository $libraryRepository,
         private WritableLibraryMembershipRepository $membershipRepository,
+        private ClassificationSeedEvolution $seedEvolution,
         private TransactionManager $transactionManager
     ) {
     }
@@ -49,6 +51,7 @@ final readonly class CreateLibraryService
         ): mixed {
             $this->libraryRepository->add($library);
             $this->membershipRepository->add($ownerAssignment);
+            $this->seedEvolution->evolve($library->id());
 
             return $continuation();
         });

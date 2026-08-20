@@ -18,6 +18,7 @@ use Biblio\Core\Application\Reading\StartReadingFromLibraryItemService;
 use Biblio\Core\Authorization\LibraryAuthorizationPolicy;
 use Biblio\Core\Infrastructure\Persistence\WordPress\CoreTableNames;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbEditionRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbClassificationSeedEvolutionFactory;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbExternalLoanRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbItemRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMembershipRepository;
@@ -78,9 +79,14 @@ final class ProductionComposition
             $database,
             $tableNames
         );
+        $seedEvolution = WpdbClassificationSeedEvolutionFactory::create(
+            $database,
+            $tableNames
+        );
         $createLibrary = new CreateLibraryService(
             $libraryRepository,
             $membershipRepository,
+            $seedEvolution,
             $transactionManager
         );
         $personalLibraries = new EnsurePersonalPrivateLibraryService(

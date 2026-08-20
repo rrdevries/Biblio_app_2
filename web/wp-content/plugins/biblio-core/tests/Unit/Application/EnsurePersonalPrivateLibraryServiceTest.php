@@ -7,6 +7,8 @@ namespace Biblio\Core\Tests\Unit\Application;
 use Biblio\Core\Application\Library\CreateLibraryService;
 use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
 use Biblio\Core\Application\TransactionManager;
+use Biblio\Core\Catalog\Classification\ClassificationSeedAdoptionAmbiguity;
+use Biblio\Core\Catalog\Classification\ClassificationSeedEvolution;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Library\Library;
 use Biblio\Core\Library\LibraryId;
@@ -33,6 +35,11 @@ final class PersonalLibraryInMemoryLibraryRepository implements
     public function find(LibraryId $libraryId): ?Library
     {
         return $this->libraries[$libraryId->value()] ?? null;
+    }
+
+    public function all(): array
+    {
+        return array_values($this->libraries);
     }
 
     public function count(): int
@@ -107,6 +114,24 @@ final class PassthroughTransactionManager implements TransactionManager
     public function run(callable $operation): mixed
     {
         return $operation();
+    }
+}
+
+final class NoopClassificationSeedEvolution implements ClassificationSeedEvolution
+{
+    public function evolve(LibraryId $libraryId): void
+    {
+    }
+
+    public function isConverged(LibraryId $libraryId): bool
+    {
+        return true;
+    }
+
+    /** @return list<ClassificationSeedAdoptionAmbiguity> */
+    public function ambiguities(LibraryId $libraryId): array
+    {
+        return [];
     }
 }
 
@@ -196,6 +221,7 @@ final class EnsurePersonalPrivateLibraryServiceTest extends TestCase
         return new CreateLibraryService(
             $libraryRepository,
             $membershipRepository,
+            new NoopClassificationSeedEvolution(),
             new PassthroughTransactionManager()
         );
     }

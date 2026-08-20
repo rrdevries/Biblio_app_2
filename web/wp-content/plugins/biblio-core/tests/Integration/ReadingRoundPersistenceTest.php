@@ -516,6 +516,7 @@ final class ReadingRoundPersistenceTest extends PersistenceIntegrationTestCase
         (new CreateLibraryService(
             new WpdbLibraryRepository($this->database, $this->tableNames),
             $this->membershipRepository(),
+            $this->classificationSeedEvolution(),
             new WpdbTransactionManager($this->database)
         ))->create(Library::privateLibrary($libraryId), $owner);
     }
