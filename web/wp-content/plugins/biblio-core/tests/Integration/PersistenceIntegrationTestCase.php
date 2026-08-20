@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Tests\Integration;
 
+use Biblio\Core\Application\Catalog\Classification\ClassificationSeedEvolutionService;
 use Biblio\Core\Infrastructure\Persistence\WordPress\CoreTableNames;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbClassificationSeedEvolutionFactory;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use wpdb;
@@ -82,6 +84,14 @@ abstract class PersistenceIntegrationTestCase extends TestCase
         );
         $this->database->query("DELETE FROM `{$memberships}`");
         $this->database->query("DELETE FROM `{$libraries}`");
+    }
+
+    protected function classificationSeedEvolution(): ClassificationSeedEvolutionService
+    {
+        return WpdbClassificationSeedEvolutionFactory::create(
+            $this->database,
+            $this->tableNames
+        );
     }
 
     private function tableExists(string $tableName): bool

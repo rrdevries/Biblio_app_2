@@ -334,6 +334,7 @@ final class CatalogApplicationPersistenceTest extends
                 $this->database,
                 $this->tableNames
             ),
+            $this->classificationSeedEvolution(),
             new WpdbTransactionManager($this->database)
         ))->create(
             Library::privateLibrary($libraryId),

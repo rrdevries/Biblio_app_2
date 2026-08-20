@@ -110,6 +110,7 @@ final class LibraryDatabaseIntegrityTest extends PersistenceIntegrationTestCase
             new FailingLibraryMembershipRepository(
                 $realMembershipRepository
             ),
+            $this->classificationSeedEvolution(),
             new WpdbTransactionManager($this->database)
         );
         $libraryId = new LibraryId("library-a");

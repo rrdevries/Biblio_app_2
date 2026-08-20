@@ -172,6 +172,7 @@ final class ReadingRoundConcurrencyTest extends PersistenceIntegrationTestCase
                 $this->database,
                 $this->tableNames
             ),
+            $this->classificationSeedEvolution(),
             new WpdbTransactionManager($this->database)
         ))->create(Library::privateLibrary($library), $user);
         $work = new Work(new WorkId("work-w"), "Concurrent Work");

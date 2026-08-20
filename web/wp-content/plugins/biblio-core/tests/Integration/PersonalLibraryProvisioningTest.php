@@ -321,6 +321,7 @@ final class PersonalLibraryProvisioningTest extends
         return new CreateLibraryService(
             $this->libraryRepository(),
             $membershipRepository ?? $this->membershipRepository(),
+            $this->classificationSeedEvolution(),
             new WpdbTransactionManager($this->database)
         );
     }

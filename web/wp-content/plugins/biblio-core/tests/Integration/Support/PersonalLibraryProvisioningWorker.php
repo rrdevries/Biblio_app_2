@@ -8,6 +8,7 @@ use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Persistence\WordPress\CoreTableNames;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMembershipRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbClassificationSeedEvolutionFactory;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPersonalLibraryRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionManager;
 use Biblio\Core\Library\LibraryId;
@@ -67,6 +68,7 @@ $barrierRepository = new class(
 $createLibraryService = new CreateLibraryService(
     new WpdbLibraryRepository($wpdb, $tableNames),
     new WpdbLibraryMembershipRepository($wpdb, $tableNames),
+    WpdbClassificationSeedEvolutionFactory::create($wpdb, $tableNames),
     new WpdbTransactionManager($wpdb)
 );
 $service = new EnsurePersonalPrivateLibraryService(
