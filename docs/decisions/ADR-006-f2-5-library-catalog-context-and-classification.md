@@ -1158,3 +1158,190 @@ Naast de eerdere acceptatiecriteria moet F2.5 bewijzen dat:
     het vereiste ActivityEvent atomair vastlegt;
 15. een mislukte ActivityEvent-write de bijbehorende termmutatie volledig
     terugdraait.
+
+## 45. Migratie van bestaande Manager-permissions
+
+Bij migration 1000 -> 1001 worden bestaande Manager-memberships expliciet
+gemigreerd naar het nieuwe authorizationmodel.
+
+Iedere bestaande Manager-membership krijgt:
+
+    catalog.item_add
+
+Dit geldt ongeacht de actuele membershipstatus.
+
+De membershipstatus blijft afzonderlijk bepalen of een permission op dat moment
+daadwerkelijk gebruikt kan worden.
+
+Bestaande Managers krijgen niet automatisch:
+
+    catalog.classification_manage
+
+Reden:
+
+- F2.3 gaf Managers reeds het functionele recht om catalogusitems toe te voegen;
+- die bestaande capability moet bij migration behouden blijven;
+- classificatiebeheer is een nieuw, afzonderlijk en zwaarder recht;
+- dat nieuwe recht wordt niet stilzwijgend toegekend.
+
+De migration mag bestaande onbekende/additionele permissions niet verwijderen
+of overschrijven.
+
+## 46. Audit van bootstrap, seed-adoptie en migrations
+
+Automatische technische classificatieacties vanuit:
+
+- schema migration;
+- seedbootstrap;
+- seed-adoptie;
+- retry/idempotente migrationlogica;
+
+produceren geen Library ActivityEvent.
+
+Deze acties zijn systeem-/migrationonderhoud en geen bewuste
+Library-beheerhandeling.
+
+Diagnostiek verloopt via:
+
+- migrationresultaten;
+- technische logging;
+- schema-health warnings waar relevant.
+
+Bewuste gebruikersmutaties aan classificatietermen en
+LibraryCatalogContext blijven wel onder de transactionele ActivityEvent-regels
+van deze ADR vallen.
+
+Daarmee geldt:
+
+    automatische systeembootstrap != Library ActivityEvent
+    bewuste gedeelde gebruikersmutatie = verplicht Library ActivityEvent
+
+## 47. Metadata-mappings buiten F2.5
+
+F2.5 en schema 1001 implementeren geen metadata-mappingmodel.
+
+Er komt in F2.5 geen persistence voor:
+
+- metadata providers;
+- externe classificatiewaarden;
+- mappingrecords;
+- proposalstatussen;
+- approval lifecycle;
+- automatische provider->Library-term mapping.
+
+Passages in deze ADR over metadata die classificaties kan voorstellen of over
+toekomstige Library-specifieke mappings gelden uitsluitend als toekomstig
+architectuurcontract.
+
+De functionele F2.5-scope blijft beperkt tot:
+
+- handmatige Library-classificatie;
+- Boeksoort;
+- Genre;
+- Onderwerp;
+- termbeheer;
+- LibraryCatalogContext;
+- seed/bootstrap/evolutie;
+- authorization;
+- audit;
+- concurrency.
+
+Metadata-mapping krijgt pas een implementatieslice nadat provideridentiteit,
+mappingrichting, lifecycle, approval en persistence expliciet zijn ontworpen.
+
+## 48. Concurrency bij ontbrekende contextcreatie
+
+Bij twee gelijktijdige pogingen om dezelfde ontbrekende:
+
+    Library + Work
+
+LibraryCatalogContext aan te maken, bepaalt de unieke contextidentiteit één
+winnaar.
+
+De verliezende operatie herleest daarna de gecommitte winnaarcontext.
+
+Daarna geldt:
+
+### Semantisch gelijke gewenste classificatie
+
+Als de gewenste eindclassificatie van de verliezer semantisch gelijk is aan de
+winnaarcontext:
+
+- wordt de bestaande winnaarcontext idempotent hergebruikt;
+- ontstaat geen tweede context;
+- ontstaat geen extra contextmutatie;
+- ontstaat geen extra classificatie-ActivityEvent;
+- mag de omringende Item-add-operatie doorgaan indien alle overige voorwaarden
+  geldig zijn.
+
+### Verschillende gewenste classificatie
+
+Als de gewenste eindclassificatie verschilt van de winnaarcontext:
+
+- wordt de verliezende operatie geweigerd met een stabiel
+  LibraryCatalogContext-conflict;
+- vindt geen automatische merge plaats;
+- wordt de winnaarcontext niet aangepast;
+- worden eventuele compound writes van de verliezende operatie volgens de
+  geldende transactionele regels teruggedraaid.
+
+De kernregel is:
+
+    dezelfde gewenste toestand -> idempotent hergebruik
+    verschillende gewenste toestand -> expliciet conflict
+
+## 49. Technisch normalisatiecontract
+
+Harde duplicate-normalisatie voor classificatietermen gebruikt een
+Unicode-bewuste maar conservatieve technische normalisatie.
+
+Minimaal:
+
+1. invoer moet geldige UTF-8 zijn;
+2. Unicode casefold wordt toegepast;
+3. equivalente whitespace-runs worden genormaliseerd;
+4. triviale dash/separatorvarianten mogen worden genormaliseerd wanneer zij
+   alleen formattering vertegenwoordigen;
+5. begin- en eindwhitespace wordt verwijderd.
+
+Niet automatisch normaliseren of gelijkstellen:
+
+- accenten/diakritische tekens;
+- synoniemen;
+- afkortingen;
+- vertalingen;
+- semantisch verwante termen;
+- algemene leestekenverwijdering;
+- vrije spellingscorrectie.
+
+Voorbeelden:
+
+    Sci-Fi -> sci fi
+    Sci Fi -> sci fi
+    Sciencefiction -> sciencefiction
+
+maar:
+
+    WO II != Tweede Wereldoorlog
+
+en semantische equivalentie wordt niet door dit normalisatiecontract bepaald.
+
+De exacte technische implementatie en testvectors worden in code vastgelegd en
+moeten dit contract aantoonbaar respecteren.
+
+## 50. Initiële LibraryCatalogContext-version
+
+Een nieuw gecreëerde LibraryCatalogContext start technisch op:
+
+    version = 1
+
+Deze keuze is een technische conventie voor optimistic locking.
+
+Daarna geldt:
+
+- iedere echte succesvolle contextmutatie verhoogt version exact eenmaal;
+- een semantische no-op verhoogt version niet;
+- stale no-op verhoogt version niet;
+- termmutaties verhogen contextversion niet.
+
+Version 1 heeft geen functionele betekenis buiten concurrencycontrole.
