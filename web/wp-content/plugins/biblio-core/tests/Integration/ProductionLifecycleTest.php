@@ -15,6 +15,7 @@ use Biblio\Core\Exception\CoreFailure;
 use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigration;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrationException;
+use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrationRegistry;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrator;
 use Biblio\Core\Infrastructure\WordPress\Lifecycle\CoreLifecycleException;
 use Biblio\Core\Infrastructure\WordPress\Lifecycle\WpTransientLifecycleStateStore;
@@ -158,6 +159,20 @@ final class ProductionLifecycleTest extends PersistenceIntegrationTestCase
         } finally {
             $this->ensureBaseline();
         }
+    }
+
+    public function testProductionRegistryMatchesCurrentBaselineVersion(): void
+    {
+        $registry = CoreSchemaMigrationRegistry::production(
+            $this->database,
+            $this->tableNames
+        );
+
+        self::assertSame(
+            CoreSchemaMigrator::FORMAL_BASELINE_VERSION,
+            CoreSchemaMigrator::CURRENT_VERSION
+        );
+        self::assertSame([], $registry->migrations());
     }
 
     public function testActivationOfCurrentSchemaIsSchemaAndDataNoOp(): void
@@ -519,7 +534,7 @@ final class ProductionLifecycleTest extends PersistenceIntegrationTestCase
         return new ProductionComposition(
             $this->database,
             $this->state,
-            $migrations
+            CoreSchemaMigrationRegistry::explicit(...$migrations)
         );
     }
 

@@ -15,7 +15,19 @@ final readonly class CoreSchemaHealthChecker
     ) {
     }
 
-    public function inspect(): CoreSchemaHealth
+    public function inspectForVersion(int $expectedVersion): CoreSchemaHealth
+    {
+        if ($expectedVersion !== CoreSchemaMigrator::FORMAL_BASELINE_VERSION) {
+            throw new CoreSchemaMigrationException(
+                "No explicit Biblio Core schema-health contract exists for "
+                . "schema version {$expectedVersion}."
+            );
+        }
+
+        return $this->inspectVersion1000();
+    }
+
+    private function inspectVersion1000(): CoreSchemaHealth
     {
         $issues = [];
 
