@@ -4,27 +4,81 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Infrastructure\Persistence\WordPress\Schema;
 
+use Biblio\Core\Catalog\Classification\ClassificationSeedEvolution;
 use Biblio\Core\Infrastructure\Persistence\WordPress\CoreTableNames;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbClassificationSeedEvolutionFactory;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryRepository;
+use Biblio\Core\Library\LibraryRepository;
 use wpdb;
 
 final readonly class CoreSchemaHealthChecker
 {
+    private LibraryRepository $libraries;
+    private ClassificationSeedEvolution $seedEvolution;
+
     public function __construct(
         private wpdb $database,
-        private CoreTableNames $tableNames
+        private CoreTableNames $tableNames,
+        ?LibraryRepository $libraries = null,
+        ?ClassificationSeedEvolution $seedEvolution = null
     ) {
+        $this->libraries = $libraries
+            ?? new WpdbLibraryRepository($database, $tableNames);
+        $this->seedEvolution = $seedEvolution
+            ?? WpdbClassificationSeedEvolutionFactory::create(
+                $database,
+                $tableNames
+            );
     }
 
     public function inspectForVersion(int $expectedVersion): CoreSchemaHealth
     {
-        return match ($expectedVersion) {
+        $health = match ($expectedVersion) {
             1000 => $this->inspectTables($this->tableNames->all(), true),
             1001 => $this->inspectTables($this->tableNames->schema1001(), true),
+            1002 => $this->inspectTables($this->tableNames->schema1001(), true),
             default => throw new CoreSchemaMigrationException(
                 "No explicit Biblio Core schema-health contract exists for "
                 . "schema version {$expectedVersion}."
             ),
         };
+
+        if (
+            $expectedVersion < 1001
+            || !$health->isHealthy()
+        ) {
+            return $health;
+        }
+
+        return new CoreSchemaHealth(
+            $health->errors(),
+            $this->classificationSeedWarnings()
+        );
+    }
+
+    /** @return list<CoreSchemaHealthWarning> */
+    private function classificationSeedWarnings(): array
+    {
+        $warnings = [];
+
+        foreach ($this->libraries->all() as $library) {
+            $ambiguities = $this->seedEvolution->ambiguities($library->id());
+
+            foreach ($ambiguities as $ambiguity) {
+                $warnings[] = new CoreSchemaHealthWarning(
+                    "classification_seed_adoption_ambiguous",
+                    "Classification seed adoption is ambiguous and was not applied.",
+                    [
+                        "library_id" => $ambiguity->libraryId()->value(),
+                        "taxonomy_type" => $ambiguity->taxonomyType()->value,
+                        "seed_key" => $ambiguity->seedKey()->value(),
+                        "candidate_term_ids" => $ambiguity->candidateTermIds(),
+                    ]
+                );
+            }
+        }
+
+        return $warnings;
     }
 
     public function inspectExistingSchema1001Additions(): CoreSchemaHealth

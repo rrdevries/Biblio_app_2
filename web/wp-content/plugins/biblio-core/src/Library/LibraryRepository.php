@@ -7,4 +7,7 @@ namespace Biblio\Core\Library;
 interface LibraryRepository
 {
     public function find(LibraryId $libraryId): ?Library;
+
+    /** @return list<Library> */
+    public function all(): array;
 }
