@@ -27,4 +27,6 @@ interface LibraryBookTypeRepository
         LibraryId $libraryId,
         ClassificationSeedKey $seedKey
     ): ?LibraryBookType;
+
+    public function countActive(LibraryId $libraryId): int;
 }

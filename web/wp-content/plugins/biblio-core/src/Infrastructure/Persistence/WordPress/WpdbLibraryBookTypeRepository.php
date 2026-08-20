@@ -156,6 +156,18 @@ final readonly class WpdbLibraryBookTypeRepository implements
         );
     }
 
+    public function countActive(LibraryId $libraryId): int
+    {
+        $table = $this->tableNames->libraryBookTypes();
+
+        return (int) $this->database->get_var($this->database->prepare(
+            "SELECT COUNT(*) FROM `{$table}` WHERE library_id = %s "
+            . "AND term_status = %s",
+            $libraryId->value(),
+            ClassificationTermStatus::Active->value
+        ));
+    }
+
     /**
      * @param list<string> $parameters Library ID followed by criterion value.
      */

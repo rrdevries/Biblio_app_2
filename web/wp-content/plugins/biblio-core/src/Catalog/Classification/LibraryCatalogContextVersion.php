@@ -31,4 +31,9 @@ final readonly class LibraryCatalogContextVersion
     {
         return $this->value === $other->value;
     }
+
+    public function next(): self
+    {
+        return new self($this->value + 1);
+    }
 }
