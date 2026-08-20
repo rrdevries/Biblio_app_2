@@ -58,6 +58,17 @@ final class ClassificationFoundationTest extends TestCase
         }
     }
 
+    public function testTermNamesFitThePersistenceContract(): void
+    {
+        self::assertSame(
+            str_repeat("a", 512),
+            (new ClassificationTermName(str_repeat("a", 512)))->value()
+        );
+
+        $this->expectException(ValidationException::class);
+        new ClassificationTermName(str_repeat("a", 513));
+    }
+
     #[DataProvider("normalizationCases")]
     public function testNormalizerFollowsConservativeUnicodeContract(
         string $input,
