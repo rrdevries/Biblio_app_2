@@ -459,8 +459,11 @@ Acceptance:
   Work+Edition creation;
 - actor identity is resolved server-side per operation; no public method
   accepts actor `UserId` or trusted `LibraryContext`;
-- target Library is explicit, and active Owner plus active Manager may mutate
-  its catalog regardless of `UseAccess`;
+- target Library is explicit, and Item-add requires an active Owner or active
+  Manager with `catalog.item_add`, regardless of `UseAccess`;
+- `catalog.classification_manage` is independent from `catalog.item_add` and
+  governs existing-context and classification-term management without
+  granting Item-add;
 - Member, inactive membership, foreign-Library actor and unauthenticated actor
   fail with the appropriate stable authorization/authentication reason;
 - authorization occurs before central Work/Edition existence inspection;

@@ -530,9 +530,14 @@ Work → Edition → `Catalog\Item` model and schema:
   a new Edition under an existing Work, and a new Work plus Edition;
 - the current actor is resolved server-side for every operation and the caller
   selects only the target Library and catalog identifiers/data;
-- catalog management requires an active Owner or Manager membership and is
-  independent of physical `UseAccess`; Member, inactive and foreign-Library
-  actors are denied before central catalog existence is inspected;
+- catalog Item-add requires an active Owner or an active Manager with
+  `catalog.item_add` and is independent of physical `UseAccess`; Member,
+  inactive and foreign-Library actors are denied before central catalog
+  existence is inspected;
+- `catalog.classification_manage` is an independent Manager permission for
+  existing LibraryCatalogContext changes and classification-term management;
+  it grants no Item-add right, while `catalog.item_add` grants no general
+  classification-management right;
 - the service creates the Item with the authorized Library identity and never
   creates a Library-local Work or Edition identity;
 - all paths are transaction-managed; Edition+Item and Work+Edition+Item are

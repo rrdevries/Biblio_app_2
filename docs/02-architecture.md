@@ -527,11 +527,20 @@ three explicit methods represent only valid construction paths:
 The target `LibraryId` is caller-selected scope, never authorization. At the
 start of every call, the service resolves the WordPress actor through
 `AuthenticatedUser`, constructs `LibraryContext`, and asks
-`LibraryAccessService::canManageCatalog()`. That permission requires an active
-Owner or Manager and deliberately ignores `UseAccess`, because physical use
-and catalog management are independent membership dimensions. Authorization
-precedes Work/Edition existence checks. The service then constructs the Item
-with the authorized Library ID.
+`LibraryAccessService::canAddCatalogItem()`. That check requires an active
+Owner or an active Manager with `catalog.item_add` and deliberately ignores
+`UseAccess`, because physical use and catalog management are independent
+membership dimensions. Authorization precedes Work/Edition existence checks.
+The service then constructs the Item with the authorized Library ID.
+
+Classification authorization is separately exposed inside Core as
+`canInitializeCatalogContextDuringItemAdd()`,
+`canModifyLibraryCatalogContext()` and `canManageClassificationTerms()`.
+Context initialization inside Item-add follows the Item-add permission and is
+not a standalone configurable right. Existing-context and term management use
+the independent `catalog.classification_manage` permission. These internal
+predicates expose no repository or context-mutation route through
+`CoreApplication`.
 
 The existing writable Work, Edition and Item ports and wpdb adapters are
 reused. Compound writes run through the shared transaction manager. Repository
