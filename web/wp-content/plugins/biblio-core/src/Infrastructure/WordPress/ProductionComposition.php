@@ -27,7 +27,7 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbReadingRoundRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionConnection;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionManager;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbWorkRepository;
-use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigration;
+use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrationRegistry;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrator;
 use Biblio\Core\Infrastructure\WordPress\Lifecycle\CoreLifecycleCoordinator;
 use Biblio\Core\Infrastructure\WordPress\Lifecycle\LifecycleStateStore;
@@ -40,13 +40,16 @@ final class ProductionComposition
     private readonly CoreLifecycleCoordinator $lifecycle;
     private readonly CoreApplication $application;
 
-    /** @param list<CoreSchemaMigration> $migrations */
     public function __construct(
         wpdb $database,
         ?LifecycleStateStore $lifecycleState = null,
-        array $migrations = []
+        ?CoreSchemaMigrationRegistry $migrationRegistry = null
     ) {
         $tableNames = new CoreTableNames($database->prefix);
+        $migrationRegistry ??= CoreSchemaMigrationRegistry::production(
+            $database,
+            $tableNames
+        );
         $authenticatedUser = new WordPressAuthenticatedUser();
         $transactionConnection = new WpdbTransactionConnection($database);
         $transactionManager = new WpdbTransactionManager(
@@ -134,7 +137,11 @@ final class ProductionComposition
             $externalLoanReading
         );
         $this->lifecycle = new CoreLifecycleCoordinator(
-            new CoreSchemaMigrator($database, $tableNames, $migrations),
+            new CoreSchemaMigrator(
+                $database,
+                $tableNames,
+                $migrationRegistry->migrations()
+            ),
             $lifecycleState ?? new WpTransientLifecycleStateStore()
         );
     }

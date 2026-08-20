@@ -17,11 +17,10 @@ final class RetryableProbeMigration implements CoreSchemaMigration
 {
     public const INDEX_NAME = "f1_1_migration_probe_by_title";
 
-    private bool $failAfterKnownChange = true;
-
     public function __construct(
         private readonly wpdb $database,
-        private readonly CoreTableNames $tableNames
+        private readonly CoreTableNames $tableNames,
+        private bool $failAfterKnownChange = true
     ) {
     }
 
@@ -128,6 +127,7 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
 {
     public function testFreshDatabaseInstallsFormalBaseline(): void
     {
+        $expectedBaseline = $this->schemaSnapshot();
         $this->dropCoreSchema();
 
         $migrator = $this->migrator();
@@ -142,10 +142,11 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
             $migrator->expectedVersion()
         );
         self::assertTrue(
-            $migrator->health()->isHealthy(),
-            $migrator->health()->summary()
+            $migrator->healthForVersion(1000)->isHealthy(),
+            $migrator->healthForVersion(1000)->summary()
         );
         self::assertSame(8, $this->existingCoreTableCount());
+        self::assertSame($expectedBaseline, $this->schemaSnapshot());
         self::assertSame(
             "STORED GENERATED",
             $this->columnExtra(
@@ -168,6 +169,47 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
             2,
             $this->checkConstraintCount($this->tableNames->readingRounds())
         );
+    }
+
+    public function testFreshInstallCanContinueWithExplicitFutureMigration(): void
+    {
+        $this->dropCoreSchema();
+        $migration = new RetryableProbeMigration(
+            $this->database,
+            $this->tableNames,
+            false
+        );
+        $migrator = $this->migrator([$migration]);
+
+        try {
+            $migrator->migrate();
+
+            self::assertSame(1001, $migrator->installedVersion());
+            self::assertSame(1001, $migrator->expectedVersion());
+            self::assertTrue($migrator->healthForVersion(1000)->isHealthy());
+            self::assertSame(8, $this->existingCoreTableCount());
+            self::assertSame(1, $this->indexCount(
+                $this->tableNames->works(),
+                RetryableProbeMigration::INDEX_NAME
+            ));
+        } finally {
+            $migration->removeProbeIndex();
+            update_option(
+                CoreSchemaMigrator::VERSION_OPTION,
+                (string) CoreSchemaMigrator::FORMAL_BASELINE_VERSION,
+                false
+            );
+        }
+    }
+
+    public function testHealthRequiresExplicitContractForRequestedVersion(): void
+    {
+        $this->expectException(CoreSchemaMigrationException::class);
+        $this->expectExceptionMessage(
+            "No explicit Biblio Core schema-health contract exists"
+        );
+
+        $this->migrator()->healthForVersion(1001);
     }
 
     public function testHealthyCurrentRunIsSchemaAndDataNoOp(): void

@@ -49,7 +49,7 @@ final readonly class CoreSchemaMigrator
         if ($installedVersion === null) {
             $this->assertNoLegacySpikeVersion();
             $this->baselineInstaller->install();
-            $this->assertHealthy();
+            $this->assertHealthyForVersion(self::FORMAL_BASELINE_VERSION);
             $this->recordVersion(self::FORMAL_BASELINE_VERSION);
             $installedVersion = self::FORMAL_BASELINE_VERSION;
         }
@@ -98,7 +98,7 @@ final readonly class CoreSchemaMigrator
             $installedVersion = $migration->targetVersion();
         }
 
-        $this->assertHealthy();
+        $this->assertHealthyForVersion(self::CURRENT_VERSION);
     }
 
     public function installedVersion(): ?int
@@ -134,12 +134,17 @@ final readonly class CoreSchemaMigrator
 
     public function health(): CoreSchemaHealth
     {
-        return $this->healthChecker->inspect();
+        return $this->healthForVersion(self::CURRENT_VERSION);
     }
 
-    private function assertHealthy(): void
+    public function healthForVersion(int $expectedVersion): CoreSchemaHealth
     {
-        $health = $this->health();
+        return $this->healthChecker->inspectForVersion($expectedVersion);
+    }
+
+    private function assertHealthyForVersion(int $expectedVersion): void
+    {
+        $health = $this->healthForVersion($expectedVersion);
 
         if (!$health->isHealthy()) {
             throw new CoreSchemaHealthException($health);
