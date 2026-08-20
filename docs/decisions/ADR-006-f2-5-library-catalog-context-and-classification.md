@@ -1345,3 +1345,54 @@ Daarna geldt:
 - termmutaties verhogen contextversion niet.
 
 Version 1 heeft geen functionele betekenis buiten concurrencycontrole.
+
+## 51. Formele data-evolutie voor classificatieseeds
+
+De initiële classificatie-opslagstructuur is ingevoerd met schema version 1001.
+
+Omdat reeds op 1001 gemigreerde installaties niet opnieuw door de
+1000 -> 1001 migration lopen, wordt classificatie-seedbootstrap voor bestaande
+Libraries vastgelegd als een afzonderlijke formele forward migration:
+
+    1001 -> 1002
+
+Schema version 1002 vertegenwoordigt hierbij een nieuw durable
+persistence-/datacontract. Voor deze migration is geen aanvullende DDL vereist.
+
+De bestaande schema-1001-tabellen blijven structureel ongewijzigd.
+
+De 1001 -> 1002 migration:
+
+- verwerkt iedere bestaande Library via dezelfde classification
+  seed-evolutionservice;
+- is idempotent en retryable;
+- behoudt bestaande lokale term-IDs, displaynamen en active/inactive-status;
+- adopteert alleen veilige ondubbelzinnige normalized matches;
+- maakt ontbrekende Boeksoort- en Genreseeds aan;
+- maakt geen Onderwerpseeds aan;
+- voert geen merge, rename of reactivering uit;
+- schrijft geen Library ActivityEvent;
+- laat ambiguïteit inhoudelijk ongemuteerd;
+- maakt ambiguïteit technisch zichtbaar via de afgesproken non-blocking
+  schema-health warning.
+
+Bij failure blijft de formele version 1001.
+
+Version 1002 wordt pas geregistreerd nadat de volledige data-evolution voor
+alle Libraries succesvol is afgerond en de current healthpostcondition slaagt.
+
+Reeds volledig verwerkte Libraries mogen bij retry veilig als no-op worden
+herkend.
+
+Nieuwe Libraries worden na introductie van deze evolution direct binnen de
+bestaande CreateLibraryService-transactie gebootstrapt met dezelfde
+seed-evolutionservice.
+
+Er komt geen:
+
+- boot-time datamigratie;
+- activation-time hidden bootstrap;
+- afzonderlijke data-versionmarker naast de formele schemaversie.
+
+Daarmee blijft alle duurzame persistence-evolutie onderdeel van dezelfde
+versioned migrationketen.
