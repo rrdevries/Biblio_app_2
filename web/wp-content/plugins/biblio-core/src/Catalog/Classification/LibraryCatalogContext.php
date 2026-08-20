@@ -55,4 +55,15 @@ final readonly class LibraryCatalogContext
     ): bool {
         return $this->classification->equals($classification);
     }
+
+    public function reclassify(
+        LibraryCatalogSelection $classification
+    ): self {
+        return new self(
+            $this->libraryId,
+            $this->workId,
+            $classification,
+            $this->version->next()
+        );
+    }
 }

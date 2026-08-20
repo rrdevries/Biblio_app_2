@@ -20,6 +20,8 @@ enum FailureReason: string
     case ClassificationTermConflict = "classification_term_conflict";
     case LibraryCatalogContextAlreadyExists =
         "library_catalog_context_already_exists";
+    case LibraryCatalogContextStale =
+        "library_catalog_context_stale";
     case PersistenceFailure = "persistence_failure";
     case PersistenceWriteFailed = "persistence_write_failed";
     case PersistenceReadFailed = "persistence_read_failed";
