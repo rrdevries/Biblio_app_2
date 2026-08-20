@@ -18,6 +18,17 @@ final readonly class ClassificationNormalizedName
                 "Normalized classification name must be non-empty valid UTF-8."
             );
         }
+
+
+        if (
+            preg_match_all('/./us', $this->value)
+            > ClassificationTermName::MAX_LENGTH
+        ) {
+            throw new ValidationException(
+                "Normalized classification name must not exceed "
+                . ClassificationTermName::MAX_LENGTH . " characters."
+            );
+        }
     }
 
     public function value(): string

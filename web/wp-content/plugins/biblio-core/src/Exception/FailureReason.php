@@ -17,6 +17,9 @@ enum FailureReason: string
     case PersonalLibraryDesignationConflict =
         "personal_library_designation_conflict";
     case CatalogRecordAlreadyExists = "catalog_record_already_exists";
+    case ClassificationTermConflict = "classification_term_conflict";
+    case LibraryCatalogContextAlreadyExists =
+        "library_catalog_context_already_exists";
     case PersistenceFailure = "persistence_failure";
     case PersistenceWriteFailed = "persistence_write_failed";
     case PersistenceReadFailed = "persistence_read_failed";
