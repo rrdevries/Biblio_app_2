@@ -1,0 +1,324 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Biblio\Core\Tests\Integration;
+
+use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrationException;
+use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrationRegistry;
+use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrator;
+use RuntimeException;
+
+final class Schema1001MigrationTest extends PersistenceIntegrationTestCase
+{
+    public function testVersion1000DataAndManagerPermissionsMigrateWithoutLoss(): void
+    {
+        $this->insertVersion1000Fixture();
+        $baselineBefore = $this->baselineSchemaSnapshot();
+        $this->downgradeToVersion1000();
+
+        try {
+            $this->migrator()->migrate();
+
+            self::assertSame(1001, $this->migrator()->installedVersion());
+            self::assertTrue($this->migrator()->health()->isHealthy());
+            self::assertSame($baselineBefore, $this->baselineSchemaSnapshot());
+            self::assertSame("Migration Work", $this->database->get_var(
+                "SELECT work_title FROM `{$this->tableNames->works()}` "
+                . "WHERE work_id = 'migration-work'"
+            ));
+            self::assertSame(1, (int) $this->database->get_var(
+                "SELECT COUNT(*) FROM `{$this->tableNames->readingRounds()}` "
+                . "WHERE reading_round_id = 'migration-round'"
+            ));
+
+            self::assertSame(
+                '["unknown.one","  spaced.permission  ","catalog.item_add"]',
+                $this->permissionsFor(101)
+            );
+            self::assertSame(
+                '[ "catalog.item_add" , "unknown.two" ]',
+                $this->permissionsFor(102)
+            );
+            self::assertSame(
+                '["owner.permission"]',
+                $this->permissionsFor(103)
+            );
+            self::assertSame(
+                '["member.permission"]',
+                $this->permissionsFor(104)
+            );
+            self::assertStringNotContainsString(
+                "catalog.classification_manage",
+                $this->permissionsFor(101)
+            );
+
+            $permissionsAfterFirstRun = $this->permissionsFor(101);
+            $this->migrator()->migrate();
+            self::assertSame(
+                $permissionsAfterFirstRun,
+                $this->permissionsFor(101)
+            );
+            self::assertSame(
+                1,
+                substr_count(
+                    $this->permissionsFor(101),
+                    "catalog.item_add"
+                )
+            );
+        } finally {
+            $this->restoreCurrentSchema();
+        }
+    }
+
+    public function testMalformedPermissionPayloadFailsBeforeDdlAndVersionBump(): void
+    {
+        $this->insertLibrary("permission-library");
+        $this->insertMembership(
+            "permission-library",
+            201,
+            "manager",
+            "active",
+            '{"not":"a-list"}'
+        );
+        $this->downgradeToVersion1000();
+
+        try {
+            $this->migrator()->migrate();
+            self::fail("Malformed permission data was silently repaired.");
+        } catch (CoreSchemaMigrationException $exception) {
+            self::assertStringContainsString(
+                "permissions are invalid",
+                $exception->getMessage()
+            );
+            self::assertSame(1000, $this->migrator()->installedVersion());
+            self::assertSame(0, $this->existingSchema1001AdditionCount());
+            self::assertSame(
+                '{"not":"a-list"}',
+                $this->permissionsFor(201)
+            );
+        } finally {
+            $this->database->update(
+                $this->tableNames->memberships(),
+                ["additional_permissions" => "[]"],
+                ["user_id" => 201],
+                ["%s"],
+                ["%d"]
+            );
+            $this->restoreCurrentSchema();
+        }
+    }
+
+    public function testEveryReachableCorrectPartialDdlStateIsRetryable(): void
+    {
+        $additions = $this->tableNames->schema1001Additions();
+
+        for ($retained = 0; $retained <= count($additions); $retained++) {
+            $this->dropSchema1001Additions();
+            update_option(CoreSchemaMigrator::VERSION_OPTION, "1000", false);
+            $this->migrator()->migrate();
+
+            foreach (array_reverse(array_slice($additions, $retained)) as $table) {
+                $this->database->query("DROP TABLE `{$table}`");
+            }
+            update_option(CoreSchemaMigrator::VERSION_OPTION, "1000", false);
+
+            $this->migrator()->migrate();
+
+            self::assertSame(1001, $this->migrator()->installedVersion());
+            self::assertSame(7, $this->existingSchema1001AdditionCount());
+            self::assertTrue(
+                $this->migrator()->health()->isHealthy(),
+                "Retry failed with {$retained} retained schema-1001 tables."
+            );
+        }
+    }
+
+    public function testUnknownPartialTableDriftFailsClosedWithoutVersionBump(): void
+    {
+        $this->downgradeToVersion1000();
+        $this->migrator()->migrate();
+        update_option(CoreSchemaMigrator::VERSION_OPTION, "1000", false);
+        $table = $this->tableNames->libraryGenres();
+        $this->database->query(
+            "ALTER TABLE `{$table}` DROP INDEX `genres_by_normalized_name`"
+        );
+
+        try {
+            $this->migrator()->migrate();
+            self::fail("Unknown schema-1001 drift was repaired automatically.");
+        } catch (CoreSchemaMigrationException $exception) {
+            self::assertStringContainsString(
+                "missing required index genres_by_normalized_name",
+                $exception->getMessage()
+            );
+            self::assertSame(1000, $this->migrator()->installedVersion());
+        } finally {
+            $this->database->query(
+                "ALTER TABLE `{$table}` ADD UNIQUE KEY "
+                . "`genres_by_normalized_name` (library_id, normalized_name)"
+            );
+            $this->restoreCurrentSchema();
+        }
+    }
+
+    private function insertVersion1000Fixture(): void
+    {
+        $this->insertLibrary("migration-library");
+        $this->insertMembership(
+            "migration-library",
+            101,
+            "manager",
+            "active",
+            '["unknown.one","  spaced.permission  "]'
+        );
+        $this->insertMembership(
+            "migration-library",
+            102,
+            "manager",
+            "inactive",
+            '[ "catalog.item_add" , "unknown.two" ]'
+        );
+        $this->insertMembership(
+            "migration-library",
+            103,
+            "owner",
+            "active",
+            '["owner.permission"]'
+        );
+        $this->insertMembership(
+            "migration-library",
+            104,
+            "member",
+            "active",
+            '["member.permission"]'
+        );
+        $this->database->insert($this->tableNames->works(), [
+            "work_id" => "migration-work",
+            "work_title" => "Migration Work",
+        ]);
+        $this->database->insert($this->tableNames->editions(), [
+            "edition_id" => "migration-edition",
+            "work_id" => "migration-work",
+        ]);
+        $this->database->insert($this->tableNames->items(), [
+            "item_id" => "migration-item",
+            "library_id" => "migration-library",
+            "edition_id" => "migration-edition",
+            "item_status" => "active",
+        ]);
+        $this->database->insert($this->tableNames->readingRounds(), [
+            "reading_round_id" => "migration-round",
+            "user_id" => 101,
+            "work_id" => "migration-work",
+            "item_id" => "migration-item",
+            "external_loan_id" => null,
+            "round_status" => "active",
+            "started_at" => "2026-08-20 12:00:00.000000",
+        ]);
+    }
+
+    private function insertLibrary(string $libraryId): void
+    {
+        $this->database->insert($this->tableNames->libraries(), [
+            "library_id" => $libraryId,
+            "library_type" => "private_library",
+            "library_status" => "active",
+        ]);
+    }
+
+    private function insertMembership(
+        string $libraryId,
+        int $userId,
+        string $role,
+        string $status,
+        string $permissions
+    ): void {
+        $this->database->insert($this->tableNames->memberships(), [
+            "library_id" => $libraryId,
+            "user_id" => $userId,
+            "membership_status" => $status,
+            "management_role" => $role,
+            "use_access" => "direct",
+            "additional_permissions" => $permissions,
+        ]);
+    }
+
+    private function permissionsFor(int $userId): string
+    {
+        return (string) $this->database->get_var($this->database->prepare(
+            "SELECT additional_permissions FROM "
+            . "`{$this->tableNames->memberships()}` WHERE user_id = %d",
+            $userId
+        ));
+    }
+
+    /** @return array<string, string> */
+    private function baselineSchemaSnapshot(): array
+    {
+        $snapshot = [];
+
+        foreach ($this->tableNames->all() as $table) {
+            $row = $this->database->get_row("SHOW CREATE TABLE `{$table}`", ARRAY_N);
+
+            if (!is_array($row) || !isset($row[1])) {
+                throw new RuntimeException("Could not inspect {$table}.");
+            }
+
+            $snapshot[$table] = (string) $row[1];
+        }
+
+        return $snapshot;
+    }
+
+    private function downgradeToVersion1000(): void
+    {
+        $this->dropSchema1001Additions();
+        update_option(CoreSchemaMigrator::VERSION_OPTION, "1000", false);
+    }
+
+    private function dropSchema1001Additions(): void
+    {
+        foreach (
+            array_reverse($this->tableNames->schema1001Additions())
+            as $table
+        ) {
+            $this->database->query("DROP TABLE IF EXISTS `{$table}`");
+        }
+    }
+
+    private function restoreCurrentSchema(): void
+    {
+        if ($this->migrator()->installedVersion() !== 1001) {
+            $this->migrator()->migrate();
+        }
+    }
+
+    private function existingSchema1001AdditionCount(): int
+    {
+        $count = 0;
+
+        foreach ($this->tableNames->schema1001Additions() as $table) {
+            $count += (int) $this->database->get_var($this->database->prepare(
+                "SELECT COUNT(*) FROM information_schema.TABLES "
+                . "WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s",
+                DB_NAME,
+                $table
+            ));
+        }
+
+        return $count;
+    }
+
+    private function migrator(): CoreSchemaMigrator
+    {
+        return new CoreSchemaMigrator(
+            $this->database,
+            $this->tableNames,
+            CoreSchemaMigrationRegistry::production(
+                $this->database,
+                $this->tableNames
+            )->migrations()
+        );
+    }
+}

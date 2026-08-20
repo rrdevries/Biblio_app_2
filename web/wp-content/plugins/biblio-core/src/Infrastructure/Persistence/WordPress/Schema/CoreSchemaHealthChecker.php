@@ -17,23 +17,38 @@ final readonly class CoreSchemaHealthChecker
 
     public function inspectForVersion(int $expectedVersion): CoreSchemaHealth
     {
-        if ($expectedVersion !== CoreSchemaMigrator::FORMAL_BASELINE_VERSION) {
-            throw new CoreSchemaMigrationException(
+        return match ($expectedVersion) {
+            1000 => $this->inspectTables($this->tableNames->all(), true),
+            1001 => $this->inspectTables($this->tableNames->schema1001(), true),
+            default => throw new CoreSchemaMigrationException(
                 "No explicit Biblio Core schema-health contract exists for "
                 . "schema version {$expectedVersion}."
-            );
-        }
-
-        return $this->inspectVersion1000();
+            ),
+        };
     }
 
-    private function inspectVersion1000(): CoreSchemaHealth
+    public function inspectExistingSchema1001Additions(): CoreSchemaHealth
+    {
+        return $this->inspectTables(
+            $this->tableNames->schema1001Additions(),
+            false
+        );
+    }
+
+    /** @param list<string> $tableNames */
+    private function inspectTables(
+        array $tableNames,
+        bool $missingIsError
+    ): CoreSchemaHealth
     {
         $issues = [];
 
-        foreach ($this->tableNames->all() as $tableName) {
+        foreach ($tableNames as $tableName) {
             if (!$this->tableExists($tableName)) {
-                $issues[] = "Missing required table {$tableName}";
+                if ($missingIsError) {
+                    $issues[] = "Missing required table {$tableName}";
+                }
+
                 continue;
             }
 
@@ -336,6 +351,86 @@ final readonly class CoreSchemaHealthChecker
                         . "THEN user_id ELSE NULL END",
                 ],
             ],
+            $this->tableNames->libraryBookTypes() => [
+                "library_id" => $id,
+                "book_type_id" => $id,
+                "display_name" => [
+                    "type" => "varchar(512)",
+                    "nullable" => "NO",
+                    "collation" => "utf8mb4_bin",
+                ],
+                "normalized_name" => [
+                    "type" => "varchar(512)",
+                    "nullable" => "NO",
+                    "collation" => "utf8mb4_bin",
+                ],
+                "term_status" => ["type" => "varchar(32)", "nullable" => "NO"],
+                "seed_key" => $nullableId,
+            ],
+            $this->tableNames->libraryGenres() => [
+                "library_id" => $id,
+                "genre_id" => $id,
+                "display_name" => [
+                    "type" => "varchar(512)",
+                    "nullable" => "NO",
+                    "collation" => "utf8mb4_bin",
+                ],
+                "normalized_name" => [
+                    "type" => "varchar(512)",
+                    "nullable" => "NO",
+                    "collation" => "utf8mb4_bin",
+                ],
+                "term_status" => ["type" => "varchar(32)", "nullable" => "NO"],
+                "seed_key" => $nullableId,
+            ],
+            $this->tableNames->librarySubjects() => [
+                "library_id" => $id,
+                "subject_id" => $id,
+                "display_name" => [
+                    "type" => "varchar(512)",
+                    "nullable" => "NO",
+                    "collation" => "utf8mb4_bin",
+                ],
+                "normalized_name" => [
+                    "type" => "varchar(512)",
+                    "nullable" => "NO",
+                    "collation" => "utf8mb4_bin",
+                ],
+                "term_status" => ["type" => "varchar(32)", "nullable" => "NO"],
+                "seed_key" => $nullableId,
+            ],
+            $this->tableNames->libraryCatalogContexts() => [
+                "library_id" => $id,
+                "work_id" => $id,
+                "book_type_id" => $id,
+                "context_version" => [
+                    "type" => "bigint(20) unsigned",
+                    "nullable" => "NO",
+                ],
+            ],
+            $this->tableNames->libraryCatalogContextGenres() => [
+                "library_id" => $id,
+                "work_id" => $id,
+                "genre_id" => $id,
+            ],
+            $this->tableNames->libraryCatalogContextSubjects() => [
+                "library_id" => $id,
+                "work_id" => $id,
+                "subject_id" => $id,
+            ],
+            $this->tableNames->libraryActivityEvents() => [
+                "event_id" => $id,
+                "library_id" => $id,
+                "occurred_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "actor_user_id" => $nullableId,
+                "actor_display_name" => ["type" => "longtext", "nullable" => "YES"],
+                "event_source" => $id,
+                "event_key" => $id,
+                "primary_entity_type" => $id,
+                "primary_entity_id" => $id,
+                "related_entities_json" => ["type" => "longtext", "nullable" => "NO"],
+                "changes_json" => ["type" => "longtext", "nullable" => "NO"],
+            ],
         ];
     }
 
@@ -382,6 +477,89 @@ final readonly class CoreSchemaHealthChecker
                 "one_active_external_round_per_user" => [
                     "unique" => true,
                     "columns" => ["active_external_loan_user_id", "external_loan_id"],
+                ],
+            ],
+            $this->tableNames->libraryBookTypes() => [
+                "PRIMARY" => [
+                    "unique" => true,
+                    "columns" => ["library_id", "book_type_id"],
+                ],
+                "book_types_by_normalized_name" => [
+                    "unique" => true,
+                    "columns" => ["library_id", "normalized_name"],
+                ],
+                "book_types_by_seed_key" => [
+                    "unique" => true,
+                    "columns" => ["library_id", "seed_key"],
+                ],
+            ],
+            $this->tableNames->libraryGenres() => [
+                "PRIMARY" => [
+                    "unique" => true,
+                    "columns" => ["library_id", "genre_id"],
+                ],
+                "genres_by_normalized_name" => [
+                    "unique" => true,
+                    "columns" => ["library_id", "normalized_name"],
+                ],
+                "genres_by_seed_key" => [
+                    "unique" => true,
+                    "columns" => ["library_id", "seed_key"],
+                ],
+            ],
+            $this->tableNames->librarySubjects() => [
+                "PRIMARY" => [
+                    "unique" => true,
+                    "columns" => ["library_id", "subject_id"],
+                ],
+                "subjects_by_normalized_name" => [
+                    "unique" => true,
+                    "columns" => ["library_id", "normalized_name"],
+                ],
+                "subjects_by_seed_key" => [
+                    "unique" => true,
+                    "columns" => ["library_id", "seed_key"],
+                ],
+            ],
+            $this->tableNames->libraryCatalogContexts() => [
+                "PRIMARY" => [
+                    "unique" => true,
+                    "columns" => ["library_id", "work_id"],
+                ],
+                "catalog_contexts_by_work" => [
+                    "unique" => false,
+                    "columns" => ["work_id"],
+                ],
+                "catalog_contexts_by_book_type" => [
+                    "unique" => false,
+                    "columns" => ["library_id", "book_type_id"],
+                ],
+            ],
+            $this->tableNames->libraryCatalogContextGenres() => [
+                "PRIMARY" => [
+                    "unique" => true,
+                    "columns" => ["library_id", "work_id", "genre_id"],
+                ],
+                "context_genres_by_genre" => [
+                    "unique" => false,
+                    "columns" => ["library_id", "genre_id"],
+                ],
+            ],
+            $this->tableNames->libraryCatalogContextSubjects() => [
+                "PRIMARY" => [
+                    "unique" => true,
+                    "columns" => ["library_id", "work_id", "subject_id"],
+                ],
+                "context_subjects_by_subject" => [
+                    "unique" => false,
+                    "columns" => ["library_id", "subject_id"],
+                ],
+            ],
+            $this->tableNames->libraryActivityEvents() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["event_id"]],
+                "activity_events_by_library_time" => [
+                    "unique" => false,
+                    "columns" => ["library_id", "occurred_at", "event_id"],
                 ],
             ],
         ];
@@ -433,6 +611,75 @@ final readonly class CoreSchemaHealthChecker
                     ["external_loan_id"]
                 ),
             ],
+            $this->tableNames->libraryBookTypes() => [
+                $restrict(
+                    ["library_id"],
+                    $this->tableNames->libraries(),
+                    ["library_id"]
+                ),
+            ],
+            $this->tableNames->libraryGenres() => [
+                $restrict(
+                    ["library_id"],
+                    $this->tableNames->libraries(),
+                    ["library_id"]
+                ),
+            ],
+            $this->tableNames->librarySubjects() => [
+                $restrict(
+                    ["library_id"],
+                    $this->tableNames->libraries(),
+                    ["library_id"]
+                ),
+            ],
+            $this->tableNames->libraryCatalogContexts() => [
+                $restrict(
+                    ["library_id"],
+                    $this->tableNames->libraries(),
+                    ["library_id"]
+                ),
+                $restrict(
+                    ["work_id"],
+                    $this->tableNames->works(),
+                    ["work_id"]
+                ),
+                $restrict(
+                    ["library_id", "book_type_id"],
+                    $this->tableNames->libraryBookTypes(),
+                    ["library_id", "book_type_id"]
+                ),
+            ],
+            $this->tableNames->libraryCatalogContextGenres() => [
+                $restrict(
+                    ["library_id", "work_id"],
+                    $this->tableNames->libraryCatalogContexts(),
+                    ["library_id", "work_id"]
+                ),
+                $restrict(
+                    ["library_id", "genre_id"],
+                    $this->tableNames->libraryGenres(),
+                    ["library_id", "genre_id"]
+                ),
+            ],
+            $this->tableNames->libraryCatalogContextSubjects() => [
+                $restrict(
+                    ["library_id", "work_id"],
+                    $this->tableNames->libraryCatalogContexts(),
+                    ["library_id", "work_id"]
+                ),
+                $restrict(
+                    ["library_id", "subject_id"],
+                    $this->tableNames->librarySubjects(),
+                    ["library_id", "subject_id"]
+                ),
+            ],
+            $this->tableNames->libraryActivityEvents() => [
+                $restrict(
+                    ["library_id"],
+                    $this->tableNames->libraries(),
+                    ["library_id"]
+                ),
+            ],
         ];
     }
 
@@ -465,6 +712,31 @@ final readonly class CoreSchemaHealthChecker
                 "round_status = 'active'",
                 "item_id IS NOT NULL AND external_loan_id IS NULL OR "
                     . "item_id IS NULL AND external_loan_id IS NOT NULL",
+            ],
+            $this->tableNames->libraryBookTypes() => [
+                "CHAR_LENGTH(TRIM(display_name)) > 0",
+                "CHAR_LENGTH(TRIM(normalized_name)) > 0",
+                "term_status IN ('active', 'inactive')",
+            ],
+            $this->tableNames->libraryGenres() => [
+                "CHAR_LENGTH(TRIM(display_name)) > 0",
+                "CHAR_LENGTH(TRIM(normalized_name)) > 0",
+                "term_status IN ('active', 'inactive')",
+            ],
+            $this->tableNames->librarySubjects() => [
+                "CHAR_LENGTH(TRIM(display_name)) > 0",
+                "CHAR_LENGTH(TRIM(normalized_name)) > 0",
+                "term_status IN ('active', 'inactive')",
+            ],
+            $this->tableNames->libraryCatalogContexts() => [
+                "context_version >= 1",
+            ],
+            $this->tableNames->libraryActivityEvents() => [
+                "actor_user_id IS NULL OR actor_display_name IS NOT NULL",
+                "actor_display_name IS NULL OR "
+                    . "CHAR_LENGTH(TRIM(actor_display_name)) > 0",
+                "JSON_VALID(related_entities_json)",
+                "JSON_VALID(changes_json)",
             ],
         ];
     }

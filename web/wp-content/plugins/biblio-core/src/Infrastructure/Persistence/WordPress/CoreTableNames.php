@@ -18,6 +18,13 @@ final readonly class CoreTableNames
     private string $items;
     private string $externalLoans;
     private string $readingRounds;
+    private string $libraryBookTypes;
+    private string $libraryGenres;
+    private string $librarySubjects;
+    private string $libraryCatalogContexts;
+    private string $libraryCatalogContextGenres;
+    private string $libraryCatalogContextSubjects;
+    private string $libraryActivityEvents;
 
     public function __construct(string $prefix)
     {
@@ -30,8 +37,19 @@ final readonly class CoreTableNames
         $this->items = $prefix . "biblio_items";
         $this->externalLoans = $prefix . "biblio_external_loans";
         $this->readingRounds = $prefix . "biblio_reading_rounds";
+        $this->libraryBookTypes = $prefix . "biblio_library_book_types";
+        $this->libraryGenres = $prefix . "biblio_library_genres";
+        $this->librarySubjects = $prefix . "biblio_library_subjects";
+        $this->libraryCatalogContexts = $prefix
+            . "biblio_library_catalog_contexts";
+        $this->libraryCatalogContextGenres = $prefix
+            . "biblio_library_catalog_context_genres";
+        $this->libraryCatalogContextSubjects = $prefix
+            . "biblio_library_catalog_context_subjects";
+        $this->libraryActivityEvents = $prefix
+            . "biblio_library_activity_events";
 
-        foreach ($this->all() as $tableName) {
+        foreach ($this->schema1001() as $tableName) {
             $this->assertSafe($tableName);
         }
     }
@@ -76,6 +94,41 @@ final readonly class CoreTableNames
         return $this->readingRounds;
     }
 
+    public function libraryBookTypes(): string
+    {
+        return $this->libraryBookTypes;
+    }
+
+    public function libraryGenres(): string
+    {
+        return $this->libraryGenres;
+    }
+
+    public function librarySubjects(): string
+    {
+        return $this->librarySubjects;
+    }
+
+    public function libraryCatalogContexts(): string
+    {
+        return $this->libraryCatalogContexts;
+    }
+
+    public function libraryCatalogContextGenres(): string
+    {
+        return $this->libraryCatalogContextGenres;
+    }
+
+    public function libraryCatalogContextSubjects(): string
+    {
+        return $this->libraryCatalogContextSubjects;
+    }
+
+    public function libraryActivityEvents(): string
+    {
+        return $this->libraryActivityEvents;
+    }
+
     /** @return list<string> */
     public function all(): array
     {
@@ -89,6 +142,26 @@ final readonly class CoreTableNames
             $this->externalLoans,
             $this->readingRounds,
         ];
+    }
+
+    /** @return list<string> */
+    public function schema1001Additions(): array
+    {
+        return [
+            $this->libraryBookTypes,
+            $this->libraryGenres,
+            $this->librarySubjects,
+            $this->libraryCatalogContexts,
+            $this->libraryCatalogContextGenres,
+            $this->libraryCatalogContextSubjects,
+            $this->libraryActivityEvents,
+        ];
+    }
+
+    /** @return list<string> */
+    public function schema1001(): array
+    {
+        return array_merge($this->all(), $this->schema1001Additions());
     }
 
     private function assertSafe(string $tableName): void

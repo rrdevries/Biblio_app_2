@@ -9,6 +9,7 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\CoreTableNames;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaHealthException;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigration;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrationException;
+use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrationRegistry;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrator;
 use RuntimeException;
 use wpdb;
@@ -26,12 +27,12 @@ final class RetryableProbeMigration implements CoreSchemaMigration
 
     public function sourceVersion(): int
     {
-        return CoreSchemaMigrator::FORMAL_BASELINE_VERSION;
+        return CoreSchemaMigrator::CURRENT_VERSION;
     }
 
     public function targetVersion(): int
     {
-        return CoreSchemaMigrator::FORMAL_BASELINE_VERSION + 1;
+        return CoreSchemaMigrator::CURRENT_VERSION + 1;
     }
 
     public function assertPrecondition(): void
@@ -127,14 +128,14 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
 {
     public function testFreshDatabaseInstallsFormalBaseline(): void
     {
-        $expectedBaseline = $this->schemaSnapshot();
+        $expectedBaseline = $this->baselineSchemaSnapshot();
         $this->dropCoreSchema();
 
         $migrator = $this->migrator();
         $migrator->migrate();
 
         self::assertSame(
-            CoreSchemaMigrator::FORMAL_BASELINE_VERSION,
+            CoreSchemaMigrator::CURRENT_VERSION,
             $migrator->installedVersion()
         );
         self::assertSame(
@@ -146,7 +147,8 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
             $migrator->healthForVersion(1000)->summary()
         );
         self::assertSame(8, $this->existingCoreTableCount());
-        self::assertSame($expectedBaseline, $this->schemaSnapshot());
+        self::assertSame(15, $this->existingCurrentTableCount());
+        self::assertSame($expectedBaseline, $this->baselineSchemaSnapshot());
         self::assertSame(
             "STORED GENERATED",
             $this->columnExtra(
@@ -184,10 +186,10 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
         try {
             $migrator->migrate();
 
-            self::assertSame(1001, $migrator->installedVersion());
-            self::assertSame(1001, $migrator->expectedVersion());
-            self::assertTrue($migrator->healthForVersion(1000)->isHealthy());
-            self::assertSame(8, $this->existingCoreTableCount());
+            self::assertSame(1002, $migrator->installedVersion());
+            self::assertSame(1002, $migrator->expectedVersion());
+            self::assertTrue($migrator->healthForVersion(1001)->isHealthy());
+            self::assertSame(15, $this->existingCurrentTableCount());
             self::assertSame(1, $this->indexCount(
                 $this->tableNames->works(),
                 RetryableProbeMigration::INDEX_NAME
@@ -196,7 +198,7 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
             $migration->removeProbeIndex();
             update_option(
                 CoreSchemaMigrator::VERSION_OPTION,
-                (string) CoreSchemaMigrator::FORMAL_BASELINE_VERSION,
+                (string) CoreSchemaMigrator::CURRENT_VERSION,
                 false
             );
         }
@@ -209,7 +211,7 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
             "No explicit Biblio Core schema-health contract exists"
         );
 
-        $this->migrator()->healthForVersion(1001);
+        $this->migrator()->healthForVersion(1002);
     }
 
     public function testHealthyCurrentRunIsSchemaAndDataNoOp(): void
@@ -259,7 +261,7 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
                 $exception->getMessage()
             );
             self::assertSame(
-                CoreSchemaMigrator::FORMAL_BASELINE_VERSION,
+                CoreSchemaMigrator::CURRENT_VERSION,
                 $migrator->installedVersion()
             );
             self::assertSame(
@@ -275,7 +277,7 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
             $migrator->migrate();
 
             self::assertSame(
-                CoreSchemaMigrator::FORMAL_BASELINE_VERSION + 1,
+                CoreSchemaMigrator::CURRENT_VERSION + 1,
                 $migrator->installedVersion()
             );
             self::assertSame(1, $this->indexCount(
@@ -293,7 +295,7 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
             $migration->removeProbeIndex();
             update_option(
                 CoreSchemaMigrator::VERSION_OPTION,
-                (string) CoreSchemaMigrator::FORMAL_BASELINE_VERSION,
+                (string) CoreSchemaMigrator::CURRENT_VERSION,
                 false
             );
         }
@@ -460,10 +462,15 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
     /** @param list<CoreSchemaMigration> $migrations */
     private function migrator(array $migrations = []): CoreSchemaMigrator
     {
+        $productionMigrations = CoreSchemaMigrationRegistry::production(
+            $this->database,
+            $this->tableNames
+        )->migrations();
+
         return new CoreSchemaMigrator(
             $this->database,
             $this->tableNames,
-            $migrations
+            [...$productionMigrations, ...$migrations]
         );
     }
 
@@ -544,11 +551,23 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
     }
 
     /** @return array<string, string> */
-    private function schemaSnapshot(): array
+    private function baselineSchemaSnapshot(): array
     {
         $snapshot = [];
 
         foreach ($this->tableNames->all() as $tableName) {
+            $snapshot[$tableName] = $this->showCreateTable($tableName);
+        }
+
+        return $snapshot;
+    }
+
+    /** @return array<string, string> */
+    private function schemaSnapshot(): array
+    {
+        $snapshot = [];
+
+        foreach ($this->tableNames->schema1001() as $tableName) {
             $snapshot[$tableName] = $this->showCreateTable($tableName);
         }
 
@@ -560,7 +579,7 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
     {
         $snapshot = [];
 
-        foreach ($this->tableNames->all() as $tableName) {
+        foreach ($this->tableNames->schema1001() as $tableName) {
             $snapshot[$tableName] = $this->database->get_results(
                 "SELECT * FROM `{$tableName}`",
                 ARRAY_A
@@ -572,7 +591,7 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
 
     private function dropCoreSchema(): void
     {
-        foreach (array_reverse($this->tableNames->all()) as $tableName) {
+        foreach (array_reverse($this->tableNames->schema1001()) as $tableName) {
             $this->database->query("DROP TABLE IF EXISTS `{$tableName}`");
         }
 
@@ -585,6 +604,17 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
         $count = 0;
 
         foreach ($this->tableNames->all() as $tableName) {
+            $count += $this->tableExists($tableName) ? 1 : 0;
+        }
+
+        return $count;
+    }
+
+    private function existingCurrentTableCount(): int
+    {
+        $count = 0;
+
+        foreach ($this->tableNames->schema1001() as $tableName) {
             $count += $this->tableExists($tableName) ? 1 : 0;
         }
 
