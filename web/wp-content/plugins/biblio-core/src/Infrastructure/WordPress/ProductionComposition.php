@@ -6,6 +6,14 @@ namespace Biblio\Core\Infrastructure\WordPress;
 
 use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
 use Biblio\Core\Application\Catalog\AddLibraryItemService;
+use Biblio\Core\Application\Catalog\Classification\ClassificationTermActivity;
+use Biblio\Core\Application\Catalog\Classification\CreateLibraryCatalogContextService;
+use Biblio\Core\Application\Catalog\Classification\LibraryCatalogContextActivity;
+use Biblio\Core\Application\Catalog\Classification\LibraryCatalogSelectionResolver;
+use Biblio\Core\Application\Catalog\Classification\ManageLibraryBookTypesService;
+use Biblio\Core\Application\Catalog\Classification\ManageLibraryGenresService;
+use Biblio\Core\Application\Catalog\Classification\ManageLibrarySubjectsService;
+use Biblio\Core\Application\Catalog\Classification\SaveLibraryCatalogContextService;
 use Biblio\Core\Application\CoreApplication;
 use Biblio\Core\Application\Library\CreateLibraryService;
 use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
@@ -16,8 +24,17 @@ use Biblio\Core\Application\Reading\GetOwnedReadingRoundService;
 use Biblio\Core\Application\Reading\StartReadingFromExternalLoanService;
 use Biblio\Core\Application\Reading\StartReadingFromLibraryItemService;
 use Biblio\Core\Authorization\LibraryAuthorizationPolicy;
+use Biblio\Core\Audit\ActivityEventSource;
+use Biblio\Core\Catalog\Classification\ClassificationNameNormalizer;
 use Biblio\Core\Infrastructure\Persistence\WordPress\CoreTableNames;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbEditionRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbActivityEventAppender;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryBookTypeRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryCatalogContextRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryGenreRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMutationLock;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibrarySubjectRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryWorkRepresentationRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbClassificationSeedEvolutionFactory;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbExternalLoanRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbItemRepository;
@@ -71,6 +88,34 @@ final class ProductionComposition
         $workRepository = new WpdbWorkRepository($database, $tableNames);
         $editionRepository = new WpdbEditionRepository($database, $tableNames);
         $itemRepository = new WpdbItemRepository($database, $tableNames);
+        $bookTypeRepository = new WpdbLibraryBookTypeRepository(
+            $database,
+            $tableNames
+        );
+        $genreRepository = new WpdbLibraryGenreRepository(
+            $database,
+            $tableNames
+        );
+        $subjectRepository = new WpdbLibrarySubjectRepository(
+            $database,
+            $tableNames
+        );
+        $catalogContextRepository = new WpdbLibraryCatalogContextRepository(
+            $database,
+            $tableNames
+        );
+        $libraryMutationLock = new WpdbLibraryMutationLock(
+            $database,
+            $tableNames
+        );
+        $representedWorks = new WpdbLibraryWorkRepresentationRepository(
+            $database,
+            $tableNames
+        );
+        $activityEvents = new WpdbActivityEventAppender(
+            $database,
+            $tableNames
+        );
         $externalLoanRepository = new WpdbExternalLoanRepository(
             $database,
             $tableNames
@@ -104,6 +149,68 @@ final class ProductionComposition
             $workRepository,
             $editionRepository,
             $itemRepository,
+            $transactionManager
+        );
+        $activityFactory = new WordPressActivityEventFactory(
+            new ActivityEventSource("core.classification")
+        );
+        $selectionResolver = new LibraryCatalogSelectionResolver(
+            $bookTypeRepository,
+            $genreRepository,
+            $subjectRepository
+        );
+        $contextActivity = new LibraryCatalogContextActivity(
+            $activityFactory
+        );
+        $termActivity = new ClassificationTermActivity($activityFactory);
+        $catalogContextCreation = new CreateLibraryCatalogContextService(
+            $authenticatedUser,
+            $libraryAccess,
+            $representedWorks,
+            $catalogContextRepository,
+            $selectionResolver,
+            $libraryMutationLock,
+            $contextActivity,
+            $activityEvents,
+            $transactionManager
+        );
+        $catalogContextManagement = new SaveLibraryCatalogContextService(
+            $authenticatedUser,
+            $libraryAccess,
+            $workRepository,
+            $catalogContextRepository,
+            $selectionResolver,
+            $contextActivity,
+            $activityEvents,
+            $transactionManager
+        );
+        $normalizer = ClassificationNameNormalizer::create();
+        $bookTypeManagement = new ManageLibraryBookTypesService(
+            $authenticatedUser,
+            $libraryAccess,
+            $bookTypeRepository,
+            $normalizer,
+            $libraryMutationLock,
+            $termActivity,
+            $activityEvents,
+            $transactionManager
+        );
+        $genreManagement = new ManageLibraryGenresService(
+            $authenticatedUser,
+            $libraryAccess,
+            $genreRepository,
+            $normalizer,
+            $termActivity,
+            $activityEvents,
+            $transactionManager
+        );
+        $subjectManagement = new ManageLibrarySubjectsService(
+            $authenticatedUser,
+            $libraryAccess,
+            $subjectRepository,
+            $normalizer,
+            $termActivity,
+            $activityEvents,
             $transactionManager
         );
         $accessibleItems = new GetAccessibleLibraryItemService(
@@ -140,7 +247,12 @@ final class ProductionComposition
             $ownedExternalLoans,
             $ownedReadingRounds,
             $libraryItemReading,
-            $externalLoanReading
+            $externalLoanReading,
+            $catalogContextCreation,
+            $catalogContextManagement,
+            $bookTypeManagement,
+            $genreManagement,
+            $subjectManagement
         );
         $this->lifecycle = new CoreLifecycleCoordinator(
             new CoreSchemaMigrator(

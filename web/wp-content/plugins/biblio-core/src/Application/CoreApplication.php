@@ -6,6 +6,11 @@ namespace Biblio\Core\Application;
 
 use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
 use Biblio\Core\Application\Catalog\AddLibraryItemService;
+use Biblio\Core\Application\Catalog\Classification\CreateLibraryCatalogContextService;
+use Biblio\Core\Application\Catalog\Classification\ManageLibraryBookTypesService;
+use Biblio\Core\Application\Catalog\Classification\ManageLibraryGenresService;
+use Biblio\Core\Application\Catalog\Classification\ManageLibrarySubjectsService;
+use Biblio\Core\Application\Catalog\Classification\SaveLibraryCatalogContextService;
 use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
 use Biblio\Core\Application\Library\GetAccessibleLibraryItemService;
 use Biblio\Core\Application\Reading\GetOwnedReadingRoundService;
@@ -27,7 +32,12 @@ final readonly class CoreApplication
         private GetOwnedExternalLoanService $ownedExternalLoans,
         private GetOwnedReadingRoundService $ownedReadingRounds,
         private StartReadingFromLibraryItemService $libraryItemReading,
-        private StartReadingFromExternalLoanService $externalLoanReading
+        private StartReadingFromExternalLoanService $externalLoanReading,
+        private CreateLibraryCatalogContextService $catalogContextCreation,
+        private SaveLibraryCatalogContextService $catalogContextManagement,
+        private ManageLibraryBookTypesService $bookTypeManagement,
+        private ManageLibraryGenresService $genreManagement,
+        private ManageLibrarySubjectsService $subjectManagement
     ) {
     }
 
@@ -64,5 +74,30 @@ final readonly class CoreApplication
     public function externalLoanReading(): StartReadingFromExternalLoanService
     {
         return $this->externalLoanReading;
+    }
+
+    public function catalogContextCreation(): CreateLibraryCatalogContextService
+    {
+        return $this->catalogContextCreation;
+    }
+
+    public function catalogContextManagement(): SaveLibraryCatalogContextService
+    {
+        return $this->catalogContextManagement;
+    }
+
+    public function bookTypeManagement(): ManageLibraryBookTypesService
+    {
+        return $this->bookTypeManagement;
+    }
+
+    public function genreManagement(): ManageLibraryGenresService
+    {
+        return $this->genreManagement;
+    }
+
+    public function subjectManagement(): ManageLibrarySubjectsService
+    {
+        return $this->subjectManagement;
     }
 }
