@@ -126,7 +126,7 @@ final class RetryableProbeMigration implements CoreSchemaMigration
 
 final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
 {
-    public function testFreshDatabaseInstallsFormalBaseline(): void
+    public function testFreshDatabaseInstallsBaselineAndMigratesToCurrent(): void
     {
         $expectedBaseline = $this->baselineSchemaSnapshot();
         $this->dropCoreSchema();
@@ -145,6 +145,10 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
         self::assertTrue(
             $migrator->healthForVersion(1000)->isHealthy(),
             $migrator->healthForVersion(1000)->summary()
+        );
+        self::assertTrue(
+            $migrator->healthForVersion(1002)->isHealthy(),
+            $migrator->healthForVersion(1002)->summary()
         );
         self::assertSame(8, $this->existingCoreTableCount());
         self::assertSame(15, $this->existingCurrentTableCount());
@@ -186,9 +190,9 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
         try {
             $migrator->migrate();
 
-            self::assertSame(1002, $migrator->installedVersion());
-            self::assertSame(1002, $migrator->expectedVersion());
-            self::assertTrue($migrator->healthForVersion(1001)->isHealthy());
+            self::assertSame(1003, $migrator->installedVersion());
+            self::assertSame(1003, $migrator->expectedVersion());
+            self::assertTrue($migrator->healthForVersion(1002)->isHealthy());
             self::assertSame(15, $this->existingCurrentTableCount());
             self::assertSame(1, $this->indexCount(
                 $this->tableNames->works(),
@@ -211,7 +215,7 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
             "No explicit Biblio Core schema-health contract exists"
         );
 
-        $this->migrator()->healthForVersion(1002);
+        $this->migrator()->healthForVersion(1003);
     }
 
     public function testHealthyCurrentRunIsSchemaAndDataNoOp(): void

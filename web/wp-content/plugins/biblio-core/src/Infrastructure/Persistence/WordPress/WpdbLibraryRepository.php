@@ -61,11 +61,30 @@ final readonly class WpdbLibraryRepository implements WritableLibraryRepository
             return null;
         }
 
+        return $this->hydrate($row);
+    }
+
+    public function all(): array
+    {
+        $table = $this->tableNames->libraries();
+        $rows = $this->database->get_results(
+            "SELECT library_id, library_type, library_status "
+            . "FROM `{$table}` ORDER BY library_id"
+        );
+
+        return array_map(
+            fn (object $row): Library => $this->hydrate($row),
+            $rows
+        );
+    }
+
+    private function hydrate(object $row): Library
+    {
         try {
             return new Library(
-                new LibraryId($row->library_id),
-                LibraryType::from($row->library_type),
-                LibraryStatus::from($row->library_status)
+                new LibraryId((string) $row->library_id),
+                LibraryType::from((string) $row->library_type),
+                LibraryStatus::from((string) $row->library_status)
             );
         } catch (Throwable $exception) {
             throw new PersistenceException(

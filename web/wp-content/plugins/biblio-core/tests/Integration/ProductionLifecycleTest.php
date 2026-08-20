@@ -150,12 +150,12 @@ final class ProductionLifecycleTest extends PersistenceIntegrationTestCase
 
             $migrator = $this->migrator();
             self::assertSame(15, $this->existingCoreTableCount());
-            self::assertSame(1001, $migrator->installedVersion());
+            self::assertSame(1002, $migrator->installedVersion());
             self::assertTrue(
                 $migrator->health()->isHealthy(),
                 $migrator->health()->summary()
             );
-            self::assertTrue($this->state->isHealthCurrent(1001));
+            self::assertTrue($this->state->isHealthCurrent(1002));
         } finally {
             $this->ensureBaseline();
         }
@@ -168,10 +168,13 @@ final class ProductionLifecycleTest extends PersistenceIntegrationTestCase
             $this->tableNames
         );
 
-        self::assertSame(1001, CoreSchemaMigrator::CURRENT_VERSION);
-        self::assertCount(1, $registry->migrations());
+        self::assertSame(1000, CoreSchemaMigrator::FORMAL_BASELINE_VERSION);
+        self::assertSame(1002, CoreSchemaMigrator::CURRENT_VERSION);
+        self::assertCount(2, $registry->migrations());
         self::assertSame(1000, $registry->migrations()[0]->sourceVersion());
         self::assertSame(1001, $registry->migrations()[0]->targetVersion());
+        self::assertSame(1001, $registry->migrations()[1]->sourceVersion());
+        self::assertSame(1002, $registry->migrations()[1]->targetVersion());
     }
 
     public function testActivationOfCurrentSchemaIsSchemaAndDataNoOp(): void
@@ -208,11 +211,11 @@ final class ProductionLifecycleTest extends PersistenceIntegrationTestCase
             $composition->lifecycle()->boot();
 
             self::assertSame(1, $migration->attempts());
-            self::assertSame(1002, $this->migrator()->installedVersion());
-            self::assertTrue($this->state->isHealthCurrent(1002));
+            self::assertSame(1003, $this->migrator()->installedVersion());
+            self::assertTrue($this->state->isHealthCurrent(1003));
         } finally {
             $migration->remove();
-            update_option(CoreSchemaMigrator::VERSION_OPTION, "1001", false);
+            update_option(CoreSchemaMigrator::VERSION_OPTION, "1002", false);
         }
     }
 
@@ -243,7 +246,7 @@ final class ProductionLifecycleTest extends PersistenceIntegrationTestCase
             }
 
             self::assertSame(1, $migration->attempts());
-            self::assertSame(1001, $this->migrator()->installedVersion());
+            self::assertSame(1002, $this->migrator()->installedVersion());
             self::assertSame(
                 "Preserved",
                 $this->database->get_var($this->database->prepare(
@@ -268,10 +271,10 @@ final class ProductionLifecycleTest extends PersistenceIntegrationTestCase
             $this->state->clear();
             $composition->lifecycle()->boot();
             self::assertSame(2, $migration->attempts());
-            self::assertSame(1002, $this->migrator()->installedVersion());
+            self::assertSame(1003, $this->migrator()->installedVersion());
         } finally {
             $migration->remove();
-            update_option(CoreSchemaMigrator::VERSION_OPTION, "1001", false);
+            update_option(CoreSchemaMigrator::VERSION_OPTION, "1002", false);
         }
     }
 

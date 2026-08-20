@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Biblio\Core\Tests\Integration;
 
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrationException;
+use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchema1001Migration;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrationRegistry;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrator;
 use RuntimeException;
@@ -289,8 +290,8 @@ final class Schema1001MigrationTest extends PersistenceIntegrationTestCase
 
     private function restoreCurrentSchema(): void
     {
-        if ($this->migrator()->installedVersion() !== 1001) {
-            $this->migrator()->migrate();
+        if ($this->productionMigrator()->installedVersion() !== 1002) {
+            $this->productionMigrator()->migrate();
         }
     }
 
@@ -311,6 +312,15 @@ final class Schema1001MigrationTest extends PersistenceIntegrationTestCase
     }
 
     private function migrator(): CoreSchemaMigrator
+    {
+        return new CoreSchemaMigrator(
+            $this->database,
+            $this->tableNames,
+            [new CoreSchema1001Migration($this->database, $this->tableNames)]
+        );
+    }
+
+    private function productionMigrator(): CoreSchemaMigrator
     {
         return new CoreSchemaMigrator(
             $this->database,
