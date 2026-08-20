@@ -548,8 +548,10 @@ Work → Edition → `Catalog\Item` model and schema:
   platform-wide Edition may be reused by multiple Libraries;
 - Item reads stay explicitly Library-scoped, and a newly created Item remains
   a valid ReadingRound source whose Work is derived through Edition;
-- `CoreApplication::libraryItemCreation()` is the single new production
-  accessor; repositories and generic service-location remain unpublished.
+- `CoreApplication::libraryItemCreation()` remains the only Item-creation
+  accessor; classification management is exposed through separate named
+  context-, Boeksoort-, Genre- and Onderwerp-services, while repositories and
+  generic service-location remain unpublished.
 
 No schema migration, catalog table, aggregate or version change is part of
 F2.3. Product `v2.001`, plugin/package `2.1.0` and schema baseline `1000` remain
@@ -566,3 +568,29 @@ Last verified F2.3 quality baseline:
 - independent-process catalog creation: one winner, one stable conflict;
 - WordPress smoke: plugin active, Core loaded, init hook executed, HTTP 200;
 - Composer, PHP syntax, manifest and Git diff checks: passed.
+
+### F2.5.5c — Classification management application layer
+
+Status: **Implemented**
+
+Production Core now exposes explicit services for represented-Work context
+creation, optimistic context save and the separate Boeksoort, Genre and
+Onderwerp lifecycles. Every operation resolves the actor server-side and uses
+`catalog.classification_manage`; Item-add authorization is not accepted.
+
+Context save supports semantic no-op and stale-no-op before conflict handling.
+A real save validates only newly introduced links as active, increments the
+contextversion exactly once and appends exactly one immutable ActivityEvent in
+the same transaction. Retained inactive links remain valid. Term writes and
+their term-level ActivityEvents are likewise atomic; no-op, failure and
+conflict outcomes write no event.
+
+Missing-context creation uses a Library-scoped Item → Edition → Work query.
+Library-row serialization makes equal concurrent creation idempotent and
+different concurrent creation an explicit conflict. Term-row locks serialize
+new-link validation against deactivation. Boeksoort lifecycle uses the same
+Library-row lock for the last-active confirmation decision.
+
+No schema or migration change is part of F2.5.5c; formal schema version remains
+1002. Item-add classification initialization, metadata mappings,
+REST/Abilities/UI and the Boeksoort request workflow remain unimplemented.

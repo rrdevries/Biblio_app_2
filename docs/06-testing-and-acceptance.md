@@ -480,8 +480,9 @@ Acceptance:
 - Item lookup never crosses Library scope, while a newly created Item can
   immediately start a valid ReadingRound whose Work is derived through Edition;
 - `ProductionComposition` remains the only production constructor of wpdb
-  catalog repositories, and `CoreApplication` exposes only one named catalog
-  creation service, no repository or resolver;
+  catalog repositories, and `CoreApplication` exposes one named Item-creation
+  service plus explicit classification services, never a repository or
+  resolver;
 - no schema migration occurs and product `v2.001`, package `2.1.0` and schema
   baseline `1000` remain unchanged;
 - the complete canonical quality gate stays green, including PHPStan,
@@ -496,3 +497,36 @@ No-go:
 - a partial compound catalog chain after failure;
 - repository exposure through the production application boundary;
 - schema/table changes or expansion into deferred Fase-2 domains.
+
+## 29. Classification context and term management
+
+Acceptance:
+
+- explicit missing-context creation succeeds only for a Work represented by a
+  same-Library Item→Edition→Work chain;
+- classification authorization is checked before representation, term or
+  context lookup and before starting a mutation transaction;
+- context selection is exactly one Boeksoort plus duplicate-free unordered
+  Genre and Onderwerp sets;
+- equal current-state and stale-current-state requests are successful no-ops
+  returning the current version without update or ActivityEvent;
+- a stale divergent request returns the stable
+  `library_catalog_context_stale` reason and current context;
+- a real save increments version exactly once, never merges automatically and
+  requires explicit confirmation for a changed Boeksoort ID;
+- retained inactive links remain valid while every newly introduced link is
+  active at the serialized validation point;
+- context mutation and one structured context ActivityEvent commit atomically;
+- each type-specific term service implements create, rename, deactivate and
+  reactivate without delete, merge or automatic reactivation;
+- normalized uniqueness covers active and inactive terms; no-op and conflict
+  outcomes produce neither write nor event;
+- last-active Boeksoort deactivation requires explicit confirmation, while
+  zero active Boeksoorten remains schema-healthy;
+- independent-process tests prove context CAS winner/stale behavior,
+  equal/different context-create outcomes, duplicate term create,
+  rename/create collision, deactivate/new-link serialization and last-active
+  Boeksoort serialization;
+- audit failure rolls back both context and term mutations;
+- AddLibraryItemService, schema 1002, ReadingRound and earlier isolation
+  regressions remain unchanged and green.

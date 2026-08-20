@@ -538,9 +538,9 @@ Classification authorization is separately exposed inside Core as
 `canModifyLibraryCatalogContext()` and `canManageClassificationTerms()`.
 Context initialization inside Item-add follows the Item-add permission and is
 not a standalone configurable right. Existing-context and term management use
-the independent `catalog.classification_manage` permission. These internal
-predicates expose no repository or context-mutation route through
-`CoreApplication`.
+the independent `catalog.classification_manage` permission. These predicates
+are consumed by named classification application services; `CoreApplication`
+exposes those services but no repository or generic mutation primitive.
 
 The existing writable Work, Edition and Item ports and wpdb adapters are
 reused. Compound writes run through the shared transaction manager. Repository
@@ -553,14 +553,47 @@ physical copies and cross-Library reuse of one Edition.
 
 `ProductionComposition` owns all concrete construction and supplies the same
 authenticated-user, library-access, transaction and repository instances to
-the relevant services. `CoreApplication` adds exactly one named
-`libraryItemCreation()` accessor and exposes no repository or resolver. The
-existing Item→Edition→Work ReadingRound path is unchanged and immediately
-accepts an Item created through this boundary when the actor has direct use
-access.
+the relevant services. `CoreApplication` keeps one named
+`libraryItemCreation()` accessor and exposes separate named classification
+services, but no repository or resolver. The existing Item→Edition→Work
+ReadingRound path is unchanged and immediately accepts an Item created through
+this boundary when the actor has direct use access.
 
 This slice does not solve bibliographic entity resolution or shared-record
 governance: callers must select existing central identities or deliberately
 request a new identity with a unique ID. Author/contributors, Series, rich
 metadata, search/entity resolution, taxonomy and all other deferred catalog or
 product lifecycles remain later work.
+
+## 17. Classification management application boundary
+
+F2.5.5c builds on schema 1002 without changing DDL. Context creation and save
+are separate use-cases. Explicit legacy creation first authorizes the trusted
+actor, then proves Work representation with one Library-scoped
+Item→Edition→Work query. A Library-row `FOR UPDATE` lock serializes the absent
+Library+Work identity before checking and inserting the unique context.
+
+Existing-context save locks and reads the current context before deciding:
+
+1. desired selection equals current selection: return current context;
+2. desired differs and expected version is stale: return a stable stale
+   conflict carrying current state;
+3. desired differs and version matches: validate confirmations and terms,
+   perform one CAS replacement and append one ActivityEvent.
+
+The selection resolver is explicitly typed for Boeksoort, Genre and Onderwerp.
+It locks referenced term rows so a deactivation cannot race past validation of
+a new link. Only IDs newly introduced relative to the current selection must
+be active; retained inactive IDs remain legal. Set order is normalized by the
+domain value object and never creates a mutation.
+
+Boeksoort, Genre and Onderwerp have separate concrete management services, not
+a generic taxonomy engine. Database uniqueness remains the concurrency
+authority for normalized create/rename conflicts. Boeksoort operations also
+take the Library-row lock; active-term counting and the last-active
+confirmation decision are therefore serialized.
+
+`WordPressActivityEventFactory` captures a UUID, timestamp and historical
+WordPress actor display name. Context and term audit builders capture technical
+IDs and display labels. Domain write and append-only event insert run through
+one `TransactionManager` operation, so either both commit or both roll back.
