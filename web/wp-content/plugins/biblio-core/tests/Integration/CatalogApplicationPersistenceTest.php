@@ -23,6 +23,7 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionManager;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbWorkRepository;
 use Biblio\Core\Infrastructure\WordPress\ProductionComposition;
+use Biblio\Core\Library\AdditionalPermissions;
 use Biblio\Core\Library\Library;
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Library\LibraryMembership;
@@ -41,6 +42,9 @@ final class CatalogApplicationPersistenceTest extends
     {
         $owner = $this->createWordPressUser("catalog-owner");
         $manager = $this->createWordPressUser("catalog-manager");
+        $classificationManager = $this->createWordPressUser(
+            "catalog-classification-manager"
+        );
         $member = $this->createWordPressUser("catalog-member");
         $inactive = $this->createWordPressUser("catalog-inactive");
         $foreign = $this->createWordPressUser("catalog-foreign");
@@ -52,20 +56,40 @@ final class CatalogApplicationPersistenceTest extends
             $library,
             $manager,
             ManagementRole::Manager,
-            UseAccess::ViewOnly
+            UseAccess::ViewOnly,
+            permissions: AdditionalPermissions::fromValues(
+                AdditionalPermissions::CATALOG_ITEM_ADD
+            )
+        );
+        $this->addMembership(
+            $library,
+            $classificationManager,
+            ManagementRole::Manager,
+            UseAccess::Borrow,
+            permissions: AdditionalPermissions::fromValues(
+                AdditionalPermissions::CATALOG_CLASSIFICATION_MANAGE
+            )
         );
         $this->addMembership(
             $library,
             $member,
             ManagementRole::Member,
-            UseAccess::Direct
+            UseAccess::Direct,
+            permissions: AdditionalPermissions::fromValues(
+                AdditionalPermissions::CATALOG_ITEM_ADD,
+                AdditionalPermissions::CATALOG_CLASSIFICATION_MANAGE
+            )
         );
         $this->addMembership(
             $library,
             $inactive,
             ManagementRole::Manager,
             UseAccess::Direct,
-            MembershipStatus::Inactive
+            MembershipStatus::Inactive,
+            AdditionalPermissions::fromValues(
+                AdditionalPermissions::CATALOG_ITEM_ADD,
+                AdditionalPermissions::CATALOG_CLASSIFICATION_MANAGE
+            )
         );
         $work = new Work(new WorkId("work-existing"), "Existing Work");
         $edition = new Edition(new EditionId("edition-existing"), $work->id());
@@ -90,7 +114,10 @@ final class CatalogApplicationPersistenceTest extends
                 $edition->id()
             );
 
-            foreach ([$member, $inactive, $foreign] as $deniedUser) {
+            foreach (
+                [$classificationManager, $member, $inactive, $foreign]
+                as $deniedUser
+            ) {
                 wp_set_current_user($deniedUser);
 
                 try {
@@ -347,7 +374,8 @@ final class CatalogApplicationPersistenceTest extends
         int $wordpressUserId,
         ManagementRole $role,
         UseAccess $useAccess,
-        MembershipStatus $status = MembershipStatus::Active
+        MembershipStatus $status = MembershipStatus::Active,
+        ?AdditionalPermissions $permissions = null
     ): void {
         (new WpdbLibraryMembershipRepository(
             $this->database,
@@ -355,7 +383,7 @@ final class CatalogApplicationPersistenceTest extends
         ))->add(new LibraryMembershipAssignment(
             $libraryId,
             new UserId((string) $wordpressUserId),
-            new LibraryMembership($role, $useAccess, $status)
+            new LibraryMembership($role, $useAccess, $status, $permissions)
         ));
     }
 

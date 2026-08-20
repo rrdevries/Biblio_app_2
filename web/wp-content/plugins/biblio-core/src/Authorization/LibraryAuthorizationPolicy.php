@@ -6,25 +6,51 @@ namespace Biblio\Core\Authorization;
 
 use Biblio\Core\Library\LibraryContext;
 use Biblio\Core\Library\LibraryMembershipAssignment;
+use Biblio\Core\Library\AdditionalPermissions;
 use Biblio\Core\Library\ManagementRole;
 use Biblio\Core\Library\MembershipStatus;
 use Biblio\Core\Library\UseAccess;
 
 final class LibraryAuthorizationPolicy
 {
-    public function canManageCatalog(
+    public function canAddCatalogItem(
         LibraryContext $context,
         LibraryMembershipAssignment $assignment
     ): bool {
-        $context->assertMembershipApplies($assignment);
+        return $this->canUseManagementPermission(
+            $context,
+            $assignment,
+            AdditionalPermissions::CATALOG_ITEM_ADD
+        );
+    }
 
-        $membership = $assignment->membership();
+    public function canInitializeCatalogContextDuringItemAdd(
+        LibraryContext $context,
+        LibraryMembershipAssignment $assignment
+    ): bool {
+        return $this->canAddCatalogItem($context, $assignment);
+    }
 
-        return $membership->status() === MembershipStatus::Active
-            && in_array($membership->managementRole(), [
-                ManagementRole::Owner,
-                ManagementRole::Manager,
-            ], true);
+    public function canModifyLibraryCatalogContext(
+        LibraryContext $context,
+        LibraryMembershipAssignment $assignment
+    ): bool {
+        return $this->canUseManagementPermission(
+            $context,
+            $assignment,
+            AdditionalPermissions::CATALOG_CLASSIFICATION_MANAGE
+        );
+    }
+
+    public function canManageClassificationTerms(
+        LibraryContext $context,
+        LibraryMembershipAssignment $assignment
+    ): bool {
+        return $this->canUseManagementPermission(
+            $context,
+            $assignment,
+            AdditionalPermissions::CATALOG_CLASSIFICATION_MANAGE
+        );
     }
 
     public function canViewCollection(
@@ -63,6 +89,27 @@ final class LibraryAuthorizationPolicy
         return match ($membership->useAccess()) {
             UseAccess::Direct, UseAccess::Borrow => true,
             UseAccess::ViewOnly => false,
+        };
+    }
+
+    private function canUseManagementPermission(
+        LibraryContext $context,
+        LibraryMembershipAssignment $assignment,
+        string $permission
+    ): bool {
+        $context->assertMembershipApplies($assignment);
+        $membership = $assignment->membership();
+
+        if ($membership->status() !== MembershipStatus::Active) {
+            return false;
+        }
+
+        return match ($membership->managementRole()) {
+            ManagementRole::Owner => true,
+            ManagementRole::Manager => $membership
+                ->additionalPermissions()
+                ->contains($permission),
+            ManagementRole::Member => false,
         };
     }
 }

@@ -28,6 +28,27 @@ final class AdditionalPermissionsTest extends TestCase
         );
     }
 
+    public function testCatalogPermissionsCoexistWithUnknownFutureValues(): void
+    {
+        $permissions = AdditionalPermissions::fromValues(
+            "future.catalog.permission",
+            AdditionalPermissions::CATALOG_ITEM_ADD,
+            AdditionalPermissions::CATALOG_CLASSIFICATION_MANAGE
+        );
+
+        self::assertSame([
+            "future.catalog.permission",
+            "catalog.item_add",
+            "catalog.classification_manage",
+        ], $permissions->values());
+        self::assertTrue($permissions->contains(
+            AdditionalPermissions::CATALOG_ITEM_ADD
+        ));
+        self::assertTrue($permissions->contains(
+            AdditionalPermissions::CATALOG_CLASSIFICATION_MANAGE
+        ));
+    }
+
     public function testEmptyPermissionIsRejected(): void
     {
         $this->expectException(InvalidArgumentException::class);

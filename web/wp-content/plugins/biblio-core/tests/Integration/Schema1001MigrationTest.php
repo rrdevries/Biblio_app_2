@@ -4,10 +4,24 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Tests\Integration;
 
+use Biblio\Core\Application\Catalog\AddLibraryItemService;
+use Biblio\Core\Application\Library\LibraryAccessService;
+use Biblio\Core\Authorization\LibraryAuthorizationPolicy;
+use Biblio\Core\Catalog\EditionId;
+use Biblio\Core\Catalog\ItemId;
+use Biblio\Core\Identity\UserId;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbEditionRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbItemRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMembershipRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionManager;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbWorkRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrationException;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchema1001Migration;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrationRegistry;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrator;
+use Biblio\Core\Library\LibraryContext;
+use Biblio\Core\Library\LibraryId;
+use Biblio\Core\Tests\Support\ControllableAuthenticatedUser;
 use RuntimeException;
 
 final class Schema1001MigrationTest extends PersistenceIntegrationTestCase
@@ -53,6 +67,39 @@ final class Schema1001MigrationTest extends PersistenceIntegrationTestCase
                 "catalog.classification_manage",
                 $this->permissionsFor(101)
             );
+            $managerId = new UserId("101");
+            $libraryId = new LibraryId("migration-library");
+            $access = new LibraryAccessService(
+                new WpdbLibraryMembershipRepository(
+                    $this->database,
+                    $this->tableNames
+                ),
+                new LibraryAuthorizationPolicy()
+            );
+            $context = new LibraryContext($libraryId, $managerId);
+            self::assertTrue($access->canAddCatalogItem($context));
+            self::assertTrue(
+                $access->canInitializeCatalogContextDuringItemAdd($context)
+            );
+            self::assertFalse(
+                $access->canModifyLibraryCatalogContext($context)
+            );
+            self::assertFalse(
+                $access->canManageClassificationTerms($context)
+            );
+            $item = (new AddLibraryItemService(
+                new ControllableAuthenticatedUser($managerId),
+                $access,
+                new WpdbWorkRepository($this->database, $this->tableNames),
+                new WpdbEditionRepository($this->database, $this->tableNames),
+                new WpdbItemRepository($this->database, $this->tableNames),
+                new WpdbTransactionManager($this->database)
+            ))->addForExistingEdition(
+                $libraryId,
+                new ItemId("migration-manager-item"),
+                new EditionId("migration-edition")
+            );
+            self::assertSame("migration-library", $item->libraryId()->value());
 
             $permissionsAfterFirstRun = $this->permissionsFor(101);
             $this->migrator()->migrate();

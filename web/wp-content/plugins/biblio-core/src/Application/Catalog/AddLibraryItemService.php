@@ -111,9 +111,9 @@ final readonly class AddLibraryItemService
             $this->authenticatedUser->requireUserId()
         );
 
-        if (!$this->libraryAccessService->canManageCatalog($context)) {
+        if (!$this->libraryAccessService->canAddCatalogItem($context)) {
             throw new AuthorizationException(
-                "Catalog management is not permitted for this Library."
+                "Adding catalog Items is not permitted for this Library."
             );
         }
 

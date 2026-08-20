@@ -6,6 +6,7 @@ namespace Biblio\Core\Tests\Unit\Authorization;
 
 use Biblio\Core\Authorization\LibraryAuthorizationPolicy;
 use Biblio\Core\Identity\UserId;
+use Biblio\Core\Library\AdditionalPermissions;
 use Biblio\Core\Library\LibraryContext;
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Library\LibraryMembership;
@@ -19,59 +20,111 @@ use PHPUnit\Framework\TestCase;
 
 final class LibraryAuthorizationPolicyTest extends TestCase
 {
-    #[DataProvider("catalogManagementCases")]
-    public function testCatalogManagementDependsOnlyOnActiveManagementRole(
+    #[DataProvider("managementAuthorizationCases")]
+    public function testManagementAuthorizationUsesExplicitPermissions(
         ManagementRole $role,
         UseAccess $useAccess,
         MembershipStatus $status,
-        bool $expected
+        AdditionalPermissions $permissions,
+        bool $canAddItem,
+        bool $canManageClassification
     ): void {
         [$context, $assignment] = $this->membership(
             $useAccess,
             $status,
-            $role
+            $role,
+            $permissions
         );
+        $policy = new LibraryAuthorizationPolicy();
 
         self::assertSame(
-            $expected,
-            (new LibraryAuthorizationPolicy())->canManageCatalog(
+            $canAddItem,
+            $policy->canAddCatalogItem($context, $assignment)
+        );
+        self::assertSame(
+            $canAddItem,
+            $policy->canInitializeCatalogContextDuringItemAdd(
                 $context,
                 $assignment
             )
         );
+        self::assertSame(
+            $canManageClassification,
+            $policy->canModifyLibraryCatalogContext($context, $assignment)
+        );
+        self::assertSame(
+            $canManageClassification,
+            $policy->canManageClassificationTerms($context, $assignment)
+        );
     }
 
-    public static function catalogManagementCases(): iterable
+    public static function managementAuthorizationCases(): iterable
     {
         yield "active owner direct" => [
             ManagementRole::Owner,
             UseAccess::Direct,
             MembershipStatus::Active,
+            AdditionalPermissions::none(),
+            true,
             true,
         ];
         yield "inactive owner direct" => [
             ManagementRole::Owner,
             UseAccess::Direct,
             MembershipStatus::Inactive,
+            AdditionalPermissions::fromValues(
+                AdditionalPermissions::CATALOG_ITEM_ADD,
+                AdditionalPermissions::CATALOG_CLASSIFICATION_MANAGE
+            ),
+            false,
             false,
         ];
 
-        foreach ([ManagementRole::Manager, ManagementRole::Member] as $role) {
-            foreach (UseAccess::cases() as $useAccess) {
-                foreach (MembershipStatus::cases() as $status) {
-                    yield implode(" ", [
-                        $status->value,
-                        $role->value,
-                        $useAccess->value,
-                    ]) => [
-                        $role,
-                        $useAccess,
-                        $status,
-                        $role === ManagementRole::Manager
-                            && $status === MembershipStatus::Active,
-                    ];
-                }
+        $permissionCases = [
+            "none" => [AdditionalPermissions::none(), false, false],
+            "item add" => [AdditionalPermissions::fromValues(
+                AdditionalPermissions::CATALOG_ITEM_ADD
+            ), true, false],
+            "classification manage" => [AdditionalPermissions::fromValues(
+                AdditionalPermissions::CATALOG_CLASSIFICATION_MANAGE
+            ), false, true],
+            "both" => [AdditionalPermissions::fromValues(
+                AdditionalPermissions::CATALOG_ITEM_ADD,
+                AdditionalPermissions::CATALOG_CLASSIFICATION_MANAGE
+            ), true, true],
+        ];
+
+        foreach (UseAccess::cases() as $useAccess) {
+            foreach ($permissionCases as $label => $permissionCase) {
+                [$permissions, $canAdd, $canClassify] = $permissionCase;
+
+                yield "active manager {$useAccess->value} {$label}" => [
+                    ManagementRole::Manager,
+                    $useAccess,
+                    MembershipStatus::Active,
+                    $permissions,
+                    $canAdd,
+                    $canClassify,
+                ];
             }
+
+            yield "inactive manager {$useAccess->value} with both" => [
+                ManagementRole::Manager,
+                $useAccess,
+                MembershipStatus::Inactive,
+                $permissionCases["both"][0],
+                false,
+                false,
+            ];
+
+            yield "active member {$useAccess->value} with both" => [
+                ManagementRole::Member,
+                $useAccess,
+                MembershipStatus::Active,
+                $permissionCases["both"][0],
+                false,
+                false,
+            ];
         }
     }
 
@@ -136,7 +189,8 @@ final class LibraryAuthorizationPolicyTest extends TestCase
     private function membership(
         UseAccess $useAccess,
         MembershipStatus $status = MembershipStatus::Active,
-        ManagementRole $role = ManagementRole::Member
+        ManagementRole $role = ManagementRole::Member,
+        ?AdditionalPermissions $permissions = null
     ): array {
         $userId = new UserId("user-1");
         $libraryId = new LibraryId("library-a");
@@ -149,7 +203,8 @@ final class LibraryAuthorizationPolicyTest extends TestCase
                 new LibraryMembership(
                     $role,
                     $useAccess,
-                    $status
+                    $status,
+                    $permissions
                 )
             )
         ];
