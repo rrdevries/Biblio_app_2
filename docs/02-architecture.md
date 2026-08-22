@@ -644,3 +644,40 @@ confirmation decision are therefore serialized.
 WordPress actor display name. Context and term audit builders capture technical
 IDs and display labels. Domain write and append-only event insert run through
 one `TransactionManager` operation, so either both commit or both roll back.
+
+## 18. F2.6 ReadingRound lifecycle design
+
+ADR-007 is the binding implementation contract for the next ReadingRound
+slices. Lifecycle has one stored truth: nullable outcome, where null is active
+and completed/stopped is ended. ReadingRound provenance distinguishes legacy
+source-started, new source-started and manually historical records. Source is
+mandatory and immutable for normal rounds; manually registered history is
+ended and source-free.
+
+Content reading dates use explicit year/month/day components with day-, month-
+or year-precision. Technical `created_at`, `updated_at` and `ended_at` remain
+separate UTC instants. The schema-1002 `started_at` values are preserved as
+legacy content instants and are not reinterpreted as confirmed local dates.
+
+The persistence change requires ordered migration 1002→1003 and explicit
+1003 health. Baseline 1000 and earlier migrations remain immutable. Existing
+active rows retain ID, User, Work, source and `started_at`; new database checks
+separate active source-backed and ended source-free shapes. Active uniqueness
+remains User + concrete source.
+
+All ReadingRound mutation services resolve the actor server-side, use
+owner-scoped reads and perform locked decision plus CAS write transactionally.
+Identical stale requests are no-op successes; divergent stale requests return
+a typed conflict with current state. No ReadingRound mutation writes a Library
+ActivityEvent or introduces a private audit engine.
+
+`ReadingRoundIdGenerator` is a specific composition detail shared by both
+existing start paths and historical registration. Database primary-key
+uniqueness remains final and only a translated ID collision receives at most
+three attempts. `CoreApplication` exposes named use-cases and projections, not
+the generator or repository.
+
+Personal Work-read-status and first-read/reread are calculated from owned
+ReadingRounds. Date intervals determine only provable chronology; overlap is
+`chronology_indeterminate`. Presentation tie-breaks remain deterministic but
+have no historical meaning.

@@ -621,6 +621,15 @@ When ended:
 - `Uitgelezen = ja`;
 - or `Uitgelezen = nee` (`Gestopt`).
 
+Technical creation, update and end timestamps are not reading dates. Content
+dates preserve what the user knows: exact day, month + year or year only.
+Unknown date parts are not filled with an artificial default.
+
+An ended round may be corrected for an incorrectly recorded completed/stopped
+outcome or content reading period. This is the same ReadingRound, not a new
+round. User, Work, original source and normal-vs-historical provenance remain
+unchanged; hard delete is not the standard correction route.
+
 ## Personal Work status
 
 Derived for current user:
@@ -654,6 +663,10 @@ A completed historical read may be registered directly.
 
 Known date precision is preserved.
 
+When its physical source is genuinely unknown, the historical round is stored
+without a source and is explicitly distinguishable from a round that followed
+the normal source-backed start/end lifecycle. No pseudo source is created.
+
 ## Reread classification
 
 Per user + Work, at most one successful round can be the first completed read.
@@ -663,6 +676,11 @@ Every later successfully completed round is a reread based on chronological comp
 Start date does not determine reread status.
 
 Stopped rounds are neither first completion nor reread completion.
+
+When known completion dates overlap because their precision is limited, no
+technical timestamp, ID or entry order invents a historical order. The
+affected classification is explicitly chronologically indeterminate until the
+content dates provide enough information.
 
 # 7. Verlanglijst, Gewenste aanwinsten and Hierna lezen
 

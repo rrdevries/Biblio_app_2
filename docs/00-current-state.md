@@ -670,3 +670,32 @@ Item→Edition→Work ReadingRound derivation. Metadata mappings,
 REST/Abilities/UI, the Boeksoort request workflow, term merge/hierarchy and
 term-level optimistic locking remain deferred. The complete criterion and
 verification record is maintained in `docs/08-f2-5-exit-evidence.md`.
+
+### F2.6 — ReadingRound lifecycle and historical truth
+
+Status: **Design accepted; implementation not started**
+
+ADR-007 fixes the production contract for active and ended ReadingRounds.
+Ended outcome is completed or stopped; lifecycle is derived from the nullable
+outcome and is not a second mutable truth. Normal active rounds retain exactly
+one Item or ExternalLoan source. A manually registered historical completed
+round is explicitly source-free and linked directly to Work; it is never
+represented through a pseudo source. Source, identity, ownership and
+provenance are immutable through ending and correction.
+
+New content dates preserve exact day, month+year or year precision as explicit
+calendar components. Technical creation/update/end timestamps are separate
+and never stand in for reading dates. Existing schema-1002 `started_at` values
+remain untouched legacy content instants because their original timezone and
+calendar intent cannot be reconstructed safely.
+
+Finish, stop and ended correction use owner-scoped transactional CAS with
+semantic no-op, stale-no-op and typed stale conflict behavior. Personal Work
+read status and first-read/reread classification remain derived; uncertain
+chronology is represented explicitly rather than resolved with technical
+timestamps or IDs. ReadingRound IDs are issued server-side through a specific
+generator with bounded primary-key collision retry.
+
+Implementation is planned as F2.6b domain/schema-1003/persistence/ID issuance,
+F2.6c lifecycle/history/correction, and F2.6d derived reads/exit. No production
+code, migration or service from those slices is implemented by F2.6a.

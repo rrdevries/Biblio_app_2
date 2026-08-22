@@ -620,3 +620,49 @@ Acceptance:
   management, schema 1002 and all earlier regressions remain green;
 - no migration, DDL, metadata mapping, REST/Abilities/UI, search or new term
   management behavior is introduced.
+
+## 32. F2.6 ReadingRound lifecycle acceptance plan
+
+F2.6a accepts ADR-007 and introduces no production behavior. F2.6b–F2.6d must
+collectively prove:
+
+- lifecycle is derived from nullable completed/stopped outcome and cannot be
+  persisted as a contradictory second state;
+- normal active rounds keep one valid Item or ExternalLoan source and manual
+  historical rounds are ended, source-free and linked to an existing Work;
+- exact-day, month+year and year-only dates roundtrip without invented parts;
+- technical timestamps never substitute for content dates and migration
+  preserves every schema-1002 `started_at` value exactly as legacy evidence;
+- formal baseline stays 1000, migration chain becomes
+  1000→1001→1002→1003, version advances only after healthy 1003 and a known
+  partial failure retries idempotently;
+- 1003 health fails closed on column, generated expression, index, FK, CHECK
+  or persisted lifecycle/provenance/date/version drift;
+- Item and ExternalLoan start still authorize before sensitive lookup, derive
+  Work from the source and enforce one active round per User + source;
+- every creation path obtains an opaque ReadingRoundId server-side; only a
+  translated primary-key collision is retried and at most three times;
+- finish/stop perform one transactional CAS mutation, identical concurrent
+  requests converge through stale-no-op and completed-versus-stopped yields
+  one winner plus one typed stale conflict with current state;
+- ended correction changes only outcome and content period, preserves
+  identity/source/provenance, and follows no-op/stale-no-op/stale-conflict
+  semantics without hard delete;
+- personal Work status covers never read, active, stopped, completed,
+  historical, reread and mixed combinations without a stored Work flag;
+- first/reread uses only completed finish-date intervals and returns explicit
+  chronology-indeterminate where day/month/year evidence cannot prove order;
+- owner/non-owner/anonymous boundaries are indistinguishable where needed,
+  mutation authorization precedes lookup and no Library-role bypass exists;
+- no ReadingRound mutation writes a Library ActivityEvent or generic private
+  audit event;
+- `CoreApplication` exposes only named owner-scoped services/projectors and
+  keeps repositories, generators and arbitrary writers private;
+- independent-process concurrency plus the canonical full gate keep F2.3,
+  F2.5, Library isolation and existing ReadingRound behavior green.
+
+F2.6b owns domain/schema/persistence/ID issuance and compatible startflows.
+F2.6c owns finish, stop, historical registration and correction. F2.6d owns
+derived Work/reread reads and the final exit evidence. InternalLoan,
+ExternalLoan lifecycle, goals/statistics/Timeline/Home, ratings/notes,
+REST/Abilities/UI and any private audit engine remain outside these criteria.

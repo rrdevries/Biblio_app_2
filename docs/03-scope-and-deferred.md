@@ -19,6 +19,7 @@
 - simple internal loans.
 - external loans.
 - ReadingRounds with concrete physical sources.
+- completed historical ReadingRounds without a source when genuinely unknown.
 - Verlanglijst.
 - manual Hierna lezen.
 - Ratings/Reviews/Notes.
