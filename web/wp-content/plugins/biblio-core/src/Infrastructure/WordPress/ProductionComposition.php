@@ -9,6 +9,7 @@ use Biblio\Core\Application\Catalog\AddLibraryItemService;
 use Biblio\Core\Application\Catalog\Classification\ClassificationTermActivity;
 use Biblio\Core\Application\Catalog\Classification\CreateLibraryCatalogContextService;
 use Biblio\Core\Application\Catalog\Classification\LibraryCatalogContextActivity;
+use Biblio\Core\Application\Catalog\Classification\LibraryCatalogContextInitializer;
 use Biblio\Core\Application\Catalog\Classification\LibraryCatalogSelectionResolver;
 use Biblio\Core\Application\Catalog\Classification\ManageLibraryBookTypesService;
 use Biblio\Core\Application\Catalog\Classification\ManageLibraryGenresService;
@@ -143,14 +144,6 @@ final class ProductionComposition
             $membershipRepository,
             new LibraryAuthorizationPolicy()
         );
-        $libraryItemCreation = new AddLibraryItemService(
-            $authenticatedUser,
-            $libraryAccess,
-            $workRepository,
-            $editionRepository,
-            $itemRepository,
-            $transactionManager
-        );
         $activityFactory = new WordPressActivityEventFactory(
             new ActivityEventSource("core.classification")
         );
@@ -162,13 +155,29 @@ final class ProductionComposition
         $contextActivity = new LibraryCatalogContextActivity(
             $activityFactory
         );
+        $contextInitializer = new LibraryCatalogContextInitializer(
+            $catalogContextRepository,
+            $selectionResolver,
+            $libraryMutationLock
+        );
+        $libraryItemCreation = new AddLibraryItemService(
+            $authenticatedUser,
+            $libraryAccess,
+            $workRepository,
+            $editionRepository,
+            $itemRepository,
+            $catalogContextRepository,
+            $contextInitializer,
+            $contextActivity,
+            $activityEvents,
+            $transactionManager
+        );
         $termActivity = new ClassificationTermActivity($activityFactory);
         $catalogContextCreation = new CreateLibraryCatalogContextService(
             $authenticatedUser,
             $libraryAccess,
             $representedWorks,
-            $catalogContextRepository,
-            $selectionResolver,
+            $contextInitializer,
             $libraryMutationLock,
             $contextActivity,
             $activityEvents,
