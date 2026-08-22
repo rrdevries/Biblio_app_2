@@ -472,8 +472,10 @@ Acceptance:
   and Item references exactly one Library plus Edition;
 - Work without Edition remains schema-valid, multiple Items may reference one
   Edition in one Library, and multiple Libraries may reuse that Edition;
-- existing-Edition creation writes only Item; compound paths commit as one
-  unit or leave no partial Work/Edition/Item rows after any failed step;
+- existing-Edition creation writes only Item when its Library + Work context
+  exists; otherwise context, Item and context-created event commit as one unit;
+  compound paths leave no partial Work/Edition/context/Item/event rows after
+  any failed step;
 - duplicate Work, Edition and Item primary IDs—including an independent-process
   race—produce `catalog_record_already_exists`, with one race winner and one
   conflict;
@@ -530,3 +532,40 @@ Acceptance:
 - audit failure rolls back both context and term mutations;
 - AddLibraryItemService, schema 1002, ReadingRound and earlier isolation
   regressions remain unchanged and green.
+
+## 30. Item-add classification initialization
+
+Acceptance:
+
+- the three explicit F2.3 Item-add paths remain the only production creation
+  paths and accept at most one optional typed context-initialization intent;
+- authorization and actor resolution precede every central or Library-local
+  lookup; Owner and active Manager with `catalog.item_add` are allowed, while
+  classification-only Manager, Member, inactive and foreign membership are
+  denied regardless of `UseAccess`;
+- initialization is not exposed outside `libraryItemCreation()` and does not
+  require or grant `catalog.classification_manage` authority;
+- an existing Library + Work context is reused unchanged even with retained
+  inactive terms or supplied differing input: no context write, version change
+  or context-created ActivityEvent occurs;
+- an absent context requires exactly one active Library-owned Boeksoort;
+  active Genres and Onderwerpen are optional duplicate-free unordered sets;
+- missing input, inactive new selections and cross-Library term IDs fail with
+  no partial Work, Edition, context, Item or ActivityEvent;
+- the shared internal initializer uses the same Library/term locking,
+  active-selection validation, context identity and persistence path as
+  explicit F2.5.5c context creation;
+- applicable writes occur in one transaction in Work → Edition → context →
+  Item → context-created-event order, and event failure rolls the compound
+  mutation back;
+- a created context starts at version 1 and produces exactly one structured
+  `library_catalog_context.created` event with primary context, related Work,
+  trusted actor and historical IDs plus labels;
+- independent connections prove that equal concurrent initialization produces
+  one context, two valid Items and one context event, while different initial
+  classifications produce one winner, one stable context conflict and no
+  losing Edition/Item rows;
+- Library isolation, Item→Edition→Work ReadingRound derivation, F2.5.5c
+  management, schema 1002 and all earlier regressions remain green;
+- no migration, DDL, metadata mapping, REST/Abilities/UI, search or new term
+  management behavior is introduced.

@@ -5,9 +5,18 @@ declare(strict_types=1);
 namespace Biblio\Core\Tests\Integration;
 
 use Biblio\Core\Application\Library\CreateLibraryService;
+use Biblio\Core\Application\Library\LibraryAccessService;
 use Biblio\Core\Application\Catalog\Classification\LibraryCatalogContextInitialization;
+use Biblio\Core\Application\Catalog\AddLibraryItemService;
+use Biblio\Core\Application\Catalog\Classification\LibraryCatalogContextActivity;
+use Biblio\Core\Application\Catalog\Classification\LibraryCatalogContextInitializer;
+use Biblio\Core\Application\Catalog\Classification\LibraryCatalogSelectionResolver;
 use Biblio\Core\Application\CoreApplication;
 use Biblio\Core\Catalog\CatalogRecordAlreadyExists;
+use Biblio\Core\Audit\ActivityEvent;
+use Biblio\Core\Audit\ActivityEventAppender;
+use Biblio\Core\Audit\ActivityEventSource;
+use Biblio\Core\Authorization\LibraryAuthorizationPolicy;
 use Biblio\Core\Catalog\Classification\ClassificationSeedKey;
 use Biblio\Core\Catalog\Classification\LibraryCatalogSelection;
 use Biblio\Core\Catalog\Classification\LibraryGenreId;
@@ -27,10 +36,14 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMembershipReposi
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryBookTypeRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryCatalogContextRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryGenreRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMutationLock;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibrarySubjectRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionManager;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbWorkRepository;
 use Biblio\Core\Infrastructure\WordPress\ProductionComposition;
+use Biblio\Core\Infrastructure\WordPress\Identity\WordPressAuthenticatedUser;
+use Biblio\Core\Infrastructure\WordPress\WordPressActivityEventFactory;
 use Biblio\Core\Library\AdditionalPermissions;
 use Biblio\Core\Library\Library;
 use Biblio\Core\Library\LibraryId;
@@ -41,7 +54,16 @@ use Biblio\Core\Library\MembershipStatus;
 use Biblio\Core\Library\UseAccess;
 use DateTimeImmutable;
 use PHPUnit\Framework\Attributes\DataProvider;
+use RuntimeException;
 use WP_Error;
+
+final class FailingCatalogActivityAppender implements ActivityEventAppender
+{
+    public function append(ActivityEvent $event): void
+    {
+        throw new RuntimeException("Configured ActivityEvent failure.");
+    }
+}
 
 final class CatalogApplicationPersistenceTest extends
     PersistenceIntegrationTestCase
@@ -393,6 +415,57 @@ final class CatalogApplicationPersistenceTest extends
         }
     }
 
+    public function testContextActivityFailureRollsBackEntireCompoundAdd(): void
+    {
+        $owner = $this->createWordPressUser("catalog-event-failure-owner");
+        $library = new LibraryId("library-event-failure");
+        $this->createOwnedLibrary($library, $owner);
+        $workId = new WorkId("work-event-failure");
+        $editionId = new EditionId("edition-event-failure");
+        $itemId = new ItemId("item-event-failure");
+        $previousUserId = get_current_user_id();
+
+        try {
+            wp_set_current_user($owner);
+
+            try {
+                $this->itemCreationWithAppender(
+                    new FailingCatalogActivityAppender()
+                )->addWithNewWorkAndEdition(
+                    $library,
+                    $itemId,
+                    $workId,
+                    "Event Failure Work",
+                    $editionId,
+                    $this->initialization($library)
+                );
+                self::fail("ActivityEvent failure did not fail Item-add.");
+            } catch (RuntimeException $exception) {
+                self::assertSame(
+                    "Configured ActivityEvent failure.",
+                    $exception->getMessage()
+                );
+            }
+
+            self::assertNull($this->workRepository()->find($workId));
+            self::assertNull($this->editionRepository()->find($editionId));
+            self::assertNull($this->itemRepository()->findInLibrary(
+                $itemId,
+                $library
+            ));
+            self::assertNull((new WpdbLibraryCatalogContextRepository(
+                $this->database,
+                $this->tableNames
+            ))->find($library, $workId));
+            self::assertSame(
+                0,
+                $this->contextCreatedEventCount($library, $workId)
+            );
+        } finally {
+            wp_set_current_user($previousUserId);
+        }
+    }
+
     #[DataProvider("compoundConflictCases")]
     public function testCompoundDuplicateConflictRollsBackEveryStep(
         string $path,
@@ -613,6 +686,64 @@ final class CatalogApplicationPersistenceTest extends
         self::assertSame(
             0,
             $this->contextCreatedEventCount($libraryId, $workId)
+        );
+    }
+
+    private function itemCreationWithAppender(
+        ActivityEventAppender $activityEvents
+    ): AddLibraryItemService {
+        $workRepository = $this->workRepository();
+        $editionRepository = $this->editionRepository();
+        $itemRepository = $this->itemRepository();
+        $contexts = new WpdbLibraryCatalogContextRepository(
+            $this->database,
+            $this->tableNames
+        );
+        $selectionResolver = new LibraryCatalogSelectionResolver(
+            new WpdbLibraryBookTypeRepository(
+                $this->database,
+                $this->tableNames
+            ),
+            new WpdbLibraryGenreRepository(
+                $this->database,
+                $this->tableNames
+            ),
+            new WpdbLibrarySubjectRepository(
+                $this->database,
+                $this->tableNames
+            )
+        );
+        $libraryLock = new WpdbLibraryMutationLock(
+            $this->database,
+            $this->tableNames
+        );
+        $contextActivity = new LibraryCatalogContextActivity(
+            new WordPressActivityEventFactory(
+                new ActivityEventSource("test.catalog")
+            )
+        );
+
+        return new AddLibraryItemService(
+            new WordPressAuthenticatedUser(),
+            new LibraryAccessService(
+                new WpdbLibraryMembershipRepository(
+                    $this->database,
+                    $this->tableNames
+                ),
+                new LibraryAuthorizationPolicy()
+            ),
+            $workRepository,
+            $editionRepository,
+            $itemRepository,
+            $contexts,
+            new LibraryCatalogContextInitializer(
+                $contexts,
+                $selectionResolver,
+                $libraryLock
+            ),
+            $contextActivity,
+            $activityEvents,
+            new WpdbTransactionManager($this->database)
         );
     }
 

@@ -559,6 +559,28 @@ services, but no repository or resolver. The existing Item→Edition→Work
 ReadingRound path is unchanged and immediately accepts an Item created through
 this boundary when the actor has direct use access.
 
+F2.5.6 adds one optional typed `LibraryCatalogContextInitialization` to each
+of the three creation paths. The Item-add service authorizes both Item-add and
+its inseparable initialization predicate before Work, Edition, context or term
+lookup. An existing context short-circuits classification handling completely.
+Only an initially absent context enters the shared internal initializer.
+
+That initializer is also used by explicit represented-Work context creation.
+It owns Library-row serialization, a locked current-context read, locked term
+resolution, active-new-link validation and the unique context insert, but owns
+neither authorization, transaction boundaries nor audit ordering. Those remain
+with the enclosing use-case. This keeps it unavailable through
+`CoreApplication` and prevents `catalog.item_add` from becoming standalone
+context-management authority.
+
+For Item-add, the enclosing transaction orders the applicable writes as Work,
+Edition, context, Item and then the context-created ActivityEvent. A context
+that appears after the initial absence observation is reread under the Library
+lock: equal desired classification is reused without a second event, while a
+different desired classification raises the existing stable context conflict
+and rolls back the losing compound writes. No schema or repository write path
+is added.
+
 This slice does not solve bibliographic entity resolution or shared-record
 governance: callers must select existing central identities or deliberately
 request a new identity with a unique ID. Author/contributors, Series, rich

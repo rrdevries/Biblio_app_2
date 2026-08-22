@@ -592,5 +592,37 @@ new-link validation against deactivation. Boeksoort lifecycle uses the same
 Library-row lock for the last-active confirmation decision.
 
 No schema or migration change is part of F2.5.5c; formal schema version remains
-1002. Item-add classification initialization, metadata mappings,
-REST/Abilities/UI and the Boeksoort request workflow remain unimplemented.
+1002. Metadata mappings, REST/Abilities/UI and the Boeksoort request workflow
+remain unimplemented.
+
+### F2.5.6 — LibraryCatalogContext during Item-add
+
+Status: **Implemented**
+
+All three existing `AddLibraryItemService` paths now accept one optional typed
+`LibraryCatalogContextInitialization`. It is used only when the authorized
+Library + Work has no context. In that case one active Boeksoort is required;
+active Genres and Onderwerpen are optional duplicate-free sets. The shared
+internal initializer reuses the F2.5.5c Library lock, locked term resolution,
+active-link validation and unique context write instead of creating a second
+classification path.
+
+An already existing context is reused exactly as stored. Item-add ignores an
+initialization intent in that case, including when its retained Boeksoort is
+inactive: no classification write, version increment or context-created event
+occurs. When the context was initially absent, a concurrent equal initializer
+reuses the winner while a different desired classification returns the stable
+context conflict.
+
+Work, Edition, new context at version 1, Item and exactly one structured
+`library_catalog_context.created` ActivityEvent commit through one existing
+transactional boundary. Event failure and every other operational failure roll
+back the complete compound write. The context event is appended only after the
+Item write and captures the trusted server-side actor, related Work and
+historical term IDs plus labels.
+
+Initialization remains reachable only inside `libraryItemCreation()` and uses
+`catalog.item_add`; `catalog.classification_manage` is neither required nor
+granted. `CoreApplication` exposes no initializer, repository or trusted
+context input. Formal schema version remains 1002 and no DDL or migration is
+part of F2.5.6.
