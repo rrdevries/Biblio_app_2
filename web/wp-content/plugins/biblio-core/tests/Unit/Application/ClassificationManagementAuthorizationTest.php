@@ -7,6 +7,7 @@ namespace Biblio\Core\Tests\Unit\Application;
 use Biblio\Core\Application\Catalog\Classification\ClassificationTermActivity;
 use Biblio\Core\Application\Catalog\Classification\CreateLibraryCatalogContextService;
 use Biblio\Core\Application\Catalog\Classification\LibraryCatalogContextActivity;
+use Biblio\Core\Application\Catalog\Classification\LibraryCatalogContextInitializer;
 use Biblio\Core\Application\Catalog\Classification\LibraryCatalogSelectionResolver;
 use Biblio\Core\Application\Catalog\Classification\ManageLibraryGenresService;
 use Biblio\Core\Application\Library\LibraryAccessService;
@@ -70,17 +71,24 @@ final class ClassificationManagementAuthorizationTest extends TestCase
         $represented->expects(self::never())->method("findRepresentedWork");
         $transactions = $this->createMock(TransactionManager::class);
         $transactions->expects(self::never())->method("run");
+        $contexts = $this->createStub(
+            WritableLibraryCatalogContextRepository::class
+        );
+        $libraryLock = $this->createStub(LibraryMutationLock::class);
         $service = new CreateLibraryCatalogContextService(
             $actor,
             $access,
             $represented,
-            $this->createStub(WritableLibraryCatalogContextRepository::class),
-            new LibraryCatalogSelectionResolver(
-                $this->createStub(LibraryBookTypeRepository::class),
-                $this->createStub(LibraryGenreRepository::class),
-                $this->createStub(LibrarySubjectRepository::class)
+            new LibraryCatalogContextInitializer(
+                $contexts,
+                new LibraryCatalogSelectionResolver(
+                    $this->createStub(LibraryBookTypeRepository::class),
+                    $this->createStub(LibraryGenreRepository::class),
+                    $this->createStub(LibrarySubjectRepository::class)
+                ),
+                $libraryLock
             ),
-            $this->createStub(LibraryMutationLock::class),
+            $libraryLock,
             new LibraryCatalogContextActivity(
                 $this->createStub(ActivityEventFactory::class)
             ),

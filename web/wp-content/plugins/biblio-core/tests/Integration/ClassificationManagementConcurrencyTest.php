@@ -110,6 +110,85 @@ final class ClassificationManagementConcurrencyTest extends
         self::assertSame(2, $this->eventCount($libraryId));
     }
 
+    public function testConcurrentItemAddsShareOrConflictOnInitialContext(): void
+    {
+        [$ownerId, $libraryId] = $this->libraryFixture("item-context-race");
+        $bookA = $this->seedBookType($libraryId, "book_type.reading_book");
+        $bookB = $this->seedBookType($libraryId, "book_type.cookbook");
+        $workRepository = new WpdbWorkRepository(
+            $this->database,
+            $this->tableNames
+        );
+        $equalWork = new WorkId("work-item-equal");
+        $differentWork = new WorkId("work-item-different");
+        $workRepository->add(new Work($equalWork, "Equal Item Work"));
+        $workRepository->add(new Work(
+            $differentWork,
+            "Different Item Work"
+        ));
+
+        $equal = $this->itemAddPayload(
+            $ownerId,
+            $libraryId,
+            $equalWork,
+            $bookA,
+            "equal"
+        );
+        $results = $this->race(
+            array_merge($equal, [
+                "item_id" => "item-equal-a",
+                "edition_id" => "edition-equal-a",
+            ]),
+            array_merge($equal, [
+                "item_id" => "item-equal-b",
+                "edition_id" => "edition-equal-b",
+            ]),
+            $libraryId
+        );
+
+        self::assertSame(["success", "success"], $this->statuses($results));
+        self::assertSame(
+            $bookA->value(),
+            $this->contexts()->find($libraryId, $equalWork)
+                ?->classification()->bookTypeId()->value()
+        );
+        self::assertSame(1, $this->eventCount($libraryId));
+
+        $first = $this->itemAddPayload(
+            $ownerId,
+            $libraryId,
+            $differentWork,
+            $bookA,
+            "different-a"
+        );
+        $second = $this->itemAddPayload(
+            $ownerId,
+            $libraryId,
+            $differentWork,
+            $bookB,
+            "different-b"
+        );
+        $results = $this->race($first, $second, $libraryId);
+
+        self::assertSame(
+            ["context_conflict", "success"],
+            $this->statuses($results)
+        );
+        $storedBookType = $this->contexts()
+            ->find($libraryId, $differentWork)
+            ?->classification()->bookTypeId()->value();
+        self::assertContains(
+            $storedBookType,
+            [$bookA->value(), $bookB->value()]
+        );
+        self::assertSame(2, $this->eventCount($libraryId));
+        self::assertSame(3, $this->tableCount($this->tableNames->editions()));
+        self::assertSame(3, $this->tableCount($this->tableNames->items()));
+        self::assertSame(2, $this->tableCount(
+            $this->tableNames->libraryCatalogContexts()
+        ));
+    }
+
     public function testConcurrentDuplicateCreateAndRenameCreateHaveSingleAuditedWinner(): void
     {
         [$ownerId, $libraryId] = $this->libraryFixture("term-race");
@@ -257,7 +336,11 @@ final class ClassificationManagementConcurrencyTest extends
      * @param array<string, mixed> $secondPayload
      * @return list<array<string, mixed>>
      */
-    private function race(array $firstPayload, array $secondPayload): array
+    private function race(
+        array $firstPayload,
+        array $secondPayload,
+        ?LibraryId $blockingLibrary = null
+    ): array
     {
         $directory = sys_get_temp_dir()
             . "/biblio-classification-race-"
@@ -277,8 +360,23 @@ final class ClassificationManagementConcurrencyTest extends
             ];
             $this->awaitWorkers($workers, $directory);
 
+            if ($blockingLibrary !== null) {
+                $this->database->query("START TRANSACTION");
+                $libraries = $this->tableNames->libraries();
+                $this->database->get_var($this->database->prepare(
+                    "SELECT library_id FROM `{$libraries}` "
+                    . "WHERE library_id = %s FOR UPDATE",
+                    $blockingLibrary->value()
+                ));
+            }
+
             if (file_put_contents($release, "release") === false) {
                 throw new RuntimeException("Could not release race barrier.");
+            }
+
+            if ($blockingLibrary !== null) {
+                usleep(500_000);
+                $this->database->query("COMMIT");
             }
 
             return [
@@ -286,6 +384,10 @@ final class ClassificationManagementConcurrencyTest extends
                 $this->finishWorker($workers[1]),
             ];
         } finally {
+            if ($blockingLibrary !== null) {
+                $this->database->query("ROLLBACK");
+            }
+
             foreach ($workers as $worker) {
                 $this->terminateWorkerIfRunning($worker);
             }
@@ -455,6 +557,27 @@ final class ClassificationManagementConcurrencyTest extends
         ];
     }
 
+    /** @return array<string, mixed> */
+    private function itemAddPayload(
+        int $ownerId,
+        LibraryId $libraryId,
+        WorkId $workId,
+        LibraryBookTypeId $bookType,
+        string $identity
+    ): array {
+        return [
+            "operation" => "item_add_new_edition",
+            "user_id" => $ownerId,
+            "library_id" => $libraryId->value(),
+            "work_id" => $workId->value(),
+            "book_type_id" => $bookType->value(),
+            "genre_ids" => [],
+            "subject_ids" => [],
+            "item_id" => "item-{$identity}",
+            "edition_id" => "edition-{$identity}",
+        ];
+    }
+
     private function seedBookType(
         LibraryId $libraryId,
         string $key
@@ -504,6 +627,13 @@ final class ClassificationManagementConcurrencyTest extends
             . "WHERE library_id = %s",
             $libraryId->value()
         ));
+    }
+
+    private function tableCount(string $table): int
+    {
+        return (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$table}`"
+        );
     }
 
     private function bookTypes(): WpdbLibraryBookTypeRepository

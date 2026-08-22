@@ -3,10 +3,15 @@
 declare(strict_types=1);
 
 use Biblio\Core\Catalog\CatalogRecordAlreadyExists;
+use Biblio\Core\Application\Catalog\Classification\LibraryCatalogContextInitialization;
+use Biblio\Core\Catalog\Classification\ClassificationSeedKey;
+use Biblio\Core\Catalog\Classification\LibraryCatalogSelection;
 use Biblio\Core\Catalog\EditionId;
 use Biblio\Core\Catalog\ItemId;
 use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Infrastructure\WordPress\ProductionComposition;
+use Biblio\Core\Infrastructure\Persistence\WordPress\CoreTableNames;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryBookTypeRepository;
 use Biblio\Core\Library\LibraryId;
 
 if ($argc !== 7) {
@@ -50,15 +55,31 @@ while (!is_file($releasePath)) {
 }
 
 try {
+    $libraryId = new LibraryId($libraryValue);
+    $bookType = (new WpdbLibraryBookTypeRepository(
+        $wpdb,
+        new CoreTableNames($wpdb->prefix)
+    ))->findBySeedKey(
+        $libraryId,
+        new ClassificationSeedKey("book_type.reading_book")
+    );
+
+    if ($bookType === null) {
+        throw new RuntimeException("Classification seed is missing.");
+    }
+
     $item = (new ProductionComposition($wpdb))
         ->application()
         ->libraryItemCreation()
         ->addWithNewWorkAndEdition(
-            new LibraryId($libraryValue),
+            $libraryId,
             new ItemId($itemValue),
             new WorkId($workValue),
             "Concurrent Work",
-            new EditionId($editionValue)
+            new EditionId($editionValue),
+            new LibraryCatalogContextInitialization(
+                new LibraryCatalogSelection($bookType->id())
+            )
         );
     fwrite(STDOUT, json_encode([
         "status" => "created",

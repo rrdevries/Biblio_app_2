@@ -9,9 +9,7 @@ use Biblio\Core\Application\Library\LibraryAccessService;
 use Biblio\Core\Application\TransactionManager;
 use Biblio\Core\Audit\ActivityEventAppender;
 use Biblio\Core\Catalog\Classification\LibraryCatalogContext;
-use Biblio\Core\Catalog\Classification\LibraryCatalogContextAlreadyExists;
 use Biblio\Core\Catalog\Classification\LibraryCatalogSelection;
-use Biblio\Core\Catalog\Classification\WritableLibraryCatalogContextRepository;
 use Biblio\Core\Catalog\LibraryWorkRepresentationRepository;
 use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Exception\AuthorizationException;
@@ -26,8 +24,7 @@ final readonly class CreateLibraryCatalogContextService
         private AuthenticatedUser $authenticatedUser,
         private LibraryAccessService $access,
         private LibraryWorkRepresentationRepository $representedWorks,
-        private WritableLibraryCatalogContextRepository $contexts,
-        private LibraryCatalogSelectionResolver $selectionResolver,
+        private LibraryCatalogContextInitializer $initializer,
         private LibraryMutationLock $libraryLock,
         private LibraryCatalogContextActivity $activity,
         private ActivityEventAppender $activityEvents,
@@ -69,35 +66,23 @@ final readonly class CreateLibraryCatalogContextService
                 );
             }
 
-            $existing = $this->contexts->findForUpdate($libraryId, $workId);
-
-            if ($existing !== null) {
-                if ($existing->hasSameClassification($selection)) {
-                    return $existing;
-                }
-
-                throw new LibraryCatalogContextAlreadyExists();
-            }
-
-            $resolved = $this->selectionResolver->lockAndResolve(
-                $libraryId,
-                $selection
-            );
-            $resolved->assertNewSelectionsAreActive(null);
-            $created = LibraryCatalogContext::create(
+            $result = $this->initializer->initializeOrReuse(
                 $libraryId,
                 $workId,
                 $selection
             );
-            $this->contexts->add($created);
-            $this->activityEvents->append($this->activity->created(
-                $actorId,
-                $libraryId,
-                $work,
-                $resolved
-            ));
+            $createdSelection = $result->createdSelection();
 
-            return $created;
+            if ($createdSelection !== null) {
+                $this->activityEvents->append($this->activity->created(
+                    $actorId,
+                    $libraryId,
+                    $work,
+                    $createdSelection
+                ));
+            }
+
+            return $result->context();
         });
     }
 }

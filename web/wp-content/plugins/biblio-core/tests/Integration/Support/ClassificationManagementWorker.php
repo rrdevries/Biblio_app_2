@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Biblio\Core\Application\Catalog\Classification\LibraryCatalogContextInitialization;
 use Biblio\Core\Catalog\Classification\ClassificationTermConflict;
 use Biblio\Core\Catalog\Classification\ClassificationTermName;
 use Biblio\Core\Catalog\Classification\LibraryBookTypeId;
@@ -11,6 +12,8 @@ use Biblio\Core\Catalog\Classification\LibraryCatalogContextVersion;
 use Biblio\Core\Catalog\Classification\LibraryCatalogSelection;
 use Biblio\Core\Catalog\Classification\LibraryGenreId;
 use Biblio\Core\Catalog\Classification\LibrarySubjectId;
+use Biblio\Core\Catalog\EditionId;
+use Biblio\Core\Catalog\ItemId;
 use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Exception\ValidationException;
 use Biblio\Core\Infrastructure\WordPress\ProductionComposition;
@@ -85,6 +88,14 @@ try {
             new LibraryBookTypeId($payload["term_id"]),
             (bool) $payload["confirm_last_active"]
         ),
+        "item_add_new_edition" => $application->libraryItemCreation()
+            ->addWithNewEditionForExistingWork(
+                $libraryId,
+                new ItemId($payload["item_id"]),
+                new EditionId($payload["edition_id"]),
+                new WorkId($payload["work_id"]),
+                new LibraryCatalogContextInitialization(selection($payload))
+            ),
         default => throw new RuntimeException("Unknown worker operation."),
     };
     $version = method_exists($result, "version")

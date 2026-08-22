@@ -5,13 +5,22 @@ declare(strict_types=1);
 namespace Biblio\Core\Tests\Integration;
 
 use Biblio\Core\Application\Catalog\AddLibraryItemService;
+use Biblio\Core\Application\Catalog\Classification\LibraryCatalogContextActivity;
+use Biblio\Core\Application\Catalog\Classification\LibraryCatalogContextInitializer;
+use Biblio\Core\Application\Catalog\Classification\LibraryCatalogSelectionResolver;
 use Biblio\Core\Application\Library\LibraryAccessService;
+use Biblio\Core\Audit\ActivityEventAppender;
+use Biblio\Core\Audit\ActivityEventFactory;
 use Biblio\Core\Authorization\LibraryAuthorizationPolicy;
+use Biblio\Core\Catalog\Classification\LibraryBookTypeRepository;
+use Biblio\Core\Catalog\Classification\LibraryGenreRepository;
+use Biblio\Core\Catalog\Classification\LibrarySubjectRepository;
 use Biblio\Core\Catalog\EditionId;
 use Biblio\Core\Catalog\ItemId;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbEditionRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbItemRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryCatalogContextRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMembershipRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionManager;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbWorkRepository;
@@ -21,6 +30,7 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrationR
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrator;
 use Biblio\Core\Library\LibraryContext;
 use Biblio\Core\Library\LibraryId;
+use Biblio\Core\Library\LibraryMutationLock;
 use Biblio\Core\Tests\Support\ControllableAuthenticatedUser;
 use RuntimeException;
 
@@ -87,12 +97,50 @@ final class Schema1001MigrationTest extends PersistenceIntegrationTestCase
             self::assertFalse(
                 $access->canManageClassificationTerms($context)
             );
+            $this->database->insert(
+                $this->tableNames->libraryBookTypes(),
+                [
+                    "library_id" => "migration-library",
+                    "book_type_id" => "migration-book-type",
+                    "display_name" => "Migration Book Type",
+                    "normalized_name" => "migration book type",
+                    "term_status" => "inactive",
+                    "seed_key" => null,
+                ]
+            );
+            $this->database->insert(
+                $this->tableNames->libraryCatalogContexts(),
+                [
+                    "library_id" => "migration-library",
+                    "work_id" => "migration-work",
+                    "book_type_id" => "migration-book-type",
+                    "context_version" => 1,
+                ]
+            );
+            $catalogContexts = new WpdbLibraryCatalogContextRepository(
+                $this->database,
+                $this->tableNames
+            );
             $item = (new AddLibraryItemService(
                 new ControllableAuthenticatedUser($managerId),
                 $access,
                 new WpdbWorkRepository($this->database, $this->tableNames),
                 new WpdbEditionRepository($this->database, $this->tableNames),
                 new WpdbItemRepository($this->database, $this->tableNames),
+                $catalogContexts,
+                new LibraryCatalogContextInitializer(
+                    $catalogContexts,
+                    new LibraryCatalogSelectionResolver(
+                        $this->createStub(LibraryBookTypeRepository::class),
+                        $this->createStub(LibraryGenreRepository::class),
+                        $this->createStub(LibrarySubjectRepository::class)
+                    ),
+                    $this->createStub(LibraryMutationLock::class)
+                ),
+                new LibraryCatalogContextActivity(
+                    $this->createStub(ActivityEventFactory::class)
+                ),
+                $this->createStub(ActivityEventAppender::class),
                 new WpdbTransactionManager($this->database)
             ))->addForExistingEdition(
                 $libraryId,
