@@ -1,6 +1,6 @@
 # 12 — F2.8a Ratings & Reviews analysis
 
-Status: **GO WITH CONDITIONS**
+Status: **GO**
 
 Scope: Biblio V2 v2.001, documentation-only analysis for F2.8b. This document
 does not implement production code, tests, migrations, schema, UI, REST,
@@ -29,19 +29,18 @@ The labels in this document mean:
 
 - **canonical**: current approved product behavior;
 - **consequence**: architecture required to preserve a canonical rule;
-- **recommendation**: technical choice that does not invent product behavior;
-- **open**: a product choice needed before F2.8b can implement safely;
+- **technical choice**: implementation detail that preserves product behavior;
 - **deferred**: explicitly outside F2.8b.
 
 | Source | Binding evidence | Conflict/gap resolution |
 | --- | --- | --- |
 | `docs/00-current-state.md` | Ratings/Reviews are private Mijn Biblio data owned by the user | Canonical ownership boundary; current state contains no implemented F2.8 slice |
-| `docs/01-functional-design.md` §12 | Separate Rating and Review, optional Round, at most one unlinked contribution per type/User/Work, independent publication, eligibility, averages and moderation | Most detailed canonical product source; undefined details remain open rather than inferred |
-| `docs/01-functional-design.md` §14/§16 | Beoordelingen may feed personal Timeline; personal ratings/reviews are excluded from Library audit | Timeline implementation remains deferred; publication/moderation audit is genuinely ambiguous |
+| `docs/01-functional-design.md` §12 | Separate Rating and Review, optional Round, at most one unlinked contribution per type/User/Work, independent publication, eligibility, averages and moderation | Most detailed canonical product source, completed by the definitive F2.8a decisions in §18 |
+| `docs/01-functional-design.md` §14/§16 | Beoordelingen may feed personal Timeline; personal ratings/reviews are excluded from Library audit | Timeline implementation remains deferred; F2.8b writes no Library ActivityEvents for contribution/publication/moderation behavior |
 | `docs/02-architecture.md`; ADR-001/003 | User-owned and Library-scoped boundaries are distinct; optional Library reference never transfers ownership | Requires separate owner-scoped source and authorized Library publication behavior |
 | ADR-002/004/005 | Core owns workflows; custom tables are the proven baseline where integrity/concurrency require them; schema chain is formal and forward-only | Supports schema 1005, but does not decide product semantics |
 | ADR-006 and current catalog code | Library Work presence is derived through Item → Edition → Work within explicit Library Context | Publication eligibility must reuse an explicit active-representation query, not trust a client Work/Library pair |
-| ADR-007 and F2.6 evidence | ReadingRound has immutable owner/Work, owner-scoped CAS and conditional historical delete | Proven pattern only; it does not decide Rating/Review Round lifecycle automatically |
+| ADR-007 and F2.6 evidence | ReadingRound has immutable owner/Work, owner-scoped CAS and conditional historical delete | F2.8 uses the proven owner/Work/CAS boundary and the explicit contribution-resolution contract in §8 |
 | F2.7 analysis/evidence | Optional same-user/same-Work Round context, strict private content, CAS and `SET NULL` are proven for Notes | Useful technical precedent, but the Note content and deletion contracts are not inherited by Reviews |
 | `docs/03-scope-and-deferred.md` | Ratings/Reviews are v2.001 scope; social/public-profile/global-feed functions are deferred | F2.8b should stop at Core contribution/publication/read projections |
 | `docs/04-terminology.md` | Rating is a private user-owned Work rating; Review is an independently publishable written contribution to one Library context | Confirms separate records and one publication context per contribution |
@@ -49,11 +48,10 @@ The labels in this document mean:
 | `docs/06-testing-and-acceptance.md` §2/§14 | Private isolation, one explicit Library, active Item and no moderator text edits | Binding acceptance floor, not a complete implementation contract |
 | Current production/tests/schema 1004 | No Ratings/Reviews implementation exists; current Item domain is active-only and `LibraryWorkRepresentationRepository` does not yet express status explicitly | F2.8b must add a status-explicit eligibility port and must not mistake current active-only storage for a permanent archive rule |
 
-There is no direct contradiction between available canonical sources. There
-are under-specified areas. In particular, “may disappear” when Work presence
-ends is not a deterministic visibility rule, and “hide/delete” does not define
-a moderation lifecycle. Those phrases cannot be converted into code without a
-product decision.
+There is no remaining conflict or product gap. The definitive F2.8a decisions
+in §18 make rating scale, Round lifecycle, deletion, publication visibility,
+moderation, public output, averages, Review content and event behavior
+deterministic for F2.8b.
 
 ## 3. Functional contract matrix
 
@@ -61,8 +59,8 @@ product decision.
 | --- | --- | --- |
 | Ownership | Canonical | Rating and Review remain owned by their authenticated user, including after publication |
 | Rating versus Review | Canonical | They are independent contribution types, not nullable fields on one Assessment record |
-| Work | Canonical + recommendation | Each contribution concerns one Work; use immutable Work identity and explicit delete/recreate for a wrong Work, subject to O3 |
-| ReadingRound | Canonical + open | Optional context; same-user/same-Work is mandatory, but cardinality, eligible states, correction and delete interaction require O2 |
+| Work | Canonical | Each contribution concerns one immutable Work; ordinary Rating/Review updates never move it |
+| ReadingRound | Canonical | Optional, correctable same-user/same-Work context; all lifecycle states eligible; at most one contribution of each type per Round |
 | Unlinked contribution | Canonical | At most one unlinked Rating and one unlinked Review per User + Work |
 | Multiple reads | Canonical | Multiple Ratings/Reviews for the same Work are possible through rereads |
 | Private creation | Canonical | Requires no Library membership or context |
@@ -71,14 +69,14 @@ product decision.
 | Publish eligibility | Canonical | Owner is an active member of target Library and Work has at least one active Item there at publication time |
 | Use access | Canonical | No Direct/Borrow/ViewOnly restriction is stated; active membership is sufficient |
 | Ownership transfer | Canonical | Publication does not transfer contribution ownership to Library |
-| Moderation | Canonical + open | Owner/authorized Manager may affect public visibility but never edit source content; exact lifecycle needs O5 |
-| Membership loss | Canonical + open | Publication context is not automatically deleted; continuing public visibility needs O4 |
-| Work presence loss | Open | Source says publication may disappear and later reappear; O4 must replace “may” with a deterministic rule |
-| Personal average | Canonical + open | Uses owner’s valid Ratings; set membership, weighting and rounding need O7 |
-| Library average | Canonical + open | Uses only visible Ratings published to that Library; weighting and eligibility-at-read need O7 |
+| Moderation | Canonical | Owner/authorized Manager may hide or remove only the Library publication with a mandatory reason; source content remains owner-only |
+| Membership loss | Canonical | Does not withdraw, delete or hide an already valid publication |
+| Work presence loss | Canonical | Suppresses current visibility while no active Item represents Work; visibility returns automatically with active presence |
+| Personal average | Canonical | Every current valid own Rating counts once, including unlinked and reread Ratings |
+| Library average | Canonical | Only the most recently updated currently visible Rating per User+Work counts; ties use RatingId descending |
 | Platform average | Out of F2.8b | No source requires a platform-wide public average |
-| Correction/delete | Open | Owner may correct own content, but identity correction, hard/soft delete and published-source interaction need O3/O4 |
-| Public person/context fields | Open | Display name, dates and ReadingRound context are not approved for public output; O6 is required |
+| Correction/delete | Canonical | Owner-scoped version-checked hard delete removes only the contribution and its active publication relation; Work/Round remain |
+| Public person/context fields | Canonical | Review projection shows display name, visible rating if present, escaped review text and publication date; no private reading/account context |
 | Timeline | Canonical but deferred | “Beoordelingen” is a future personal derived Timeline category; F2.8b adds no Timeline engine |
 | Global search/feed | Deferred | No full-text Review search, global feed, profiles, comments, likes or recommendations |
 
@@ -94,8 +92,8 @@ product decision.
 | Work presence | `findRepresentedWork(LibraryId, WorkId)` joins Item→Edition→Work | Method does not state active-only semantics; F2.8b needs `hasActiveWorkRepresentation` behavior |
 | Persistence | Healthy ordered schema through 1004 | No contribution/publication tables or 1005 migration/health |
 | Concurrency | Transactions, row locks, CAS and independent-process tests | Contribution/publication CAS and eligibility-race tests |
-| Audit | Append-only Library ActivityEvents for shared Library mutations | Publication/withdraw/moderation event policy unresolved by sources |
-| Rendering | Strict Note-specific safe-HTML policy | Review format and public render boundary undefined; Note policy must not be reused blindly |
+| Audit | Append-only Library ActivityEvents for selected shared Library mutations | F2.8b deliberately wires no Rating/Review/publication/moderation ActivityEvent |
+| Rendering | Strict Note-specific safe-HTML policy | Reviews require a separate normalized plain-text/escaping policy with a 5,000-code-point limit |
 | Read models | Owner-scoped Round/Note queries | My assessments, public Library contributions and averages |
 | Tests | 327 tests in the current canonical gate | No Rating/Review cases |
 
@@ -109,7 +107,7 @@ product decision.
 
 - opaque `RatingId`;
 - immutable owner `UserId`;
-- immutable `WorkId` (recommended; O3 confirms correction behavior);
+- immutable `WorkId`;
 - optional `ReadingRoundId`;
 - required `RatingValue`;
 - `createdAt`, `updatedAt`;
@@ -119,9 +117,9 @@ product decision.
 
 - opaque `ReviewId`;
 - immutable owner `UserId`;
-- immutable `WorkId` (recommended; O3 confirms correction behavior);
+- immutable `WorkId`;
 - optional `ReadingRoundId`;
-- required non-empty `ReviewContent`;
+- required `ReviewContent` value, which may contain zero code points;
 - `createdAt`, `updatedAt`;
 - positive `ReviewVersion`.
 
@@ -139,8 +137,8 @@ It contains:
 - opaque `ContributionPublicationId`;
 - exactly one source reference: Rating XOR Review;
 - one `LibraryId`;
-- visibility/moderation state selected by O4/O5;
-- optional moderation reason only if O5 retains it;
+- author publication state plus moderation state;
+- required moderation reason, moderator and moderation timestamp when moderated;
 - `publishedAt`, `updatedAt` and positive `PublicationVersion`;
 - no ownership transfer; source owner is resolved through the referenced
   contribution rather than accepted from caller input.
@@ -152,10 +150,9 @@ would lose foreign-key integrity. A single publication table with two nullable
 real FKs and an XOR check keeps the model small without an unsafe polymorphic
 reference.
 
-The publication is a relationship/lifecycle aggregate. It must never contain
-an independently editable copy of rating value or review text. Public reads
-join to the current source contribution unless O4/O5 deliberately requires a
-moderated snapshot/history model.
+The publication is a relationship/lifecycle aggregate. It never contains an
+independently editable copy of rating value or review text. Public reads join
+to current source content; editing source never clears moderation.
 
 ## 6. Rating contract
 
@@ -169,34 +166,32 @@ Confirmed:
 - independent Rating publication means a public rating without Review is valid;
 - averages are derived and never stored as a second domain truth.
 
-Open O1 must define scale, minimum, maximum and step. Until then F2.8b cannot
-define `RatingValue`, validation, database CHECK, display or aggregation.
-
-After O1, store a scaled integer, never binary floating point. Examples only:
-whole 1–5 stars can store 1–5; half-stars can store 2–10 half-units. The value
-object owns range/step validation, exact equality and conversion for output.
-The database repeats the range/step rule through a CHECK.
+`RatingValue` accepts exactly 1.0 through 5.0 stars in steps of 0.5: 1.0, 1.5,
+2.0, 2.5, 3.0, 3.5, 4.0, 4.5 and 5.0. Zero, finer steps, other decimals and
+out-of-range values are invalid. Store an integer count of half-stars, 2
+through 10, never binary floating point. The value object owns conversion and
+exact equality; a database CHECK repeats the 2–10 invariant. Derived averages
+may contain other decimal values.
 
 ## 7. Review content and security contract
 
 Confirmed:
 
-- a Review is a written contribution and therefore requires non-empty content;
+- a Review is an independent written contribution and its text may contain
+  zero through 5,000 Unicode code points;
 - it is independent from Rating;
 - publication exposes only content that passed the Core content policy;
 - server-side validation and output safety are mandatory regardless of UI;
 - public rendering is a stricter XSS boundary than private input storage.
 
-Open O8 must choose plain text or a precise limited-markup allowlist and a
-maximum normalized UTF-8 byte length. The Private Note allowlist is not a
-Ratings/Reviews requirement and is not inherited.
-
-Recommended default for v2.001 is normalized plain text with output escaping,
-because no source requires formatted Reviews. If limited HTML is selected,
-F2.8b needs an explicit tag/attribute/protocol grammar, rejection versus
-stripping behavior, and revalidation at the public render boundary. In both
-variants reject invalid UTF-8, NUL, empty/whitespace-only and over-limit input.
-No images, embeds, attachments, scripts or rich content blocks are justified.
+For v2.001 Review content is plain text. Normalize CRLF and CR to LF before
+validation; each LF counts as one character. Measure the normalized string as
+Unicode code points with UTF-8 semantics (`mb_strlen(..., 'UTF-8')`), not bytes,
+UTF-16 code units or grapheme clusters. Zero code points is valid; 5,001 fails.
+Reject invalid UTF-8 and NUL. Preserve line endings/paragraphs and escape the
+text at every HTML output boundary. Any submitted HTML remains literal text
+and is never executed as markup. There is no HTML allowlist, rich text,
+attachments, images, embeds or block content.
 
 ## 8. Work and ReadingRound contract
 
@@ -210,19 +205,21 @@ Confirmed:
 - an unlinked contribution remains valid without a Library or Round;
 - at most one unlinked contribution of each type exists per User + Work.
 
-Open O2 must decide:
+At most one Rating and one Review per User + ReadingRound are allowed. Active,
+ended and historical own same-Work Rounds are all eligible. The owner may later
+attach, change or remove context. A target Round that already has the same
+contribution type yields a typed conflict; Rating and Review do not conflict
+with each other.
 
-- maximum one or multiple Ratings/Reviews of the same type per ReadingRound;
-- whether active, ended and historical Rounds are all eligible;
-- whether a link can later be attached, changed and removed;
-- whether legitimate F2.6 hard delete nulls the link or blocks deletion.
-
-**Recommendation:** one Rating and one Review per User + ReadingRound; all own
-same-Work Round states eligible; attach/change/remove allowed; legitimate Round
-delete uses `ON DELETE SET NULL` without changing contribution value/content,
-timestamps or version. This matches “multiple through rereads”, preserves the
-contribution when context disappears and avoids making ReadingRound its owner.
-It remains a recommendation until O2 is decided.
+The ReadingRound FK uses `ON DELETE RESTRICT`, not cascade or automatic
+`SET NULL`. When the F2.6 historical-Round delete is otherwise legitimate and
+linked Ratings/Reviews exist, the owner must explicitly choose per contribution
+to hard-delete it or preserve it as unlinked. Preserve is valid only when it
+does not violate the one-unlinked contribution of that type per User+Work;
+otherwise deletion fails until the conflict is explicitly resolved. Unlinking
+is a real contribution mutation and increments its version/update timestamp.
+The complete resolution and Round deletion commit atomically. Deleting a Rating
+or Review never deletes its ReadingRound.
 
 ## 9. Privacy and publication model
 
@@ -230,16 +227,28 @@ It remains a recommendation until O2 is decided.
 
 | Actor/context | Private source | Visible publication | Moderated/withdrawn publication |
 | --- | --- | --- | --- |
-| Owner | Full owner-scoped source | Source plus publication state | Source remains accessible; publication state according to O4/O5 |
+| Owner | Full owner-scoped source | Source plus publication state | Source remains accessible; withdrawal/moderation does not delete it |
 | Other user | Never | Public projection only | Never through public projection |
 | Ordinary Library member | Never | Public projection in explicit Library | Never through public projection |
 | Library Owner/Manager | Never by role | Same public projection | May see minimum moderation metadata only if authorized; never private source |
 | Platform/support role | No implicit access | Same public projection | No private bypass |
 
-Public output may include the published rating value or review text because
-that is the purpose of publication. Display name, ReadingRound context and date
-semantics are not established and remain O6. Source owner ID, private links,
-other contributions and private aggregates never enter the public DTO.
+A public Rating DTO contains exactly display name, Rating value and publication
+date. A public Review DTO contains exactly display name, an associated visible
+Rating when present, escaped Review text and publication date. An associated
+Rating is
+one with the same owner, Work and identical Round context (including both
+unlinked), and it must have its own currently visible publication in the same
+Library. Publishing a Review never exposes a private Rating.
+
+The DTO excludes ReadingRound ID/context, reading dates, physical source/Item,
+Private Notes, email address, other account fields and other Library
+memberships. Technical source owner ID and private links never enter output.
+`publication_date` is the current activation instant of that Publication; a
+later source edit changes content but not that date.
+The display name is resolved server-side from the current WordPress user
+identity at read time and is never accepted from publication input or copied as
+an independently editable contribution field.
 
 ### 9.2 Eligibility at publication time
 
@@ -253,7 +262,8 @@ The `PublishRatingToLibrary`/`PublishReviewToLibrary` transaction must:
 5. require at least one active Item in that Library whose Edition represents
    the immutable Work;
 6. revalidate Rating/Review content;
-7. enforce one publication relation for that contribution;
+7. enforce at most one current active publication relation for that
+   contribution;
 8. insert/update publication atomically with version/uniqueness checks.
 
 The Work is derived from the locked contribution. The caller never supplies a
@@ -262,42 +272,50 @@ the current ambiguous repository name.
 
 ### 9.3 Later eligibility loss
 
-Canonical behavior preserves publication context after membership loss and
-never changes source ownership. It does not clearly decide continued public
-visibility. Likewise, Work-presence loss “may” hide and later show the
-publication. O4 must choose whether visibility is:
+Publication eligibility is checked when publishing, republishing or moving.
+Later membership loss preserves the publication and its visibility. Loss of
+the last active Item for Work preserves the Publication record but suppresses
+it from active public output and the public average. Visibility returns
+automatically when the Work is again represented by an active Item, provided
+the author has not withdrawn it and moderation permits visibility.
 
-- derived continuously from current membership and active Work presence;
-- retained after valid publication until owner withdrawal/moderation;
-- hybrid: membership loss retains visibility, active Work absence temporarily
-  suppresses it and reactivation restores it.
-
-The third option most closely matches the existing wording, but is not yet a
-binding decision.
+The owner may withdraw at any time; withdrawal immediately removes public
+visibility without deleting source content or publication history. Republishing
+rechecks current eligibility and sets a new publication date. Moving A→B is one
+atomic withdraw-A/publish-B operation after target eligibility; there is never
+more than one active Library publication per contribution.
 
 ## 10. Moderation contract
 
-Confirmed:
+The Library Owner and an authorized Manager may moderate only a Publication in
+that explicit Library. Ordinary members, inactive/foreign Managers and
+unauthorized Managers may not. Use one explicit Manager permission such as
+`contribution.moderate`; Owner authorization remains inherent.
 
-- Library Owner and an authorized Manager may moderate only a publication in
-  that explicit Library;
-- ordinary members, inactive/foreign Managers and unauthorized Managers may not;
-- moderation never reads or edits private source fields beyond what is already
-  publicly projected;
-- moderation never changes Rating/Review owner, Work, Round, value or text;
-- a reason may be stored, but requiredness and visibility are unspecified.
+Moderation state is separate from author publication state:
 
-O5 must replace “hide/delete” with exact transitions. The minimal recommended
-model is `visible → moderated_hidden`, with a reason and moderator/time
-metadata, plus an explicit restore decision. Hard-deleting the publication
-would lose the stated optional reason and obscures moderation history. A
-withdrawal by the source owner is a separate operation and must not impersonate
-a moderation action.
+- `visible`: moderation permits output;
+- `hidden`: temporarily suppresses output and can be restored by an authorized
+  moderator;
+- `removed`: suppresses output permanently for that contribution+Library and
+  cannot be lifted by the author.
 
-Introduce one explicit additional Manager permission such as
-`contribution.moderate`; Owner authorization remains inherent. This is an
-architectural implementation of “authorized Beheerder”, not permission for
-private source access.
+Hide and remove require a non-empty valid UTF-8 moderation reason plus
+moderator/time metadata. Use plain text, safe escaping and the technical `TEXT`
+capacity boundary of at most 65,535 normalized UTF-8 bytes. The reason is
+visible to the contribution author and authorized moderators, never in public
+output. There is no moderation queue in F2.8b.
+
+Moderation never reads or edits private source fields beyond the public DTO and
+never changes source owner, Work, Round, Rating value, Review text or source
+version. The author may still edit private source content or withdraw it;
+neither action clears hidden/removed state. Editing a hidden contribution does
+not republish it. A moderator may restore `hidden → visible`; `removed` is
+terminal for the same contribution+Library, although the owner may publish the
+contribution to another eligible Library after the prior relation is inactive.
+
+The permission is an authorization capability for the publication projection,
+never permission for private source access.
 
 ## 11. ActivityEvent and Timeline contract
 
@@ -310,17 +328,11 @@ Definitive:
 - personal Timeline is a derived future concern. F2.8b stores adequate source
   timestamps but adds no Timeline event store or UI.
 
-Open O9:
-
-- the canonical audit chapter excludes personal ratings/reviews, while publish,
-  withdrawal and moderation mutate a shared Library projection;
-- decide whether these publication lifecycle actions create Library
-  ActivityEvents and which roles can see them.
-
-Recommendation: record publish/withdraw/moderate/restore as Library
-ActivityEvents containing publication ID, contribution type, Work ID, state
-transition and actor snapshot, but never source text, private Round, private
-Rating value or unrelated owner data. The source contribution remains excluded.
+F2.8b writes no Library ActivityEvent for publish, withdraw, move, hide, remove
+or restore. The current sources do not prescribe these events, and private
+Rating/Review data must not be pulled into Library audit. A future explicit
+audit decision can add privacy-safe event types without changing source
+ownership. Timeline implementation remains deferred.
 
 ## 12. Application service contracts
 
@@ -335,13 +347,13 @@ There is no generic unrestricted update service.
 | `CreateRatingForWorkService` | WorkId, RatingValue | Work exists; create unlinked owner Rating; reject unlinked duplicate |
 | `CreateRatingForReadingRoundService` | RoundId, RatingValue | Lock owned Round; derive Work; enforce Round cardinality |
 | `UpdateRatingValueService` | RatingId, expected version, RatingValue | Locked owner read; semantic no-op; CAS real change |
-| `CorrectRatingReadingRoundService` | RatingId, expected version, nullable RoundId | O2; owner/same-Work; no implicit Work change |
-| `DeleteOwnRatingService` | RatingId, expected version | O3/O4; conditionally remove only own source and its publication effect |
+| `CorrectRatingReadingRoundService` | RatingId, expected version, nullable RoundId | Owner/same-Work; all states; enforce one Rating per target Round |
+| `DeleteOwnRatingService` | RatingId, expected version | Owner-scoped hard delete of source and its Publications only |
 | `CreateReviewForWorkService` | WorkId, ReviewContent | Work exists; create unlinked owner Review; reject unlinked duplicate |
 | `CreateReviewForReadingRoundService` | RoundId, ReviewContent | Lock owned Round; derive Work; enforce Round cardinality |
 | `UpdateReviewContentService` | ReviewId, expected version, ReviewContent | Locked owner read; validate; semantic no-op; CAS real change |
-| `CorrectReviewReadingRoundService` | ReviewId, expected version, nullable RoundId | O2; owner/same-Work; no implicit Work change |
-| `DeleteOwnReviewService` | ReviewId, expected version | O3/O4; conditionally remove only own source and its publication effect |
+| `CorrectReviewReadingRoundService` | ReviewId, expected version, nullable RoundId | Owner/same-Work; all states; enforce one Review per target Round |
+| `DeleteOwnReviewService` | ReviewId, expected version | Owner-scoped hard delete of source and its Publications only |
 
 Failure families should distinguish invalid rating/content, contribution not
 available, duplicate unlinked/linked contribution, invalid Round context,
@@ -353,10 +365,10 @@ stale source, and ID-collision exhaustion without exposing foreign identity.
 | --- | --- | --- |
 | `PublishRatingToLibraryService` | RatingId, LibraryId | Owner source + active membership + active Work presence; create one publication |
 | `PublishReviewToLibraryService` | ReviewId, LibraryId | Same; revalidate public content |
-| `MoveContributionPublicationService` | PublicationId, expected version, target LibraryId | Only if O4 permits; re-run target eligibility atomically |
-| `WithdrawContributionPublicationService` | PublicationId, expected version | Owner only; apply O4 withdrawal state/delete |
-| `ModerateContributionPublicationService` | PublicationId, expected version, action/reason | Explicit Library Context and moderation permission; source unchanged |
-| `RestoreContributionPublicationService` | PublicationId, expected version | Only if O5 permits and actor/action rules are fixed |
+| `MoveContributionPublicationService` | PublicationId, expected version, target LibraryId | Owner only; atomically withdraw current/recheck and publish target |
+| `WithdrawContributionPublicationService` | PublicationId, expected version | Owner only; retain history, remove public visibility |
+| `ModerateContributionPublicationService` | PublicationId, expected version, hide/remove + reason | Explicit Library Context and moderation permission; source unchanged |
+| `RestoreContributionPublicationService` | PublicationId, expected version | Authorized moderator; hidden→visible only |
 
 Publication failures distinguish unavailable source/publication, membership
 ineligible, Work not actively represented, already published, stale
@@ -380,7 +392,7 @@ write aggregates or authorize through UI visibility.
 
 ## 13. Concurrency and ID contract
 
-**Recommendation, consistent with existing Core conventions:**
+**Technical contract, consistent with existing Core conventions:**
 
 - separate `RatingVersion`, `ReviewVersion`, `PublicationVersion` start at 1;
 - every real mutable change increments exactly once;
@@ -420,36 +432,43 @@ CCT/CPT would add no net benefit at this Core boundary.
 - `user_id VARCHAR(191) ... utf8mb4_bin`;
 - `work_id VARCHAR(191) ... utf8mb4_bin`;
 - `reading_round_id VARCHAR(191) ... utf8mb4_bin NULL`;
-- `rating_value` scaled integer selected after O1;
+- `rating_half_units TINYINT UNSIGNED`, exactly 2 through 10;
 - `created_at`, `updated_at DATETIME(6)`;
 - `rating_version BIGINT UNSIGNED`;
 - generated nullable `unlinked_work_id` equal to Work only when Round is null;
 - unique `(user_id, unlinked_work_id)`;
-- optionally unique `(user_id, reading_round_id)` if O2 chooses one per Round;
+- unique `(user_id, reading_round_id)`; nullable values remain governed by the
+  separate generated unlinked constraint;
 - owner+Work, owner+Round and owner+updated paging indexes;
-- Work FK `RESTRICT`; Round FK according to O2; positive version/time and
-  rating-range CHECKs.
+- Work and Round FKs `RESTRICT`; positive version/time and half-unit range
+  CHECKs.
 
 ### 14.3 `wp_biblio_reviews`
 
 - analogous ID/User/Work/Round/time/version columns;
-- `review_content TEXT` or bounded alternative selected after O8;
-- same generated unlinked uniqueness and conditional Round uniqueness;
-- same owner query indexes and FKs/CHECKs.
+- `review_content TEXT NOT NULL` with `CHAR_LENGTH(review_content) <= 5000`;
+- same generated unlinked uniqueness and unique owner+Round constraint;
+- same owner query indexes and Work/Round `RESTRICT` FKs/CHECKs.
 
 ### 14.4 `wp_biblio_contribution_publications`
 
 - `publication_id VARCHAR(191) ... utf8mb4_bin` primary key;
 - `library_id VARCHAR(191) ... utf8mb4_bin`;
 - nullable `rating_id` and `review_id`, exactly one populated;
-- state/reason/moderator fields determined by O4/O5;
+- `author_status` (`active`/`withdrawn`) and `moderation_status`
+  (`visible`/`hidden`/`removed`);
+- nullable `TEXT` reason plus moderator/time fields with CHECKs that require
+  them for hidden/removed and forbid them for visible;
 - `published_at`, `updated_at DATETIME(6)` and positive version;
 - real Library, Rating and Review FKs;
-- XOR CHECK; unique nullable Rating and Review references enforce at most one
-  publication context per contribution;
+- XOR CHECK; unique source+Library keys retain one history relation per target;
+- generated active source references, populated only for active and
+  non-removed relations, with unique indexes enforce at most one current
+  Library publication per contribution;
 - Library+state+updated paging index and source lookup indexes;
 - no duplicated editable Work, owner, rating value or review content;
-- source-delete FK action and publication tombstone behavior depend on O3/O4.
+- source FKs `ON DELETE CASCADE` remove only dependent publication history when
+  the owner hard-deletes the source; Library FK is `RESTRICT`.
 
 Public Library-by-Work queries join the publication to its source and use
 indexed Library/state plus source Work indexes. Do not add FULLTEXT or store
@@ -497,13 +516,13 @@ rejecting an unexplained partial shape.
 | ID enumeration | Opaque IDs plus scope predicates | Generator/repository | Guessing grants no authority |
 | Publish eligibility race | Shared Library lock and same-transaction recheck | Application/persistence | Independent-process race |
 | Source delete/publication race | Lock order and FK/transaction | Application/database | No orphan or half-state |
-| Private data in audit | Publication event allowlist excludes content/private Round/value | Activity builder | Payload assertions |
+| Private data in audit | No F2.8 ActivityEvent dependency or append | Composition/application | Event count and payload storage remain unchanged |
 | Hidden publication in average | Visibility predicate applied before aggregate | Query/persistence | Count/sum exclude hidden/withdrawn |
 
 ## 16. Read models and aggregates
 
-All owner lists are owner-predicated, bounded and stably paged. Recommended
-ordering is `updated_at DESC, id DESC`, default 50 and maximum 100, consistent
+All owner lists are owner-predicated, bounded and stably paged. Ordering is
+`updated_at DESC, id DESC`, default 50 and maximum 100, consistent
 with Private Notes. Public lists are scoped by explicit Library + Work and
 must never fall back to platform-wide data.
 
@@ -529,10 +548,15 @@ Confirmed inclusion rules:
   average;
 - no stored average, platform-wide average or global deduplication service.
 
-O7 must decide whether every reread Rating counts equally or one Rating per
-user is selected, and must define rounding/display and empty state. Core should
-return exact scaled sum + count and, once decided, a deterministic decimal;
-presentation formatting must not become a second aggregation rule.
+For the personal Work aggregate every current valid owner Rating counts once,
+including unlinked and distinct rereads. For the public Library+Work aggregate,
+filter currently visible Rating Publications and select at most one Rating per
+user using `rating.updated_at DESC, rating_id DESC`; the second key is the
+deterministic tie-break. Sum original half-units and divide only at the end.
+Return exact sum, contributing Rating count and—publicly—unique user count.
+Presentation rounds half-up to one decimal and renders an empty result (no
+average, count 0) when no Rating qualifies. No intermediate rounding or stored
+average is allowed.
 
 ## 17. Numbered F2.8b acceptance matrix
 
@@ -541,12 +565,14 @@ presentation formatting must not become a second aggregation rule.
 1. RatingId, ReviewId and PublicationId accept valid 191-byte IDs and reject
    empty, invalid UTF-8 and over-limit values.
 2. Versions start positive and increment exactly once per real change.
-3. O1 minimum/maximum/step Rating values succeed at every boundary.
+3. All nine half-star values from 1.0 through 5.0 succeed exactly.
 4. Below/above/invalid-step/manipulated Rating values fail before persistence.
 5. Rating equality and scaled storage roundtrip exactly without float drift.
-6. Review accepts valid normalized Unicode content at O8 boundary.
-7. Empty, invalid UTF-8, NUL and over-limit Review content fails.
-8. O8 XSS payload matrix cannot cross public render output.
+6. Review accepts empty, multiline and exactly 5,000-code-point normalized
+   Unicode content; CRLF/CR becomes LF.
+7. Invalid UTF-8, NUL and 5,001-code-point Review content fails.
+8. HTML remains literal plain text and the XSS payload matrix is escaped at
+   public output.
 9. Rating and Review aggregates cannot mutate owner or Work.
 10. Rating and Review remain independent and do not create each other.
 
@@ -559,11 +585,13 @@ presentation formatting must not become a second aggregation rule.
 15. Round creation path derives Work from owned Round.
 16. Foreign/unknown Round is non-enumerating unavailable.
 17. Same-owner cross-Work Round is rejected without mutation.
-18. Active/ended/historical Round acceptance follows O2 exactly.
-19. Per-Round Rating/Review cardinality follows O2 under concurrency.
-20. Attach/change/remove context follows O2 with no-op/stale behavior.
-21. Legitimate ReadingRound deletion follows O2 without deleting Work or
-    unrelated contribution data.
+18. Active, ended and historical own same-Work Rounds are accepted.
+19. Concurrent same-type creation/linking on one Round yields one winner and a
+    typed conflict; Rating and Review coexist on the same Round.
+20. Attach/change/remove context has owner/same-Work/no-op/stale behavior.
+21. Round hard delete is RESTRICTed until every linked contribution has an
+    explicit delete-or-unlink choice; unlinked-cardinality conflict rolls back
+    and no choice ever deletes Work or unrelated data.
 
 ### Ownership and source mutations
 
@@ -573,8 +601,9 @@ presentation formatting must not become a second aggregation rule.
 25. Divergent stale value/content update returns current safe conflict state.
 26. Foreign user cannot update context/value/content or delete.
 27. Library Owner/Manager/Member/support/platform role grants no private read.
-28. Source deletion follows O3 and never deletes Work/ReadingRound/other data.
-29. Wrong-Work correction follows O3 without silent identity reassignment.
+28. Owner/version hard delete removes only source and dependent Publications,
+    never Work/ReadingRound/other data.
+29. Work is immutable through every Rating/Review update; no silent reassignment.
 30. Production signatures accept no UserId or caller-supplied create ID.
 
 ### Publication and visibility
@@ -589,25 +618,32 @@ presentation formatting must not become a second aggregation rule.
 38. Item for another Work/Library or archived-only presence is rejected.
 39. Contribution cannot be simultaneously published to two Libraries.
 40. Concurrent duplicate/cross-Library publish yields one consistent winner.
-41. Move and withdrawal follow O4 and recheck target eligibility.
-42. Membership loss visibility follows O4 while preserving source ownership.
-43. Last active Item removal and later return follow O4 deterministically.
-44. Public DTO exposes exactly O6-approved fields and no private Round/owner ID.
-45. Source content correction effect on public projection follows O4/O5.
+41. Withdrawal hides immediately; republish/move rechecks target eligibility,
+    updates publication date and never creates two active targets.
+42. Membership loss leaves a previously valid publication visible and preserves
+    source ownership.
+43. Last active Item loss suppresses output/average and later active presence
+    restores it without rewriting Publication state.
+44. Public Review DTO exposes only display name, separately visible associated
+    Rating if present, escaped text and publication date.
+45. Source correction updates public content without changing publication date
+    or clearing hidden/removed moderation.
 46. Source delete versus publication action is atomic with no orphan.
 
 ### Moderation and audit
 
-47. Same-Library Owner can perform each O5-approved moderation action.
+47. Same-Library Owner can hide/remove with a mandatory reason and restore a
+    hidden Publication.
 48. Manager requires explicit moderation permission and active membership.
 49. Member, inactive/foreign/unauthorized Manager cannot moderate.
 50. Moderator cannot read unpublished source or edit source value/text/context.
-51. Reason requiredness, visibility and restore behavior follow O5.
+51. Moderation reason is mandatory, escaped and visible only to author and
+    authorized moderators; hidden is restorable, removed is terminal for that
+    contribution+Library and no queue exists.
 52. Owner withdrawal and moderator hiding remain distinguishable states/actions.
 53. Private source mutations create no Library ActivityEvent.
-54. Publish/withdraw/moderate/restore events follow O9 exactly.
-55. Any publication event contains no review text, private Round or private
-    Rating value and is scoped to one Library.
+54. Publish/withdraw/move/hide/remove/restore write no Library ActivityEvent.
+55. Library ActivityEvent storage contains no F2.8 source/publication payload.
 56. No Timeline storage/UI is introduced; source timestamps remain usable for
     a later derived personal Timeline.
 
@@ -617,9 +653,12 @@ presentation formatting must not become a second aggregation rule.
 58. Public Library+Work list contains only visible publications in that Library.
 59. Private, withdrawn, moderated-hidden and foreign-Library Ratings are
     excluded from public aggregate.
-60. Personal aggregate includes exactly O7-selected own valid Ratings.
-61. Multiple reread weighting/deduplication follows O7.
-62. Exact sum/count, decimal/rounding and empty state follow O7.
+60. Personal aggregate counts every current valid own unlinked/reread Rating
+    exactly once.
+61. Public aggregate selects latest updated visible Rating per user; equal
+    timestamps use RatingId descending and unique-user count is returned.
+62. Exact half-unit sum has no intermediate rounding; presentation is one
+    decimal and empty state has no average with count zero.
 63. Review presence never changes numerical average.
 64. No platform/global average, global feed, FULLTEXT or Review search appears.
 
@@ -628,7 +667,8 @@ presentation formatting must not become a second aggregation rule.
 65. All three tables roundtrip IDs, Unicode, nullable Round, microseconds and
     versions on real MariaDB.
 66. Unknown Work/Round/Library/source FKs fail and do not bump schema/version.
-67. XOR and one-unlinked/one-publication uniqueness CHECKs/indexes hold.
+67. XOR, one-unlinked, one-per-Round, one-current-publication and
+    source+Library history uniqueness CHECKs/indexes hold.
 68. Repository defense rejects owner/Work-inconsistent Round relationships.
 69. Divergent/equal parallel source updates prove winner/stale/no-op behavior.
 70. Publish-versus-withdraw/delete/moderate races produce one valid final state.
@@ -646,69 +686,63 @@ presentation formatting must not become a second aggregation rule.
 79. PHPStan level 6, full unit/integration suite, WordPress smoke, manifest and
     Git whitespace all pass.
 
-## 18. Open product decisions
+## 18. Definitive product decisions
 
-These are genuine blockers for a no-guess F2.8b implementation.
+There are no remaining product decisions for F2.8b.
 
-### O1 — Rating scale
+### D1 — Rating scale
 
-Decide minimum, maximum and increment: for example whole 1–5, half 0.5–5, or
-another scale. Confirm whether zero means a rating or only “not rated”.
+Exactly 1.0–5.0 in 0.5 steps; store half-units 2–10. Zero and finer values are
+invalid. Derived averages may contain other decimals.
 
-### O2 — ReadingRound cardinality and lifecycle
+### D2 — ReadingRound and source deletion
 
-Decide maximum per contribution type per Round, eligible active/ended/
-historical states, later attach/change/remove, and behavior when a legitimate
-historical Round is deleted.
+One contribution of each type per own same-Work Round; active, ended and
+historical are eligible; context is attachable/correctable/removable. Round
+delete requires explicit delete-or-unlink resolution and uses FK `RESTRICT`.
 
-### O3 — Work correction and contribution deletion
+### D3 — Work and contribution deletion
 
-Confirm immutable Work plus delete/recreate for wrong Work; hard versus soft
-delete; expected-version requirement; and the atomic effect on an existing
-publication. No source permits deletion to affect Work, Round or other reads.
+Work is immutable. Owner/version-checked hard delete removes only the source
+contribution and its Publications; never Work, Round or other reading data.
 
-### O4 — Publication lifecycle and continuing visibility
+### D4 — Publication lifecycle
 
-Confirm owner withdrawal, A→B move semantics, whether move is atomic, what
-happens after membership loss, what happens while the Work has no active Item,
-whether later active presence automatically restores visibility, and whether
-editing published source content updates public output immediately.
+One current Library target per contribution; publish/republish/move rechecks
+eligibility. Withdrawal hides. Membership loss does not hide. Missing active
+Work presence suppresses output temporarily and return restores it.
 
-### O5 — Moderation lifecycle
+### D5 — Moderation
 
-Define hide versus delete, restore, moderator permission, reason requiredness,
-who may see the reason, author notification only if in scope, and what happens
-after the owner edits a moderated contribution. Moderation may never mutate the
-source contribution.
+Authorized Library moderation can hide or remove only the Publication, always
+with a reason, and never source content. Hidden is moderator-restorable;
+removed is terminal for the same contribution+Library. There is no queue.
 
-### O6 — Public projection fields
+### D6 — Public Review projection
 
-Decide whether public output shows display name or another author label,
-publication/update date and any ReadingRound context. Do not expose these by
-default without approval.
+Only display name, separately visible associated Rating if present, escaped
+Review text and publication date are public. Reading/account/source context is
+excluded and ownership remains with the user.
 
-### O7 — Average semantics
+### D7 — Averages
 
-Decide whether every published reread Rating counts or one per user, arithmetic
-mean/rounding precision, display rule and empty state. Apply the same explicit
-logic separately to personal and Library aggregates where intended.
+Personal: every current valid own Rating. Public: most recently updated visible
+Rating per user+Work, tie RatingId descending. No intermediate rounding; show
+one decimal and unique-user count; store no average.
 
-### O8 — Review content
+### D8 — Review content
 
-Choose plain text or an exact safe-markup subset, normalized maximum byte
-length and reject-versus-strip behavior. Public rendering must revalidate/
-escape according to that fixed format.
+Plain text, zero through 5,000 Unicode code points after newline normalization,
+with server validation and escaped output. No markup or rich content.
 
-### O9 — Publication ActivityEvents
+### D9 — Events
 
-Decide whether publish, withdraw, moderate and restore enter Library audit,
-which roles see them and the minimal privacy-safe payload. Private Rating/
-Review mutations remain excluded; Timeline implementation remains deferred.
+No F2.8 private, publication or moderation mutation writes a Library
+ActivityEvent. Timeline implementation is deferred.
 
 ## 19. Recommended F2.8b implementation order
 
-1. Resolve O1–O9 and merge the decisions into this contract, schema plan and
-   test matrix; only then change verdict to GO.
+1. Use the definitive §18 contract without reopening product choices.
 2. Add separate Rating/Review/Publication values, aggregates, failures, clocks
    and generators with domain tests.
 3. Add the fixed Review content policy and public render boundary tests.
@@ -720,7 +754,7 @@ Review mutations remain excluded; Timeline implementation remains deferred.
 7. Add explicit publish eligibility and moderation authorization policies,
    publication repository and Library-lock transaction boundary.
 8. Add private/public read models and exact average projectors.
-9. Add publication events only as decided by O9; add no Timeline engine.
+9. Prove that F2.8 writes no ActivityEvents and add no Timeline engine.
 10. Run targeted domain/security/concurrency tests, all F2.5/F2.6/F2.7
     regressions and the complete canonical gate.
 11. Update current state, architecture, acceptance and exit evidence only for
@@ -754,7 +788,7 @@ required outcomes remain deterministic and green.
 
 ### Exit verdict
 
-**GO WITH CONDITIONS**
+**GO**
 
 The available repository establishes the ownership split, separate Rating and
 Review contributions, optional ReadingRound context, one unlinked contribution
@@ -763,8 +797,11 @@ user ownership and separate personal/public averages. It also provides a
 proven technical foundation for schema 1005, owner isolation, Library Context,
 transactions, CAS, opaque IDs, migrations and health.
 
-F2.8b cannot yet start without product or architecture guesses. O1–O9 affect
-domain value objects, uniqueness, foreign-key behavior, publication state,
-moderation, privacy-safe output, aggregate queries, content security and audit.
-After those decisions are supplied, this document can be finalized to GO and
-F2.8b can proceed without expanding into UI, Timeline or social functionality.
+The definitive decisions in §18 close rating value, Round cardinality/deletion,
+Work/deletion, publication, moderation, public projection, averages, Review
+security and ActivityEvent behavior. The Core model, schema-1005 plan,
+application boundaries and 79 acceptance cases contain no conditional product
+variants.
+
+**F2.8b can start without any further product decision.** It must remain within
+the documented Core scope and not expand into UI, Timeline or social features.
