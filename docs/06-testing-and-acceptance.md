@@ -621,10 +621,10 @@ Acceptance:
 - no migration, DDL, metadata mapping, REST/Abilities/UI, search or new term
   management behavior is introduced.
 
-## 32. F2.6 ReadingRound lifecycle acceptance plan
+## 32. F2.6 ReadingRound lifecycle acceptance evidence
 
-F2.6a accepts ADR-007 and introduces no production behavior. F2.6b–F2.6d must
-collectively prove:
+F2.6a accepted ADR-007 without production behavior. The F2.6b implementation
+and its regression suite now prove:
 
 - lifecycle is derived from nullable completed/stopped outcome and cannot be
   persisted as a contradictory second state;
@@ -669,9 +669,9 @@ collectively prove:
 - independent-process concurrency plus the canonical full gate keep F2.3,
   F2.5, Library isolation and existing ReadingRound behavior green.
 
-F2.6b owns domain/schema/persistence/ID issuance and compatible startflows.
-F2.6c owns finish, stop, historical registration, content/source correction
-and historical-manual deletion. F2.6d owns derived Work/reread reads and the
-final exit evidence. InternalLoan,
+The implementation delivers the previously planned F2.6b domain/schema/
+persistence/ID work together with the lifecycle, history, correction, deletion
+and derived-read behavior needed by the binding implementation request. The
+formal evidence is recorded in `docs/09-f2-6b-exit-evidence.md`. InternalLoan,
 ExternalLoan lifecycle, goals/statistics/Timeline/Home, ratings/notes,
 REST/Abilities/UI and any private audit engine remain outside these criteria.

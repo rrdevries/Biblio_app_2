@@ -215,7 +215,12 @@ Biblio-owned custom tables are the proven baseline for relational and transactio
 
 Work and Edition remain platform-wide and use Biblio-owned custom tables for v2.001. Item is Library-owned. ExternalLoan and ReadingRound are user-owned.
 
-The current ReadingRound source representation uses nullable `item_id` and `external_loan_id` foreign keys with an exactly-one check. This is the accepted v2.001 baseline for the two currently implemented source types, not a permanent decision for every future source type.
+The current ReadingRound source representation uses nullable `item_id` and
+`external_loan_id` foreign keys with a zero-or-one check. Normal active starts
+still require exactly one authorized source; zero sources are reserved for
+explicitly corrected unknown provenance and manual history. This is the
+accepted v2.001 baseline for the two currently implemented source types, not a
+permanent decision for every future source type.
 
 See `docs/decisions/ADR-004-fase-0-persistence-and-reading-sources.md`.
 
@@ -673,7 +678,7 @@ verification record is maintained in `docs/08-f2-5-exit-evidence.md`.
 
 ### F2.6 — ReadingRound lifecycle and historical truth
 
-Status: **Design accepted; implementation not started**
+Status: **Implemented — GO**
 
 ADR-007 fixes the production contract for active and ended ReadingRounds.
 Ended outcome is completed or stopped; lifecycle is derived from the nullable
@@ -704,7 +709,20 @@ start→end-round is corrected and never deleted. Deleting wrong manual history
 and registering the right Work are separate operations; Work itself never
 changes on a ReadingRound.
 
-Implementation is planned as F2.6b domain/schema-1003/persistence/ID issuance,
-F2.6c lifecycle/history/content+source correction/historical deletion, and
-F2.6d derived reads/exit. No production code, migration or service from those
-slices is implemented by F2.6a.
+Production Core implements the complete contract through schema 1003, the
+owner-scoped start/finish/stop/history/correction/delete services and derived
+Work-status and reading-sequence projections. Both active start paths and
+historical registration share the server-side generator and its bounded
+primary-key collision retry. Wpdb persistence supplies locked owner reads,
+compare-and-swap replacement, conditional historical deletion and User + Work
+queries; no ReadingRound mutation is wired to Library ActivityEvent.
+
+Migration 1002→1003 preserves legacy IDs, User, Work, source and `started_at`,
+marks existing rows `legacy_source_started`, and introduces nullable outcome,
+immutable provenance, explicit content-date components, technical timestamps
+and positive optimistic version. Known already-applied migration state retries
+idempotently before the version bump, and health validation covers the 1003
+columns, generated active-source keys, indexes, foreign keys and checks.
+
+The complete implementation and verification record is maintained in
+`docs/09-f2-6b-exit-evidence.md`.

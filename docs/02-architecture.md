@@ -645,10 +645,10 @@ WordPress actor display name. Context and term audit builders capture technical
 IDs and display labels. Domain write and append-only event insert run through
 one `TransactionManager` operation, so either both commit or both roll back.
 
-## 18. F2.6 ReadingRound lifecycle design
+## 18. F2.6 ReadingRound lifecycle
 
-ADR-007 is the binding implementation contract for the next ReadingRound
-slices. Lifecycle has one stored truth: nullable outcome, where null is active
+ADR-007 is the binding contract implemented by the ReadingRound domain,
+application and persistence layers. Lifecycle has one stored truth: nullable outcome, where null is active
 and completed/stopped is ended. ReadingRound provenance distinguishes legacy
 source-started, new source-started and manually historical records. Source is
 mandatory when a normal round is started. It is separate, correctable
@@ -662,8 +662,8 @@ or year-precision. Technical `created_at`, `updated_at` and `ended_at` remain
 separate UTC instants. The schema-1002 `started_at` values are preserved as
 legacy content instants and are not reinterpreted as confirmed local dates.
 
-The persistence change requires ordered migration 1002→1003 and explicit
-1003 health. Baseline 1000 and earlier migrations remain immutable. Existing
+The persistence change uses ordered migration 1002→1003 and explicit 1003
+health. Baseline 1000 and earlier migrations remain immutable. Existing
 active rows retain ID, User, Work, source and `started_at`; new database checks
 allow zero or one source, never both. Application services enforce the
 stronger creation and correction rules. Active uniqueness remains User +
