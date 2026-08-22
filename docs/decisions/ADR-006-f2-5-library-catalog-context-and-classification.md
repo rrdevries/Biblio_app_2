@@ -319,8 +319,14 @@ Een inactieve term kan niet voor nieuwe koppelingen worden gekozen.
 Een bestaande context wordt niet alleen vanwege inactivatie automatisch
 gemuteerd.
 
-Wanneer een bestaande context bewust wordt gewijzigd, moet bij opslaan een
-geldige actieve Boeksoort zijn geselecteerd.
+Bij een bewuste wijziging van een bestaande context hoeven reeds gekoppelde
+inactieve classificatietermen niet te worden vervangen of gereactiveerd.
+Alleen term-IDs die door de wijziging nieuw aan de context worden gekoppeld
+moeten actief zijn.
+
+Dit geldt ook voor Boeksoort: een reeds gekoppelde inactieve Boeksoort mag
+behouden blijven wanneer bijvoorbeeld alleen Genre of Onderwerp wijzigt. Als
+de Boeksoort-ID zelf wijzigt, moet de nieuw gekozen Boeksoort actief zijn.
 
 Genre- en Onderwerpkoppelingen worden niet stilzwijgend verwijderd alleen
 omdat een term inactief is geworden.
@@ -962,8 +968,10 @@ De lifecyclebetekenis is daarmee:
 - een bestaande koppeling aan een inmiddels inactieve term blijft geldig;
 - hergebruik van een bestaande context is geen nieuwe classificatiekeuze.
 
-Wanneer een bestaande LibraryCatalogContext later bewust wordt bewerkt, moet
-bij opslaan een actieve Boeksoort zijn geselecteerd conform §14.
+Wanneer een bestaande LibraryCatalogContext later bewust wordt bewerkt, geldt
+het retained-inactive-contract uit §14: alleen nieuw gekoppelde term-IDs moeten
+actief zijn. Een behouden inactieve Boeksoort blijft geldig; een gewijzigde
+Boeksoort-ID moet naar een actieve Boeksoort verwijzen.
 
 Een bevoegde beheerder mag bij Item-add een non-blocking informatieve
 waarschuwing krijgen dat de bestaande Boeksoort inactief is.
