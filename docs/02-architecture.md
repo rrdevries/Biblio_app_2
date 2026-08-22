@@ -587,7 +587,29 @@ request a new identity with a unique ID. Author/contributors, Series, rich
 metadata, search/entity resolution, taxonomy and all other deferred catalog or
 product lifecycles remain later work.
 
-## 17. Classification management application boundary
+## 17. F2.5 classification persistence and application boundary
+
+F2.5 keeps Work and Edition platform-wide and adds one Library-owned context
+identity per Library + Work. Typed Boeksoort, Genre and Onderwerp repositories
+remain separate; Genre and Onderwerp are unordered sets rather than a generic
+taxonomy abstraction. Schema 1001 persists the three term types,
+LibraryCatalogContext, its junction sets and append-only ActivityEvents.
+Composite foreign keys make cross-Library term links invalid at database level.
+
+The formal migration chain is 1000→1001→1002 while formal baseline 1000 stays
+unchanged. Migration 1000→1001 owns DDL and the compatibility backfill that
+adds `catalog.item_add` to existing Managers without granting
+`catalog.classification_manage`. Migration 1001→1002 is data-only: it uses the
+same idempotent seed-evolution service as transactional new-Library creation,
+preserves local identity/display/status/context choices, creates no automatic
+ActivityEvent and records seed-adoption ambiguity only as a non-blocking health
+warning. Current schema version is 1002.
+
+Classification foundations and user-driven audit share Core persistence
+contracts. Context and term ActivityEvents capture trusted actor/source,
+technical identities and historical labels through the append-only appender.
+Automatic migration, bootstrap and seed-adoption operations deliberately do
+not produce Library ActivityEvents.
 
 F2.5.5c builds on schema 1002 without changing DDL. Context creation and save
 are separate use-cases. Explicit legacy creation first authorizes the trusted
@@ -606,8 +628,11 @@ Existing-context save locks and reads the current context before deciding:
 The selection resolver is explicitly typed for Boeksoort, Genre and Onderwerp.
 It locks referenced term rows so a deactivation cannot race past validation of
 a new link. Only IDs newly introduced relative to the current selection must
-be active; retained inactive IDs remain legal. Set order is normalized by the
-domain value object and never creates a mutation.
+be active. Already linked inactive Boeksoort, Genre and Onderwerp IDs remain
+legal when another part of the selection changes; a changed Boeksoort ID must
+reference an active Boeksoort. There is no automatic replacement or
+reactivation. Set order is normalized by the domain value object and never
+creates a mutation.
 
 Boeksoort, Genre and Onderwerp have separate concrete management services, not
 a generic taxonomy engine. Database uniqueness remains the concurrency

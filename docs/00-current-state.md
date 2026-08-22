@@ -569,9 +569,42 @@ Last verified F2.3 quality baseline:
 - WordPress smoke: plugin active, Core loaded, init hook executed, HTTP 200;
 - Composer, PHP syntax, manifest and Git diff checks: passed.
 
-### F2.5.5c — Classification management application layer
+### F2.5 — LibraryCatalogContext and local classification
 
 Status: **Implemented**
+
+F2.5 adds the Library-owned classification layer around platform-wide Work
+identity. `LibraryCatalogContext` is uniquely scoped by Library + Work and
+contains exactly one Boeksoort plus duplicate-free, unordered Genre and
+Onderwerp sets. The typed identifiers, names, normalized names, immutable seed
+keys, term statuses, selection and contextversion value objects share the
+persistable Core contracts.
+
+Schema 1001 introduced the separate Boeksoort, Genre and Onderwerp tables,
+LibraryCatalogContext plus its set junctions, and immutable append-only
+ActivityEvent persistence. Composite foreign keys enforce that context and
+terms belong to the same Library. The 1000→1001 migration also backfills
+`catalog.item_add` for existing Manager memberships, preserves all additional
+permissions and deliberately does not grant `catalog.classification_manage`.
+
+Formal data-only migration 1001→1002 evolves every existing Library through
+the shared seed-evolution service. It adopts only one safe hard-normalized
+local candidate, otherwise creates the missing seed or emits the non-blocking
+`classification_seed_adoption_ambiguous` health warning without guessing.
+IDs, display names, status and existing context links are preserved; migration,
+bootstrap and adoption create no Library ActivityEvent. New Libraries use the
+same service inside the existing Library + Owner-membership transaction and
+receive exactly 9 Boeksoort seeds, 12 Genre seeds and no Onderwerp seeds.
+
+Item-add and classification management use independent permissions.
+`catalog.item_add` controls Item creation and its inseparable missing-context
+initialization; `catalog.classification_manage` controls explicit represented-
+Work context creation, existing-context changes and term management. Owner has
+both rights; an active Manager only has permissions explicitly stored for that
+membership. Member, inactive and foreign memberships are denied, and
+`UseAccess` does not alter either management decision.
+
+#### Context and term management
 
 Production Core now exposes explicit services for represented-Work context
 creation, optimistic context save and the separate Boeksoort, Genre and
@@ -581,7 +614,10 @@ Onderwerp lifecycles. Every operation resolves the actor server-side and uses
 Context save supports semantic no-op and stale-no-op before conflict handling.
 A real save validates only newly introduced links as active, increments the
 contextversion exactly once and appends exactly one immutable ActivityEvent in
-the same transaction. Retained inactive links remain valid. Term writes and
+the same transaction. Already linked inactive Boeksoort, Genre and Onderwerp
+IDs may be retained when another part of the context changes; changing the
+Boeksoort ID requires explicit confirmation and the new Boeksoort must be
+active. Nothing is automatically reactivated or replaced. Term writes and
 their term-level ActivityEvents are likewise atomic; no-op, failure and
 conflict outcomes write no event.
 
@@ -591,11 +627,13 @@ different concurrent creation an explicit conflict. Term-row locks serialize
 new-link validation against deactivation. Boeksoort lifecycle uses the same
 Library-row lock for the last-active confirmation decision.
 
-No schema or migration change is part of F2.5.5c; formal schema version remains
-1002. Metadata mappings, REST/Abilities/UI and the Boeksoort request workflow
-remain unimplemented.
+Separate-process coverage proves context-CAS winner/stale behavior,
+equal/different concurrent context creation, normalized term-create and
+rename/create conflicts, term-deactivate versus new-link serialization, and
+the confirmed last-active Boeksoort decision. No schema change is part of this
+management layer; formal schema version remains 1002.
 
-### F2.5.6 — LibraryCatalogContext during Item-add
+#### LibraryCatalogContext during Item-add
 
 Status: **Implemented**
 
@@ -626,3 +664,9 @@ Initialization remains reachable only inside `libraryItemCreation()` and uses
 granted. `CoreApplication` exposes no initializer, repository or trusted
 context input. Formal schema version remains 1002 and no DDL or migration is
 part of F2.5.6.
+
+F2.5 preserves the F2.3 Work/Edition/Item model, explicit Library isolation and
+Item→Edition→Work ReadingRound derivation. Metadata mappings,
+REST/Abilities/UI, the Boeksoort request workflow, term merge/hierarchy and
+term-level optimistic locking remain deferred. The complete criterion and
+verification record is maintained in `docs/08-f2-5-exit-evidence.md`.

@@ -500,7 +500,50 @@ No-go:
 - repository exposure through the production application boundary;
 - schema/table changes or expansion into deferred Fase-2 domains.
 
-## 29. Classification context and term management
+## 29. F2.5 foundations, migrations and seed evolution
+
+Acceptance and durable evidence:
+
+- formal baseline remains 1000, current version is 1002 and the production
+  registry contains the ordered 1000→1001 and 1001→1002 steps;
+- fresh install reaches healthy 1002, a real healthy 1001 state upgrades to
+  1002, and a failed data-evolution leaves version 1001 for an idempotent retry;
+- schema 1001 introduces separate local term/context/audit persistence without
+  rewriting baseline 1000; migration 1001→1002 is data-only and leaves its DDL
+  unchanged;
+- 1000→1001 gives every existing Manager membership `catalog.item_add`, does
+  not grant `catalog.classification_manage`, and preserves unknown additional
+  permissions and membership status;
+- every new or migrated Library converges on 9 Boeksoort seeds, 12 Genre seeds
+  and 0 Onderwerp seeds through one shared transactional, idempotent and
+  concurrency-safe seed-evolution service;
+- an existing seed key is a no-op; one safe normalized local candidate adopts
+  the immutable seed key without changing ID, display name, status or context
+  links; missing seeds are created and no rename, merge or reactivation occurs;
+- unsafe or ambiguous adoption performs no content mutation and reports
+  `classification_seed_adoption_ambiguous` with Library, taxonomy, seed and
+  candidate IDs as a non-blocking schema-health warning;
+- automatic migration/bootstrap/adoption writes no Library ActivityEvent,
+  while a seed failure during new-Library creation rolls back Library and Owner
+  membership through the existing transaction;
+- schema constraints enforce Library+Work context identity, normalized and
+  seed-key uniqueness, duplicate-free junction sets and same-Library composite
+  foreign keys for every selected term;
+- `Schema1001MigrationTest`, `Schema1001IntegrityTest`,
+  `Schema1002SeedEvolutionTest`, `ClassificationSeedConcurrencyTest`,
+  `ClassificationPersistenceTest` and `ActivityEventPersistenceTest` provide
+  the real-MariaDB migration, tenant-integrity, seed, retry and append-only
+  evidence.
+
+No-go:
+
+- a hidden boot-time bootstrap, a second data-version marker or premature
+  version bump;
+- automatic rename, merge, reactivation, context mutation or ActivityEvent;
+- rewriting schema-1001 DDL in migration 1001→1002;
+- cross-Library context-term relationships.
+
+## 30. Classification authorization, context and term management
 
 Acceptance:
 
@@ -516,8 +559,10 @@ Acceptance:
   `library_catalog_context_stale` reason and current context;
 - a real save increments version exactly once, never merges automatically and
   requires explicit confirmation for a changed Boeksoort ID;
-- retained inactive links remain valid while every newly introduced link is
-  active at the serialized validation point;
+- retained inactive Boeksoort, Genre and Onderwerp links remain valid when
+  another part of the context changes, while every newly introduced link is
+  active at the serialized validation point; changing the Boeksoort ID selects
+  an active Boeksoort and requires explicit confirmation;
 - context mutation and one structured context ActivityEvent commit atomically;
 - each type-specific term service implements create, rename, deactivate and
   reactivate without delete, merge or automatic reactivation;
@@ -533,7 +578,13 @@ Acceptance:
 - AddLibraryItemService, schema 1002, ReadingRound and earlier isolation
   regressions remain unchanged and green.
 
-## 30. Item-add classification initialization
+Evidence is provided by `LibraryAuthorizationPolicyTest`,
+`ClassificationManagementAuthorizationTest`,
+`ClassificationManagementApplicationTest`,
+`ClassificationManagementConcurrencyTest`, `ActivityEventPersistenceTest`
+and `ProductionApplicationBoundaryTest` in the complete suites.
+
+## 31. Item-add classification initialization
 
 Acceptance:
 
