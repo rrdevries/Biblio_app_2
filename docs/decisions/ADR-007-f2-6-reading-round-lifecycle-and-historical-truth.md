@@ -392,6 +392,32 @@ faalt gesloten. De version option wordt pas 1003 na de volledige
 postcondition; failure laat haar 1002 en retry convergeert zonder dat bestaande
 inhoud wordt herschreven.
 
+De ordered implementation sequence is:
+
+1. bewijs gezonde schema-1002-DDL en de huidige ReadingRound-data-invarianten;
+2. voeg de nieuwe gewone kolommen eerst nullable toe, inclusief tijdelijk
+   nullable `provenance` en `round_version`;
+3. backfill uitsluitend bestaande rijen naar `legacy_source_started`, version
+   1 en outcome null; verifieer dat aantallen en legacywaarden gelijk zijn;
+4. maak `started_at` nullable en maak na bewezen volledige backfill
+   `provenance` en `round_version` non-null zonder default;
+5. verwijder de twee active unique indexes, daarna hun generated kolommen en
+   vervolgens de oude status/source-checks; verwijder `round_status` pas nadat
+   `round_outcome` en de backfill aantoonbaar aanwezig zijn;
+6. maak de generated active-userkolommen opnieuw met de §11-expressions en
+   herstel hun unique indexes;
+7. voeg het nieuwe User+Work+finish-readindex en de negen named checks uit §11
+   toe zonder bestaande FK's of overige indexes te vervangen;
+8. voer volledige data- en DDL-postcondition plus schema-health 1003 uit;
+9. laat pas daarna de bestaande migrator de version option naar 1003 zetten.
+
+Iedere stap detecteert `absent`, `exact expected intermediate` of `exact final`
+en voert alleen de ontbrekende overgang uit. Een afwijkende definitie, een
+halfgevulde backfill of een onbekende constraint/index-expression is geen
+retrycandidate en faalt gesloten. Tijdens migration wordt Core application
+niet gecomposeerd; daardoor schrijft geen F2.6-applicationservice tegen een
+tussenschema.
+
 Schema-health 1003 inspecteert de nieuwe kolomtypen/nullability, generated
 expressions, indexes, drie foreign keys en alle essentiële CHECK-constraints.
 Zij controleert tevens data-invarianten die niet betrouwbaar uit DDL-metadata
