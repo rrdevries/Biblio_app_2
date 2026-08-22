@@ -677,11 +677,13 @@ Status: **Design accepted; implementation not started**
 
 ADR-007 fixes the production contract for active and ended ReadingRounds.
 Ended outcome is completed or stopped; lifecycle is derived from the nullable
-outcome and is not a second mutable truth. Normal active rounds retain exactly
-one Item or ExternalLoan source. A manually registered historical completed
-round is explicitly source-free and linked directly to Work; it is never
-represented through a pseudo source. Source, identity, ownership and
-provenance are immutable through ending and correction.
+outcome and is not a second mutable truth. Normal active rounds start with
+exactly one Item or ExternalLoan source. A manually registered historical
+completed round is initially source-free and linked directly to Work; it is
+never represented through a pseudo source. Identity, ownership, Work and
+provenance remain immutable. Source is explicitly correctable for active and
+ended rounds, including same-Work Item↔ExternalLoan, unknown→concrete and a proven
+wrong concrete source→unknown when the correct source is no longer known.
 
 New content dates preserve exact day, month+year or year precision as explicit
 calendar components. Technical creation/update/end timestamps are separate
@@ -696,6 +698,13 @@ chronology is represented explicitly rather than resolved with technical
 timestamps or IDs. ReadingRound IDs are issued server-side through a specific
 generator with bounded primary-key collision retry.
 
+Only a fully erroneous manually registered historical round may be hard
+deleted, including when it names the wrong Work. A normal Biblio
+start→end-round is corrected and never deleted. Deleting wrong manual history
+and registering the right Work are separate operations; Work itself never
+changes on a ReadingRound.
+
 Implementation is planned as F2.6b domain/schema-1003/persistence/ID issuance,
-F2.6c lifecycle/history/correction, and F2.6d derived reads/exit. No production
-code, migration or service from those slices is implemented by F2.6a.
+F2.6c lifecycle/history/content+source correction/historical deletion, and
+F2.6d derived reads/exit. No production code, migration or service from those
+slices is implemented by F2.6a.

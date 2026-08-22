@@ -36,7 +36,9 @@ De enige opgeslagen lifecyclewaarheid is een nullable `ReadingRoundOutcome`:
 
 `ReadingRoundLifecycle` (`active` of `ended`) wordt in het domein uit outcome
 afgeleid en wordt niet als tweede mutable waarde opgeslagen. Er is geen
-`paused` en geen hard-deleteflow om leesgeschiedenis te corrigeren.
+`paused`. Een normaal doorlopen ReadingRound wordt niet hard verwijderd om
+leesgeschiedenis te corrigeren. Alleen een volledig foutieve
+`historical_manual` registratie mag volgens §13 worden verwijderd.
 
 Een `ReadingRoundVersion` is een positieve integer. Creatie start op versie 1.
 Iedere echte lifecycle- of correctiemutatie verhoogt de versie exact eenmaal.
@@ -52,18 +54,29 @@ No-op en stale-no-op verhogen niet.
   aangemaakt;
 - `historical_manual`: handmatig als afgesloten historie geregistreerd.
 
-Een `legacy_source_started` of `source_started` ronde heeft exact één Item- of
-ExternalLoan-bron. Work is bij creatie uit die geautoriseerde bron afgeleid en
-de repository verifieert opnieuw dat bron en Work overeenkomen. De bron is
-immutable provenance: finish, stop en correctie vervangen of verwijderen haar
-niet.
+Een `legacy_source_started` of `source_started` ronde begint met exact één
+Item- of ExternalLoan-bron. Work is bij creatie uit die geautoriseerde bron
+afgeleid en de repository verifieert opnieuw dat bron en Work overeenkomen.
+Provenance beschrijft hoe de ronde is ontstaan en blijft immutable; de huidige
+bron is afzonderlijke, corrigeerbare provenance-informatie.
 
-Een `historical_manual` ronde is afgesloten en bronloos. De service accepteert
-een bestaand `WorkId` pas nadat de actor server-side is vastgesteld. Work is
-platformbrede bibliografische identiteit en de ronde blijft van de actor; een
-Library, membership of Library ActivityEvent wordt daardoor niet de owner.
-F2.6 introduceert geen pseudo-Item, pseudo-ExternalLoan, InternalLoan-bron of
-route om achteraf een bron aan historie te koppelen.
+Een expliciete broncorrectie is toegestaan voor active en ended rondes. Een
+nieuwe concrete bron moet volgens de toepasselijke source-regels geldig en
+toegankelijk zijn en via Item→Edition→Work of ExternalLoan→Work exact hetzelfde
+Work vertegenwoordigen als de ronde. Daardoor zijn Item→ander Item en
+Item↔ExternalLoan toegestaan wanneer beide hetzelfde Work vertegenwoordigen.
+Broncorrectie wijzigt nooit Work en maakt geen nieuwe ReadingRound. Een
+bestaande concrete bron mag alleen expliciet naar unknown/source-free worden
+gecorrigeerd wanneer die opgeslagen bron fout is en de juiste bron niet meer
+bekend is. Andere lifecycle- of datacorrecties laten de bron onaangeroerd.
+
+Een `historical_manual` ronde wordt afgesloten en bronloos geregistreerd. De
+service accepteert een bestaand `WorkId` pas nadat de actor server-side is
+vastgesteld. Later mag via dezelfde expliciete broncorrectieregels een concrete
+bron van datzelfde Work worden gekoppeld. Work is platformbrede
+bibliografische identiteit en de ronde blijft van de actor; een Library,
+membership of Library ActivityEvent wordt daardoor niet de owner. F2.6
+introduceert geen pseudo-Item, pseudo-ExternalLoan of InternalLoan-bron.
 
 De directe historische registratieroute registreert conform het functioneel
 ontwerp een `completed` ronde. Een latere correctie mag de foutief vastgelegde
@@ -183,6 +196,8 @@ De production applicationlaag krijgt expliciete, owner-scoped services:
 - `StopReadingRoundService`;
 - `RegisterHistoricalReadingRoundService`;
 - `CorrectEndedReadingRoundService`;
+- `CorrectReadingRoundSourceService`;
+- `DeleteHistoricalReadingRoundService`;
 - owner-scoped reads voor ronde, User + Work-status en leesvolgorde.
 
 Iedere mutatieservice:
@@ -196,12 +211,22 @@ Iedere mutatieservice:
 Finish/stop accepteren ronde-ID, verwachte versie en de gewenste inhoudelijke
 einddag. Correctie accepteert ronde-ID, verwachte versie en de volledige
 gewenste corrigeerbare toestand: outcome, inhoudelijke start en einddatum.
-Immutable zijn ID, User, Work, provenance, bron, `created_at` en `ended_at`.
+Broncorrectie is een afzonderlijke expliciete use-case met ronde-ID, verwachte
+version en een concrete Item-/ExternalLoan-bron of expliciet unknown. Daardoor
+kan geen andere correctie de bron impliciet wijzigen. Immutable zijn ID, User,
+Work, provenance, `created_at` en `ended_at`.
 
 Historische registratie accepteert geen ID of bron van de caller. Zij vereist
 een bestaande Work, outcome is `completed`, en legt de opgegeven precieze
 ReadingPeriod plus `historical_manual` vast. Nieuwe Work/Edition-creatie en
 entity resolution zijn geen onderdeel van F2.6.
+
+Verwijdering is een afzonderlijke owner-scoped use-case en accepteert alleen
+een `historical_manual` ronde. Een source-started of legacy-source-started
+ronde wordt nooit hard verwijderd, ongeacht latere broncorrecties. Wanneer een
+historische registratie het verkeerde Work gebruikt, wordt zij verwijderd en
+wordt voor het juiste Work afzonderlijk een nieuwe historische ronde
+geregistreerd; Work wordt niet op de bestaande ronde gewijzigd.
 
 `CoreApplication` exposeert alleen deze benoemde use-cases en readprojecties.
 Repositories, ID-generator, transaction primitives en een generieke
@@ -225,7 +250,8 @@ niet als ID-collision herhaald.
 
 De repository biedt geen publieke willekeurige state replacement. Benodigde
 ports zijn owner-scoped reads, create voor de twee geldige constructiepaden,
-CAS end/correct en User + Work-queryprojecties.
+CAS end/contentcorrect/sourcecorrect, conditional delete van uitsluitend
+`historical_manual` en User + Work-queryprojecties.
 
 Een mutationele service voert locked current-state read, beslissing en write
 in één transactie uit. De database-update gebruikt minimaal
@@ -240,6 +266,8 @@ Stable failure reasons onderscheiden minimaal:
 - source/Work unavailable bij start;
 - ReadingRound not available (onbekend of niet-owned, zonder disclosure);
 - stale divergent ReadingRound;
+- ReadingRound source correction unavailable of Work-mismatched;
+- ReadingRound deletion not allowed;
 - actieve bron al in gebruik;
 - ID collision na begrensde retries;
 - persistence/transaction failure.
@@ -257,6 +285,11 @@ herladen zonder een tweede onbeveiligde lookup.
 | completed X | finish naar X | current of stale | success, actuele state, geen write |
 | stopped X | stop naar X | current of stale | success, actuele state, geen write |
 | ended | identieke volledige correctie | current of stale | success, actuele state, geen write |
+| active/ended | identieke broncorrectie | current of stale | success, actuele state, geen write |
+| active/ended | geldige andere bron of expliciet unknown | current | één CAS-update, version +1 |
+| active/ended | afwijkende broncorrectie | stale | typed stale conflict met actuele state |
+| historical_manual | delete | current | conditionele hard delete |
+| legacy/source-started | delete | elke | stable deletion-not-allowed, geen write |
 | active/ended | afwijkende mutatie | stale | typed stale conflict met actuele state |
 | completed | stop of andere einddatum | current | alleen via correctionservice, één update |
 | stopped | finish of andere einddatum | current | alleen via correctionservice, één update |
@@ -267,10 +300,12 @@ stale-no-op terugkrijgt. Concurrent completed versus stopped heeft exact één
 winnaar; de verliezer ziet een afwijkende actuele toestand en krijgt het stable
 stale conflict. Er is geen merge of last-write-wins.
 
-Correctie vergelijkt eerst de volledige semantische gewenste toestand met de
-locked actuele toestand en toetst pas daarna de versie. Daardoor is een
-identieke stale correctie een no-op; een afwijkende stale correctie een
-conflict. Een echte correctie verhoogt version exact eenmaal.
+Content- en broncorrectie vergelijken eerst de volledige semantische gewenste
+toestand met de locked actuele toestand en toetsen pas daarna de versie.
+Daardoor is een identieke stale correctie een no-op; een afwijkende stale
+correctie een conflict. Een echte correctie verhoogt version exact eenmaal.
+Delete gebruikt dezelfde owner- en expected-versiongrens en slaagt alleen als
+de actuele provenance nog `historical_manual` is.
 
 ### 11. Schema 1002 → 1003
 
@@ -337,8 +372,9 @@ De vervangende named checks zijn:
 
 - `reading_rounds_outcome`: toegestane outcome-vormen;
 - `reading_rounds_provenance`: toegestane provenancewaarden;
-- `reading_rounds_source_shape`: exact één bron voor beide source-started
-  provenances en geen bron voor `historical_manual`;
+- `reading_rounds_source_shape`: nooit tegelijk een Item- en ExternalLoan-bron;
+  nul of één bron is persistabel omdat iedere provenance na een expliciete
+  correctie concrete of unknown source-informatie kan hebben;
 - `reading_rounds_start_shape`: legacy instant uitsluitend bij legacy,
   exacte nieuwe startdag voor `source_started`, en optionele geldige precisie
   voor `historical_manual`;
@@ -366,11 +402,12 @@ Databasechecks borgen minimaal:
 
 - outcome is null, `completed` of `stopped`;
 - provenance is een van de drie waarden;
-- `legacy_source_started` heeft één bron, een legacy `started_at`, geen nieuwe
+- `legacy_source_started` heeft een legacy `started_at`, geen nieuwe
   startcomponenten en mag active of ended zijn;
-- `source_started` heeft één bron, geen legacy `started_at`, een volledige
-  exacte startdatum en mag active of ended zijn;
-- `historical_manual` is bronloos, heeft geen legacy `started_at` en is ended;
+- `source_started` heeft geen legacy `started_at`, een volledige exacte
+  startdatum en mag active of ended zijn;
+- `historical_manual` heeft geen legacy `started_at` en is ended;
+- iedere provenance heeft na creatie/correctie nul of één bron, nooit beide;
 - active heeft geen finishdatum en geen `ended_at`; ended heeft een geldige
   finishdatum en `ended_at`;
 - componentnullable-vormen en kalendergeldigheid volgen §3;
@@ -430,19 +467,37 @@ Fresh install blijft eerst baseline 1000 installeren en doorloopt daarna
 1000→1001→1002→1003. Een gezonde 1002-installatie doorloopt alleen de nieuwe
 stap. Baseline 1000 wordt niet herschreven.
 
-### 13. Correctie en afgeleide effecten
+### 13. Correctie, broncorrectie, verwijdering en afgeleide effecten
 
-Alleen een ended ronde kan worden gecorrigeerd. Corrigeerbaar zijn outcome en
-de volledige inhoudelijke ReadingPeriod. Een normal-source ronde behoudt haar
-bron en provenance; een historische ronde blijft bronloos en handmatig.
+Outcome en de volledige inhoudelijke ReadingPeriod zijn alleen bij een ended
+ronde corrigeerbaar. Broncorrectie is voor active en ended toegestaan en staat
+los van deze datacorrectie. Zij kan een concrete bron van hetzelfde Work
+vervangen door een andere concrete bron, een source-free ronde aan zo'n bron
+koppelen of een aantoonbaar fout opgeslagen bron expliciet unknown maken als
+de juiste bron niet meer bekend is. Provenance en Work veranderen niet; zonder
+een expliciete source-correction-intentie blijft de bron exact behouden.
 
-Een correctie kan daarom direct gevolgen hebben voor:
+Alleen een volledig foutieve `historical_manual` registratie mag conditioneel
+hard worden verwijderd. Dit blijft toegestaan nadat zo'n historische ronde
+via broncorrectie een concrete bron heeft gekregen, omdat provenance en niet
+de actuele bronvorm de deletebevoegdheid bepaalt. Een
+`legacy_source_started` of `source_started` ronde wordt nooit hard verwijderd.
+Een verkeerd Work wordt nooit op een ronde gecorrigeerd: alleen de foutieve
+handmatige historische registratie mag worden verwijderd, waarna voor het
+juiste Work een nieuwe historische ronde wordt geregistreerd.
+
+Een contentcorrectie of historische delete kan direct gevolgen hebben voor:
 
 - persoonlijke Work-status wanneer de laatste/een eerste completion in
   stopped verandert of omgekeerd;
 - bewezen first-read, reread of chronology-indeterminate voor alle completed
   rondes van dezelfde User + Work;
 - latere goals, statistiek en tijdlijnprojecties.
+
+Broncorrectie wijzigt geen Work, outcome of contentperiode en daarmee niet de
+persoonlijke Work-status of first/rereadclassificatie. Zij kan wel de afgeleide
+bron-/Library-context van latere Tijdlijn-, goal- of statistiekprojecties
+wijzigen. Zij maakt geen afzonderlijke correctie-ReadingRound.
 
 Deze waarden worden na de transactie opnieuw uit actuele ReadingRounds
 afgeleid. F2.6 slaat geen invalidatieflag, cached Work-read-status of
@@ -457,13 +512,15 @@ Scope:
 - lifecycle/outcome/provenance/version/date-value objects;
 - ReadingRound aggregate met legacy-hydrationcontract;
 - migration 1002→1003, health en registry/current-version;
-- uitgebreide owner-scoped repository en wpdb-adapter;
+- uitgebreide owner-scoped repository en wpdb-adapter, inclusief optional
+  source-shape en CAS/conditional-delete primitives;
 - ReadingRoundIdGenerator plus production-adapter en maximaal drie
   collisionpogingen;
 - bestaande Item- en ExternalLoan-startflows migreren zonder gedragsregressie;
 - composition en readboundary voor het nieuwe persistencemodel.
 
-Non-scope: finish/stop/historical/correction use-cases en derived reads.
+Non-scope: finish/stop/historical/contentcorrect/sourcecorrect/delete use-cases
+en derived reads.
 
 Afhankelijkheden: ADR-004, ADR-005 en dit ADR. Acceptatie: fresh/upgrade,
 failure/retry, legacybehoud, constraints/health, ID collision, start-
@@ -478,7 +535,9 @@ Scope:
 
 - finish en stop;
 - handmatige completed historische registratie;
-- ended correction;
+- ended content correction;
+- expliciete source correction voor active en ended;
+- conditional delete van uitsluitend `historical_manual` registraties;
 - owner-first authorization;
 - transactionele CAS, no-op/stale-no-op/conflictsemantiek;
 - productiecomposition en benoemde CoreApplication-use-cases;
@@ -487,11 +546,12 @@ Scope:
 Non-scope: derived Work/reread projecties, goals/statistiek/UI en private
 audit. Afhankelijkheid: F2.6b.
 
-Acceptatie: de matrix in §10, bron/provenance-immutability, datumprecisie,
-rollback, geen Library ActivityEvent en één CAS-winnaar zijn aantoonbaar.
+Acceptatie: de matrix in §10, immutable Work/provenance, expliciete
+source-correctionregels, provenance-beperkte delete, datumprecisie, rollback,
+geen Library ActivityEvent en één CAS-winnaar zijn aantoonbaar.
 
-Voorgestelde commits: lifecycle services; historical registration; correction;
-composition; concurrency/regressies.
+Voorgestelde commits: lifecycle services; historical registration; content- en
+source-correction; historical delete; composition; concurrency/regressies.
 
 ### F2.6d — afgeleide reads en exit
 
@@ -518,7 +578,8 @@ Minimale unit- en real-MariaDB-dekking:
 - lifecycle/outcome kan geen redundante of ongeldige combinatie vormen;
 - alle geldige datumprecisies en kalendergrenzen; geen fictieve componenten;
 - periodevalidatie met exacte, overlappende en onmogelijke intervallen;
-- provenance/source/Work-invarianten en legacy hydration;
+- provenance/source/Work-invarianten, optional source-shape en legacy
+  hydration;
 - schema 1002→1003, fresh chain, failure vóór version bump, partial retry,
   drift/health en ongewijzigde 1000-baseline;
 - bestaande rows behouden ID, User, Work, bron en legacy `started_at` exact;
@@ -529,7 +590,18 @@ Minimale unit- en real-MariaDB-dekking:
 - finish/stop/no-op/stale-no-op/stale divergent en rollback;
 - twee identieke en twee tegengestelde eindrequests in onafhankelijke
   processen;
-- correctievelden, immutable bron/provenance/identity, version/timestamps;
+- contentcorrectievelden en immutable Work/provenance/identity;
+- source correction active/ended voor Item→Item, Item↔ExternalLoan,
+  unknown→concrete en fout concrete→unknown, altijd met hetzelfde Work;
+- source authorization vóór gevoelige lookup en non-disclosing afwijzing van
+  ontoegankelijke, onbekende of Work-mismatched kandidaten;
+- andere correcties wijzigen de bron niet impliciet;
+- alleen `historical_manual` delete, ook na source attachment; normale
+  lifecycleprovenance weigert delete;
+- verkeerd historisch Work vereist delete plus afzonderlijke nieuwe registratie;
+- concurrente source-correcties en delete-versus-correctie leveren via
+  expected version één winnaar, stale-no-op of stable conflict zonder partial
+  write;
 - Work-status voor nooit, active, stopped, completed, historical en combinaties;
 - first/reread/indeterminate voor dag, gelijk, maand, jaar en gemengde
   precisie;
@@ -544,8 +616,12 @@ Minimale unit- en real-MariaDB-dekking:
 - bestaande leesstartinstants blijven waarheidsgetrouw behouden, maar hebben
   door ontbrekende historische timezone-informatie niet automatisch dezelfde
   semantiek als nieuwe kalenderdatums;
-- bronloze historie is expliciet en verzwakt de source-eis voor actieve rondes
-  niet;
+- iedere normale actieve start vereist nog steeds een concrete bron; een ronde
+  kan alleen door expliciete foutcorrectie later source-free worden;
+- historische provenance blijft herkenbaar wanneer een concrete bron later
+  wordt gekoppeld;
+- alleen volledig foutieve handmatige historische registraties zijn hard
+  verwijderbaar; normale lifecyclehistorie blijft behouden;
 - correcties zijn zichtbaar in technische current-state data, maar er ontstaat
   geen private auditgeschiedenis;
 - first/reread kan bewust `chronology_indeterminate` zijn; productprojecties
@@ -561,7 +637,9 @@ Minimale unit- en real-MariaDB-dekking:
 - technische `ended_at` gebruiken als content completion date;
 - bestaande UTC-instants zonder timezone-evidence tot lokale dagen migreren;
 - pseudo-bronnen voor handmatige historie;
-- source switching of hard delete als correctie;
+- impliciete source switching door een andere correctie;
+- Work wijzigen onder de noemer source correction;
+- hard delete van een normaal via Biblio gestarte ReadingRound;
 - first/reread opslaan als handmatig of mutable attribuut;
 - ID's door REST/UI laten aanleveren of een generieke ID-engine bouwen;
 - Library ActivityEvents of een nieuwe generieke private audit-engine voor

@@ -651,8 +651,11 @@ ADR-007 is the binding implementation contract for the next ReadingRound
 slices. Lifecycle has one stored truth: nullable outcome, where null is active
 and completed/stopped is ended. ReadingRound provenance distinguishes legacy
 source-started, new source-started and manually historical records. Source is
-mandatory and immutable for normal rounds; manually registered history is
-ended and source-free.
+mandatory when a normal round is started. It is separate, correctable
+provenance information: active and ended rounds may explicitly switch between
+same-Work Item/ExternalLoan, attach a same-Work source to historical unknown,
+or remove a proven wrong source when the correct one is unknown. Work and
+provenance remain immutable.
 
 Content reading dates use explicit year/month/day components with day-, month-
 or year-precision. Technical `created_at`, `updated_at` and `ended_at` remain
@@ -662,14 +665,21 @@ legacy content instants and are not reinterpreted as confirmed local dates.
 The persistence change requires ordered migration 1002→1003 and explicit
 1003 health. Baseline 1000 and earlier migrations remain immutable. Existing
 active rows retain ID, User, Work, source and `started_at`; new database checks
-separate active source-backed and ended source-free shapes. Active uniqueness
-remains User + concrete source.
+allow zero or one source, never both. Application services enforce the
+stronger creation and correction rules. Active uniqueness remains User +
+concrete source whenever a concrete source is present.
 
 All ReadingRound mutation services resolve the actor server-side, use
 owner-scoped reads and perform locked decision plus CAS write transactionally.
 Identical stale requests are no-op successes; divergent stale requests return
 a typed conflict with current state. No ReadingRound mutation writes a Library
 ActivityEvent or introduces a private audit engine.
+
+Source correction is a separate named use-case so no content/lifecycle
+correction can change source implicitly. Conditional hard delete is exposed
+only for `historical_manual` provenance. Normal source-started provenance is
+never hard deleted, even after its source was corrected; a wrong Work on
+manual history requires delete plus a separate new registration.
 
 `ReadingRoundIdGenerator` is a specific composition detail shared by both
 existing start paths and historical registration. Database primary-key

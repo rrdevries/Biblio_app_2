@@ -628,8 +628,10 @@ collectively prove:
 
 - lifecycle is derived from nullable completed/stopped outcome and cannot be
   persisted as a contradictory second state;
-- normal active rounds keep one valid Item or ExternalLoan source and manual
-  historical rounds are ended, source-free and linked to an existing Work;
+- every normal active start has one valid Item or ExternalLoan source; persisted
+  rounds allow zero or one source so explicit correction can represent unknown;
+- manual historical rounds start ended and source-free, remain linked to an
+  existing Work and may later receive a valid same-Work source;
 - exact-day, month+year and year-only dates roundtrip without invented parts;
 - technical timestamps never substitute for content dates and migration
   preserves every schema-1002 `started_at` value exactly as legacy evidence;
@@ -645,9 +647,15 @@ collectively prove:
 - finish/stop perform one transactional CAS mutation, identical concurrent
   requests converge through stale-no-op and completed-versus-stopped yields
   one winner plus one typed stale conflict with current state;
-- ended correction changes only outcome and content period, preserves
-  identity/source/provenance, and follows no-op/stale-no-op/stale-conflict
-  semantics without hard delete;
+- ended content correction changes only outcome and content period, preserves
+  identity/Work/provenance, never changes source implicitly and follows
+  no-op/stale-no-op/stale-conflict semantics;
+- explicit source correction works for active and ended Item→Item,
+  Item↔ExternalLoan, unknown→concrete and proven-wrong concrete→unknown cases,
+  always preserves Work and uses applicable source authorization/validation;
+- only `historical_manual` provenance can be conditionally hard deleted;
+  normal start→end provenance is corrected instead, and wrong-Work history is
+  delete plus a separate new registration rather than Work replacement;
 - personal Work status covers never read, active, stopped, completed,
   historical, reread and mixed combinations without a stored Work flag;
 - first/reread uses only completed finish-date intervals and returns explicit
@@ -662,7 +670,8 @@ collectively prove:
   F2.5, Library isolation and existing ReadingRound behavior green.
 
 F2.6b owns domain/schema/persistence/ID issuance and compatible startflows.
-F2.6c owns finish, stop, historical registration and correction. F2.6d owns
-derived Work/reread reads and the final exit evidence. InternalLoan,
+F2.6c owns finish, stop, historical registration, content/source correction
+and historical-manual deletion. F2.6d owns derived Work/reread reads and the
+final exit evidence. InternalLoan,
 ExternalLoan lifecycle, goals/statistics/Timeline/Home, ratings/notes,
 REST/Abilities/UI and any private audit engine remain outside these criteria.

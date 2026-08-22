@@ -627,8 +627,8 @@ Unknown date parts are not filled with an artificial default.
 
 An ended round may be corrected for an incorrectly recorded completed/stopped
 outcome or content reading period. This is the same ReadingRound, not a new
-round. User, Work, original source and normal-vs-historical provenance remain
-unchanged; hard delete is not the standard correction route.
+round. User, Work and normal-vs-historical provenance remain unchanged; this
+correction does not implicitly change the source.
 
 ## Personal Work status
 
@@ -653,7 +653,9 @@ If Item A has an active round and Item B of the same Work does not:
 
 Loss of direct access, end of membership, return or archiving never automatically ends someone else's private active ReadingRound.
 
-The round remains linked to the original source and may indicate that the source is no longer available.
+The round remains linked to the recorded source and may indicate that the
+source is no longer available, unless the user explicitly corrects an
+incorrectly recorded source under the rules below.
 
 Only the user ends their private ReadingRound.
 
@@ -666,6 +668,26 @@ Known date precision is preserved.
 When its physical source is genuinely unknown, the historical round is stored
 without a source and is explicitly distinguishable from a round that followed
 the normal source-backed start/end lifecycle. No pseudo source is created.
+
+## Source correction and erroneous historical registration
+
+The owner may explicitly correct the source of an active or ended round. A new
+concrete Item or ExternalLoan must be valid and accessible under its applicable
+source rules and represent the same Work. Item→Item and Item↔ExternalLoan are
+therefore allowed only within that Work. A source-free historical round may
+later receive such a source. A recorded concrete source may become unknown
+only through an explicit correction when that source was wrong and the right
+source is no longer known.
+
+Source correction never changes Work or creates another ReadingRound. Other
+corrections never change source implicitly. A wrong Work is not a source
+correction.
+
+A completely erroneous manually registered historical round may be deleted.
+A round that actually followed Biblio's normal start→end lifecycle is not hard
+deleted and is corrected instead. If a manual historical round has the wrong
+Work, it is deleted and a new historical round is registered for the right
+Work; Work is never replaced on the existing round.
 
 ## Reread classification
 
