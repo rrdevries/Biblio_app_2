@@ -675,3 +675,42 @@ and derived-read behavior needed by the binding implementation request. The
 formal evidence is recorded in `docs/09-f2-6b-exit-evidence.md`. InternalLoan,
 ExternalLoan lifecycle, goals/statistics/Timeline/Home, ratings/notes,
 REST/Abilities/UI and any private audit engine remain outside these criteria.
+
+## 33. F2.7 Private Notes acceptance evidence
+
+F2.7a fixed the binding O1–O3 contracts. F2.7b and its regression suite prove:
+
+- Note ID, owner, Work and creation time remain immutable; Note IDs are opaque,
+  server-issued persistent identifiers with bounded collision retry;
+- the exact safe HTML allowlist roundtrips, while invalid UTF-8, NUL, empty,
+  oversized, malformed, attributed, linked, styled, scripted, embedded,
+  image and unknown markup fail without silent stripping;
+- the render boundary revalidates stored content before returning HTML;
+- create-for-Work supports unlinked and multiple Notes; create-for-Round
+  derives Work from an owned locked Round and supports multiple Notes per Round;
+- active, ended and historical same-owner/same-Work Round contexts work;
+  foreign and same-owner/cross-Work contexts fail without mutation;
+- content correction and Round attach/change/remove preserve identity and Work,
+  implement semantic/stale no-op and increment version once per real mutation;
+- single reads, Work listings, Round listings and Mijn-notities listings always
+  include the authenticated owner predicate and use bounded stable pagination;
+- another user, including one with unrelated Library/platform authority,
+  cannot enumerate, read, project, change, relink or delete a Note;
+- conditional hard delete requires owner plus current version and removes only
+  the Note, never Work, Round or other reading truth;
+- legitimate F2.6 historical Round delete preserves its Notes and nulls only
+  `reading_round_id`; a denied Round delete leaves Note context unchanged;
+- independent-process races prove one winner/one stale for divergent updates,
+  one version increment for equal updates and consistent update-versus-delete;
+- schema 1004 fresh install, real 1003→1004 upgrade, DDL-before-version retry,
+  unknown partial-table failure, health drift, FKs, checks and indexes run on
+  real MariaDB and preserve pre-existing data;
+- no Note mutation writes Library ActivityEvent, no Timeline/private-event
+  engine or global full-text Note search is introduced;
+- production composition exposes named Note services/rendering only, never the
+  repository, ID generator, sanitizer/policy or unrestricted writer;
+- the canonical full gate keeps all F2.3, F2.5, F2.6, Library isolation,
+  migration, concurrency and WordPress-smoke regressions green.
+
+The formal implementation and verification record is
+`docs/11-f2-7b-exit-evidence.md`.

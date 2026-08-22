@@ -691,3 +691,30 @@ Personal Work-read-status and first-read/reread are calculated from owned
 ReadingRounds. Date intervals determine only provable chronology; overlap is
 `chronology_indeterminate`. Presentation tie-breaks remain deterministic but
 have no historical meaning.
+
+## 19. F2.7 Private Notes
+
+PrivateNote is a user-owned Core aggregate with server-generated identity,
+immutable owner and Work, optional ReadingRound context, safe HTML content,
+technical UTC timestamps and optimistic version. It has no Library Context,
+visibility, publication, Timeline, audit, soft-delete or tombstone state.
+
+Application composition exposes only named owner-scoped create, content-
+update, context-correction/removal, conditional hard-delete and read/list
+services. Creation for a ReadingRound derives Work from a locked owned Round;
+context correction locks and validates the target Round. Both application and
+persistence verify same-owner/same-Work context, and create never accepts a
+caller-supplied Note ID or actor.
+
+`StrictPrivateNoteContentPolicy` accepts exactly `p`, `br`, `strong`, `em`,
+`ul`, `ol`, `li` and `blockquote`, with no attributes, after UTF-8/newline/
+byte-bound validation. Disallowed markup is a validation failure. The render
+service re-applies the same policy before returning HTML, so stored content is
+never treated as an unchecked executable payload.
+
+Migration 1003→1004 adds one InnoDB Core table. Work uses `ON DELETE RESTRICT`;
+the nullable ReadingRound FK uses `ON DELETE SET NULL`. Explicit Note
+mutations run inside one locked-read/CAS transaction. Referential Round unlink
+is not a Note edit and deliberately leaves Note version and timestamps intact.
+Stable owner predicates and `updated_at DESC, private_note_id DESC` cursor
+pagination protect every individual and projected read.

@@ -726,3 +726,37 @@ columns, generated active-source keys, indexes, foreign keys and checks.
 
 The complete implementation and verification record is maintained in
 `docs/09-f2-6b-exit-evidence.md`.
+
+### F2.7 — Private Notes / Mijn notities
+
+Status: **Implemented — GO**
+
+Private Notes are user-owned, always private and linked to one immutable Work.
+They may have zero or one correctable ReadingRound context; every linked Round
+must be owned by the same user and concern the same Work. Active, ended and
+historical Rounds are all eligible, multiple Notes may share a Work or Round,
+and Library or platform roles never grant access.
+
+Content uses the fixed safe HTML subset `p`, `br`, `strong`, `em`, `ul`, `ol`,
+`li` and `blockquote`, without attributes. Core normalizes and validates this
+contract server-side and repeats the same validation at the render boundary.
+Links, media, embeds, scripts, styles, classes, arbitrary HTML and complex
+blocks are rejected rather than silently retained or stripped.
+
+Named create, content-update, context-correction/removal, conditional hard-
+delete and owner-scoped read/list services use server-derived actor identity.
+Real updates increment a positive optimistic version exactly once; semantic
+no-ops return current state and divergent stale intent returns current safe
+state through a typed conflict. Opaque Note IDs are issued server-side with
+three bounded collision retries after the first attempt.
+
+Schema 1004 adds `wp_biblio_private_notes` through migration 1003→1004 with
+real Work and optional ReadingRound foreign keys, three bounded query indexes,
+technical UTC timestamps and CAS version. Work deletion is restricted.
+Legitimate F2.6 hard deletion of linked `historical_manual` ReadingRound truth
+preserves the Note and nulls only its context through `ON DELETE SET NULL`,
+without changing Note content, Work, timestamps or version.
+
+Private Note mutations write no Library ActivityEvent and Notes are not added
+to Timeline. The complete implementation and verification record is maintained
+in `docs/11-f2-7b-exit-evidence.md`.
