@@ -14,6 +14,14 @@ use Biblio\Core\Application\Catalog\Classification\SaveLibraryCatalogContextServ
 use Biblio\Core\Application\CoreApplication;
 use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
 use Biblio\Core\Application\Library\GetAccessibleLibraryItemService;
+use Biblio\Core\Application\Notes\CorrectPrivateNoteReadingRoundService;
+use Biblio\Core\Application\Notes\CreatePrivateNoteService;
+use Biblio\Core\Application\Notes\DeletePrivateNoteService;
+use Biblio\Core\Application\Notes\GetPrivateNoteService;
+use Biblio\Core\Application\Notes\ListMyPrivateNotesService;
+use Biblio\Core\Application\Notes\ListPrivateNotesForReadingRoundService;
+use Biblio\Core\Application\Notes\ListPrivateNotesForWorkService;
+use Biblio\Core\Application\Notes\UpdatePrivateNoteContentService;
 use Biblio\Core\Application\Reading\GetOwnedReadingRoundService;
 use Biblio\Core\Application\Reading\CreateActiveReadingRoundService;
 use Biblio\Core\Application\Reading\StartReadingFromExternalLoanService;
@@ -44,6 +52,15 @@ final class ProductionApplicationBoundaryTest extends TestCase
             [GetOwnedReadingRoundService::class, "get"],
             [StartReadingFromLibraryItemService::class, "start"],
             [StartReadingFromExternalLoanService::class, "start"],
+            [CreatePrivateNoteService::class, "createForWork"],
+            [CreatePrivateNoteService::class, "createForReadingRound"],
+            [UpdatePrivateNoteContentService::class, "update"],
+            [CorrectPrivateNoteReadingRoundService::class, "correct"],
+            [DeletePrivateNoteService::class, "delete"],
+            [GetPrivateNoteService::class, "get"],
+            [ListPrivateNotesForWorkService::class, "list"],
+            [ListPrivateNotesForReadingRoundService::class, "list"],
+            [ListMyPrivateNotesService::class, "list"],
             [
                 CreateLibraryCatalogContextService::class,
                 "createForRepresentedWork",
@@ -102,10 +119,19 @@ final class ProductionApplicationBoundaryTest extends TestCase
             "historicalReadingRounds",
             "libraryItemCreation",
             "libraryItemReading",
+            "myPrivateNotes",
             "ownedExternalLoans",
             "ownedReadingRounds",
             "personalLibraries",
             "personalWorkReadingStatus",
+            "privateNoteContentUpdate",
+            "privateNoteContextCorrection",
+            "privateNoteCreation",
+            "privateNoteDeletion",
+            "privateNoteRendering",
+            "privateNotes",
+            "privateNotesForReadingRound",
+            "privateNotesForWork",
             "readingRoundSourceCorrection",
             "readingSequence",
             "stopReadingRound",

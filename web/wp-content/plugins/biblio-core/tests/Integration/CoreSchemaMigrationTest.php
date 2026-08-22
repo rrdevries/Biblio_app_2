@@ -143,11 +143,11 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
             $migrator->expectedVersion()
         );
         self::assertTrue(
-            $migrator->healthForVersion(1003)->isHealthy(),
-            $migrator->healthForVersion(1003)->summary()
+            $migrator->healthForVersion(1004)->isHealthy(),
+            $migrator->healthForVersion(1004)->summary()
         );
         self::assertSame(8, $this->existingCoreTableCount());
-        self::assertSame(15, $this->existingCurrentTableCount());
+        self::assertSame(16, $this->existingCurrentTableCount());
         self::assertSame($expectedBaseline, $this->baselineSchemaSnapshot());
         self::assertSame(
             "STORED GENERATED",
@@ -186,10 +186,10 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
         try {
             $migrator->migrate();
 
-            self::assertSame(1004, $migrator->installedVersion());
-            self::assertSame(1004, $migrator->expectedVersion());
-            self::assertTrue($migrator->healthForVersion(1003)->isHealthy());
-            self::assertSame(15, $this->existingCurrentTableCount());
+            self::assertSame(1005, $migrator->installedVersion());
+            self::assertSame(1005, $migrator->expectedVersion());
+            self::assertTrue($migrator->healthForVersion(1004)->isHealthy());
+            self::assertSame(16, $this->existingCurrentTableCount());
             self::assertSame(1, $this->indexCount(
                 $this->tableNames->works(),
                 RetryableProbeMigration::INDEX_NAME
@@ -211,7 +211,7 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
             "No explicit Biblio Core schema-health contract exists"
         );
 
-        $this->migrator()->healthForVersion(1004);
+        $this->migrator()->healthForVersion(1005);
     }
 
     public function testHealthyCurrentRunIsSchemaAndDataNoOp(): void
@@ -303,7 +303,7 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
 
     public function testCurrentVersionWithMissingTableFailsClosed(): void
     {
-        $table = $this->tableNames->readingRounds();
+        $table = $this->tableNames->privateNotes();
         $createSql = $this->showCreateTable($table);
         $this->database->query("DROP TABLE `{$table}`");
 
@@ -577,7 +577,7 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
     {
         $snapshot = [];
 
-        foreach ($this->tableNames->schema1001() as $tableName) {
+        foreach ($this->tableNames->schema1004() as $tableName) {
             $snapshot[$tableName] = $this->showCreateTable($tableName);
         }
 
@@ -589,7 +589,7 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
     {
         $snapshot = [];
 
-        foreach ($this->tableNames->schema1001() as $tableName) {
+        foreach ($this->tableNames->schema1004() as $tableName) {
             $snapshot[$tableName] = $this->database->get_results(
                 "SELECT * FROM `{$tableName}`",
                 ARRAY_A
@@ -601,7 +601,7 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
 
     private function dropCoreSchema(): void
     {
-        foreach (array_reverse($this->tableNames->schema1001()) as $tableName) {
+        foreach (array_reverse($this->tableNames->schema1004()) as $tableName) {
             $this->database->query("DROP TABLE IF EXISTS `{$tableName}`");
         }
 
@@ -624,7 +624,7 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
     {
         $count = 0;
 
-        foreach ($this->tableNames->schema1001() as $tableName) {
+        foreach ($this->tableNames->schema1004() as $tableName) {
             $count += $this->tableExists($tableName) ? 1 : 0;
         }
 

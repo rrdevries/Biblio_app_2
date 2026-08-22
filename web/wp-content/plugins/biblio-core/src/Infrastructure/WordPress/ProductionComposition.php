@@ -20,6 +20,16 @@ use Biblio\Core\Application\Library\CreateLibraryService;
 use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
 use Biblio\Core\Application\Library\GetAccessibleLibraryItemService;
 use Biblio\Core\Application\Library\LibraryAccessService;
+use Biblio\Core\Application\Notes\CorrectPrivateNoteReadingRoundService;
+use Biblio\Core\Application\Notes\CreatePrivateNoteService;
+use Biblio\Core\Application\Notes\DeletePrivateNoteService;
+use Biblio\Core\Application\Notes\GetPrivateNoteService;
+use Biblio\Core\Application\Notes\ListMyPrivateNotesService;
+use Biblio\Core\Application\Notes\ListPrivateNotesForReadingRoundService;
+use Biblio\Core\Application\Notes\ListPrivateNotesForWorkService;
+use Biblio\Core\Application\Notes\PrivateNoteCreation;
+use Biblio\Core\Application\Notes\RenderPrivateNoteContentService;
+use Biblio\Core\Application\Notes\UpdatePrivateNoteContentService;
 use Biblio\Core\Application\Reading\CreateActiveReadingRoundService;
 use Biblio\Core\Application\Reading\CorrectEndedReadingRoundService;
 use Biblio\Core\Application\Reading\CorrectReadingRoundSourceService;
@@ -52,6 +62,7 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbItemRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMembershipRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPersonalLibraryRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPrivateNoteRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbReadingRoundRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionConnection;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionManager;
@@ -62,6 +73,7 @@ use Biblio\Core\Infrastructure\WordPress\Lifecycle\CoreLifecycleCoordinator;
 use Biblio\Core\Infrastructure\WordPress\Lifecycle\LifecycleStateStore;
 use Biblio\Core\Infrastructure\WordPress\Lifecycle\WpTransientLifecycleStateStore;
 use Biblio\Core\Infrastructure\WordPress\Identity\WordPressAuthenticatedUser;
+use Biblio\Core\Notes\StrictPrivateNoteContentPolicy;
 use wpdb;
 
 final class ProductionComposition
@@ -309,6 +321,65 @@ final class ProductionComposition
             $authenticatedUser,
             $readingRoundRepository
         );
+        $privateNoteContentPolicy = new StrictPrivateNoteContentPolicy();
+        $privateNoteRepository = new WpdbPrivateNoteRepository(
+            $database,
+            $tableNames,
+            $privateNoteContentPolicy
+        );
+        $privateNoteClock = new SystemPrivateNoteClock();
+        $privateNoteCreation = new PrivateNoteCreation(
+            new OpaquePrivateNoteIdGenerator(),
+            $privateNoteRepository
+        );
+        $privateNoteCreate = new CreatePrivateNoteService(
+            $authenticatedUser,
+            $workRepository,
+            $readingRoundRepository,
+            $privateNoteContentPolicy,
+            $privateNoteCreation,
+            $privateNoteClock,
+            $transactionManager
+        );
+        $privateNoteContentUpdate = new UpdatePrivateNoteContentService(
+            $authenticatedUser,
+            $privateNoteRepository,
+            $privateNoteContentPolicy,
+            $privateNoteClock,
+            $transactionManager
+        );
+        $privateNoteContextCorrection = new CorrectPrivateNoteReadingRoundService(
+            $authenticatedUser,
+            $privateNoteRepository,
+            $readingRoundRepository,
+            $privateNoteClock,
+            $transactionManager
+        );
+        $privateNoteDeletion = new DeletePrivateNoteService(
+            $authenticatedUser,
+            $privateNoteRepository,
+            $transactionManager
+        );
+        $privateNotes = new GetPrivateNoteService(
+            $authenticatedUser,
+            $privateNoteRepository
+        );
+        $privateNotesForWork = new ListPrivateNotesForWorkService(
+            $authenticatedUser,
+            $privateNoteRepository
+        );
+        $privateNotesForReadingRound = new ListPrivateNotesForReadingRoundService(
+            $authenticatedUser,
+            $privateNoteRepository,
+            $readingRoundRepository
+        );
+        $myPrivateNotes = new ListMyPrivateNotesService(
+            $authenticatedUser,
+            $privateNoteRepository
+        );
+        $privateNoteRendering = new RenderPrivateNoteContentService(
+            $privateNoteContentPolicy
+        );
 
         $this->application = new CoreApplication(
             $personalLibraries,
@@ -326,6 +397,15 @@ final class ProductionComposition
             $historicalReadingRoundDeletion,
             $personalWorkReadingStatus,
             $readingSequence,
+            $privateNoteCreate,
+            $privateNoteContentUpdate,
+            $privateNoteContextCorrection,
+            $privateNoteDeletion,
+            $privateNotes,
+            $privateNotesForWork,
+            $privateNotesForReadingRound,
+            $myPrivateNotes,
+            $privateNoteRendering,
             $catalogContextCreation,
             $catalogContextManagement,
             $bookTypeManagement,

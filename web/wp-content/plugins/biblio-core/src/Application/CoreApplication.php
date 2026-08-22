@@ -13,6 +13,15 @@ use Biblio\Core\Application\Catalog\Classification\ManageLibrarySubjectsService;
 use Biblio\Core\Application\Catalog\Classification\SaveLibraryCatalogContextService;
 use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
 use Biblio\Core\Application\Library\GetAccessibleLibraryItemService;
+use Biblio\Core\Application\Notes\CorrectPrivateNoteReadingRoundService;
+use Biblio\Core\Application\Notes\CreatePrivateNoteService;
+use Biblio\Core\Application\Notes\DeletePrivateNoteService;
+use Biblio\Core\Application\Notes\GetPrivateNoteService;
+use Biblio\Core\Application\Notes\ListMyPrivateNotesService;
+use Biblio\Core\Application\Notes\ListPrivateNotesForReadingRoundService;
+use Biblio\Core\Application\Notes\ListPrivateNotesForWorkService;
+use Biblio\Core\Application\Notes\RenderPrivateNoteContentService;
+use Biblio\Core\Application\Notes\UpdatePrivateNoteContentService;
 use Biblio\Core\Application\Reading\GetOwnedReadingRoundService;
 use Biblio\Core\Application\Reading\CorrectEndedReadingRoundService;
 use Biblio\Core\Application\Reading\CorrectReadingRoundSourceService;
@@ -49,6 +58,15 @@ final readonly class CoreApplication
         private DeleteHistoricalReadingRoundService $historicalReadingRoundDeletion,
         private GetPersonalWorkReadingStatusService $personalWorkReadingStatus,
         private GetReadingSequenceService $readingSequence,
+        private CreatePrivateNoteService $privateNoteCreation,
+        private UpdatePrivateNoteContentService $privateNoteContentUpdate,
+        private CorrectPrivateNoteReadingRoundService $privateNoteContextCorrection,
+        private DeletePrivateNoteService $privateNoteDeletion,
+        private GetPrivateNoteService $privateNotes,
+        private ListPrivateNotesForWorkService $privateNotesForWork,
+        private ListPrivateNotesForReadingRoundService $privateNotesForReadingRound,
+        private ListMyPrivateNotesService $myPrivateNotes,
+        private RenderPrivateNoteContentService $privateNoteRendering,
         private CreateLibraryCatalogContextService $catalogContextCreation,
         private SaveLibraryCatalogContextService $catalogContextManagement,
         private ManageLibraryBookTypesService $bookTypeManagement,
@@ -130,6 +148,51 @@ final readonly class CoreApplication
     public function readingSequence(): GetReadingSequenceService
     {
         return $this->readingSequence;
+    }
+
+    public function privateNoteCreation(): CreatePrivateNoteService
+    {
+        return $this->privateNoteCreation;
+    }
+
+    public function privateNoteContentUpdate(): UpdatePrivateNoteContentService
+    {
+        return $this->privateNoteContentUpdate;
+    }
+
+    public function privateNoteContextCorrection(): CorrectPrivateNoteReadingRoundService
+    {
+        return $this->privateNoteContextCorrection;
+    }
+
+    public function privateNoteDeletion(): DeletePrivateNoteService
+    {
+        return $this->privateNoteDeletion;
+    }
+
+    public function privateNotes(): GetPrivateNoteService
+    {
+        return $this->privateNotes;
+    }
+
+    public function privateNotesForWork(): ListPrivateNotesForWorkService
+    {
+        return $this->privateNotesForWork;
+    }
+
+    public function privateNotesForReadingRound(): ListPrivateNotesForReadingRoundService
+    {
+        return $this->privateNotesForReadingRound;
+    }
+
+    public function myPrivateNotes(): ListMyPrivateNotesService
+    {
+        return $this->myPrivateNotes;
+    }
+
+    public function privateNoteRendering(): RenderPrivateNoteContentService
+    {
+        return $this->privateNoteRendering;
     }
 
     public function catalogContextCreation(): CreateLibraryCatalogContextService
