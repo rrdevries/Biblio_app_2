@@ -34,9 +34,10 @@ final readonly class CoreSchemaHealthChecker
     public function inspectForVersion(int $expectedVersion): CoreSchemaHealth
     {
         $health = match ($expectedVersion) {
-            1000 => $this->inspectTables($this->tableNames->all(), true),
-            1001 => $this->inspectTables($this->tableNames->schema1001(), true),
-            1002 => $this->inspectTables($this->tableNames->schema1001(), true),
+            1000 => $this->inspectTables($this->tableNames->all(), true, 1000),
+            1001 => $this->inspectTables($this->tableNames->schema1001(), true, 1001),
+            1002 => $this->inspectTables($this->tableNames->schema1001(), true, 1002),
+            1003 => $this->inspectTables($this->tableNames->schema1001(), true, 1003),
             default => throw new CoreSchemaMigrationException(
                 "No explicit Biblio Core schema-health contract exists for "
                 . "schema version {$expectedVersion}."
@@ -85,14 +86,16 @@ final readonly class CoreSchemaHealthChecker
     {
         return $this->inspectTables(
             $this->tableNames->schema1001Additions(),
-            false
+            false,
+            1001
         );
     }
 
     /** @param list<string> $tableNames */
     private function inspectTables(
         array $tableNames,
-        bool $missingIsError
+        bool $missingIsError,
+        int $schemaVersion
     ): CoreSchemaHealth
     {
         $issues = [];
@@ -113,19 +116,23 @@ final readonly class CoreSchemaHealthChecker
                     . ($engine === "" ? "unknown" : $engine);
             }
 
-            $this->inspectColumns($tableName, $issues);
-            $this->inspectIndexes($tableName, $issues);
+            $this->inspectColumns($tableName, $issues, $schemaVersion);
+            $this->inspectIndexes($tableName, $issues, $schemaVersion);
             $this->inspectForeignKeys($tableName, $issues);
-            $this->inspectChecks($tableName, $issues);
+            $this->inspectChecks($tableName, $issues, $schemaVersion);
         }
 
         return new CoreSchemaHealth($issues);
     }
 
     /** @param list<string> $issues */
-    private function inspectColumns(string $tableName, array &$issues): void
+    private function inspectColumns(
+        string $tableName,
+        array &$issues,
+        int $schemaVersion
+    ): void
     {
-        $expectedColumns = $this->expectedColumns()[$tableName] ?? [];
+        $expectedColumns = $this->expectedColumns($schemaVersion)[$tableName] ?? [];
         $rows = $this->database->get_results($this->database->prepare(
             "SELECT COLUMN_NAME AS column_name, COLUMN_TYPE AS column_type, "
             . "IS_NULLABLE AS is_nullable, COLLATION_NAME AS collation_name, "
@@ -199,7 +206,11 @@ final readonly class CoreSchemaHealthChecker
     }
 
     /** @param list<string> $issues */
-    private function inspectIndexes(string $tableName, array &$issues): void
+    private function inspectIndexes(
+        string $tableName,
+        array &$issues,
+        int $schemaVersion
+    ): void
     {
         $rows = $this->database->get_results($this->database->prepare(
             "SELECT INDEX_NAME AS index_name, NON_UNIQUE AS non_unique, "
@@ -218,7 +229,7 @@ final readonly class CoreSchemaHealthChecker
             $actualIndexes[$name]["columns"][] = $row["column_name"];
         }
 
-        foreach (($this->expectedIndexes()[$tableName] ?? []) as $name => $expected) {
+        foreach (($this->expectedIndexes($schemaVersion)[$tableName] ?? []) as $name => $expected) {
             if (!isset($actualIndexes[$name])) {
                 $issues[] = "Table {$tableName} missing required index {$name}";
                 continue;
@@ -299,7 +310,11 @@ final readonly class CoreSchemaHealthChecker
     }
 
     /** @param list<string> $issues */
-    private function inspectChecks(string $tableName, array &$issues): void
+    private function inspectChecks(
+        string $tableName,
+        array &$issues,
+        int $schemaVersion
+    ): void
     {
         $rows = $this->database->get_col($this->database->prepare(
             "SELECT c.CHECK_CLAUSE FROM information_schema.CHECK_CONSTRAINTS c "
@@ -316,7 +331,7 @@ final readonly class CoreSchemaHealthChecker
             $rows
         );
 
-        foreach (($this->expectedChecks()[$tableName] ?? []) as $expected) {
+        foreach (($this->expectedChecks($schemaVersion)[$tableName] ?? []) as $expected) {
             $normalized = $this->normalizeExpression($expected);
 
             if (!in_array($normalized, $actualChecks, true)) {
@@ -328,7 +343,7 @@ final readonly class CoreSchemaHealthChecker
     }
 
     /** @return array<string, array<string, array<string, string>>> */
-    private function expectedColumns(): array
+    private function expectedColumns(int $schemaVersion): array
     {
         $id = [
             "type" => "varchar(191)",
@@ -387,24 +402,54 @@ final readonly class CoreSchemaHealthChecker
                 "borrowed_at" => ["type" => "datetime(6)", "nullable" => "NO"],
                 "due_at" => ["type" => "datetime(6)", "nullable" => "YES"],
             ],
-            $this->tableNames->readingRounds() => [
-                "reading_round_id" => $id,
-                "user_id" => $id,
-                "work_id" => $id,
-                "item_id" => $nullableId,
-                "external_loan_id" => $nullableId,
-                "round_status" => ["type" => "varchar(32)", "nullable" => "NO"],
-                "started_at" => ["type" => "datetime(6)", "nullable" => "NO"],
-                "active_item_user_id" => $generatedId + [
-                    "expression" => "CASE WHEN round_status = 'active' "
-                        . "AND item_id IS NOT NULL THEN user_id ELSE NULL END",
+            $this->tableNames->readingRounds() => $schemaVersion < 1003
+                ? [
+                    "reading_round_id" => $id,
+                    "user_id" => $id,
+                    "work_id" => $id,
+                    "item_id" => $nullableId,
+                    "external_loan_id" => $nullableId,
+                    "round_status" => ["type" => "varchar(32)", "nullable" => "NO"],
+                    "started_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                    "active_item_user_id" => $generatedId + [
+                        "expression" => "CASE WHEN round_status = 'active' "
+                            . "AND item_id IS NOT NULL THEN user_id ELSE NULL END",
+                    ],
+                    "active_external_loan_user_id" => $generatedId + [
+                        "expression" => "CASE WHEN round_status = 'active' "
+                            . "AND external_loan_id IS NOT NULL "
+                            . "THEN user_id ELSE NULL END",
+                    ],
+                ]
+                : [
+                    "reading_round_id" => $id,
+                    "user_id" => $id,
+                    "work_id" => $id,
+                    "item_id" => $nullableId,
+                    "external_loan_id" => $nullableId,
+                    "started_at" => ["type" => "datetime(6)", "nullable" => "YES"],
+                    "round_outcome" => ["type" => "varchar(16)", "nullable" => "YES"],
+                    "provenance" => ["type" => "varchar(32)", "nullable" => "NO"],
+                    "reading_started_year" => ["type" => "smallint(5) unsigned", "nullable" => "YES"],
+                    "reading_started_month" => ["type" => "tinyint(3) unsigned", "nullable" => "YES"],
+                    "reading_started_day" => ["type" => "tinyint(3) unsigned", "nullable" => "YES"],
+                    "reading_finished_year" => ["type" => "smallint(5) unsigned", "nullable" => "YES"],
+                    "reading_finished_month" => ["type" => "tinyint(3) unsigned", "nullable" => "YES"],
+                    "reading_finished_day" => ["type" => "tinyint(3) unsigned", "nullable" => "YES"],
+                    "created_at" => ["type" => "datetime(6)", "nullable" => "YES"],
+                    "updated_at" => ["type" => "datetime(6)", "nullable" => "YES"],
+                    "ended_at" => ["type" => "datetime(6)", "nullable" => "YES"],
+                    "round_version" => ["type" => "bigint(20) unsigned", "nullable" => "NO"],
+                    "active_item_user_id" => $generatedId + [
+                        "expression" => "CASE WHEN round_outcome IS NULL "
+                            . "AND item_id IS NOT NULL THEN user_id ELSE NULL END",
+                    ],
+                    "active_external_loan_user_id" => $generatedId + [
+                        "expression" => "CASE WHEN round_outcome IS NULL "
+                            . "AND external_loan_id IS NOT NULL "
+                            . "THEN user_id ELSE NULL END",
+                    ],
                 ],
-                "active_external_loan_user_id" => $generatedId + [
-                    "expression" => "CASE WHEN round_status = 'active' "
-                        . "AND external_loan_id IS NOT NULL "
-                        . "THEN user_id ELSE NULL END",
-                ],
-            ],
             $this->tableNames->libraryBookTypes() => [
                 "library_id" => $id,
                 "book_type_id" => $id,
@@ -489,7 +534,7 @@ final readonly class CoreSchemaHealthChecker
     }
 
     /** @return array<string, array<string, array{unique: bool, columns: list<string>}>> */
-    private function expectedIndexes(): array
+    private function expectedIndexes(int $schemaVersion): array
     {
         return [
             $this->tableNames->libraries() => [
@@ -532,7 +577,20 @@ final readonly class CoreSchemaHealthChecker
                     "unique" => true,
                     "columns" => ["active_external_loan_user_id", "external_loan_id"],
                 ],
-            ],
+            ] + ($schemaVersion < 1003 ? [] : [
+                "reading_rounds_by_user_work_finish" => [
+                    "unique" => false,
+                    "columns" => [
+                        "user_id",
+                        "work_id",
+                        "round_outcome",
+                        "reading_finished_year",
+                        "reading_finished_month",
+                        "reading_finished_day",
+                        "reading_round_id",
+                    ],
+                ],
+            ]),
             $this->tableNames->libraryBookTypes() => [
                 "PRIMARY" => [
                     "unique" => true,
@@ -738,7 +796,7 @@ final readonly class CoreSchemaHealthChecker
     }
 
     /** @return array<string, list<string>> */
-    private function expectedChecks(): array
+    private function expectedChecks(int $schemaVersion): array
     {
         return [
             $this->tableNames->libraries() => [
@@ -762,11 +820,13 @@ final readonly class CoreSchemaHealthChecker
                 "CHAR_LENGTH(TRIM(user_id)) > 0",
                 "loan_status = 'active'",
             ],
-            $this->tableNames->readingRounds() => [
-                "round_status = 'active'",
-                "item_id IS NOT NULL AND external_loan_id IS NULL OR "
-                    . "item_id IS NULL AND external_loan_id IS NOT NULL",
-            ],
+            $this->tableNames->readingRounds() => $schemaVersion < 1003
+                ? [
+                    "round_status = 'active'",
+                    "item_id IS NOT NULL AND external_loan_id IS NULL OR "
+                        . "item_id IS NULL AND external_loan_id IS NOT NULL",
+                ]
+                : self::readingRound1003Checks(),
             $this->tableNames->libraryBookTypes() => [
                 "CHAR_LENGTH(TRIM(display_name)) > 0",
                 "CHAR_LENGTH(TRIM(normalized_name)) > 0",
@@ -792,6 +852,50 @@ final readonly class CoreSchemaHealthChecker
                 "JSON_VALID(related_entities_json)",
                 "JSON_VALID(changes_json)",
             ],
+        ];
+    }
+
+    /** @return list<string> */
+    private static function readingRound1003Checks(): array
+    {
+        return [
+            "round_outcome IS NULL OR round_outcome IN ('completed', 'stopped')",
+            "provenance IN ('legacy_source_started', 'source_started', "
+                . "'historical_manual')",
+            "item_id IS NULL OR external_loan_id IS NULL",
+            "provenance = 'legacy_source_started' AND started_at IS NOT NULL "
+                . "AND reading_started_year IS NULL AND reading_started_month IS NULL "
+                . "AND reading_started_day IS NULL OR provenance = 'source_started' "
+                . "AND started_at IS NULL AND reading_started_year IS NOT NULL "
+                . "AND reading_started_month IS NOT NULL AND reading_started_day IS NOT NULL "
+                . "OR provenance = 'historical_manual' AND started_at IS NULL "
+                . "AND round_outcome IS NOT NULL",
+            "round_outcome IS NULL AND reading_finished_year IS NULL "
+                . "AND reading_finished_month IS NULL AND reading_finished_day IS NULL "
+                . "OR round_outcome IS NOT NULL AND reading_finished_year IS NOT NULL",
+            "(reading_started_year IS NULL AND reading_started_month IS NULL "
+                . "AND reading_started_day IS NULL OR reading_started_year BETWEEN 1000 AND 9999 "
+                . "AND (reading_started_month IS NULL AND reading_started_day IS NULL "
+                . "OR reading_started_month BETWEEN 1 AND 12 "
+                . "AND (reading_started_day IS NULL OR reading_started_day BETWEEN 1 AND "
+                . "DAYOFMONTH(LAST_DAY(CONCAT(reading_started_year, '-', reading_started_month, '-01')))))) "
+                . "AND (reading_finished_year IS NULL AND reading_finished_month IS NULL "
+                . "AND reading_finished_day IS NULL OR reading_finished_year BETWEEN 1000 AND 9999 "
+                . "AND (reading_finished_month IS NULL AND reading_finished_day IS NULL "
+                . "OR reading_finished_month BETWEEN 1 AND 12 "
+                . "AND (reading_finished_day IS NULL OR reading_finished_day BETWEEN 1 AND "
+                . "DAYOFMONTH(LAST_DAY(CONCAT(reading_finished_year, '-', reading_finished_month, '-01'))))))",
+            "reading_started_year IS NULL OR reading_started_year * 10000 "
+                . "+ COALESCE(reading_started_month, 1) * 100 "
+                . "+ COALESCE(reading_started_day, 1) <= reading_finished_year * 10000 "
+                . "+ COALESCE(reading_finished_month, 12) * 100 "
+                . "+ COALESCE(reading_finished_day, DAYOFMONTH(LAST_DAY(CONCAT(reading_finished_year, '-', "
+                . "COALESCE(reading_finished_month, 12), '-01'))))",
+            "(round_outcome IS NULL AND ended_at IS NULL OR round_outcome IS NOT NULL "
+                . "AND ended_at IS NOT NULL) AND (provenance = 'legacy_source_started' "
+                . "OR created_at IS NOT NULL AND updated_at IS NOT NULL) "
+                . "AND (created_at IS NULL OR updated_at IS NULL OR updated_at >= created_at)",
+            "round_version >= 1",
         ];
     }
 

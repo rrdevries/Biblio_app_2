@@ -32,13 +32,18 @@ use Biblio\Core\Library\ManagementRole;
 use Biblio\Core\Library\MembershipStatus;
 use Biblio\Core\Library\UseAccess;
 use Biblio\Core\Reading\ReadingRound;
+use Biblio\Core\Reading\ReadingDate;
 use Biblio\Core\Reading\ReadingRoundId;
+use Biblio\Core\Reading\ReadingRoundLifecycle;
 use Biblio\Core\Reading\ReadingRoundRepository;
+use Biblio\Core\Reading\ReadingRoundVersion;
 use Biblio\Core\Reading\ReadingSource;
 use Biblio\Core\Reading\ReadingSourceUnavailable;
 use Biblio\Core\Reading\WritableReadingRoundRepository;
 use Biblio\Core\Tests\Support\ControllableAuthenticatedUser;
 use DateTimeImmutable;
+use Biblio\Core\Infrastructure\WordPress\OpaqueReadingRoundIdGenerator;
+use Biblio\Core\Infrastructure\WordPress\SystemReadingRoundClock;
 use PHPUnit\Framework\TestCase;
 
 final class ReadingInMemoryItemRepository implements ItemRepository
@@ -163,6 +168,44 @@ final class ReadingInMemoryRoundRepository implements
 
         return null;
     }
+
+    public function findForUserForUpdate(
+        ReadingRoundId $readingRoundId,
+        UserId $userId
+    ): ?ReadingRound {
+        return $this->findForUser($readingRoundId, $userId);
+    }
+
+    public function findAllForUserAndWork(
+        UserId $userId,
+        WorkId $workId
+    ): array {
+        return array_values(array_filter(
+            $this->rounds,
+            static fn (ReadingRound $round): bool =>
+                $userId->equals($round->userId())
+                && $workId->equals($round->workId())
+        ));
+    }
+
+    public function replaceIfVersionMatches(
+        UserId $authenticatedUserId,
+        ReadingRound $replacement,
+        ReadingRoundVersion $expectedVersion,
+        ReadingRoundLifecycle $expectedLifecycle
+    ): bool {
+        $this->rounds[$replacement->id()->value()] = $replacement;
+        return true;
+    }
+
+    public function deleteHistoricalIfVersionMatches(
+        UserId $authenticatedUserId,
+        ReadingRoundId $readingRoundId,
+        ReadingRoundVersion $expectedVersion
+    ): bool {
+        unset($this->rounds[$readingRoundId->value()]);
+        return true;
+    }
 }
 
 final class StartReadingServicesTest extends TestCase
@@ -191,7 +234,7 @@ final class StartReadingServicesTest extends TestCase
         $round = $service->start(
             $library,
             $item->id(),
-            new DateTimeImmutable(self::STARTED_AT)
+            ReadingDate::exact(2026, 8, 16)
         );
 
         self::assertSame("work-from-item", $round->workId()->value());
@@ -221,7 +264,7 @@ final class StartReadingServicesTest extends TestCase
                 $service->start(
                     $contextLibrary,
                     $item->id(),
-                    new DateTimeImmutable(self::STARTED_AT)
+                    ReadingDate::exact(2026, 8, 16)
                 );
                 self::fail("Unavailable Item source was accepted.");
             } catch (ReadingSourceUnavailable) {
@@ -252,7 +295,7 @@ final class StartReadingServicesTest extends TestCase
             $service->start(
                 $library,
                 $item->id(),
-                new DateTimeImmutable(self::STARTED_AT)
+                ReadingDate::exact(2026, 8, 16)
             );
             self::fail("Item without Edition was accepted.");
         } catch (ReadingSourceUnavailable) {
@@ -266,7 +309,9 @@ final class StartReadingServicesTest extends TestCase
         $rounds = new ReadingInMemoryRoundRepository();
         $service = new CreateActiveReadingRoundService(
             new ControllableAuthenticatedUser($user),
-            $rounds
+            $rounds,
+            new OpaqueReadingRoundIdGenerator(),
+            new SystemReadingRoundClock()
         );
         $item = Item::active(
             new ItemId("item-a"),
@@ -282,7 +327,7 @@ final class StartReadingServicesTest extends TestCase
             $service->createFromLibraryItem(
                 $item,
                 $wrongEdition,
-                new DateTimeImmutable(self::STARTED_AT)
+                ReadingDate::exact(2026, 8, 16)
             );
             self::fail("Mismatched Item and Edition were accepted.");
         } catch (ReadingSourceUnavailable) {
@@ -299,7 +344,7 @@ final class StartReadingServicesTest extends TestCase
 
         $round = $service->start(
             $loan->id(),
-            new DateTimeImmutable(self::STARTED_AT)
+            ReadingDate::exact(2026, 8, 16)
         );
 
         self::assertSame("work-from-loan", $round->workId()->value());
@@ -324,7 +369,7 @@ final class StartReadingServicesTest extends TestCase
         try {
             $service->start(
                 $active->id(),
-                new DateTimeImmutable(self::STARTED_AT)
+                ReadingDate::exact(2026, 8, 16)
             );
             self::fail("Foreign loan was accepted.");
         } catch (ReadingSourceUnavailable) {
@@ -336,7 +381,7 @@ final class StartReadingServicesTest extends TestCase
         try {
             $service->start(
                 new ExternalLoanId("unknown-loan"),
-                new DateTimeImmutable(self::STARTED_AT)
+                ReadingDate::exact(2026, 8, 16)
             );
             self::fail("Unknown loan was accepted.");
         } catch (ReadingSourceUnavailable) {
@@ -350,13 +395,15 @@ final class StartReadingServicesTest extends TestCase
         $rounds = new ReadingInMemoryRoundRepository();
         $service = new CreateActiveReadingRoundService(
             new ControllableAuthenticatedUser(new UserId("user-y")),
-            $rounds
+            $rounds,
+            new OpaqueReadingRoundIdGenerator(),
+            new SystemReadingRoundClock()
         );
 
         try {
             $service->createFromExternalLoan(
                 $this->loan($owner),
-                new DateTimeImmutable(self::STARTED_AT)
+                ReadingDate::exact(2026, 8, 16)
             );
             self::fail("Foreign External Loan was accepted by creator.");
         } catch (ReadingSourceUnavailable) {
@@ -371,6 +418,7 @@ final class StartReadingServicesTest extends TestCase
             new UserId("user-x"),
             new WorkId("work-w"),
             ReadingSource::libraryItem(new ItemId("item-a")),
+            ReadingDate::exact(2026, 8, 16),
             new DateTimeImmutable(self::STARTED_AT)
         );
         $faultyRepository = new class($round) implements ReadingRoundRepository {
@@ -390,6 +438,20 @@ final class StartReadingServicesTest extends TestCase
                 ReadingSource $source
             ): ?ReadingRound {
                 return $this->round;
+            }
+
+            public function findForUserForUpdate(
+                ReadingRoundId $readingRoundId,
+                UserId $userId
+            ): ?ReadingRound {
+                return $this->round;
+            }
+
+            public function findAllForUserAndWork(
+                UserId $userId,
+                WorkId $workId
+            ): array {
+                return [$this->round];
             }
         };
 
@@ -419,7 +481,12 @@ final class StartReadingServicesTest extends TestCase
             new StartReadingFromLibraryItemService(
                 $access,
                 $editions,
-                new CreateActiveReadingRoundService($actor, $rounds)
+                new CreateActiveReadingRoundService(
+                    $actor,
+                    $rounds,
+                    new OpaqueReadingRoundIdGenerator(),
+                    new SystemReadingRoundClock()
+                )
             ),
             $rounds,
             $items,
@@ -437,7 +504,12 @@ final class StartReadingServicesTest extends TestCase
         return [
             new StartReadingFromExternalLoanService(
                 new GetOwnedExternalLoanService($actor, $loans),
-                new CreateActiveReadingRoundService($actor, $rounds)
+                new CreateActiveReadingRoundService(
+                    $actor,
+                    $rounds,
+                    new OpaqueReadingRoundIdGenerator(),
+                    new SystemReadingRoundClock()
+                )
             ),
             $rounds,
             $loans,

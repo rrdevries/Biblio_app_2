@@ -25,6 +25,13 @@ final readonly class ReadingSource
         return new self(null, $externalLoanId);
     }
 
+    public static function same(?self $left, ?self $right): bool
+    {
+        return $left === null
+            ? $right === null
+            : $right !== null && $left->equals($right);
+    }
+
     public function itemId(): ?ItemId
     {
         return $this->itemId;

@@ -10,8 +10,11 @@ use Biblio\Core\Catalog\Edition;
 use Biblio\Core\Catalog\Item;
 use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Identity\UserId;
+use Biblio\Core\Reading\ReadingDate;
 use Biblio\Core\Reading\ReadingRound;
+use Biblio\Core\Reading\ReadingRoundClock;
 use Biblio\Core\Reading\ReadingRoundId;
+use Biblio\Core\Reading\ReadingRoundIdGenerator;
 use Biblio\Core\Reading\ReadingSource;
 use Biblio\Core\Reading\ReadingSourceUnavailable;
 use Biblio\Core\Reading\WritableReadingRoundRepository;
@@ -19,16 +22,24 @@ use DateTimeImmutable;
 
 final readonly class CreateActiveReadingRoundService
 {
+    private ReadingRoundCreation $creation;
+
     public function __construct(
         private AuthenticatedUser $authenticatedUser,
-        private WritableReadingRoundRepository $readingRoundRepository
+        WritableReadingRoundRepository $readingRoundRepository,
+        ReadingRoundIdGenerator $ids,
+        private ReadingRoundClock $clock
     ) {
+        $this->creation = new ReadingRoundCreation(
+            $ids,
+            $readingRoundRepository
+        );
     }
 
     public function createFromLibraryItem(
         Item $item,
         Edition $edition,
-        DateTimeImmutable $startedAt
+        ReadingDate|DateTimeImmutable $startedOn
     ): ReadingRound {
         if (!$item->editionId()->equals($edition->id())) {
             throw new ReadingSourceUnavailable();
@@ -37,14 +48,14 @@ final readonly class CreateActiveReadingRoundService
         return $this->create(
             $edition->workId(),
             ReadingSource::libraryItem($item->id()),
-            $startedAt,
+            $this->normalizeDate($startedOn),
             $this->authenticatedUser->requireUserId()
         );
     }
 
     public function createFromExternalLoan(
         ExternalLoan $externalLoan,
-        DateTimeImmutable $startedAt
+        ReadingDate|DateTimeImmutable $startedOn
     ): ReadingRound {
         $authenticatedUserId = $this->authenticatedUser->requireUserId();
 
@@ -55,7 +66,7 @@ final readonly class CreateActiveReadingRoundService
         return $this->create(
             $externalLoan->workId(),
             ReadingSource::externalLoan($externalLoan->id()),
-            $startedAt,
+            $this->normalizeDate($startedOn),
             $authenticatedUserId
         );
     }
@@ -63,22 +74,31 @@ final readonly class CreateActiveReadingRoundService
     private function create(
         WorkId $sourceWorkId,
         ReadingSource $source,
-        DateTimeImmutable $startedAt,
+        ReadingDate $startedOn,
         UserId $authenticatedUserId
     ): ReadingRound {
-        $readingRound = ReadingRound::active(
-            new ReadingRoundId("reading-round-" . bin2hex(random_bytes(16))),
+        return $this->creation->create(
             $authenticatedUserId,
-            $sourceWorkId,
-            $source,
-            $startedAt
+            fn (ReadingRoundId $id): ReadingRound => ReadingRound::active(
+                $id,
+                $authenticatedUserId,
+                $sourceWorkId,
+                $source,
+                $startedOn,
+                $this->clock->now()
+            )
         );
+    }
 
-        $this->readingRoundRepository->addForUser(
-            $authenticatedUserId,
-            $readingRound
-        );
-
-        return $readingRound;
+    private function normalizeDate(
+        ReadingDate|DateTimeImmutable $date
+    ): ReadingDate {
+        return $date instanceof ReadingDate
+            ? $date
+            : ReadingDate::exact(
+                (int) $date->format("Y"),
+                (int) $date->format("n"),
+                (int) $date->format("j")
+            );
     }
 }

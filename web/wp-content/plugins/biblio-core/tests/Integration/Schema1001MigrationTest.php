@@ -25,6 +25,7 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMembershipReposi
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionManager;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbWorkRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrationException;
+use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaBaselineInstaller;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchema1001Migration;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrationRegistry;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrator;
@@ -38,15 +39,17 @@ final class Schema1001MigrationTest extends PersistenceIntegrationTestCase
 {
     public function testVersion1000DataAndManagerPermissionsMigrateWithoutLoss(): void
     {
+        $this->downgradeToVersion1000();
         $this->insertVersion1000Fixture();
         $baselineBefore = $this->baselineSchemaSnapshot();
-        $this->downgradeToVersion1000();
 
         try {
             $this->migrator()->migrate();
 
             self::assertSame(1001, $this->migrator()->installedVersion());
-            self::assertTrue($this->migrator()->health()->isHealthy());
+            self::assertTrue(
+                $this->migrator()->healthForVersion(1001)->isHealthy()
+            );
             self::assertSame($baselineBefore, $this->baselineSchemaSnapshot());
             self::assertSame("Migration Work", $this->database->get_var(
                 "SELECT work_title FROM `{$this->tableNames->works()}` "
@@ -169,6 +172,7 @@ final class Schema1001MigrationTest extends PersistenceIntegrationTestCase
 
     public function testMalformedPermissionPayloadFailsBeforeDdlAndVersionBump(): void
     {
+        $this->downgradeToVersion1000();
         $this->insertLibrary("permission-library");
         $this->insertMembership(
             "permission-library",
@@ -177,8 +181,6 @@ final class Schema1001MigrationTest extends PersistenceIntegrationTestCase
             "active",
             '{"not":"a-list"}'
         );
-        $this->downgradeToVersion1000();
-
         try {
             $this->migrator()->migrate();
             self::fail("Malformed permission data was silently repaired.");
@@ -208,25 +210,30 @@ final class Schema1001MigrationTest extends PersistenceIntegrationTestCase
     public function testEveryReachableCorrectPartialDdlStateIsRetryable(): void
     {
         $additions = $this->tableNames->schema1001Additions();
+        $this->downgradeToVersion1000();
 
-        for ($retained = 0; $retained <= count($additions); $retained++) {
-            $this->dropSchema1001Additions();
-            update_option(CoreSchemaMigrator::VERSION_OPTION, "1000", false);
-            $this->migrator()->migrate();
+        try {
+            for ($retained = 0; $retained <= count($additions); $retained++) {
+                $this->dropSchema1001Additions();
+                update_option(CoreSchemaMigrator::VERSION_OPTION, "1000", false);
+                $this->migrator()->migrate();
 
-            foreach (array_reverse(array_slice($additions, $retained)) as $table) {
-                $this->database->query("DROP TABLE `{$table}`");
+                foreach (array_reverse(array_slice($additions, $retained)) as $table) {
+                    $this->database->query("DROP TABLE `{$table}`");
+                }
+                update_option(CoreSchemaMigrator::VERSION_OPTION, "1000", false);
+
+                $this->migrator()->migrate();
+
+                self::assertSame(1001, $this->migrator()->installedVersion());
+                self::assertSame(7, $this->existingSchema1001AdditionCount());
+                self::assertTrue(
+                    $this->migrator()->healthForVersion(1001)->isHealthy(),
+                    "Retry failed with {$retained} retained schema-1001 tables."
+                );
             }
-            update_option(CoreSchemaMigrator::VERSION_OPTION, "1000", false);
-
-            $this->migrator()->migrate();
-
-            self::assertSame(1001, $this->migrator()->installedVersion());
-            self::assertSame(7, $this->existingSchema1001AdditionCount());
-            self::assertTrue(
-                $this->migrator()->health()->isHealthy(),
-                "Retry failed with {$retained} retained schema-1001 tables."
-            );
+        } finally {
+            $this->restoreCurrentSchema();
         }
     }
 
@@ -369,7 +376,14 @@ final class Schema1001MigrationTest extends PersistenceIntegrationTestCase
 
     private function downgradeToVersion1000(): void
     {
-        $this->dropSchema1001Additions();
+        foreach (array_reverse($this->tableNames->schema1001()) as $table) {
+            $this->database->query("DROP TABLE IF EXISTS `{$table}`");
+        }
+        delete_option(CoreSchemaMigrator::VERSION_OPTION);
+        (new CoreSchemaBaselineInstaller(
+            $this->database,
+            $this->tableNames
+        ))->install();
         update_option(CoreSchemaMigrator::VERSION_OPTION, "1000", false);
     }
 
@@ -385,7 +399,7 @@ final class Schema1001MigrationTest extends PersistenceIntegrationTestCase
 
     private function restoreCurrentSchema(): void
     {
-        if ($this->productionMigrator()->installedVersion() !== 1002) {
+        if ($this->productionMigrator()->installedVersion() !== 1003) {
             $this->productionMigrator()->migrate();
         }
     }

@@ -21,9 +21,19 @@ use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
 use Biblio\Core\Application\Library\GetAccessibleLibraryItemService;
 use Biblio\Core\Application\Library\LibraryAccessService;
 use Biblio\Core\Application\Reading\CreateActiveReadingRoundService;
+use Biblio\Core\Application\Reading\CorrectEndedReadingRoundService;
+use Biblio\Core\Application\Reading\CorrectReadingRoundSourceService;
+use Biblio\Core\Application\Reading\DeleteHistoricalReadingRoundService;
+use Biblio\Core\Application\Reading\FinishReadingRoundService;
 use Biblio\Core\Application\Reading\GetOwnedReadingRoundService;
+use Biblio\Core\Application\Reading\GetPersonalWorkReadingStatusService;
+use Biblio\Core\Application\Reading\GetReadingSequenceService;
+use Biblio\Core\Application\Reading\ReadingRoundCreation;
+use Biblio\Core\Application\Reading\ReadingRoundEnd;
+use Biblio\Core\Application\Reading\RegisterHistoricalReadingRoundService;
 use Biblio\Core\Application\Reading\StartReadingFromExternalLoanService;
 use Biblio\Core\Application\Reading\StartReadingFromLibraryItemService;
+use Biblio\Core\Application\Reading\StopReadingRoundService;
 use Biblio\Core\Authorization\LibraryAuthorizationPolicy;
 use Biblio\Core\Audit\ActivityEventSource;
 use Biblio\Core\Catalog\Classification\ClassificationNameNormalizer;
@@ -124,6 +134,12 @@ final class ProductionComposition
         $readingRoundRepository = new WpdbReadingRoundRepository(
             $database,
             $tableNames
+        );
+        $readingRoundIds = new OpaqueReadingRoundIdGenerator();
+        $readingRoundClock = new SystemReadingRoundClock();
+        $readingRoundCreation = new ReadingRoundCreation(
+            $readingRoundIds,
+            $readingRoundRepository
         );
         $seedEvolution = WpdbClassificationSeedEvolutionFactory::create(
             $database,
@@ -233,7 +249,9 @@ final class ProductionComposition
         );
         $createReadingRound = new CreateActiveReadingRoundService(
             $authenticatedUser,
-            $readingRoundRepository
+            $readingRoundRepository,
+            $readingRoundIds,
+            $readingRoundClock
         );
         $ownedReadingRounds = new GetOwnedReadingRoundService(
             $authenticatedUser,
@@ -248,6 +266,49 @@ final class ProductionComposition
             $ownedExternalLoans,
             $createReadingRound
         );
+        $readingRoundEnd = new ReadingRoundEnd(
+            $authenticatedUser,
+            $readingRoundRepository,
+            $readingRoundClock,
+            $transactionManager
+        );
+        $finishReadingRound = new FinishReadingRoundService($readingRoundEnd);
+        $stopReadingRound = new StopReadingRoundService($readingRoundEnd);
+        $historicalReadingRounds = new RegisterHistoricalReadingRoundService(
+            $authenticatedUser,
+            $workRepository,
+            $readingRoundCreation,
+            $readingRoundClock,
+            $transactionManager
+        );
+        $endedReadingRoundCorrection = new CorrectEndedReadingRoundService(
+            $authenticatedUser,
+            $readingRoundRepository,
+            $readingRoundClock,
+            $transactionManager
+        );
+        $readingRoundSourceCorrection = new CorrectReadingRoundSourceService(
+            $authenticatedUser,
+            $readingRoundRepository,
+            $accessibleItems,
+            $editionRepository,
+            $ownedExternalLoans,
+            $readingRoundClock,
+            $transactionManager
+        );
+        $historicalReadingRoundDeletion = new DeleteHistoricalReadingRoundService(
+            $authenticatedUser,
+            $readingRoundRepository,
+            $transactionManager
+        );
+        $personalWorkReadingStatus = new GetPersonalWorkReadingStatusService(
+            $authenticatedUser,
+            $readingRoundRepository
+        );
+        $readingSequence = new GetReadingSequenceService(
+            $authenticatedUser,
+            $readingRoundRepository
+        );
 
         $this->application = new CoreApplication(
             $personalLibraries,
@@ -257,6 +318,14 @@ final class ProductionComposition
             $ownedReadingRounds,
             $libraryItemReading,
             $externalLoanReading,
+            $finishReadingRound,
+            $stopReadingRound,
+            $historicalReadingRounds,
+            $endedReadingRoundCorrection,
+            $readingRoundSourceCorrection,
+            $historicalReadingRoundDeletion,
+            $personalWorkReadingStatus,
+            $readingSequence,
             $catalogContextCreation,
             $catalogContextManagement,
             $bookTypeManagement,

@@ -468,7 +468,7 @@ final class ClassificationManagementApplicationTest extends
         self::assertTrue((new CoreSchemaHealthChecker(
             $this->database,
             $this->tableNames
-        ))->inspectForVersion(1002)->isHealthy());
+        ))->inspectForVersion(1003)->isHealthy());
         self::assertSame(
             $eventsBeforeLastBook + 1,
             $this->eventCount($libraryId)

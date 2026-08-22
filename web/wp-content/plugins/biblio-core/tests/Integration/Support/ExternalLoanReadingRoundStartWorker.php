@@ -6,13 +6,18 @@ use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
 use Biblio\Core\Application\Reading\CreateActiveReadingRoundService;
 use Biblio\Core\Application\Reading\StartReadingFromExternalLoanService;
 use Biblio\Core\Borrowing\ExternalLoanId;
+use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Persistence\WordPress\CoreTableNames;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbExternalLoanRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbReadingRoundRepository;
+use Biblio\Core\Infrastructure\WordPress\OpaqueReadingRoundIdGenerator;
+use Biblio\Core\Infrastructure\WordPress\SystemReadingRoundClock;
 use Biblio\Core\Reading\ActiveReadingRoundAlreadyExists;
 use Biblio\Core\Reading\ReadingRound;
 use Biblio\Core\Reading\ReadingRoundId;
+use Biblio\Core\Reading\ReadingRoundLifecycle;
+use Biblio\Core\Reading\ReadingRoundVersion;
 use Biblio\Core\Reading\ReadingSource;
 use Biblio\Core\Reading\WritableReadingRoundRepository;
 use Biblio\Core\Tests\Support\ControllableAuthenticatedUser;
@@ -77,6 +82,44 @@ $barrierRepository = new class(
     ): ?ReadingRound {
         return $this->repository->findActiveForUserAndSource($userId, $source);
     }
+
+    public function findForUserForUpdate(
+        ReadingRoundId $readingRoundId,
+        UserId $userId
+    ): ?ReadingRound {
+        return $this->repository->findForUserForUpdate($readingRoundId, $userId);
+    }
+
+    public function findAllForUserAndWork(UserId $userId, WorkId $workId): array
+    {
+        return $this->repository->findAllForUserAndWork($userId, $workId);
+    }
+
+    public function replaceIfVersionMatches(
+        UserId $authenticatedUserId,
+        ReadingRound $replacement,
+        ReadingRoundVersion $expectedVersion,
+        ReadingRoundLifecycle $expectedLifecycle
+    ): bool {
+        return $this->repository->replaceIfVersionMatches(
+            $authenticatedUserId,
+            $replacement,
+            $expectedVersion,
+            $expectedLifecycle
+        );
+    }
+
+    public function deleteHistoricalIfVersionMatches(
+        UserId $authenticatedUserId,
+        ReadingRoundId $readingRoundId,
+        ReadingRoundVersion $expectedVersion
+    ): bool {
+        return $this->repository->deleteHistoricalIfVersionMatches(
+            $authenticatedUserId,
+            $readingRoundId,
+            $expectedVersion
+        );
+    }
 };
 $actor = new ControllableAuthenticatedUser(new UserId($userValue));
 $service = new StartReadingFromExternalLoanService(
@@ -84,7 +127,12 @@ $service = new StartReadingFromExternalLoanService(
         $actor,
         new WpdbExternalLoanRepository($wpdb, $tableNames)
     ),
-    new CreateActiveReadingRoundService($actor, $barrierRepository)
+    new CreateActiveReadingRoundService(
+        $actor,
+        $barrierRepository,
+        new OpaqueReadingRoundIdGenerator(),
+        new SystemReadingRoundClock()
+    )
 );
 
 try {

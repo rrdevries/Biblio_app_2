@@ -143,12 +143,8 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
             $migrator->expectedVersion()
         );
         self::assertTrue(
-            $migrator->healthForVersion(1000)->isHealthy(),
-            $migrator->healthForVersion(1000)->summary()
-        );
-        self::assertTrue(
-            $migrator->healthForVersion(1002)->isHealthy(),
-            $migrator->healthForVersion(1002)->summary()
+            $migrator->healthForVersion(1003)->isHealthy(),
+            $migrator->healthForVersion(1003)->summary()
         );
         self::assertSame(8, $this->existingCoreTableCount());
         self::assertSame(15, $this->existingCurrentTableCount());
@@ -190,9 +186,9 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
         try {
             $migrator->migrate();
 
-            self::assertSame(1003, $migrator->installedVersion());
-            self::assertSame(1003, $migrator->expectedVersion());
-            self::assertTrue($migrator->healthForVersion(1002)->isHealthy());
+            self::assertSame(1004, $migrator->installedVersion());
+            self::assertSame(1004, $migrator->expectedVersion());
+            self::assertTrue($migrator->healthForVersion(1003)->isHealthy());
             self::assertSame(15, $this->existingCurrentTableCount());
             self::assertSame(1, $this->indexCount(
                 $this->tableNames->works(),
@@ -215,7 +211,7 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
             "No explicit Biblio Core schema-health contract exists"
         );
 
-        $this->migrator()->healthForVersion(1003);
+        $this->migrator()->healthForVersion(1004);
     }
 
     public function testHealthyCurrentRunIsSchemaAndDataNoOp(): void
@@ -384,9 +380,8 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
         } finally {
             $this->database->query(
                 "ALTER TABLE `{$table}` ADD CONSTRAINT "
-                . "`reading_rounds_source_xor` CHECK "
-                . "((item_id IS NOT NULL AND external_loan_id IS NULL) "
-                . "OR (item_id IS NULL AND external_loan_id IS NOT NULL))"
+                . "`reading_rounds_source_shape` CHECK "
+                . "(item_id IS NULL OR external_loan_id IS NULL)"
             );
         }
     }
@@ -549,8 +544,19 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
             "work_id" => "sentinel-work",
             "item_id" => "sentinel-item",
             "external_loan_id" => null,
-            "round_status" => "active",
-            "started_at" => "2026-08-17 09:00:00.000000",
+            "started_at" => null,
+            "round_outcome" => null,
+            "provenance" => "source_started",
+            "reading_started_year" => 2026,
+            "reading_started_month" => 8,
+            "reading_started_day" => 17,
+            "reading_finished_year" => null,
+            "reading_finished_month" => null,
+            "reading_finished_day" => null,
+            "created_at" => "2026-08-17 09:00:00.000000",
+            "updated_at" => "2026-08-17 09:00:00.000000",
+            "ended_at" => null,
+            "round_version" => 1,
         ]);
     }
 
