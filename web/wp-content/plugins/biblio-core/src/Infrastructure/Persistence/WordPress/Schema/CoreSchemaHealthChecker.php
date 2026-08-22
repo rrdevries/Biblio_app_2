@@ -38,6 +38,7 @@ final readonly class CoreSchemaHealthChecker
             1001 => $this->inspectTables($this->tableNames->schema1001(), true, 1001),
             1002 => $this->inspectTables($this->tableNames->schema1001(), true, 1002),
             1003 => $this->inspectTables($this->tableNames->schema1001(), true, 1003),
+            1004 => $this->inspectTables($this->tableNames->schema1004(), true, 1004),
             default => throw new CoreSchemaMigrationException(
                 "No explicit Biblio Core schema-health contract exists for "
                 . "schema version {$expectedVersion}."
@@ -450,6 +451,16 @@ final readonly class CoreSchemaHealthChecker
                             . "THEN user_id ELSE NULL END",
                     ],
                 ],
+            $this->tableNames->privateNotes() => [
+                "private_note_id" => $id,
+                "user_id" => $id,
+                "work_id" => $id,
+                "reading_round_id" => $nullableId,
+                "note_content" => ["type" => "text", "nullable" => "NO"],
+                "created_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "updated_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "note_version" => ["type" => "bigint(20) unsigned", "nullable" => "NO"],
+            ],
             $this->tableNames->libraryBookTypes() => [
                 "library_id" => $id,
                 "book_type_id" => $id,
@@ -591,6 +602,21 @@ final readonly class CoreSchemaHealthChecker
                     ],
                 ],
             ]),
+            $this->tableNames->privateNotes() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["private_note_id"]],
+                "private_notes_by_user_work" => [
+                    "unique" => false,
+                    "columns" => ["user_id", "work_id", "updated_at", "private_note_id"],
+                ],
+                "private_notes_by_user_round" => [
+                    "unique" => false,
+                    "columns" => ["user_id", "reading_round_id", "updated_at", "private_note_id"],
+                ],
+                "private_notes_by_user_updated" => [
+                    "unique" => false,
+                    "columns" => ["user_id", "updated_at", "private_note_id"],
+                ],
+            ],
             $this->tableNames->libraryBookTypes() => [
                 "PRIMARY" => [
                     "unique" => true,
@@ -691,6 +717,17 @@ final readonly class CoreSchemaHealthChecker
             "update" => "RESTRICT",
             "delete" => "RESTRICT",
         ];
+        $setNull = static fn (
+            array $columns,
+            string $referencedTable,
+            array $referencedColumns
+        ): array => [
+            "columns" => $columns,
+            "referenced_table" => $referencedTable,
+            "referenced_columns" => $referencedColumns,
+            "update" => "RESTRICT",
+            "delete" => "SET NULL",
+        ];
 
         return [
             $this->tableNames->memberships() => [
@@ -721,6 +758,14 @@ final readonly class CoreSchemaHealthChecker
                     ["external_loan_id"],
                     $this->tableNames->externalLoans(),
                     ["external_loan_id"]
+                ),
+            ],
+            $this->tableNames->privateNotes() => [
+                $restrict(["work_id"], $this->tableNames->works(), ["work_id"]),
+                $setNull(
+                    ["reading_round_id"],
+                    $this->tableNames->readingRounds(),
+                    ["reading_round_id"]
                 ),
             ],
             $this->tableNames->libraryBookTypes() => [
@@ -827,6 +872,10 @@ final readonly class CoreSchemaHealthChecker
                         . "item_id IS NULL AND external_loan_id IS NOT NULL",
                 ]
                 : self::readingRound1003Checks(),
+            $this->tableNames->privateNotes() => [
+                "note_version >= 1",
+                "updated_at >= created_at",
+            ],
             $this->tableNames->libraryBookTypes() => [
                 "CHAR_LENGTH(TRIM(display_name)) > 0",
                 "CHAR_LENGTH(TRIM(normalized_name)) > 0",

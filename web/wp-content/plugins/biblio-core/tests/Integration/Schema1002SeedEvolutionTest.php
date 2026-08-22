@@ -93,7 +93,7 @@ final class Schema1002SeedEvolutionTest extends PersistenceIntegrationTestCase
 
         $this->productionMigrator()->migrate();
 
-        self::assertSame(1003, $this->productionMigrator()->installedVersion());
+        self::assertSame(1004, $this->productionMigrator()->installedVersion());
         self::assertSame([
             "legacy-round",
             "771",
@@ -243,7 +243,7 @@ final class Schema1002SeedEvolutionTest extends PersistenceIntegrationTestCase
             $this->database,
             $lifecycleState
         ))->lifecycle()->boot();
-        self::assertTrue($lifecycleState->isHealthCurrent(1003));
+        self::assertTrue($lifecycleState->isHealthCurrent(1004));
         $lifecycleState->clear();
 
         $dataAfterFirstRun = $this->classificationDataSnapshot();
@@ -322,7 +322,7 @@ final class Schema1002SeedEvolutionTest extends PersistenceIntegrationTestCase
 
     private function downgradeToVersion1001(): void
     {
-        foreach (array_reverse($this->tableNames->schema1001()) as $table) {
+        foreach (array_reverse($this->tableNames->schema1004()) as $table) {
             $this->database->query("DROP TABLE IF EXISTS `{$table}`");
         }
         delete_option(CoreSchemaMigrator::VERSION_OPTION);

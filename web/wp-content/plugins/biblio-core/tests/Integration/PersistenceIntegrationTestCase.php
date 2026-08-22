@@ -52,6 +52,7 @@ abstract class PersistenceIntegrationTestCase extends TestCase
         $genres = $this->tableNames->libraryGenres();
         $subjects = $this->tableNames->librarySubjects();
         $readingRounds = $this->tableNames->readingRounds();
+        $privateNotes = $this->tableNames->privateNotes();
         $externalLoans = $this->tableNames->externalLoans();
         $items = $this->tableNames->items();
         $editions = $this->tableNames->editions();
@@ -73,6 +74,9 @@ abstract class PersistenceIntegrationTestCase extends TestCase
             if ($this->tableExists($schema1001Table)) {
                 $this->database->query("DELETE FROM `{$schema1001Table}`");
             }
+        }
+        if ($this->tableExists($privateNotes)) {
+            $this->database->query("DELETE FROM `{$privateNotes}`");
         }
         $this->database->query("DELETE FROM `{$readingRounds}`");
         $this->database->query("DELETE FROM `{$externalLoans}`");

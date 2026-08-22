@@ -20,6 +20,12 @@ enum FailureReason: string
         "reading_round_deletion_not_allowed";
     case ReadingRoundIdCollisionExhausted =
         "reading_round_id_collision_exhausted";
+    case PrivateNoteNotAvailable = "private_note_not_available";
+    case PrivateNoteStale = "private_note_stale";
+    case PrivateNoteReadingRoundUnavailable =
+        "private_note_reading_round_unavailable";
+    case PrivateNoteIdCollisionExhausted =
+        "private_note_id_collision_exhausted";
     case PersonalLibraryAlreadyProvisioned =
         "personal_library_already_provisioned";
     case PersonalLibraryDesignationConflict =
