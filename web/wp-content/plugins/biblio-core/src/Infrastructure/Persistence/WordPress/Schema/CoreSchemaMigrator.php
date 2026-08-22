@@ -15,7 +15,7 @@ final readonly class CoreSchemaMigrator
      * supported production schema history starts at 1000.
      */
     public const FORMAL_BASELINE_VERSION = 1000;
-    public const CURRENT_VERSION = 1002;
+    public const CURRENT_VERSION = 1003;
     public const VERSION_OPTION = "biblio_core_schema_version";
     public const LEGACY_VERSION_OPTION = "biblio_core_library_schema_version";
 
@@ -98,7 +98,10 @@ final readonly class CoreSchemaMigrator
             $installedVersion = $migration->targetVersion();
         }
 
-        $this->assertHealthyForVersion(self::CURRENT_VERSION);
+        $this->assertHealthyForVersion(min(
+            $this->expectedVersion(),
+            self::CURRENT_VERSION
+        ));
     }
 
     public function installedVersion(): ?int

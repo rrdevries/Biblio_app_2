@@ -31,6 +31,7 @@ use Biblio\Core\Library\ManagementRole;
 use Biblio\Core\Library\MembershipStatus;
 use Biblio\Core\Library\UseAccess;
 use Biblio\Core\Reading\ReadingRound;
+use Biblio\Core\Reading\ReadingDate;
 use Biblio\Core\Reading\ReadingRoundId;
 use Biblio\Core\Reading\ReadingSource;
 use DateTimeImmutable;
@@ -75,6 +76,7 @@ final class PersistenceContractRoundTripTest extends
             $userId,
             $workId,
             ReadingSource::libraryItem($itemId),
+            ReadingDate::exact(2026, 8, 17),
             new DateTimeImmutable("2026-08-17T11:00:00+00:00")
         );
 

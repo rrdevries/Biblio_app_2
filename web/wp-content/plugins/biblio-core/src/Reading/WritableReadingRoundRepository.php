@@ -12,4 +12,17 @@ interface WritableReadingRoundRepository extends ReadingRoundRepository
         UserId $authenticatedUserId,
         ReadingRound $readingRound
     ): void;
+
+    public function replaceIfVersionMatches(
+        UserId $authenticatedUserId,
+        ReadingRound $replacement,
+        ReadingRoundVersion $expectedVersion,
+        ReadingRoundLifecycle $expectedLifecycle
+    ): bool;
+
+    public function deleteHistoricalIfVersionMatches(
+        UserId $authenticatedUserId,
+        ReadingRoundId $readingRoundId,
+        ReadingRoundVersion $expectedVersion
+    ): bool;
 }

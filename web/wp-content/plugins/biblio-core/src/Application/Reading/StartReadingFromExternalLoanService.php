@@ -7,6 +7,7 @@ namespace Biblio\Core\Application\Reading;
 use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
 use Biblio\Core\Borrowing\ExternalLoanId;
 use Biblio\Core\Reading\ReadingRound;
+use Biblio\Core\Reading\ReadingDate;
 use Biblio\Core\Reading\ReadingSourceUnavailable;
 use DateTimeImmutable;
 
@@ -20,7 +21,7 @@ final readonly class StartReadingFromExternalLoanService
 
     public function start(
         ExternalLoanId $externalLoanId,
-        DateTimeImmutable $startedAt
+        ReadingDate|DateTimeImmutable $startedOn
     ): ReadingRound {
         $externalLoan = $this->getOwnedExternalLoan->get(
             $externalLoanId
@@ -32,7 +33,7 @@ final readonly class StartReadingFromExternalLoanService
 
         return $this->createReadingRound->createFromExternalLoan(
             $externalLoan,
-            $startedAt
+            $startedOn
         );
     }
 }

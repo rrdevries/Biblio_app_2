@@ -9,6 +9,7 @@ use Biblio\Core\Catalog\EditionRepository;
 use Biblio\Core\Catalog\ItemId;
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Reading\ReadingRound;
+use Biblio\Core\Reading\ReadingDate;
 use Biblio\Core\Reading\ReadingSourceUnavailable;
 use DateTimeImmutable;
 
@@ -24,7 +25,7 @@ final readonly class StartReadingFromLibraryItemService
     public function start(
         LibraryId $libraryId,
         ItemId $itemId,
-        DateTimeImmutable $startedAt
+        ReadingDate|DateTimeImmutable $startedOn
     ): ReadingRound {
         $accessibleItem = $this->getAccessibleItem->get(
             $libraryId,
@@ -48,7 +49,7 @@ final readonly class StartReadingFromLibraryItemService
         return $this->createReadingRound->createFromLibraryItem(
             $item,
             $edition,
-            $startedAt
+            $startedOn
         );
     }
 }

@@ -12,6 +12,14 @@ enum FailureReason: string
     case ReadingSourceUnavailable = "reading_source_unavailable";
     case ReadingRoundAlreadyActiveForSource =
         "reading_round_already_active_for_source";
+    case ReadingRoundNotAvailable = "reading_round_not_available";
+    case ReadingRoundStale = "reading_round_stale";
+    case ReadingRoundSourceCorrectionUnavailable =
+        "reading_round_source_correction_unavailable";
+    case ReadingRoundDeletionNotAllowed =
+        "reading_round_deletion_not_allowed";
+    case ReadingRoundIdCollisionExhausted =
+        "reading_round_id_collision_exhausted";
     case PersonalLibraryAlreadyProvisioned =
         "personal_library_already_provisioned";
     case PersonalLibraryDesignationConflict =

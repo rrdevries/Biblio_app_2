@@ -50,6 +50,7 @@ final readonly class CoreSchemaMigrationRegistry
         return [
             new CoreSchema1001Migration($database, $tableNames),
             new CoreSchema1002Migration($database, $tableNames),
+            new CoreSchema1003Migration($database, $tableNames),
         ];
     }
 
