@@ -1,6 +1,6 @@
 # 10 — F2.7a analyse: Mijn notities / Private Notes
 
-Status: **GO WITH CONDITIONS voor F2.7b**
+Status: **GO voor F2.7b**
 
 Scope: Biblio V2 v2.001, bron- en repositoryanalyse zonder productiecode,
 tests, schema of migration te wijzigen.
@@ -53,11 +53,10 @@ niet een oudere documentatiesnapshot, de technische upgradebron voor F2.7b is.
 Dit document gebruikt vier labels:
 
 - **Bindend**: expliciet huidige product- of architectuurwaarheid;
+- **Definitieve productbeslissing**: voor F2.7a expliciet vastgesteld contract;
 - **Consequentie**: noodzakelijk om meerdere bindende regels tegelijk geldig
   te houden;
-- **Aanbeveling**: minimale technische keuze, nog geen bestaand productfeit;
-- **Open beslissing**: keuze die vóór F2.7b bevestigd moet worden omdat
-  implementatie anders business- of lifecyclebetekenis zou gokken.
+- **Aanbeveling**: minimale technische keuze, nog geen bestaand productfeit.
 
 ## 3. Bronnenmatrix
 
@@ -70,20 +69,20 @@ Dit document gebruikt vier labels:
 | Note hoort bij Work | Functioneel ontwerp §12 | Bindend | Work is de verplichte inhoudelijke hoofdcontext. |
 | Meerdere Notes per User + Work | Functioneel ontwerp §12 | Bindend | Geen uniqueness op User + Work. |
 | ReadingRound-koppeling | Functioneel ontwerp §12 | Bindend: optioneel | Een persisted Note zonder ReadingRound is toegestaan. |
-| Meerdere Notes aan dezelfde ReadingRound | Geen expliciete huidige bron | Niet besloten | Geen bestaande maximumregel; minimaal model kan dit toestaan. |
-| ReadingRound-link later wijzigen/verwijderen | Geen expliciete huidige bron | Open beslissing | Optional bij creatie bewijst geen latere mutability. |
-| Active/ended/historical ReadingRound als context | Geen expliciete Note-regel | Open beslissing | Alle drie zijn geldige user-owned ReadingRounds, maar Note-eligibility is niet vastgelegd. |
+| Meerdere Notes aan dezelfde ReadingRound | F2.7a O2 | Definitieve productbeslissing | Er geldt geen uniqueness op User + ReadingRound. |
+| ReadingRound-link later wijzigen/verwijderen | F2.7a O2 | Definitieve productbeslissing | De optionele context mag worden attached, gewijzigd en verwijderd. |
+| Active/ended/historical ReadingRound als context | F2.7a O2 | Definitieve productbeslissing | Iedere eigen same-Work Round is geldig, ongeacht lifecyclestatus. |
 | Work van bestaande Note wijzigen | Geen expliciete route; ADR-007-patroon | Consequentie: niet generiek toestaan | Zonder productcontract blijft Work immutable; fout Work betekent delete + nieuwe Note. |
 | Private contribution vereist Library | Functioneel ontwerp §12 | Bindend: nee | Work-only Note-create mag geen personal-Library provisioning of membership eisen. |
 | Note-mutaties in Library ActivityEvent | Functioneel ontwerp §§16/18; architectuur §8 | Bindend: nee | Private inhoud mag niet in gedeelde audit verschijnen. |
 | Note in persoonlijke Tijdlijn | Functioneel ontwerp §14 | Bindend: nee | “Notes never appear”; F2.7 voegt geen private audit/event engine toe. |
 | Globale full-text Notes-search | Functioneel ontwerp §15 | Bindend: nee | Geen FULLTEXT-index of zoekservice in F2.7b. |
 | Archiveren van Item verwijdert Notes | Functioneel ontwerp §9 | Bindend: nee | Note blijft via Work/optionele ReadingRound onafhankelijk bestaan. |
-| Eenvoudige tekstopmaak | Niet in huidige canonieke repositorybron | Open beslissing | De analyseopdracht noemt dit als ontwerpcontext, niet als geverifieerd productfeit. |
+| Eenvoudige tekstopmaak | F2.7a O1 | Definitieve productbeslissing | Beperkt veilig HTML met vaste allowlist; plain text is afgewezen. |
 | Afbeeldingen, attachments en blokken | Niet canoniek beschreven; expliciet buiten F2.7-scope in de opdracht | Scopegrens | F2.7b ondersteunt ze niet en modelleert geen media/blob/block-relaties. |
 | Handmatig opslaan, geen autosave | Niet in huidige canonieke bron; UI buiten scope | Deferred UI | Core krijgt expliciete create/update-calls en geen autosave-protocol. |
 | Korte deletebevestiging | Niet in huidige canonieke bron; UI buiten scope | Deferred UI | Geen Core-boolean of bevestigingstekst modelleren. |
-| Hard/soft/tombstone delete | Geen huidige bron | Open beslissing | Audit, Timeline en publicatie eisen geen behoud; hard delete heeft technische voorkeur. |
+| Hard/soft/tombstone delete | F2.7a O3 | Definitieve productbeslissing | Owner-scoped conditionele hard delete; geen soft-delete of tombstone. |
 | Account-erasuregedrag | Scope/deferred | Deferred | Normale user hard-delete/erasure/anonimisering is niet F2.7b. |
 | Persistencekeuze | ADR-004; architectuur §9 | Technisch te beslissen | De relationele owner/Work/Round/CAS/migrationbehoefte maakt een Core-tabel de kleinste bewezen keuze. |
 | Huidige schema-upgradebron | Code, lokale DB, F2.6-exitbewijs | Bindend technisch | F2.7b wordt migration `1003→1004`; baseline 1000 blijft ongewijzigd. |
@@ -106,14 +105,11 @@ Dit document gebruikt vier labels:
 
 ### Gecontroleerde functionele baseline
 
-Wel bevestigd zijn: user-owned, altijd privé, uitsluitend owner-access,
-Work-level, meerdere Notes per Work en een optionele ReadingRound-link.
-
-Niet bevestigd in de actuele repository zijn: de exacte simpele opmaak,
-handmatig opslaan/no-autosave, deletebevestiging, linkcorrectie, eligible
-ReadingRound-lifecycles en hard/soft delete. Afbeeldingen, attachments,
-complexe blokken, autosave en UI zijn door de opdracht in ieder geval buiten
-F2.7-scope geplaatst.
+Bevestigd zijn: user-owned, altijd privé, uitsluitend owner-access,
+Work-level, meerdere Notes per Work, beperkt veilig HTML, een optionele en
+corrigeerbare ReadingRound-link, alle eigen same-Work ReadingRound-statussen,
+meerdere Notes per ReadingRound en conditionele hard delete. Afbeeldingen,
+attachments, complexe blokken, autosave en UI zijn buiten F2.7-scope geplaatst.
 
 ## 4. Gap-analyse
 
@@ -135,10 +131,10 @@ F2.7-scope geplaatst.
 | Production boundary | Patroon bestaat | Alleen benoemde services/projectors exposen. |
 | REST/UI | Ontbreekt en buiten scope | Niet toevoegen. |
 
-## 5. Definitief voorgesteld Core-contract
+## 5. Definitief Core-contract
 
-De onderstaande vorm is implementatieklaar zodra de drie gemarkeerde open
-beslissingen in §11 zijn bevestigd. Technische namen volgen de bestaande
+De onderstaande vorm is implementatieklaar. De definitieve productbeslissingen
+O1–O3 zijn in §11 vastgelegd. Technische namen volgen de bestaande
 Engelstalige Core-conventie; het UI-label blijft “Mijn notities”.
 
 ### 5.1 Aggregate en waarden
@@ -150,7 +146,7 @@ Engelstalige Core-conventie; het UI-label blijft “Mijn notities”.
 | ID | `PrivateNoteId` | nee | immutable | server-side generator |
 | owner | `UserId` | nee | immutable | authenticated actor |
 | Work | `WorkId` | nee | immutable | expliciete bestaande Work of afgeleid uit Round |
-| ReadingRound-context | `?ReadingRoundId` | ja | conditioneel corrigeerbaar | owner-scoped same-Work Round |
+| ReadingRound-context | `?ReadingRoundId` | ja | corrigeerbaar/verwijderbaar | owner-scoped same-Work Round |
 | inhoud | `PrivateNoteContent` | nee | wijzigbaar | fixed safe-format policy |
 | created at | UTC `DateTimeImmutable` | nee | immutable | server-side clock |
 | updated at | UTC `DateTimeImmutable` | nee | echte mutation | server-side clock |
@@ -161,7 +157,7 @@ Niet opnemen zonder latere use-case:
 - `library_id`, visibility/publication/status of Library-auditvelden;
 - titel, tags, afbeeldingen, attachment/blob-ID of block-JSON;
 - provenance, omdat er maar één creationpad en geen importcontract is;
-- `deleted_at` of lifecycle wanneer hard delete wordt bevestigd;
+- `deleted_at` of soft-delete/tombstone-lifecycle;
 - apart rendered HTML, excerpt, searchdocument of first/last ReadingRound-state.
 
 `PrivateNoteId` hergebruikt het persistable-ID-contract: niet leeg, geldig
@@ -179,9 +175,9 @@ Technische timestamps moeten in MariaDB `DATETIME(6)` UTC-bereik vallen en
 6. Inhoud is na normalisatie geldig UTF-8, inhoudelijk niet leeg en past in
    het vaste opslagcontract.
 7. ID, owner, Work en `created_at` zijn immutable.
-8. Alleen inhoud en, na bevestiging, ReadingRound-context zijn corrigeerbaar.
+8. Alleen inhoud en ReadingRound-context zijn corrigeerbaar.
 9. Een expliciete Note-mutation verhoogt version exact eenmaal en zet
-   `updated_at`; de in O3 voorgestelde referentiële Round-delete-unlink is de
+   `updated_at`; de in O3 vastgestelde referentiële Round-delete-unlink is de
    enige uitzondering en is geen user edit.
 10. Een Note-create/update/delete schrijft geen Library ActivityEvent,
     Timeline-event of generiek private audit-event.
@@ -220,10 +216,8 @@ Note-ID, expected version en een gewenste `?ReadingRoundId`:
 - vreemde, onbekende of cross-Work Round: één niet-onthullende stable failure;
 - inhoud en Work wijzigen nooit impliciet mee.
 
-Dit mutationcontract geldt alleen wanneer open beslissing O2 wordt bevestigd.
-
-`DeletePrivateNoteService` accepteert Note-ID en expected version. Aanbevolen
-contract bij hard delete:
+`DeletePrivateNoteService` accepteert Note-ID en expected version. Het contract
+voor conditionele hard delete is:
 
 - locked owner-scoped read in één transactie;
 - stale expected version geeft `PrivateNoteStale`;
@@ -279,15 +273,10 @@ Timeline-events geprojecteerd.
 
 ## 6. Tekst en eenvoudige opmaak
 
-### Vastgesteld versus voorgesteld
+### Definitief contentformat
 
-De canonieke bronnen bevestigen alleen dat Notes bestaan en altijd privé zijn;
-zij definiëren geen markup. De opdracht sluit media, attachments en complexe
-blokken uit. Daardoor is een onbeperkt HTML-, Gutenberg- of page-buildermodel
-niet gerechtvaardigd.
-
-**Aanbevolen minimale beslissing O1:** één canoniek, gesanitiseerd HTML-subset
-als broninhoud met uitsluitend:
+O1 stelt voor v2.001 één canoniek, server-side gesanitiseerd HTML-subset als
+broninhoud vast, met uitsluitend:
 
 - paragrafen en regeleinden: `p`, `br`;
 - nadruk: `strong`, `em`;
@@ -295,9 +284,12 @@ als broninhoud met uitsluitend:
 - citaat: `blockquote`;
 - geen attributen op deze elementen.
 
-Niet toegestaan zijn onder meer `script`, `style`, `iframe`, `object`,
-`embed`, `img`, `svg`, `video`, `audio`, `form`, links/URL-attributen,
-eventhandlers, CSS, comments en block-markers.
+Niet toegestaan zijn onder meer links, styles, classes, afbeeldingen, embeds,
+scripts, willekeurige HTML en complexe contentblokken. Daaronder vallen ook
+`style`, `iframe`, `object`, `embed`, `img`, `svg`, `video`, `audio`, `form`,
+URL-attributen, eventhandlers, CSS, comments en block-markers. Geen enkel
+toegestaan element accepteert attributen. Plain text is als contentformat
+afgewezen.
 
 ### Opslag- en rendergrens
 
@@ -312,14 +304,11 @@ eventhandlers, CSS, comments en block-markers.
   allowlist is een Biblio-contract en geen globale editorconfiguratie.
 - Render uitsluitend via een Note-renderer die tekstnodes escaped en opnieuw
   dezelfde allowlist toepast als defense in depth; adapters mogen nooit raw
-  databasecontent rechtstreeks echoën.
+  databasecontent rechtstreeks echoën. Sanitization en output escaping volgen
+  de bestaande WordPress/Biblio-securityconventies.
 - Gebruik `TEXT` met een domeingrens van maximaal 65.535 UTF-8-bytes na
   normalisatie. Dit sluit exact op MariaDB `TEXT` aan zonder een willekeurige
   veel grotere blobcapaciteit te introduceren.
-
-De exacte subset is een technische/productpresentatiebeslissing en moet vóór
-F2.7b worden bevestigd of vervangen door plain text. Zonder die bevestiging
-mag F2.7b geen willekeurige rich-textkeuze maken.
 
 ## 7. Persistence- en migrationplan
 
@@ -335,14 +324,14 @@ queries, migration-health en onafhankelijk testen concrete nettowinst boven
 CPT/meta of JetEngine/CCT. Directe JetEngine-mutaties zouden bovendien de
 owner- en same-Work-grens kunnen omzeilen.
 
-### 7.2 Voorgestelde kolommen
+### 7.2 Definitieve kolommen
 
 | Kolom | MariaDB | Null | Regel |
 | --- | --- | --- | --- |
 | `private_note_id` | `VARCHAR(191)` binair | nee | primary key |
 | `user_id` | `VARCHAR(191)` binair | nee | owner; geen FK naar `wp_users` volgens huidige Core-conventie |
 | `work_id` | `VARCHAR(191)` binair | nee | FK Work, `RESTRICT` |
-| `reading_round_id` | `VARCHAR(191)` binair | ja | FK ReadingRound; deleteactie is O3 |
+| `reading_round_id` | `VARCHAR(191)` binair | ja | FK ReadingRound, `ON DELETE SET NULL` |
 | `note_content` | `TEXT` | nee | genormaliseerde veilige broninhoud |
 | `created_at` | `DATETIME(6)` | nee | UTC technical instant |
 | `updated_at` | `DATETIME(6)` | nee | UTC technical instant |
@@ -374,7 +363,7 @@ bewijzen.
 
 ### 7.4 ReadingRound-delete-interactie
 
-Wanneer O3 wordt bevestigd, gebruikt de optionele FK `ON DELETE SET NULL`:
+De optionele FK gebruikt volgens O3 `ON DELETE SET NULL`:
 
 - het verwijderen van toegestane `historical_manual` ReadingRound-history
   verwijdert nooit de Note;
@@ -386,9 +375,8 @@ Wanneer O3 wordt bevestigd, gebruikt de optionele FK `ON DELETE SET NULL`:
 - Note-delete zelf raakt de Round nooit.
 
 Dit is een expliciet lifecyclecontract, geen toevallige cascade. `CASCADE` van
-ReadingRound naar Note is verboden. `RESTRICT` zou het reeds toegestane F2.6-
-deletecontract onverwacht blokkeren en vereist daarom een nieuw productbesluit
-als O3 niet wordt gevolgd.
+ReadingRound naar Note is verboden. `RESTRICT` zou het legitieme F2.6-
+deletecontract onverwacht blokkeren en is daarom eveneens verboden.
 
 ### 7.5 Migration 1003→1004
 
@@ -482,11 +470,11 @@ tekst niet als ongecontroleerde executable markup wordt uitgevoerd.
 11. Onbestaande Work faalt zonder write.
 12. Meerdere Notes voor dezelfde User + Work zijn toegestaan.
 13. `createForReadingRound` gebruikt eigen same-Work Round en deriveert Work.
-14. Meerdere Notes voor dezelfde Round zijn toegestaan wanneer O2 is bevestigd.
+14. Meerdere Notes voor dezelfde Round zijn toegestaan.
 15. Foreign/unknown Round-create is niet-onthullend geweigerd.
 16. Contentupdate: owner success, semantic no-op en stale divergent.
 17. Context attach/change/remove: owner, same Work, no-op en stale matrix.
-18. Active, ended en historical Round-context slagen wanneer O2 is bevestigd.
+18. Active, ended en historical Round-context slagen.
 19. Same-owner cross-Work Round-correctie wordt geweigerd zonder mutation.
 20. Andere gebruiker kan individuele Note niet lezen.
 21. Andere gebruiker kan Note niet wijzigen, context corrigeren of verwijderen.
@@ -513,7 +501,7 @@ tekst niet als ongecontroleerde executable markup wordt uitgevoerd.
 37. Twee afwijkende parallelle contentupdates: één winner, één stale.
 38. Twee gelijke parallelle updates: één write, één no-op current result.
 39. Update versus delete: één consistente winner, geen partial state.
-40. Deleting linked historical Round zet bij O3 alleen Note-context null en
+40. Deleting linked historical Round zet alleen Note-context null en
     behoudt Note, Work, content, version en timestamps.
 
 ### Migration/security/regression
@@ -530,44 +518,34 @@ tekst niet als ongecontroleerde executable markup wordt uitgevoerd.
 49. Bestaande ReadingRound owner/source/CAS/delete/derived-readtests blijven groen.
 50. Volledige canonieke gate, PHPStan level 6 en WordPress smoke slagen.
 
-## 11. Open beslissingen
-
-### Echte voorwaarden vóór F2.7b
+## 11. Definitieve productbeslissingen
 
 **O1 — Contentformat**
 
-Bevestig één van:
-
-- aanbevolen: het vaste veilige HTML-subset uit §6;
-- alternatief: uitsluitend plain text met regeleinden.
-
-Zonder keuze kan F2.7b niet bepalen wat geldige content, roundtrip en veilige
-rendering betekenen.
+Private Notes gebruiken in v2.001 beperkt veilig HTML met exact de allowlist
+uit §6. Server-side sanitization en veilig renderen/output escaping zijn
+verplicht. Links, attributen, media, embeds, scripts, willekeurige HTML en
+complexe contentblokken zijn niet toegestaan. Plain text is afgewezen.
 
 **O2 — ReadingRound-contextlifecycle**
 
-Aanbevolen contract:
-
-- meerdere Notes per dezelfde ReadingRound toegestaan;
-- link mag na creatie worden attached, gewijzigd en verwijderd;
-- iedere eigen same-Work ReadingRound is geldig, inclusief active, ended en
-  `historical_manual`;
-- Work blijft immutable en wordt nooit uit een nieuwe link overgenomen.
-
-Zonder bevestiging zouden mutationservices en eligibilityregels productgedrag
-moeten gokken.
+- Een Note mag zonder Round bestaan of aan precies één Round gekoppeld zijn.
+- Meerdere Notes per dezelfde ReadingRound zijn toegestaan.
+- De link mag na creatie worden attached, gewijzigd en verwijderd.
+- Iedere eigen same-Work ReadingRound is geldig, ongeacht active, ended of
+  historical status.
+- Cross-user en cross-Work koppelingen zijn verboden.
+- ReadingRound is context, geen eigenaar; Work blijft immutable en wordt nooit
+  uit een nieuwe link overgenomen.
 
 **O3 — Delete en Round-delete-interactie**
 
-Aanbevolen contract:
-
-- Note-delete is conditionele hard delete na UI-bevestiging;
-- geen tombstone, Note-audit of soft-delete lifecycle;
-- Note-delete raakt Work/ReadingRound niet;
-- delete van een gekoppelde, volgens F2.6 verwijderbare ReadingRound behoudt de
-  Note en zet uitsluitend `reading_round_id` op null via de expliciete FK-regel.
-
-Zonder bevestiging is tabelvorm, delete-use-case en FK `ON DELETE` niet definitief.
+- Note-delete is een owner-scoped conditionele hard delete met expected-version-
+  controle volgens §5.4.
+- Er is geen tombstone, Note-audit of soft-delete lifecycle.
+- Note-delete raakt Work, ReadingRound en andere leesdata niet.
+- Legitieme hard delete van een gekoppelde ReadingRound volgens F2.6 behoudt de
+  Note en zet uitsluitend `reading_round_id` op null via `ON DELETE SET NULL`.
 
 ### Niet-blockerende technische keuzes
 
@@ -597,8 +575,7 @@ gelijk blijven.
 
 ## 12. Aanbevolen F2.7b-implementatievolgorde
 
-1. Bevestig O1–O3 en canonicaliseer ze vóór functionele implementatie,
-   bij voorkeur in een kleine accepted ADR of expliciete F2.7-sectie.
+1. Gebruik de in §11 vastgelegde O1–O3-contracten als functionele baseline.
 2. Voeg domainwaarden, aggregate, failures, contentpolicycontract, generator en
    klok toe met unit tests.
 3. Voeg `CoreSchema1004Migration`, table names, registry/version en health toe;
@@ -640,21 +617,13 @@ F2.7a wijzigt uitsluitend dit analysedocument en de registratie ervan in
 
 ## 14. Exit verdict
 
-**GO WITH CONDITIONS**
+**GO**
 
 De repository biedt een sterke, bewezen technische basis en er is geen reden
 voor UI-, JetEngine- of nieuwe generieke infrastructuur. Het private owner-
 model, Work-hoofdcontext, optionele ReadingRound-relatie, CAS, server-side ID,
 custom-table/migration en ActivityEvent-scheiding zijn concreet uitwerkbaar.
 
-F2.7b mag echter niet starten alsof O1–O3 al productwaarheid zijn. De actuele
-canonieke bronnen beslissen niet:
-
-1. plain text versus de exacte eenvoudige-markupset;
-2. mutability en lifecycle-eligibility van ReadingRound-context;
-3. hard/soft delete en de reverse delete-interactie met ReadingRound.
-
-Wanneer de aanbevolen O1–O3-contracten expliciet worden bevestigd, verandert
-het implementatieverdict zonder verdere brede analyse naar **GO**. Tot dat
-moment is F2.7b voor precies deze drie punten conditioneel en mogen ze niet in
-code worden gegokt.
+O1–O3 zijn definitief vastgesteld en in het Core-contract, persistenceplan en
+de testmatrix verwerkt. Er resteert voor deze scope geen open productbeslissing.
+F2.7b kan daarom zonder verdere productbeslissing starten.
