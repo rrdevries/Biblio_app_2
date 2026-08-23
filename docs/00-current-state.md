@@ -890,3 +890,31 @@ archive, rich metadata, REST and Elementor remain out of scope.
 
 The implementation and verification record is maintained in
 `docs/18-f2-11-exit-evidence.md`.
+
+### F2.12 — WordPress REST Adapter Foundation
+
+Status: **Implemented — GO / ELEMENTOR READY**
+
+WordPress now exposes the first UI slice under the versioned `biblio/v1`
+namespace: available Library contexts, active catalog overview, scoped Item
+detail and Start Reading from a Library Item. Every route is private, has an
+explicit permission callback and resolves the current actor server-side.
+
+Cookie-authenticated browser requests use WordPress's standard `wp_rest` nonce
+in `X-WP-Nonce`. Library and Item URL identities remain untrusted targets and
+are revalidated by F2.10/F2.11 or the existing Reading start service. Query or
+body actor/capability claims never become authority.
+
+Typed parsing covers IDs, bounded page size, opaque cursor and exact
+`YYYY-MM-DD` start date. Named allowlist serializers expose only the F2.10,
+F2.11 and minimal started-Round contract. One central mapper turns Core
+failures into safe stable REST errors; inaccessible and unknown private
+resources remain non-enumerating.
+
+The adapter lives at the WordPress infrastructure boundary and contains no
+membership, reading-status, availability, capability, source/Work or lifecycle
+rules. Schema remains 1007. A1, A2 and A3 are now closed, so the next permitted
+step is the first Elementor vertical slice—not broader endpoints or B/C scope.
+
+The complete contract, security evidence and readiness decision are maintained
+in `docs/19-f2-12-exit-evidence.md`.

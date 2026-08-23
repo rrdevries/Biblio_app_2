@@ -9,6 +9,7 @@ use Biblio\Core\Exception\CoreFailure;
 use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Infrastructure\WordPress\Lifecycle\CoreLifecycleException;
 use Biblio\Core\Infrastructure\WordPress\ProductionComposition;
+use Biblio\Core\Infrastructure\WordPress\Rest\RestApi;
 use Closure;
 use Throwable;
 use wpdb;
@@ -21,6 +22,7 @@ final class Plugin
     private bool $initialized = false;
     private ?ProductionComposition $composition = null;
     private ?Throwable $bootFailure = null;
+    private readonly RestApi $restApi;
 
     /** @var Closure(): ProductionComposition */
     private readonly Closure $compositionFactory;
@@ -43,6 +45,9 @@ final class Plugin
 
                 return new ProductionComposition($wpdb);
             };
+        $this->restApi = new RestApi(
+            fn (): ?CoreApplication => $this->application()
+        );
     }
 
     public function boot(): void
@@ -54,6 +59,7 @@ final class Plugin
         register_activation_hook($this->pluginFile, [$this, "activate"]);
         add_action("init", [$this, "initialize"], 1);
         add_action("admin_notices", [$this, "renderAdminNotice"]);
+        $this->restApi->boot();
         $this->hooksRegistered = true;
     }
 

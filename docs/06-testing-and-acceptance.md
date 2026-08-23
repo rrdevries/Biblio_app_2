@@ -824,3 +824,48 @@ No-go:
   persistence inside F2.11.
 
 The exact gate record is `docs/18-f2-11-exit-evidence.md`.
+
+## 38. F2.12 WordPress REST Adapter Foundation acceptance evidence
+
+Acceptance:
+
+- `biblio/v1` registers the four first-slice routes exactly once through
+  `rest_api_init`, with an explicit authentication permission callback on each;
+- current WordPress identity is the only actor source; request `user_id`, role
+  or capability claims cannot switch actor or authorize a mutation;
+- cookie browser authentication uses the standard `wp_rest` nonce;
+  valid/missing/invalid nonce and valid nonce with insufficient authorization
+  are proven separately;
+- Library/Item route IDs are typed but untrusted and reach only the existing
+  F2.10, F2.11 and Reading application boundaries;
+- overview preserves active-only Library scope, deterministic opaque cursor,
+  page size 1–100, empty Library and server-derived status/capabilities;
+- detail preserves explicit unknown metadata and makes unknown/cross-Library
+  Items externally identical;
+- Start Reading accepts only exact `YYYY-MM-DD`, calls the named existing
+  service and leaves direct-use, source/Work and active-round invariants in
+  Core;
+- success payloads are named allowlists and contain no rows, owner IDs,
+  technical timestamps, stacks, SQL or private exception details;
+- one central adapter mapper covers authentication, transport, validation,
+  not-available, conflict, unavailable-Core and internal failures, while
+  WordPress retains its standard invalid-nonce code;
+- real `WP_REST_Server` plus isolated MariaDB tests cover authentication,
+  tenant isolation, pagination, detail, mutation, conflicts, spoofing,
+  unknown fields and error privacy;
+- unhealthy Core fails closed with 503, WordPress smoke stays available and no
+  schema 1008, Ability, Elementor, Notes, Ratings/Reviews or Next Reading route
+  is introduced;
+- the complete canonical gate stays green.
+
+No-go:
+
+- permission callback or REST code reproducing membership, reading status,
+  availability, capabilities, source consistency or lifecycle rules;
+- client-supplied actor/context/capability authority;
+- generic serialization or raw exception/database output;
+- direct table/repository access from REST or Elementor;
+- expanding beyond the first UI vertical slice.
+
+The exact contract and Elementor Readiness Gate are
+`docs/19-f2-12-exit-evidence.md`.

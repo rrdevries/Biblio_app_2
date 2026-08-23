@@ -776,3 +776,31 @@ states. Fields absent from the current Core schema remain unknown. This keeps
 the DTO honest and lets B3/B4 enrich persistence later without making
 Elementor or REST depend on table shape. F2.11 adds no schema, REST, WordPress
 Ability, serializer, cache or UI.
+
+## 22. F2.12 WordPress REST adapter boundary
+
+The versioned `biblio/v1` adapter is WordPress infrastructure around existing
+named `CoreApplication` services. It owns route registration, cookie/nonce
+integration, transport parsing, opaque cursor encoding, explicit serialization
+and safe HTTP error mapping. Core owns actor identity, Library Context,
+authorization, catalog projection, Reading source/Work derivation and
+lifecycle invariants.
+
+All private routes have an authentication permission callback. That callback
+is deliberately coarse; it never reproduces membership or use-access policy.
+The application service always makes the definitive current domain decision.
+Explicit Library and Item URL parameters are reconstructed as typed values from
+URL scope only, preventing body/query parameter precedence from substituting
+context.
+
+Responses are explicit allowlists. No DTO reflection, domain aggregate dump,
+repository, wpdb row or exception message crosses the boundary. Biblio errors
+use one mapper; standard REST nonce rejection remains owned by WordPress before
+route dispatch. Unknown and inaccessible Library/Item resources collapse to
+one 404 contract where Core preserves non-enumeration.
+
+`Plugin::boot()` registers one idempotent `rest_api_init` hook and supplies the
+existing health-gated application through a request-time provider. Failed Core
+boot therefore yields a registered route with a safe 503 rather than partial
+functionality. The adapter adds no persistent truth, schema migration, Ability,
+Elementor code or generic endpoint framework.
