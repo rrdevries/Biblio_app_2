@@ -8,6 +8,7 @@ use Biblio\Core\Infrastructure\Persistence\PersistenceException;
 use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Library\Library;
 use Biblio\Core\Library\LibraryId;
+use Biblio\Core\Library\LibraryName;
 use Biblio\Core\Library\WritableLibraryRepository;
 use Biblio\Core\Library\LibraryStatus;
 use Biblio\Core\Library\LibraryType;
@@ -18,7 +19,8 @@ final readonly class WpdbLibraryRepository implements WritableLibraryRepository
 {
     public function __construct(
         private wpdb $database,
-        private CoreTableNames $tableNames
+        private CoreTableNames $tableNames,
+        private bool $identityAvailable = true
     ) {
     }
 
@@ -31,10 +33,11 @@ final readonly class WpdbLibraryRepository implements WritableLibraryRepository
                 $this->tableNames->libraries(),
                 [
                     "library_id" => $library->id()->value(),
+                    "library_name" => $library->name()->value(),
                     "library_type" => $library->type()->value,
                     "library_status" => $library->status()->value,
                 ],
-                ["%s", "%s", "%s"]
+                ["%s", "%s", "%s", "%s"]
             );
         } finally {
             $this->database->suppress_errors($previousSuppression);
@@ -51,9 +54,9 @@ final readonly class WpdbLibraryRepository implements WritableLibraryRepository
     public function find(LibraryId $libraryId): ?Library
     {
         $table = $this->tableNames->libraries();
+        $columns = $this->selectColumns();
         $row = $this->database->get_row($this->database->prepare(
-            "SELECT library_id, library_type, library_status "
-            . "FROM `{$table}` WHERE library_id = %s",
+            "SELECT {$columns} FROM `{$table}` WHERE library_id = %s",
             $libraryId->value()
         ));
 
@@ -67,9 +70,9 @@ final readonly class WpdbLibraryRepository implements WritableLibraryRepository
     public function all(): array
     {
         $table = $this->tableNames->libraries();
+        $columns = $this->selectColumns();
         $rows = $this->database->get_results(
-            "SELECT library_id, library_type, library_status "
-            . "FROM `{$table}` ORDER BY library_id"
+            "SELECT {$columns} FROM `{$table}` ORDER BY library_id"
         );
 
         return array_map(
@@ -83,6 +86,9 @@ final readonly class WpdbLibraryRepository implements WritableLibraryRepository
         try {
             return new Library(
                 new LibraryId((string) $row->library_id),
+                isset($row->library_name)
+                    ? new LibraryName((string) $row->library_name)
+                    : LibraryName::personalDefault(),
                 LibraryType::from((string) $row->library_type),
                 LibraryStatus::from((string) $row->library_status)
             );
@@ -94,5 +100,12 @@ final readonly class WpdbLibraryRepository implements WritableLibraryRepository
                 FailureReason::PersistenceReadFailed
             );
         }
+    }
+
+    private function selectColumns(): string
+    {
+        return $this->identityAvailable
+            ? "library_id, library_name, library_type, library_status"
+            : "library_id, library_type, library_status";
     }
 }

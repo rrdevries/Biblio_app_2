@@ -178,6 +178,7 @@ final class Schema1001IntegrityTest extends PersistenceIntegrationTestCase
     {
         return $this->database->insert($this->tableNames->libraries(), [
             "library_id" => $libraryId,
+            "library_name" => "Testbibliotheek",
             "library_type" => "private_library",
             "library_status" => "active",
         ]);

@@ -229,7 +229,7 @@ final class NextReadingConcurrencyTest extends PersistenceIntegrationTestCase
         $libraries = $this->tableNames->libraries();
         if ((int) $this->database->get_var("SELECT COUNT(*) FROM `{$libraries}` WHERE library_id='race-library'") === 0) {
             $this->database->insert($this->tableNames->libraries(), [
-                "library_id" => "race-library", "library_type" => "private_library", "library_status" => "active",
+                "library_id" => "race-library", "library_name" => "Racebibliotheek", "library_type" => "private_library", "library_status" => "active",
             ]);
             $this->database->insert($this->tableNames->memberships(), [
                 "library_id" => "race-library", "user_id" => "race-user", "membership_status" => "active",

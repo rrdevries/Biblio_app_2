@@ -6,6 +6,7 @@ namespace Biblio\Core\Tests\Unit;
 
 use Biblio\Core\Library\Library;
 use Biblio\Core\Library\LibraryId;
+use Biblio\Core\Library\LibraryName;
 use Biblio\Core\Library\LibraryStatus;
 use Biblio\Core\Library\LibraryType;
 use PHPUnit\Framework\TestCase;
@@ -17,7 +18,19 @@ final class LibraryTest extends TestCase
         $library = Library::privateLibrary(new LibraryId("library-a"));
 
         self::assertSame("library-a", $library->id()->value());
+        self::assertSame("Mijn Bibliotheek", $library->name()->value());
         self::assertSame(LibraryType::PrivateLibrary, $library->type());
         self::assertSame(LibraryStatus::Active, $library->status());
+    }
+
+    public function testLibraryNameIsTrimmedWhitespaceNormalizedAndBounded(): void
+    {
+        $name = new LibraryName("  Mijn\n\tBibliotheek  ");
+
+        self::assertSame("Mijn Bibliotheek", $name->value());
+        self::assertSame(
+            "Mijn Bibliotheek",
+            LibraryName::personalDefault()->value()
+        );
     }
 }

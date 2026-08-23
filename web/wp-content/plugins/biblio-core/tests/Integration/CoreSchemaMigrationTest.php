@@ -186,8 +186,8 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
         try {
             $migrator->migrate();
 
-            self::assertSame(1007, $migrator->installedVersion());
-            self::assertSame(1007, $migrator->expectedVersion());
+            self::assertSame(1008, $migrator->installedVersion());
+            self::assertSame(1008, $migrator->expectedVersion());
             self::assertTrue($migrator->healthForVersion(1005)->isHealthy());
             self::assertSame(21, $this->existingCurrentTableCount());
             self::assertSame(1, $this->indexCount(
@@ -211,7 +211,7 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
             "No explicit Biblio Core schema-health contract exists"
         );
 
-        $this->migrator()->healthForVersion(1007);
+        $this->migrator()->healthForVersion(1008);
     }
 
     public function testHealthyCurrentRunIsSchemaAndDataNoOp(): void
@@ -498,6 +498,7 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
     {
         $this->database->insert($this->tableNames->libraries(), [
             "library_id" => "sentinel-library",
+            "library_name" => "Sentinelbibliotheek",
             "library_type" => "private_library",
             "library_status" => "active",
         ]);

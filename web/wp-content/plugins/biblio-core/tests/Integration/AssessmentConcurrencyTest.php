@@ -435,6 +435,7 @@ final class AssessmentConcurrencyTest extends PersistenceIntegrationTestCase
                 $this->tableNames->libraries(),
                 [
                     'library_id' => $libraryId,
+                    'library_name' => 'Assessmentbibliotheek',
                     'library_type' => 'private_library',
                     'library_status' => 'active',
                 ]

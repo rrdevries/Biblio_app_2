@@ -93,7 +93,7 @@ final class Schema1002SeedEvolutionTest extends PersistenceIntegrationTestCase
 
         $this->productionMigrator()->migrate();
 
-        self::assertSame(1006, $this->productionMigrator()->installedVersion());
+        self::assertSame(1007, $this->productionMigrator()->installedVersion());
         self::assertSame([
             "legacy-round",
             "771",
@@ -243,7 +243,7 @@ final class Schema1002SeedEvolutionTest extends PersistenceIntegrationTestCase
             $this->database,
             $lifecycleState
         ))->lifecycle()->boot();
-        self::assertTrue($lifecycleState->isHealthCurrent(1006));
+        self::assertTrue($lifecycleState->isHealthCurrent(1007));
         $lifecycleState->clear();
 
         $dataAfterFirstRun = $this->classificationDataSnapshot();
@@ -275,7 +275,8 @@ final class Schema1002SeedEvolutionTest extends PersistenceIntegrationTestCase
                     $this->tableNames,
                     new WpdbLibraryRepository(
                         $this->database,
-                        $this->tableNames
+                        $this->tableNames,
+                        false
                     ),
                     $failingEvolution
                 ),

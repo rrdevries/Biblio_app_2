@@ -6,6 +6,7 @@ namespace Biblio\Core\Tests\Integration;
 
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMembershipRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPersonalLibraryRepository;
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Library\ManagementRole;
@@ -92,6 +93,13 @@ final class PersonalLibraryProvisioningConcurrencyTest extends
             self::assertSame(
                 UseAccess::Direct,
                 $membership->membership()->useAccess()
+            );
+            self::assertSame(
+                "Mijn Bibliotheek",
+                (new WpdbLibraryRepository(
+                    $this->database,
+                    $this->tableNames
+                ))->find($libraryId)?->name()->value()
             );
         } finally {
             foreach ($workers as $worker) {

@@ -151,6 +151,10 @@ final class EnsurePersonalPrivateLibraryServiceTest extends TestCase
         self::assertSame(1, $repositories[0]->count());
         self::assertSame(1, $repositories[1]->count());
         self::assertSame(1, $repositories[2]->count());
+        self::assertSame(
+            "Mijn Bibliotheek",
+            $repositories[0]->find($first)?->name()->value()
+        );
         self::assertNotNull($membership);
         self::assertSame(
             ManagementRole::Owner,
