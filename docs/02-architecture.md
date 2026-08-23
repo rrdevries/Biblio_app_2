@@ -718,3 +718,29 @@ mutations run inside one locked-read/CAS transaction. Referential Round unlink
 is not a Note edit and deliberately leaves Note version and timestamps intact.
 Stable owner predicates and `updated_at DESC, private_note_id DESC` cursor
 pagination protect every individual and projected read.
+
+## 20. F2.10 Library identity and context boundary
+
+Library identity is domain-owned and persisted in the Core Library table. A
+Library has an opaque `LibraryId` and required `LibraryName`; names are
+non-unique display identity and never replace the ID in references or routes.
+The personal provisioning factory supplies `Mijn Bibliotheek` while schema
+1007 safely backfills the previously nameless supported Library baseline and
+adds an actor-membership read index without making names unique.
+
+`LibraryContextQueryService` is the adapter-facing read boundary for Library
+selection. Its public methods accept no actor or trusted `LibraryContext`.
+They resolve the authenticated user, query memberships scoped to that actor,
+build `LibraryContext` inside Core, validate active collection access and only
+then project identity, personal designation and capabilities. An explicit
+client-supplied Library ID remains an untrusted target until this validation
+succeeds.
+
+Capabilities are immutable server-calculated facts for presentation. They do
+not authorize a later mutation by themselves; every mutation continues to
+perform its own current server-side authorization. The query boundary exposes
+no repository, table, join, WordPress role assumption or user-owned data.
+
+F2.10 deliberately adds no switch session, implicit current-Library state,
+REST route, catalog overview/detail query, general rename/create lifecycle or
+Elementor behavior. F2.11 and F2.12 remain the next architectural layers.

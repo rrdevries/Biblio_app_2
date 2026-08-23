@@ -22,6 +22,7 @@ use Biblio\Core\Application\Library\CreateLibraryService;
 use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
 use Biblio\Core\Application\Library\GetAccessibleLibraryItemService;
 use Biblio\Core\Application\Library\LibraryAccessService;
+use Biblio\Core\Application\Library\LibraryContextQueryService;
 use Biblio\Core\Application\Notes\CorrectPrivateNoteReadingRoundService;
 use Biblio\Core\Application\Notes\CreatePrivateNoteService;
 use Biblio\Core\Application\Notes\DeletePrivateNoteService;
@@ -63,6 +64,7 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbClassificationSeedEvolu
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbExternalLoanRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbItemRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMembershipRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbActorLibraryContextRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPersonalLibraryRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPrivateNoteRepository;
@@ -175,9 +177,15 @@ final class ProductionComposition
             $personalLibraryRepository,
             $createLibrary
         );
+        $authorizationPolicy = new LibraryAuthorizationPolicy();
         $libraryAccess = new LibraryAccessService(
             $membershipRepository,
-            new LibraryAuthorizationPolicy()
+            $authorizationPolicy
+        );
+        $libraryContexts = new LibraryContextQueryService(
+            $authenticatedUser,
+            new WpdbActorLibraryContextRepository($database, $tableNames),
+            $authorizationPolicy
         );
         $activityFactory = new WordPressActivityEventFactory(
             new ActivityEventSource("core.classification")
@@ -478,6 +486,7 @@ final class ProductionComposition
 
         $this->application = new CoreApplication(
             $personalLibraries,
+            $libraryContexts,
             $libraryItemCreation,
             $accessibleItems,
             $ownedExternalLoans,

@@ -120,6 +120,11 @@ For v2.001, Biblio automatically creates the user's one designated personal Priv
 - Eigenaar;
 - Directe toegang.
 
+The automatically provisioned Library is named `Mijn Bibliotheek`. Library
+names are required, trimmed, whitespace-normalized UTF-8 text of at most 191
+characters and are not globally unique. Existing supported Libraries without
+a usable name receive `Mijn Bibliotheek` through the formal F2.10 migration.
+
 This automatic Library creation does not move personal ReadingRounds, external loans, ratings, goals or other Mijn Biblio data into Library ownership.
 
 The same user may still create or own additional Privébibliotheken for other collection contexts where the relevant creation flow permits this.
@@ -1220,6 +1225,12 @@ Functionally role and use access are available, e.g.:
 - Lid · Lenen
 - Beheerder · Alleen bekijken
 - Eigenaar · Directe toegang
+
+The list is resolved for the authenticated actor on the server. It contains
+the stable Library ID, name, type, active designated-personal marker and
+server-calculated capabilities. A selected Library ID is only a target: Core
+rebuilds and validates Library Context from that ID plus the authenticated
+actor and never trusts page, cookie, session or form context.
 
 Fixed action:
 `Bibliotheek maken`.

@@ -1,9 +1,15 @@
 # 16 — Fase 2 Rest-Gap & Elementor Readiness Analysis
 
-Status: **READY AFTER 3 STEPS**
+Status: **F2.10 CLOSED — READY AFTER 2 STEPS**
 
 Scope: Biblio V2 v2.001, bron- en repositorybrede analyse. Dit document
 wijzigt geen productiecode, tests, migrations, schema, data of UI.
+
+F2.10 closure update (2026-08-23): A1 is implemented on schema 1007. Library
+name/default/backfill, actor-Library list, designated marker and server-side
+capability/context projection are now proven. The original analysis below is
+retained as the decision record; open-work statements about A1 are superseded
+by this update. F2.11 (A2) and F2.12 (A3) remain open.
 
 ## 1. Baseline
 
@@ -201,7 +207,7 @@ auditfunctie.
 | Instellingen/defaults | Geen model/applicationcontract. | Persoonlijke per-Library voorkeuren, Library default en Home-configuratie. |
 | Membership/rollen/rechten | Model, persistence en enkele predicates bestaan. | Actor-librarylijst, capability DTO, membershipmutations, transfer/self-escalation en audit. |
 | Library switch/context | Geen query/switchservice; context wordt alleen per call opgebouwd. | Owner-scoped Librarylijst en één expliciete requestcontext, zonder trusted client-context. |
-| Library identity/lifecycle | Geen Librarynaam; general create/rename is niet exposed. | Naamcontract, provisioningdefault, readmodel en create/rename-use-cases. |
+| Library identity/lifecycle | F2.10 levert verplichte naam, default/backfill en actor-readmodel; general create/rename is niet exposed. | Alleen ordinary create/rename-use-cases blijven B5. |
 | REST/Abilities/adapters | Geen Biblio-transportadapter. | Routes, auth/nonce, validation, serialization, error mapping en registration lifecycle. |
 | UI-facing read models | Alleen enkele private/projectionservices. | Library/capability/catalog/current-reading/composite DTOs. |
 | UI-facing mutation contracts | F2.6–F2.9 grotendeels benoemd; andere domeinen ontbreken. | Transportcommands; catalog/lending/item/membership lifecycle waar nog niet in Core aanwezig. |
@@ -257,8 +263,9 @@ de praktijk alsnog A betekenen.
 | C14 | Brede Home-projecties en Home-configuratie | Alleen afnemer van betrouwbare bronservices; F3.0 heeft geen volledig Home nodig. |
 | C15 | Overige instellingen/defaults en operationele health-UI | Geen invloed op de gekozen startflow; alleen concrete instellingen worden later toegevoegd. |
 
-Samenvatting: **3 A-slices, 7 B-slices en 15 C-slices**. Alleen A1–A3
-vormen de Elementor-startgate.
+Samenvatting: de analyse identificeerde **3 A-slices, 7 B-slices en 15
+C-slices**. A1/F2.10 is gesloten; A2/F2.11 en A3/F2.12 vormen de resterende
+Elementor-startgate.
 
 ## 6. UI-adapteranalyse
 
@@ -384,7 +391,7 @@ koppelen.
 
 | Restant | Waarschijnlijke impact |
 | --- | --- |
-| A1 Library identity | Bestaande Library-tabel krijgt waarschijnlijk een naamveld en mogelijk een readindex; exacte naam/default/normalisatie is nog te beslissen. |
+| A1 Library identity | **Gesloten in schema 1007:** `library_name`, `Mijn Bibliotheek` default/backfill en actor-scoped readprojectie; geen extra naamindex nodig naast stabiele sortering op naam + ID. |
 | A2 overview/detail | Waarschijnlijk geen nieuw domeintabel; mogelijk gerichte index voor bounded Library + Work/Edition-sortering na queryplanmeting. |
 | Archive/Item lifecycle | Bestaande Item-status verandert en archiveperioden/redenen vragen waarschijnlijk eigen historie. |
 | InternalLoan | Nieuwe loan-tabellen en bewuste herbeoordeling van ReadingRound-sourcepersistence. |
@@ -501,9 +508,10 @@ contract nagebootst en blijft de slice toch een echte read/write-flow.
 - owner-scoped readback van de aangemaakte Round;
 - schema/migration/health/concurrency-testfundering.
 
-### Nog nodig
+### Nog nodig na F2.10
 
-- Librarynaamcontract plus owner-scoped Library/switch DTO (A1);
+- Librarynaamcontract plus actor-scoped Library/switch DTO (A1): **geleverd
+  door F2.10**;
 - bounded active Item overview en Item/Work detail/capability DTO (A2);
 - REST-routes, nonce/auth, validation, serialization en error envelope (A3);
 - adapter-/permissiontests en F3.0-fixture;
@@ -526,13 +534,13 @@ expliciete ReadingRound DTO en version, geen gehydrateerd repositoryobject.
 
 | Fase | Doel | Cat. | Afhankelijkheden | Zwaarte | Risico | Waarom vóór/na Elementor |
 | --- | --- | --- | --- | --- | --- | --- |
-| F2.10 — Library Identity & Context Readiness | Librarynaamcontract, veilige 1006→volgende migration, actor-librarylijst, designated markering en capability DTO. | A | Schema 1006, membership/auth foundation. | Middel | Productkeuze voor default naam; data-evolutie en tenantleak. | Vóór: zonder herkenbare/scoped Library kan geen betrouwbare switch of route bestaan. |
+| F2.10 — Library Identity & Context Readiness | **Gesloten:** verplicht naamcontract, veilige 1006→1007 migration/backfill, actor-librarylijst, designated markering en capability DTO. | A | Schema 1006, membership/auth foundation. | Afgerond | Naam/default, data-evolutie en tenantisolatie zijn bewezen. | A1 geleverd; geen UI gebouwd. |
 | F2.11 — Catalog UI Read Models | Bounded active overview, Item/Work detail, personal status, start capability, cursor en query/indexbewijs. | A | F2.10, catalog/ReadingRound foundation. | Middel | N+1, instabiele ordering, scopelek via joins. | Vóór: Elementor mag deze joins/capabilities niet zelf definiëren. |
 | F2.12 — WordPress UI Adapter Foundation | `biblio/v1`, routecontrollers, auth/nonce, request/response schemas, error envelope, contract/securitytests en fixture seam. | A | F2.10–F2.11, healthy composition. | Groot | CSRF, enumeration, dubbele authorization, transportcontract drift. | Vóór: dit is de enige veilige toegang van Elementor tot Core. |
 | Core/UI Readiness Gate | Objectief bewijs uit §15 verzamelen. | Gate | F2.10–F2.12. | Klein | Een groen Core-testresultaat verwarren met een groen API-contract. | Moet GO zijn vóór de eerste echte UI-mutation. |
 | F3.0 — Eerste Elementor vertical slice | Active personal-Library overview → detail → start reading, plus eerste Playwrightpad. | UI | Gate GO, Elementor/Pro beschikbaar. | Middel | UI-state wijkt van serverstate af; licensed config niet reproduceerbaar. | Eerste echte Elementorbouw. |
 
-**Aantal resterende pre-Elementor gate-stappen: 3.**
+**Aantal resterende pre-Elementor gate-stappen: 2.**
 
 ### Daarna, op afhankelijkheid en niet op oude fasenummers
 
@@ -559,14 +567,15 @@ geen prijs- of tijdgarantie en hebben circa ±50% onzekerheid.
 
 | Pre-Elementor fase | Work-level | Relatieve creditband | Vergelijking/ onzekerheid |
 | --- | --- | ---: | --- |
-| F2.10 Library Identity & Context | GEMIDDELD | 4–7 | Kleiner dan F2.7b, maar migration/backfill en nog open naamcontract kunnen uitlopen. |
+| F2.10 Library Identity & Context | AFGEROND | gerealiseerd | Schema 1007, backfill, actorlijst en capability/contextprojectie zijn bewezen. |
 | F2.11 Catalog UI Read Models | GEMIDDELD | 4–7 | Minder domeinmutatie dan F2.9b; query/index- en isolationbewijs bepalen de bovengrens. |
 | F2.12 REST Adapter Foundation | HOOG | 6–10 | Geen nieuw zwaar aggregate, maar wel een geheel nieuwe security-/transport-/testlaag. |
 | Readiness Gate/closure | LAAG | 1–2 | Alleen bewijs, regressiegate en documentatie wanneer A1–A3 compleet zijn. |
 
 Gate-kritiek totaal: grofweg **15–26 relatieve credits**. De grootste
-onzekerheden zijn de nog te kiezen Librarynaam/backfill en hoeveel WordPress
-REST-testinfrastructuur vanaf nul nodig blijkt. Splits elke fase in een eigen
+onzekerheid rond Librarynaam/backfill is door F2.10 gesloten; de resterende
+onzekerheid is hoeveel WordPress REST-testinfrastructuur vanaf nul nodig blijkt.
+Splits elke fase in een eigen
 analyse-/contractcommit en implementatie-/exitcommit om creditverlies door
 scopegroei te beperken.
 
@@ -577,9 +586,9 @@ De gate is **GO** uitsluitend wanneer ieder vak objectief bewijs heeft.
 - [ ] **Core business rules stabiel:** de gekozen slice gebruikt alleen de
   canonieke collection-view- en ReadingRound-startregels; geen open productvariant
   in de route.
-- [ ] **Library identity compleet:** Librarynaam/default/backfill is besloten,
+- [x] **Library identity compleet:** Librarynaam/default/backfill is besloten,
   gemigreerd en schema-health is groen.
-- [ ] **Auth/context server-side:** actor wordt uitsluitend via WordPress
+- [x] **Auth/context server-side:** actor wordt uitsluitend via WordPress
   resolved; Library target is expliciet en Core bouwt de context.
 - [ ] **Readcontract compleet:** owner-scoped Librarylijst, bounded active Item-
   overzicht en Itemdetail hebben stabiele DTOs, sortering, cursor en capability-
@@ -609,13 +618,12 @@ C-domein geeft geen NO-GO zolang de eerste slice er niet van afhankelijk is.
 
 ## 16. Open beslissingen
 
-### Blockerend voor A1
+### Afgerond in A1/F2.10
 
-1. **Librarynaamcontract:** verplichte naam, maximale lengte/normalisatie,
-   uniqueness (aanbevolen: niet uniek) en de default/backfill voor reeds
-   automatisch geprovisioneerde persoonlijke Libraries. Dit is een kleine
-   productbeslissing met schema-impact en mag niet uit technische ID worden
-   afgeleid.
+1. **Librarynaamcontract:** verplicht, geldige UTF-8, getrimd en whitespace-
+   genormaliseerd, maximaal 191 tekens en niet uniek. Automatische provisioning
+   en backfill gebruiken `Mijn Bibliotheek`. Schema 1007 en F2.10-tests bewijzen
+   dit zonder de naam uit de technische ID af te leiden.
 
 ### Niet blocker voor F3.0, wel vóór hun eigen slice
 
@@ -635,7 +643,7 @@ access F3.0-pad te vertragen. Beslissing 1 hoort expliciet in F2.10.
 
 ## 17. Eindverdict
 
-**READY AFTER 3 STEPS**
+**F2.10 GO — READY AFTER 2 STEPS**
 
 Biblio Core is niet “READY NOW”: er is geen transportadapter, geen betrouwbare
 Library-switch/readmodel en geen bounded catalogusoverzicht/detailcontract.
@@ -643,12 +651,13 @@ Elementor nu aansluiten zou context, joins, capabilities, validation en error-
 semantiek in de UI dwingen.
 
 Biblio is evenmin algemeen “NOT READY”. De gekozen eerste mutation en haar
-authorization/integriteit zijn al aantoonbaar volwassen. Na F2.10 Library
-Identity & Context, F2.11 Catalog UI Read Models en F2.12 WordPress UI Adapter
-kan de objectieve gate worden uitgevoerd. Wishlist, Collections, InternalLoan,
+authorization/integriteit zijn al aantoonbaar volwassen. F2.10 Library
+Identity & Context is gesloten. Na F2.11 Catalog UI Read Models en F2.12
+WordPress UI Adapter kan de objectieve gate worden uitgevoerd. Wishlist,
+Collections, InternalLoan,
 Timeline, Statistieken, Jaaroverzicht, Leesdoelen, Openstaande acties en brede
 Home hoeven daarvoor niet eerst gebouwd te worden.
 
 De kortste verstandige route is daarom:
 
-`HEAD 272cc588 → F2.10 → F2.11 → F2.12 → Core/UI Gate GO → F3.0`.
+`F2.10 GO → F2.11 → F2.12 → Core/UI Gate GO → F3.0`.

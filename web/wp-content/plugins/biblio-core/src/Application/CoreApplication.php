@@ -15,6 +15,7 @@ use Biblio\Core\Application\Catalog\Classification\ManageLibrarySubjectsService;
 use Biblio\Core\Application\Catalog\Classification\SaveLibraryCatalogContextService;
 use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
 use Biblio\Core\Application\Library\GetAccessibleLibraryItemService;
+use Biblio\Core\Application\Library\LibraryContextQueryService;
 use Biblio\Core\Application\Notes\CorrectPrivateNoteReadingRoundService;
 use Biblio\Core\Application\Notes\CreatePrivateNoteService;
 use Biblio\Core\Application\Notes\DeletePrivateNoteService;
@@ -47,6 +48,7 @@ final readonly class CoreApplication
 {
     public function __construct(
         private EnsurePersonalPrivateLibraryService $personalLibraries,
+        private LibraryContextQueryService $libraryContexts,
         private AddLibraryItemService $libraryItemCreation,
         private GetAccessibleLibraryItemService $accessibleLibraryItems,
         private GetOwnedExternalLoanService $ownedExternalLoans,
@@ -110,6 +112,11 @@ final readonly class CoreApplication
     public function personalLibraries(): EnsurePersonalPrivateLibraryService
     {
         return $this->personalLibraries;
+    }
+
+    public function libraryContexts(): LibraryContextQueryService
+    {
+        return $this->libraryContexts;
     }
 
     public function accessibleLibraryItems(): GetAccessibleLibraryItemService

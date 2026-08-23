@@ -7,23 +7,18 @@ namespace Biblio\Core\Infrastructure\Persistence\WordPress\Schema;
 use Biblio\Core\Catalog\Classification\ClassificationSeedEvolution;
 use Biblio\Core\Infrastructure\Persistence\WordPress\CoreTableNames;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbClassificationSeedEvolutionFactory;
-use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryRepository;
-use Biblio\Core\Library\LibraryRepository;
+use Biblio\Core\Library\LibraryId;
 use wpdb;
 
 final readonly class CoreSchemaHealthChecker
 {
-    private LibraryRepository $libraries;
     private ClassificationSeedEvolution $seedEvolution;
 
     public function __construct(
         private wpdb $database,
         private CoreTableNames $tableNames,
-        ?LibraryRepository $libraries = null,
         ?ClassificationSeedEvolution $seedEvolution = null
     ) {
-        $this->libraries = $libraries
-            ?? new WpdbLibraryRepository($database, $tableNames);
         $this->seedEvolution = $seedEvolution
             ?? WpdbClassificationSeedEvolutionFactory::create(
                 $database,
@@ -41,6 +36,7 @@ final readonly class CoreSchemaHealthChecker
             1004 => $this->inspectTables($this->tableNames->schema1004(), true, 1004),
             1005 => $this->inspectTables($this->tableNames->schema1005(), true, 1005),
             1006 => $this->inspectTables($this->tableNames->schema1006(), true, 1006),
+            1007 => $this->inspectTables($this->tableNames->schema1006(), true, 1007),
             default => throw new CoreSchemaMigrationException(
                 "No explicit Biblio Core schema-health contract exists for "
                 . "schema version {$expectedVersion}."
@@ -65,8 +61,14 @@ final readonly class CoreSchemaHealthChecker
     {
         $warnings = [];
 
-        foreach ($this->libraries->all() as $library) {
-            $ambiguities = $this->seedEvolution->ambiguities($library->id());
+        $libraries = $this->tableNames->libraries();
+        $storedIds = $this->database->get_col(
+            "SELECT library_id FROM `{$libraries}` ORDER BY library_id"
+        );
+
+        foreach ($storedIds as $storedId) {
+            $libraryId = new LibraryId((string) $storedId);
+            $ambiguities = $this->seedEvolution->ambiguities($libraryId);
 
             foreach ($ambiguities as $ambiguity) {
                 $warnings[] = new CoreSchemaHealthWarning(
@@ -130,6 +132,10 @@ final readonly class CoreSchemaHealthChecker
             && $this->nextReadingDataColumnsExist()) {
             $this->inspectNextReadingData($issues);
             $this->inspectNextReadingTriggers($issues);
+        }
+
+        if ($schemaVersion >= 1007 && $this->tableExists($this->tableNames->libraries())) {
+            $this->inspectLibraryIdentityData($issues);
         }
 
         return new CoreSchemaHealth($issues);
@@ -401,6 +407,21 @@ final readonly class CoreSchemaHealthChecker
         }
     }
 
+    /** @param list<string> $issues */
+    private function inspectLibraryIdentityData(array &$issues): void
+    {
+        $libraries = $this->tableNames->libraries();
+        $invalid = (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$libraries}` "
+            . "WHERE library_name IS NULL "
+            . "OR CHAR_LENGTH(TRIM(library_name)) = 0"
+        );
+
+        if ($invalid > 0) {
+            $issues[] = "Library identity contains {$invalid} missing or empty name(s)";
+        }
+    }
+
     /** @return array<string, array<string, array<string, string>>> */
     private function expectedColumns(int $schemaVersion): array
     {
@@ -416,12 +437,23 @@ final readonly class CoreSchemaHealthChecker
         ];
         $generatedId = $nullableId + ["extra" => "STORED GENERATED"];
 
-        return [
-            $this->tableNames->libraries() => [
+        $libraryColumns = [
                 "library_id" => $id,
                 "library_type" => ["type" => "varchar(32)", "nullable" => "NO"],
                 "library_status" => ["type" => "varchar(32)", "nullable" => "NO"],
-            ],
+        ];
+
+        if ($schemaVersion >= 1007) {
+            $libraryColumns = [
+                "library_id" => $id,
+                "library_name" => $id,
+                "library_type" => ["type" => "varchar(32)", "nullable" => "NO"],
+                "library_status" => ["type" => "varchar(32)", "nullable" => "NO"],
+            ];
+        }
+
+        return [
+            $this->tableNames->libraries() => $libraryColumns,
             $this->tableNames->memberships() => [
                 "library_id" => $id,
                 "user_id" => $id,
@@ -672,14 +704,23 @@ final readonly class CoreSchemaHealthChecker
     /** @return array<string, array<string, array{unique: bool, columns: list<string>}>> */
     private function expectedIndexes(int $schemaVersion): array
     {
+        $membershipIndexes = [
+            "PRIMARY" => ["unique" => true, "columns" => ["library_id", "user_id"]],
+            "one_active_owner" => ["unique" => true, "columns" => ["active_owner_library_id"]],
+        ];
+
+        if ($schemaVersion >= 1007) {
+            $membershipIndexes["memberships_by_user"] = [
+                "unique" => false,
+                "columns" => ["user_id", "library_id"],
+            ];
+        }
+
         return [
             $this->tableNames->libraries() => [
                 "PRIMARY" => ["unique" => true, "columns" => ["library_id"]],
             ],
-            $this->tableNames->memberships() => [
-                "PRIMARY" => ["unique" => true, "columns" => ["library_id", "user_id"]],
-                "one_active_owner" => ["unique" => true, "columns" => ["active_owner_library_id"]],
-            ],
+            $this->tableNames->memberships() => $membershipIndexes,
             $this->tableNames->personalLibraryDesignations() => [
                 "PRIMARY" => ["unique" => true, "columns" => ["user_id"]],
                 "one_personal_user_per_library" => ["unique" => true, "columns" => ["library_id"]],
@@ -1041,6 +1082,9 @@ final readonly class CoreSchemaHealthChecker
             $this->tableNames->libraries() => [
                 "library_type = 'private_library'",
                 "library_status = 'active'",
+                ...($schemaVersion >= 1007
+                    ? ["CHAR_LENGTH(TRIM(library_name)) > 0"]
+                    : []),
             ],
             $this->tableNames->memberships() => [
                 "membership_status IN ('active', 'inactive')",

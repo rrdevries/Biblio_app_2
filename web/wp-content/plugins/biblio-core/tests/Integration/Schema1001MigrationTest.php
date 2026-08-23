@@ -399,7 +399,7 @@ final class Schema1001MigrationTest extends PersistenceIntegrationTestCase
 
     private function restoreCurrentSchema(): void
     {
-        if ($this->productionMigrator()->installedVersion() !== 1006) {
+        if ($this->productionMigrator()->installedVersion() !== 1007) {
             $this->productionMigrator()->migrate();
         }
     }

@@ -824,3 +824,34 @@ limit or retarget service was added.
 
 The complete implementation and 73-case verification record is maintained in
 `docs/15-f2-9b-exit-evidence.md`.
+
+### F2.10 — Library Identity & Context Readiness
+
+Status: **Implemented — GO**
+
+Library now has a required stable identity consisting of its existing opaque
+ID plus a persisted server-side name. `LibraryName` accepts valid UTF-8,
+trims and collapses whitespace, is limited to 191 characters and is not
+unique. Automatic personal Privébibliotheek provisioning uses the canonical
+name `Mijn Bibliotheek`.
+
+Schema 1007 adds `library_name` to `wp_biblio_libraries`. The forward-only
+1006→1007 migration adds it through a recognized nullable intermediate state,
+backfills missing/empty names with `Mijn Bibliotheek`, then makes it `NOT NULL`
+and adds a non-empty CHECK. Retry, postcondition, data-health and real MariaDB
+tests prove idempotence and drift detection. The same migration adds
+`memberships_by_user (user_id, library_id)` for the actor-scoped switch query.
+
+Production Core exposes one named `LibraryContextQueryService`. It derives the
+actor server-side, lists only that actor's active memberships, returns ID,
+name, type, status, designated-personal marker and server-calculated
+capabilities, and resolves one explicit target Library ID non-enumerating.
+Missing, foreign and inactive memberships are rejected; user ownership and
+Library membership remain separate concepts.
+
+F2.10 closes A1 from the readiness analysis. F2.11 bounded Catalog UI Read
+Models and F2.12 REST adapter/security remain open. No REST route, Elementor
+UI, general Library create/rename or membership lifecycle was added.
+
+The implementation and verification record is maintained in
+`docs/17-f2-10-exit-evidence.md`.

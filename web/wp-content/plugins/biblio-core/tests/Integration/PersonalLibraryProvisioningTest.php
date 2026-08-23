@@ -56,6 +56,7 @@ final class PersonalLibraryProvisioningTest extends
         self::assertNotNull($library);
         self::assertSame(LibraryType::PrivateLibrary, $library->type());
         self::assertSame(LibraryStatus::Active, $library->status());
+        self::assertSame("Mijn Bibliotheek", $library->name()->value());
         self::assertNotNull($membership);
         self::assertSame(
             ManagementRole::Owner,

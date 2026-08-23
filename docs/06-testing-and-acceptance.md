@@ -748,3 +748,37 @@ regressions remain part of the canonical gate.
 
 The formal case-family mapping and exact gate results are recorded in
 `docs/15-f2-9b-exit-evidence.md`.
+
+## 36. F2.10 Library Identity & Context acceptance evidence
+
+Acceptance:
+
+- automatic personal provisioning persists exactly `Mijn Bibliotheek` and
+  remains idempotent, transactional and concurrency-safe;
+- Library ID, normalized name, type and status round-trip through persistence;
+- schema 1007 performs a real 1006 upgrade, backfills missing/empty supported
+  Library names, enforces `NOT NULL` plus non-empty CHECK, is safely retryable
+  and is a data/schema no-op after convergence; its actor-membership index is
+  present with the expected `(user_id, library_id)` order;
+- an actor Library list is derived from the authenticated actor and includes
+  only active memberships, stable identity, designated-personal marker and
+  server-calculated capabilities;
+- explicit context resolution accepts only a target Library ID, rebuilds
+  `LibraryContext` in Core and rejects missing, foreign and inactive access
+  without trusting client state;
+- two actors and multiple Libraries retain tenant isolation; Library roles do
+  not grant another user's private data ownership;
+- `CoreApplication` exposes the named context query service but no repository,
+  generic resolver or caller-supplied actor/context boundary;
+- all earlier migration, provisioning, authorization, concurrency and smoke
+  regressions remain green through the canonical full gate.
+
+No-go:
+
+- an optional/UI-only Library name;
+- trusted cookie, page, form or JavaScript Library Context;
+- a capability flag used as the final mutation authorization decision;
+- direct membership, table or repository reads from Elementor;
+- expansion into F2.11 catalog DTOs, F2.12 REST or F3.0 Elementor.
+
+The exact gate record is `docs/17-f2-10-exit-evidence.md`.

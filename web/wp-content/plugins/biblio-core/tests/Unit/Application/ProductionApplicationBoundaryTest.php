@@ -14,6 +14,7 @@ use Biblio\Core\Application\Catalog\Classification\SaveLibraryCatalogContextServ
 use Biblio\Core\Application\CoreApplication;
 use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
 use Biblio\Core\Application\Library\GetAccessibleLibraryItemService;
+use Biblio\Core\Application\Library\LibraryContextQueryService;
 use Biblio\Core\Application\Notes\CorrectPrivateNoteReadingRoundService;
 use Biblio\Core\Application\Notes\CreatePrivateNoteService;
 use Biblio\Core\Application\Notes\DeletePrivateNoteService;
@@ -41,6 +42,8 @@ final class ProductionApplicationBoundaryTest extends TestCase
     {
         foreach ([
             [EnsurePersonalPrivateLibraryService::class, "ensure"],
+            [LibraryContextQueryService::class, "myLibraries"],
+            [LibraryContextQueryService::class, "get"],
             [AddLibraryItemService::class, "addForExistingEdition"],
             [
                 AddLibraryItemService::class,
@@ -118,6 +121,7 @@ final class ProductionApplicationBoundaryTest extends TestCase
             "genreManagement",
             "historicalReadingRoundDeletion",
             "historicalReadingRounds",
+            "libraryContexts",
             "libraryItemCreation",
             "libraryItemReading",
             "myNextReadingList",

@@ -84,7 +84,7 @@ final class Schema1006NextReadingTest extends PersistenceIntegrationTestCase
         update_option(CoreSchemaMigrator::VERSION_OPTION, "1005", false);
         $this->migrator()->migrate();
 
-        self::assertSame(1006, $this->migrator()->installedVersion());
+        self::assertSame(1007, $this->migrator()->installedVersion());
         self::assertSame("Preserved 1005 Work", $this->database->get_var(
             "SELECT work_title FROM `{$this->tableNames->works()}` WHERE work_id='upgrade-sentinel'"
         ));

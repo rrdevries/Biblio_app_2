@@ -29,7 +29,7 @@ final readonly class CoreSchema1002Migration implements CoreSchemaMigration
         ?TransactionManager $transactionManager = null
     ) {
         $this->libraries = $libraries
-            ?? new WpdbLibraryRepository($database, $tableNames);
+            ?? new WpdbLibraryRepository($database, $tableNames, false);
         $this->seedEvolution = $seedEvolution
             ?? WpdbClassificationSeedEvolutionFactory::create(
                 $database,
@@ -40,7 +40,6 @@ final readonly class CoreSchema1002Migration implements CoreSchemaMigration
         $this->healthChecker = new CoreSchemaHealthChecker(
             $database,
             $tableNames,
-            $this->libraries,
             $this->seedEvolution
         );
     }

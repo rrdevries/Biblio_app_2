@@ -30,7 +30,7 @@ final readonly class EnsurePersonalPrivateLibraryService
             return $designatedLibraryId;
         }
 
-        $library = Library::privateLibrary($this->newLibraryId());
+        $library = Library::personalPrivateLibrary($this->newLibraryId());
 
         try {
             return $this->createLibraryService->createAndThen(

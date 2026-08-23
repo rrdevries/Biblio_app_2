@@ -198,6 +198,7 @@ final class NextReadingPersistenceTest extends PersistenceIntegrationTestCase
     {
         $this->database->insert($this->tableNames->libraries(), [
             "library_id" => "next-library",
+            "library_name" => "Nextbibliotheek",
             "library_type" => "private_library",
             "library_status" => "active",
         ]);
