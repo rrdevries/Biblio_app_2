@@ -794,3 +794,33 @@ canonical source→Library→publication lock order.
 
 The complete implementation and verification record is maintained in
 `docs/13-f2-8b-exit-evidence.md`.
+
+### F2.9 — Hierna lezen / Next Reading
+
+Status: **Implemented — GO**
+
+Hierna lezen is one private, platform-wide, user-owned manual ordered list per
+authenticated User. Entries target exactly a Work, visible Library Item or
+owned ExternalLoan. Core derives concrete-source Work server-side; availability
+and direct-use access are not add eligibility and never automatically filter,
+remove or reorder an entry.
+
+Targets are immutable. Concrete entries retain minimal Work/source/Library
+snapshot context while nullable live source FKs use `ON DELETE SET NULL`.
+Legitimate Item or ExternalLoan deletion therefore preserves entry, snapshot,
+position and list version without Work conversion or relinking.
+
+Schema 1006 adds `wp_biblio_next_reading_lists` and
+`wp_biblio_next_reading_entries`. One owner listversion, a persistent empty-list
+mutex, contiguous positions, full reorder and transactional compaction prevent
+lost collection updates. Independent-process races cover add/add, duplicate
+add, add/reorder, delete/reorder, divergent/equal reorder and source-delete
+interleavings.
+
+Named owner-scoped services expose three add commands, hard remove, full
+reorder, the complete own list and Home's exact first three. Home has no status
+filter. No Library ActivityEvent, Timeline, UI, global/Library query, count
+limit or retarget service was added.
+
+The complete implementation and 73-case verification record is maintained in
+`docs/15-f2-9b-exit-evidence.md`.

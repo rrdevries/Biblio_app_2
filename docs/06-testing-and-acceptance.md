@@ -729,3 +729,22 @@ withdraw/moderate and eligibility loss under the shared Library lock.
 
 The formal case-family mapping and exact gate results are recorded in
 `docs/13-f2-8b-exit-evidence.md`.
+
+## 35. F2.9 Hierna lezen acceptance evidence
+
+The 73 numbered cases in `docs/14-f2-9a-next-reading-analysis.md` are the
+binding contract. F2.9b proves closed immutable Work/Item/ExternalLoan targets,
+server-derived ownership and Work, concrete-source snapshots, source-delete
+retention, target and position uniqueness, one owner listversion, contiguous
+append/compaction, complete reorder, semantic no-op and typed stale state.
+
+Real MariaDB covers the two schema-1006 tables, nullable `SET NULL` live FKs,
+equivalent trigger-backed live-target shape enforcement, generated uniqueness,
+fresh install, real 1005 upgrade, retry, unknown partial state, health and data
+drift. Independent processes prove all specified add/reorder/delete/source-
+delete races. Owner privacy, first-three unfiltered Home output, bounded
+server-ID retry, zero ActivityEvents, named composition and all F2.6–F2.8
+regressions remain part of the canonical gate.
+
+The formal case-family mapping and exact gate results are recorded in
+`docs/15-f2-9b-exit-evidence.md`.
