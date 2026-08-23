@@ -32,6 +32,7 @@ use Biblio\Core\Application\Notes\ListPrivateNotesForWorkService;
 use Biblio\Core\Application\Notes\PrivateNoteCreation;
 use Biblio\Core\Application\Notes\RenderPrivateNoteContentService;
 use Biblio\Core\Application\Notes\UpdatePrivateNoteContentService;
+use Biblio\Core\Application\NextReading\{AddExternalLoanToNextReadingService,AddLibraryItemToNextReadingService,AddWorkToNextReadingService,GetMyNextReadingListService,GetNextReadingHomeProjectionService,NextReadingMutation,NextReadingProjector,RemoveNextReadingEntryService,ReorderNextReadingListService};
 use Biblio\Core\Application\Reading\CreateActiveReadingRoundService;
 use Biblio\Core\Application\Reading\CorrectEndedReadingRoundService;
 use Biblio\Core\Application\Reading\CorrectReadingRoundSourceService;
@@ -65,6 +66,7 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMembershipReposi
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPersonalLibraryRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPrivateNoteRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbNextReadingRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPublicationRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbRatingRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbReviewRepository;
@@ -422,6 +424,57 @@ final class ProductionComposition
             $reviewRepository,
             $publicationRepository
         );
+        $nextReadingRepository = new WpdbNextReadingRepository($database, $tableNames);
+        $nextReadingClock = new SystemNextReadingClock();
+        $nextReadingMutation = new NextReadingMutation(
+            $nextReadingRepository,
+            new OpaqueNextReadingEntryIdGenerator(),
+            $nextReadingClock,
+            $transactionManager
+        );
+        $nextReadingProjector = new NextReadingProjector(
+            $workRepository,
+            $accessibleItems,
+            $ownedExternalLoans
+        );
+        $nextReadingWorkAdd = new AddWorkToNextReadingService(
+            $authenticatedUser,
+            $workRepository,
+            $nextReadingMutation
+        );
+        $nextReadingItemAdd = new AddLibraryItemToNextReadingService(
+            $authenticatedUser,
+            $accessibleItems,
+            $editionRepository,
+            $nextReadingMutation
+        );
+        $nextReadingExternalAdd = new AddExternalLoanToNextReadingService(
+            $authenticatedUser,
+            $ownedExternalLoans,
+            $nextReadingMutation
+        );
+        $nextReadingRemove = new RemoveNextReadingEntryService(
+            $authenticatedUser,
+            $nextReadingRepository,
+            $nextReadingClock,
+            $transactionManager
+        );
+        $nextReadingReorder = new ReorderNextReadingListService(
+            $authenticatedUser,
+            $nextReadingRepository,
+            $nextReadingClock,
+            $transactionManager
+        );
+        $myNextReadingList = new GetMyNextReadingListService(
+            $authenticatedUser,
+            $nextReadingRepository,
+            $nextReadingProjector
+        );
+        $nextReadingHome = new GetNextReadingHomeProjectionService(
+            $authenticatedUser,
+            $nextReadingRepository,
+            $nextReadingProjector
+        );
 
         $this->application = new CoreApplication(
             $personalLibraries,
@@ -469,7 +522,14 @@ final class ProductionComposition
             new WithdrawContributionPublicationService($publicationLifecycle),
             new ModerateContributionPublicationService($publicationLifecycle),
             new RestoreContributionPublicationService($publicationLifecycle),
-            $assessmentQueries
+            $assessmentQueries,
+            $nextReadingWorkAdd,
+            $nextReadingItemAdd,
+            $nextReadingExternalAdd,
+            $nextReadingRemove,
+            $nextReadingReorder,
+            $myNextReadingList,
+            $nextReadingHome
         );
         $this->lifecycle = new CoreLifecycleCoordinator(
             new CoreSchemaMigrator(

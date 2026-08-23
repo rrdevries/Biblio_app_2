@@ -40,6 +40,7 @@ final readonly class CoreSchemaHealthChecker
             1003 => $this->inspectTables($this->tableNames->schema1001(), true, 1003),
             1004 => $this->inspectTables($this->tableNames->schema1004(), true, 1004),
             1005 => $this->inspectTables($this->tableNames->schema1005(), true, 1005),
+            1006 => $this->inspectTables($this->tableNames->schema1006(), true, 1006),
             default => throw new CoreSchemaMigrationException(
                 "No explicit Biblio Core schema-health contract exists for "
                 . "schema version {$expectedVersion}."
@@ -122,6 +123,13 @@ final readonly class CoreSchemaHealthChecker
             $this->inspectIndexes($tableName, $issues, $schemaVersion);
             $this->inspectForeignKeys($tableName, $issues);
             $this->inspectChecks($tableName, $issues, $schemaVersion);
+        }
+
+        if ($schemaVersion >= 1006 && $this->tableExists($this->tableNames->nextReadingLists())
+            && $this->tableExists($this->tableNames->nextReadingEntries())
+            && $this->nextReadingDataColumnsExist()) {
+            $this->inspectNextReadingData($issues);
+            $this->inspectNextReadingTriggers($issues);
         }
 
         return new CoreSchemaHealth($issues);
@@ -344,6 +352,55 @@ final readonly class CoreSchemaHealthChecker
         }
     }
 
+    /** @param list<string> $issues */
+    private function inspectNextReadingData(array &$issues): void
+    {
+        $entries = $this->tableNames->nextReadingEntries();
+        $invalidOrder = $this->database->get_var(
+            "SELECT user_id FROM `{$entries}` GROUP BY user_id "
+            . "HAVING MIN(position) <> 1 OR MAX(position) <> COUNT(*) "
+            . "OR COUNT(DISTINCT position) <> COUNT(*) LIMIT 1"
+        );
+        if (is_string($invalidOrder)) {
+            $issues[] = "Next Reading positions are not contiguous for user {$invalidOrder}";
+        }
+    }
+
+    private function nextReadingDataColumnsExist(): bool
+    {
+        $columns = $this->database->get_col($this->database->prepare(
+            "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=%s AND TABLE_NAME=%s",
+            DB_NAME,
+            $this->tableNames->nextReadingEntries()
+        ));
+        return count(array_intersect(["user_id", "position"], $columns)) === 2;
+    }
+
+    /** @param list<string> $issues */
+    private function inspectNextReadingTriggers(array &$issues): void
+    {
+        foreach ([
+            $this->tableNames->nextReadingInsertTrigger() => "INSERT",
+            $this->tableNames->nextReadingUpdateTrigger() => "UPDATE",
+        ] as $trigger => $event) {
+            $row = $this->database->get_row($this->database->prepare(
+                "SELECT EVENT_MANIPULATION AS event_name,ACTION_TIMING AS timing,EVENT_OBJECT_TABLE AS table_name,ACTION_STATEMENT AS statement "
+                . "FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA=%s AND TRIGGER_NAME=%s",
+                DB_NAME,
+                $trigger
+            ), ARRAY_A);
+            if (!is_array($row)) {
+                $issues[] = "Missing required trigger {$trigger}";
+                continue;
+            }
+            if ($row["event_name"] !== $event || $row["timing"] !== "BEFORE"
+                || $row["table_name"] !== $this->tableNames->nextReadingEntries()
+                || !str_contains((string) $row["statement"], "Invalid Next Reading live source shape")) {
+                $issues[] = "Trigger {$trigger} has an unexpected definition";
+            }
+        }
+    }
+
     /** @return array<string, array<string, array<string, string>>> */
     private function expectedColumns(int $schemaVersion): array
     {
@@ -500,6 +557,33 @@ final readonly class CoreSchemaHealthChecker
                 ],
                 "active_review_id" => $generatedId + [
                     "expression" => "CASE WHEN review_id IS NOT NULL AND author_status = 'active' AND moderation_status <> 'removed' THEN review_id ELSE NULL END",
+                ],
+            ],
+            $this->tableNames->nextReadingLists() => [
+                "user_id" => $id,
+                "list_version" => ["type" => "bigint(20) unsigned", "nullable" => "NO"],
+                "created_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "updated_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+            ],
+            $this->tableNames->nextReadingEntries() => [
+                "entry_id" => $id,
+                "user_id" => $id,
+                "work_id" => $id,
+                "target_type" => ["type" => "varchar(32)", "nullable" => "NO"],
+                "source_id_snapshot" => $nullableId,
+                "source_library_id_snapshot" => $nullableId,
+                "item_id" => $nullableId,
+                "external_loan_id" => $nullableId,
+                "position" => ["type" => "bigint(20) unsigned", "nullable" => "NO"],
+                "created_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "work_target_id" => $generatedId + [
+                    "expression" => "CASE WHEN target_type = 'work' THEN work_id ELSE NULL END",
+                ],
+                "item_target_id" => $generatedId + [
+                    "expression" => "CASE WHEN target_type = 'library_item' THEN source_id_snapshot ELSE NULL END",
+                ],
+                "external_target_id" => $generatedId + [
+                    "expression" => "CASE WHEN target_type = 'external_loan' THEN source_id_snapshot ELSE NULL END",
                 ],
             ],
             $this->tableNames->libraryBookTypes() => [
@@ -686,6 +770,17 @@ final readonly class CoreSchemaHealthChecker
                 "publications_by_rating" => ["unique" => false, "columns" => ["rating_id"]],
                 "publications_by_review" => ["unique" => false, "columns" => ["review_id"]],
             ],
+            $this->tableNames->nextReadingLists() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["user_id"]],
+            ],
+            $this->tableNames->nextReadingEntries() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["entry_id"]],
+                "next_reading_user_position" => ["unique" => true, "columns" => ["user_id", "position"]],
+                "one_next_reading_work_target" => ["unique" => true, "columns" => ["user_id", "work_target_id"]],
+                "one_next_reading_item_target" => ["unique" => true, "columns" => ["user_id", "item_target_id"]],
+                "one_next_reading_external_target" => ["unique" => true, "columns" => ["user_id", "external_target_id"]],
+                "next_reading_by_user_order" => ["unique" => false, "columns" => ["user_id", "position", "entry_id"]],
+            ],
             $this->tableNames->libraryBookTypes() => [
                 "PRIMARY" => [
                     "unique" => true,
@@ -861,6 +956,12 @@ final readonly class CoreSchemaHealthChecker
                 $cascade(["rating_id"], $this->tableNames->ratings(), ["rating_id"]),
                 $cascade(["review_id"], $this->tableNames->reviews(), ["review_id"]),
             ],
+            $this->tableNames->nextReadingEntries() => [
+                $cascade(["user_id"], $this->tableNames->nextReadingLists(), ["user_id"]),
+                $restrict(["work_id"], $this->tableNames->works(), ["work_id"]),
+                $setNull(["item_id"], $this->tableNames->items(), ["item_id"]),
+                $setNull(["external_loan_id"], $this->tableNames->externalLoans(), ["external_loan_id"]),
+            ],
             $this->tableNames->libraryBookTypes() => [
                 $restrict(
                     ["library_id"],
@@ -986,6 +1087,16 @@ final readonly class CoreSchemaHealthChecker
                 "moderation_status = 'visible' AND moderation_reason IS NULL AND moderator_user_id IS NULL AND moderated_at IS NULL OR moderation_status IN ('hidden', 'removed') AND moderation_reason IS NOT NULL AND CHAR_LENGTH(TRIM(moderation_reason)) > 0 AND moderator_user_id IS NOT NULL AND moderated_at IS NOT NULL",
                 "publication_version >= 1",
                 "updated_at >= published_at",
+            ],
+            $this->tableNames->nextReadingLists() => [
+                "CHAR_LENGTH(TRIM(user_id)) > 0",
+                "list_version >= 1",
+                "updated_at >= created_at",
+            ],
+            $this->tableNames->nextReadingEntries() => [
+                "target_type IN ('work', 'library_item', 'external_loan')",
+                "target_type = 'work' AND source_id_snapshot IS NULL AND source_library_id_snapshot IS NULL OR target_type = 'library_item' AND source_id_snapshot IS NOT NULL AND source_library_id_snapshot IS NOT NULL OR target_type = 'external_loan' AND source_id_snapshot IS NOT NULL AND source_library_id_snapshot IS NULL",
+                "position >= 1",
             ],
             $this->tableNames->libraryBookTypes() => [
                 "CHAR_LENGTH(TRIM(display_name)) > 0",
