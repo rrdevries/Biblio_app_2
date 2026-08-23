@@ -58,7 +58,7 @@ final class Schema1004PrivateNotesTest extends PersistenceIntegrationTestCase
         ));
         $this->migrator()->migrate();
 
-        self::assertSame(1005, $this->migrator()->installedVersion());
+        self::assertSame(1006, $this->migrator()->installedVersion());
         self::assertSame('Blijft behouden', $this->database->get_var(
             $this->database->prepare(
                 "SELECT work_title FROM `{$works}` WHERE work_id = %s",

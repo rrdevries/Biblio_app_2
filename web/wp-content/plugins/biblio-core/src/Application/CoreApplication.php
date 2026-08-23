@@ -24,6 +24,7 @@ use Biblio\Core\Application\Notes\ListPrivateNotesForReadingRoundService;
 use Biblio\Core\Application\Notes\ListPrivateNotesForWorkService;
 use Biblio\Core\Application\Notes\RenderPrivateNoteContentService;
 use Biblio\Core\Application\Notes\UpdatePrivateNoteContentService;
+use Biblio\Core\Application\NextReading\{AddExternalLoanToNextReadingService,AddLibraryItemToNextReadingService,AddWorkToNextReadingService,GetMyNextReadingListService,GetNextReadingHomeProjectionService,RemoveNextReadingEntryService,ReorderNextReadingListService};
 use Biblio\Core\Application\Reading\GetOwnedReadingRoundService;
 use Biblio\Core\Application\Reading\CorrectEndedReadingRoundService;
 use Biblio\Core\Application\Reading\CorrectReadingRoundSourceService;
@@ -90,7 +91,14 @@ final readonly class CoreApplication
         private WithdrawContributionPublicationService $publicationWithdrawal,
         private ModerateContributionPublicationService $publicationModeration,
         private RestoreContributionPublicationService $publicationRestoration,
-        private AssessmentQueryService $assessmentQueries
+        private AssessmentQueryService $assessmentQueries,
+        private AddWorkToNextReadingService $nextReadingWorkAdd,
+        private AddLibraryItemToNextReadingService $nextReadingItemAdd,
+        private AddExternalLoanToNextReadingService $nextReadingExternalLoanAdd,
+        private RemoveNextReadingEntryService $nextReadingRemove,
+        private ReorderNextReadingListService $nextReadingReorder,
+        private GetMyNextReadingListService $myNextReadingList,
+        private GetNextReadingHomeProjectionService $nextReadingHome
     ) {
     }
 
@@ -256,4 +264,11 @@ final readonly class CoreApplication
     public function publicationModeration(): ModerateContributionPublicationService { return $this->publicationModeration; }
     public function publicationRestoration(): RestoreContributionPublicationService { return $this->publicationRestoration; }
     public function assessmentQueries(): AssessmentQueryService { return $this->assessmentQueries; }
+    public function nextReadingWorkAdd(): AddWorkToNextReadingService { return $this->nextReadingWorkAdd; }
+    public function nextReadingItemAdd(): AddLibraryItemToNextReadingService { return $this->nextReadingItemAdd; }
+    public function nextReadingExternalLoanAdd(): AddExternalLoanToNextReadingService { return $this->nextReadingExternalLoanAdd; }
+    public function nextReadingRemove(): RemoveNextReadingEntryService { return $this->nextReadingRemove; }
+    public function nextReadingReorder(): ReorderNextReadingListService { return $this->nextReadingReorder; }
+    public function myNextReadingList(): GetMyNextReadingListService { return $this->myNextReadingList; }
+    public function nextReadingHome(): GetNextReadingHomeProjectionService { return $this->nextReadingHome; }
 }
