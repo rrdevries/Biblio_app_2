@@ -1,0 +1,2 @@
+<?php
+declare(strict_types=1);namespace Biblio\Core\Application\Assessments;use Biblio\Core\Assessments\{ContributionPublication,RatingId};use Biblio\Core\Library\LibraryId;final readonly class PublishRatingToLibraryService{public function __construct(private PublicationService $publication){}public function publish(RatingId $id,LibraryId $library):ContributionPublication{return $this->publication->publishRating($id,$library);}}

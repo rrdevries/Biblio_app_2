@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Infrastructure\WordPress;
 
+use Biblio\Core\Application\Assessments\{AssessmentQueryService,CorrectRatingReadingRoundService,CorrectReviewReadingRoundService,CreateRatingForReadingRoundService,CreateRatingForWorkService,CreateReviewForReadingRoundService,CreateReviewForWorkService,DeleteOwnRatingService,DeleteOwnReviewService,ModerateContributionPublicationService,MoveContributionPublicationService,PublicationService,PublishRatingToLibraryService,PublishReviewToLibraryService,RestoreContributionPublicationService,SourceContributionService,UpdateRatingValueService,UpdateReviewContentService,WithdrawContributionPublicationService};
+
 use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
 use Biblio\Core\Application\Catalog\AddLibraryItemService;
 use Biblio\Core\Application\Catalog\Classification\ClassificationTermActivity;
@@ -63,6 +65,9 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMembershipReposi
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPersonalLibraryRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPrivateNoteRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPublicationRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbRatingRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbReviewRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbReadingRoundRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionConnection;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionManager;
@@ -308,10 +313,40 @@ final class ProductionComposition
             $readingRoundClock,
             $transactionManager
         );
+        $assessmentClock = new SystemAssessmentClock();
+        $ratingRepository = new WpdbRatingRepository($database, $tableNames);
+        $reviewRepository = new WpdbReviewRepository($database, $tableNames);
+        $publicationRepository = new WpdbPublicationRepository($database, $tableNames);
+        $assessmentSources = new SourceContributionService(
+            $authenticatedUser,
+            $workRepository,
+            $readingRoundRepository,
+            $ratingRepository,
+            $reviewRepository,
+            new OpaqueRatingIdGenerator(),
+            new OpaqueReviewIdGenerator(),
+            $assessmentClock,
+            $transactionManager
+        );
+        $publicationLifecycle = new PublicationService(
+            $authenticatedUser,
+            $libraryAccess,
+            $libraryMutationLock,
+            $representedWorks,
+            $ratingRepository,
+            $reviewRepository,
+            $publicationRepository,
+            new OpaquePublicationIdGenerator(),
+            $assessmentClock,
+            $transactionManager
+        );
         $historicalReadingRoundDeletion = new DeleteHistoricalReadingRoundService(
             $authenticatedUser,
             $readingRoundRepository,
-            $transactionManager
+            $transactionManager,
+            $ratingRepository,
+            $reviewRepository,
+            $assessmentClock
         );
         $personalWorkReadingStatus = new GetPersonalWorkReadingStatusService(
             $authenticatedUser,
@@ -380,6 +415,13 @@ final class ProductionComposition
         $privateNoteRendering = new RenderPrivateNoteContentService(
             $privateNoteContentPolicy
         );
+        $assessmentQueries = new AssessmentQueryService(
+            $authenticatedUser,
+            $libraryAccess,
+            $ratingRepository,
+            $reviewRepository,
+            $publicationRepository
+        );
 
         $this->application = new CoreApplication(
             $personalLibraries,
@@ -410,7 +452,24 @@ final class ProductionComposition
             $catalogContextManagement,
             $bookTypeManagement,
             $genreManagement,
-            $subjectManagement
+            $subjectManagement,
+            new CreateRatingForWorkService($assessmentSources),
+            new CreateRatingForReadingRoundService($assessmentSources),
+            new UpdateRatingValueService($assessmentSources),
+            new CorrectRatingReadingRoundService($assessmentSources),
+            new DeleteOwnRatingService($assessmentSources),
+            new CreateReviewForWorkService($assessmentSources),
+            new CreateReviewForReadingRoundService($assessmentSources),
+            new UpdateReviewContentService($assessmentSources),
+            new CorrectReviewReadingRoundService($assessmentSources),
+            new DeleteOwnReviewService($assessmentSources),
+            new PublishRatingToLibraryService($publicationLifecycle),
+            new PublishReviewToLibraryService($publicationLifecycle),
+            new MoveContributionPublicationService($publicationLifecycle),
+            new WithdrawContributionPublicationService($publicationLifecycle),
+            new ModerateContributionPublicationService($publicationLifecycle),
+            new RestoreContributionPublicationService($publicationLifecycle),
+            $assessmentQueries
         );
         $this->lifecycle = new CoreLifecycleCoordinator(
             new CoreSchemaMigrator(

@@ -1,0 +1,2 @@
+<?php
+declare(strict_types=1);namespace Biblio\Core\Application\Assessments;use Biblio\Core\Assessments\{ReviewId,ReviewVersion,WrittenReview};use Biblio\Core\Reading\ReadingRoundId;final readonly class CorrectReviewReadingRoundService{public function __construct(private SourceContributionService $source){}public function correct(ReviewId $id,ReviewVersion $version,?ReadingRoundId $round):WrittenReview{return $this->source->correctReviewRound($id,$version,$round);}}

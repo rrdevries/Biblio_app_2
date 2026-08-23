@@ -1,0 +1,2 @@
+<?php
+declare(strict_types=1);namespace Biblio\Core\Application\Assessments;use Biblio\Core\Assessments\{ReviewContent,WrittenReview};use Biblio\Core\Catalog\WorkId;final readonly class CreateReviewForWorkService{public function __construct(private SourceContributionService $source){}public function create(WorkId $work,ReviewContent $content):WrittenReview{return $this->source->createReviewForWork($work,$content);}}

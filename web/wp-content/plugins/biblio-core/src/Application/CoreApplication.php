@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Application;
 
+use Biblio\Core\Application\Assessments\{AssessmentQueryService,CorrectRatingReadingRoundService,CorrectReviewReadingRoundService,CreateRatingForReadingRoundService,CreateRatingForWorkService,CreateReviewForReadingRoundService,CreateReviewForWorkService,DeleteOwnRatingService,DeleteOwnReviewService,ModerateContributionPublicationService,MoveContributionPublicationService,PublishRatingToLibraryService,PublishReviewToLibraryService,RestoreContributionPublicationService,UpdateRatingValueService,UpdateReviewContentService,WithdrawContributionPublicationService};
+
 use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
 use Biblio\Core\Application\Catalog\AddLibraryItemService;
 use Biblio\Core\Application\Catalog\Classification\CreateLibraryCatalogContextService;
@@ -71,7 +73,24 @@ final readonly class CoreApplication
         private SaveLibraryCatalogContextService $catalogContextManagement,
         private ManageLibraryBookTypesService $bookTypeManagement,
         private ManageLibraryGenresService $genreManagement,
-        private ManageLibrarySubjectsService $subjectManagement
+        private ManageLibrarySubjectsService $subjectManagement,
+        private CreateRatingForWorkService $ratingForWorkCreation,
+        private CreateRatingForReadingRoundService $ratingForRoundCreation,
+        private UpdateRatingValueService $ratingValueUpdate,
+        private CorrectRatingReadingRoundService $ratingContextCorrection,
+        private DeleteOwnRatingService $ratingDeletion,
+        private CreateReviewForWorkService $reviewForWorkCreation,
+        private CreateReviewForReadingRoundService $reviewForRoundCreation,
+        private UpdateReviewContentService $reviewContentUpdate,
+        private CorrectReviewReadingRoundService $reviewContextCorrection,
+        private DeleteOwnReviewService $reviewDeletion,
+        private PublishRatingToLibraryService $ratingPublication,
+        private PublishReviewToLibraryService $reviewPublication,
+        private MoveContributionPublicationService $publicationMove,
+        private WithdrawContributionPublicationService $publicationWithdrawal,
+        private ModerateContributionPublicationService $publicationModeration,
+        private RestoreContributionPublicationService $publicationRestoration,
+        private AssessmentQueryService $assessmentQueries
     ) {
     }
 
@@ -219,4 +238,22 @@ final readonly class CoreApplication
     {
         return $this->subjectManagement;
     }
+
+    public function ratingForWorkCreation(): CreateRatingForWorkService { return $this->ratingForWorkCreation; }
+    public function ratingForRoundCreation(): CreateRatingForReadingRoundService { return $this->ratingForRoundCreation; }
+    public function ratingValueUpdate(): UpdateRatingValueService { return $this->ratingValueUpdate; }
+    public function ratingContextCorrection(): CorrectRatingReadingRoundService { return $this->ratingContextCorrection; }
+    public function ratingDeletion(): DeleteOwnRatingService { return $this->ratingDeletion; }
+    public function reviewForWorkCreation(): CreateReviewForWorkService { return $this->reviewForWorkCreation; }
+    public function reviewForRoundCreation(): CreateReviewForReadingRoundService { return $this->reviewForRoundCreation; }
+    public function reviewContentUpdate(): UpdateReviewContentService { return $this->reviewContentUpdate; }
+    public function reviewContextCorrection(): CorrectReviewReadingRoundService { return $this->reviewContextCorrection; }
+    public function reviewDeletion(): DeleteOwnReviewService { return $this->reviewDeletion; }
+    public function ratingPublication(): PublishRatingToLibraryService { return $this->ratingPublication; }
+    public function reviewPublication(): PublishReviewToLibraryService { return $this->reviewPublication; }
+    public function publicationMove(): MoveContributionPublicationService { return $this->publicationMove; }
+    public function publicationWithdrawal(): WithdrawContributionPublicationService { return $this->publicationWithdrawal; }
+    public function publicationModeration(): ModerateContributionPublicationService { return $this->publicationModeration; }
+    public function publicationRestoration(): RestoreContributionPublicationService { return $this->publicationRestoration; }
+    public function assessmentQueries(): AssessmentQueryService { return $this->assessmentQueries; }
 }

@@ -19,6 +19,9 @@ final readonly class CoreTableNames
     private string $externalLoans;
     private string $readingRounds;
     private string $privateNotes;
+    private string $ratings;
+    private string $reviews;
+    private string $contributionPublications;
     private string $libraryBookTypes;
     private string $libraryGenres;
     private string $librarySubjects;
@@ -39,6 +42,10 @@ final readonly class CoreTableNames
         $this->externalLoans = $prefix . "biblio_external_loans";
         $this->readingRounds = $prefix . "biblio_reading_rounds";
         $this->privateNotes = $prefix . "biblio_private_notes";
+        $this->ratings = $prefix . "biblio_ratings";
+        $this->reviews = $prefix . "biblio_reviews";
+        $this->contributionPublications = $prefix
+            . "biblio_contribution_publications";
         $this->libraryBookTypes = $prefix . "biblio_library_book_types";
         $this->libraryGenres = $prefix . "biblio_library_genres";
         $this->librarySubjects = $prefix . "biblio_library_subjects";
@@ -51,7 +58,7 @@ final readonly class CoreTableNames
         $this->libraryActivityEvents = $prefix
             . "biblio_library_activity_events";
 
-        foreach ($this->schema1004() as $tableName) {
+        foreach ($this->schema1005() as $tableName) {
             $this->assertSafe($tableName);
         }
     }
@@ -99,6 +106,13 @@ final readonly class CoreTableNames
     public function privateNotes(): string
     {
         return $this->privateNotes;
+    }
+
+    public function ratings(): string { return $this->ratings; }
+    public function reviews(): string { return $this->reviews; }
+    public function contributionPublications(): string
+    {
+        return $this->contributionPublications;
     }
 
     public function libraryBookTypes(): string
@@ -175,6 +189,17 @@ final readonly class CoreTableNames
     public function schema1004(): array
     {
         return [...$this->schema1001(), $this->privateNotes];
+    }
+
+    /** @return list<string> */
+    public function schema1005(): array
+    {
+        return [
+            ...$this->schema1004(),
+            $this->ratings,
+            $this->reviews,
+            $this->contributionPublications,
+        ];
     }
 
     private function assertSafe(string $tableName): void

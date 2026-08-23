@@ -1,0 +1,2 @@
+<?php
+declare(strict_types=1);namespace Biblio\Core\Application\Assessments;use Biblio\Core\Assessments\{Rating,RatingValue};use Biblio\Core\Reading\ReadingRoundId;final readonly class CreateRatingForReadingRoundService{public function __construct(private SourceContributionService $source){}public function create(ReadingRoundId $round,RatingValue $value):Rating{return $this->source->createRatingForRound($round,$value);}}

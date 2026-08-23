@@ -171,6 +171,43 @@ final class LibraryAuthorizationPolicyTest extends TestCase
         self::assertFalse($policy->canReceiveInternalLoan($context, $assignment));
     }
 
+    public function testContributionPublicationAndModerationAuthorization(): void
+    {
+        $policy = new LibraryAuthorizationPolicy();
+        [$memberContext, $member] = $this->membership(UseAccess::ViewOnly);
+        self::assertTrue($policy->canPublishContribution($memberContext, $member));
+        self::assertFalse($policy->canModerateContribution($memberContext, $member));
+
+        [$managerContext, $manager] = $this->membership(
+            UseAccess::ViewOnly,
+            MembershipStatus::Active,
+            ManagementRole::Manager,
+            AdditionalPermissions::fromValues(
+                AdditionalPermissions::CONTRIBUTION_MODERATE
+            )
+        );
+        self::assertTrue($policy->canModerateContribution($managerContext, $manager));
+
+        [$inactiveContext, $inactiveManager] = $this->membership(
+            UseAccess::Direct,
+            MembershipStatus::Inactive,
+            ManagementRole::Manager,
+            AdditionalPermissions::fromValues(
+                AdditionalPermissions::CONTRIBUTION_MODERATE
+            )
+        );
+        self::assertFalse(
+            $policy->canModerateContribution($inactiveContext, $inactiveManager)
+        );
+
+        [$ownerContext, $owner] = $this->membership(
+            UseAccess::Direct,
+            MembershipStatus::Active,
+            ManagementRole::Owner
+        );
+        self::assertTrue($policy->canModerateContribution($ownerContext, $owner));
+    }
+
     public function testPolicyRejectsAssignmentFromAnotherLibrary(): void
     {
         $userId = new UserId("user-1");
