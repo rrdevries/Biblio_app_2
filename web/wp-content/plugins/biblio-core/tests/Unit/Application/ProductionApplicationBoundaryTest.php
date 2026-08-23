@@ -115,6 +115,7 @@ final class ProductionApplicationBoundaryTest extends TestCase
             "bookTypeManagement",
             "catalogContextCreation",
             "catalogContextManagement",
+            "catalogUiReads",
             "endedReadingRoundCorrection",
             "externalLoanReading",
             "finishReadingRound",

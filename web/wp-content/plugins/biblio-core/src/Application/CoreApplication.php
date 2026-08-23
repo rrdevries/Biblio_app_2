@@ -8,6 +8,7 @@ use Biblio\Core\Application\Assessments\{AssessmentQueryService,CorrectRatingRea
 
 use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
 use Biblio\Core\Application\Catalog\AddLibraryItemService;
+use Biblio\Core\Application\Catalog\Read\CatalogUiReadService;
 use Biblio\Core\Application\Catalog\Classification\CreateLibraryCatalogContextService;
 use Biblio\Core\Application\Catalog\Classification\ManageLibraryBookTypesService;
 use Biblio\Core\Application\Catalog\Classification\ManageLibraryGenresService;
@@ -49,6 +50,7 @@ final readonly class CoreApplication
     public function __construct(
         private EnsurePersonalPrivateLibraryService $personalLibraries,
         private LibraryContextQueryService $libraryContexts,
+        private CatalogUiReadService $catalogUiReads,
         private AddLibraryItemService $libraryItemCreation,
         private GetAccessibleLibraryItemService $accessibleLibraryItems,
         private GetOwnedExternalLoanService $ownedExternalLoans,
@@ -117,6 +119,11 @@ final readonly class CoreApplication
     public function libraryContexts(): LibraryContextQueryService
     {
         return $this->libraryContexts;
+    }
+
+    public function catalogUiReads(): CatalogUiReadService
+    {
+        return $this->catalogUiReads;
     }
 
     public function accessibleLibraryItems(): GetAccessibleLibraryItemService
