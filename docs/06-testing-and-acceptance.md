@@ -714,3 +714,15 @@ F2.7a fixed the binding O1–O3 contracts. F2.7b and its regression suite prove:
 
 The formal implementation and verification record is
 `docs/11-f2-7b-exit-evidence.md`.
+
+## 34. F2.8 Ratings & Reviews acceptance evidence
+
+The 79 numbered cases in `docs/12-f2-8a-ratings-reviews-analysis.md` remain the
+binding contract. F2.8b proves exact Rating/Review validation and escaping,
+owner isolation, Round cardinality and explicit delete choices, source and
+Publication CAS, server-issued ID retry, publish eligibility and lifecycle,
+moderation authorization/reasons, minimal public DTOs, exact personal/public
+averages, schema 1005 install/upgrade/retry/health and all earlier regressions.
+
+The formal case-family mapping and exact gate results are recorded in
+`docs/13-f2-8b-exit-evidence.md`.

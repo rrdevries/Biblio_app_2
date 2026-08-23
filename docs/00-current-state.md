@@ -760,3 +760,33 @@ without changing Note content, Work, timestamps or version.
 Private Note mutations write no Library ActivityEvent and Notes are not added
 to Timeline. The complete implementation and verification record is maintained
 in `docs/11-f2-7b-exit-evidence.md`.
+
+### F2.8 — Ratings & Reviews / Beoordelingen
+
+Status: **Implemented — GO**
+
+Rating, WrittenReview and ContributionPublication are separate Core aggregates.
+Ratings use exact half-units 2–10; Reviews are normalized plain text of zero
+through 5,000 Unicode code points and are escaped at every public boundary.
+Both sources are user-owned, retain immutable Work and may have correctable
+own same-Work ReadingRound context. Named owner-predicated services use CAS.
+
+Publication is a separate Library-scoped lifecycle. Publish, republish and move
+require active membership plus active Item representation of the source Work.
+Membership loss preserves visibility; missing active Work presence suppresses
+public output until presence returns. Author withdrawal and authorized Library
+moderation remain independent and never transfer or expose source ownership.
+
+Public DTOs contain only current display name, visible Rating where applicable,
+escaped Review text and publication date. Personal averages count every own
+Rating; public averages select the latest visible Rating per User with
+`updated_at DESC, rating_id DESC`, sum half-units exactly and round only final
+presentation.
+
+Schema 1005 adds `wp_biblio_ratings`, `wp_biblio_reviews` and
+`wp_biblio_contribution_publications` through formal migration 1004→1005.
+Explicit historical Round deletion choices resolve linked contributions
+atomically. No F2.8 mutation writes Library ActivityEvent or adds Timeline.
+
+The complete implementation and verification record is maintained in
+`docs/13-f2-8b-exit-evidence.md`.
