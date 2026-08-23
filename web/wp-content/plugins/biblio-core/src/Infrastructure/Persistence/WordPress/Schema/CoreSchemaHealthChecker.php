@@ -39,6 +39,7 @@ final readonly class CoreSchemaHealthChecker
             1002 => $this->inspectTables($this->tableNames->schema1001(), true, 1002),
             1003 => $this->inspectTables($this->tableNames->schema1001(), true, 1003),
             1004 => $this->inspectTables($this->tableNames->schema1004(), true, 1004),
+            1005 => $this->inspectTables($this->tableNames->schema1005(), true, 1005),
             default => throw new CoreSchemaMigrationException(
                 "No explicit Biblio Core schema-health contract exists for "
                 . "schema version {$expectedVersion}."
@@ -461,6 +462,46 @@ final readonly class CoreSchemaHealthChecker
                 "updated_at" => ["type" => "datetime(6)", "nullable" => "NO"],
                 "note_version" => ["type" => "bigint(20) unsigned", "nullable" => "NO"],
             ],
+            $this->tableNames->ratings() => [
+                "rating_id" => $id, "user_id" => $id, "work_id" => $id,
+                "reading_round_id" => $nullableId,
+                "rating_half_units" => ["type" => "tinyint(3) unsigned", "nullable" => "NO"],
+                "created_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "updated_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "rating_version" => ["type" => "bigint(20) unsigned", "nullable" => "NO"],
+                "unlinked_work_id" => $generatedId + [
+                    "expression" => "CASE WHEN reading_round_id IS NULL THEN work_id ELSE NULL END",
+                ],
+            ],
+            $this->tableNames->reviews() => [
+                "review_id" => $id, "user_id" => $id, "work_id" => $id,
+                "reading_round_id" => $nullableId,
+                "review_content" => ["type" => "text", "nullable" => "NO"],
+                "created_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "updated_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "review_version" => ["type" => "bigint(20) unsigned", "nullable" => "NO"],
+                "unlinked_work_id" => $generatedId + [
+                    "expression" => "CASE WHEN reading_round_id IS NULL THEN work_id ELSE NULL END",
+                ],
+            ],
+            $this->tableNames->contributionPublications() => [
+                "publication_id" => $id, "library_id" => $id,
+                "rating_id" => $nullableId, "review_id" => $nullableId,
+                "author_status" => ["type" => "varchar(16)", "nullable" => "NO"],
+                "moderation_status" => ["type" => "varchar(16)", "nullable" => "NO"],
+                "moderation_reason" => ["type" => "text", "nullable" => "YES"],
+                "moderator_user_id" => $nullableId,
+                "moderated_at" => ["type" => "datetime(6)", "nullable" => "YES"],
+                "published_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "updated_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "publication_version" => ["type" => "bigint(20) unsigned", "nullable" => "NO"],
+                "active_rating_id" => $generatedId + [
+                    "expression" => "CASE WHEN rating_id IS NOT NULL AND author_status = 'active' AND moderation_status <> 'removed' THEN rating_id ELSE NULL END",
+                ],
+                "active_review_id" => $generatedId + [
+                    "expression" => "CASE WHEN review_id IS NOT NULL AND author_status = 'active' AND moderation_status <> 'removed' THEN review_id ELSE NULL END",
+                ],
+            ],
             $this->tableNames->libraryBookTypes() => [
                 "library_id" => $id,
                 "book_type_id" => $id,
@@ -617,6 +658,34 @@ final readonly class CoreSchemaHealthChecker
                     "columns" => ["user_id", "updated_at", "private_note_id"],
                 ],
             ],
+            $this->tableNames->ratings() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["rating_id"]],
+                "one_unlinked_rating" => ["unique" => true, "columns" => ["user_id", "unlinked_work_id"]],
+                "one_rating_per_round" => ["unique" => true, "columns" => ["user_id", "reading_round_id"]],
+                "ratings_by_user_work" => ["unique" => false, "columns" => ["user_id", "work_id", "updated_at", "rating_id"]],
+                "ratings_by_user_round" => ["unique" => false, "columns" => ["user_id", "reading_round_id", "updated_at", "rating_id"]],
+                "ratings_by_user_updated" => ["unique" => false, "columns" => ["user_id", "updated_at", "rating_id"]],
+                "ratings_by_work" => ["unique" => false, "columns" => ["work_id", "updated_at", "rating_id"]],
+            ],
+            $this->tableNames->reviews() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["review_id"]],
+                "one_unlinked_review" => ["unique" => true, "columns" => ["user_id", "unlinked_work_id"]],
+                "one_review_per_round" => ["unique" => true, "columns" => ["user_id", "reading_round_id"]],
+                "reviews_by_user_work" => ["unique" => false, "columns" => ["user_id", "work_id", "updated_at", "review_id"]],
+                "reviews_by_user_round" => ["unique" => false, "columns" => ["user_id", "reading_round_id", "updated_at", "review_id"]],
+                "reviews_by_user_updated" => ["unique" => false, "columns" => ["user_id", "updated_at", "review_id"]],
+                "reviews_by_work" => ["unique" => false, "columns" => ["work_id", "updated_at", "review_id"]],
+            ],
+            $this->tableNames->contributionPublications() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["publication_id"]],
+                "rating_library_history" => ["unique" => true, "columns" => ["rating_id", "library_id"]],
+                "review_library_history" => ["unique" => true, "columns" => ["review_id", "library_id"]],
+                "one_current_rating_publication" => ["unique" => true, "columns" => ["active_rating_id"]],
+                "one_current_review_publication" => ["unique" => true, "columns" => ["active_review_id"]],
+                "publications_by_library_state" => ["unique" => false, "columns" => ["library_id", "author_status", "moderation_status", "updated_at", "publication_id"]],
+                "publications_by_rating" => ["unique" => false, "columns" => ["rating_id"]],
+                "publications_by_review" => ["unique" => false, "columns" => ["review_id"]],
+            ],
             $this->tableNames->libraryBookTypes() => [
                 "PRIMARY" => [
                     "unique" => true,
@@ -728,6 +797,17 @@ final readonly class CoreSchemaHealthChecker
             "update" => "RESTRICT",
             "delete" => "SET NULL",
         ];
+        $cascade = static fn (
+            array $columns,
+            string $referencedTable,
+            array $referencedColumns
+        ): array => [
+            "columns" => $columns,
+            "referenced_table" => $referencedTable,
+            "referenced_columns" => $referencedColumns,
+            "update" => "RESTRICT",
+            "delete" => "CASCADE",
+        ];
 
         return [
             $this->tableNames->memberships() => [
@@ -767,6 +847,19 @@ final readonly class CoreSchemaHealthChecker
                     $this->tableNames->readingRounds(),
                     ["reading_round_id"]
                 ),
+            ],
+            $this->tableNames->ratings() => [
+                $restrict(["work_id"], $this->tableNames->works(), ["work_id"]),
+                $restrict(["reading_round_id"], $this->tableNames->readingRounds(), ["reading_round_id"]),
+            ],
+            $this->tableNames->reviews() => [
+                $restrict(["work_id"], $this->tableNames->works(), ["work_id"]),
+                $restrict(["reading_round_id"], $this->tableNames->readingRounds(), ["reading_round_id"]),
+            ],
+            $this->tableNames->contributionPublications() => [
+                $restrict(["library_id"], $this->tableNames->libraries(), ["library_id"]),
+                $cascade(["rating_id"], $this->tableNames->ratings(), ["rating_id"]),
+                $cascade(["review_id"], $this->tableNames->reviews(), ["review_id"]),
             ],
             $this->tableNames->libraryBookTypes() => [
                 $restrict(
@@ -875,6 +968,24 @@ final readonly class CoreSchemaHealthChecker
             $this->tableNames->privateNotes() => [
                 "note_version >= 1",
                 "updated_at >= created_at",
+            ],
+            $this->tableNames->ratings() => [
+                "rating_half_units BETWEEN 2 AND 10",
+                "rating_version >= 1",
+                "updated_at >= created_at",
+            ],
+            $this->tableNames->reviews() => [
+                "CHAR_LENGTH(review_content) <= 5000",
+                "review_version >= 1",
+                "updated_at >= created_at",
+            ],
+            $this->tableNames->contributionPublications() => [
+                "rating_id IS NOT NULL <> (review_id IS NOT NULL)",
+                "author_status IN ('active', 'withdrawn')",
+                "moderation_status IN ('visible', 'hidden', 'removed')",
+                "moderation_status = 'visible' AND moderation_reason IS NULL AND moderator_user_id IS NULL AND moderated_at IS NULL OR moderation_status IN ('hidden', 'removed') AND moderation_reason IS NOT NULL AND CHAR_LENGTH(TRIM(moderation_reason)) > 0 AND moderator_user_id IS NOT NULL AND moderated_at IS NOT NULL",
+                "publication_version >= 1",
+                "updated_at >= published_at",
             ],
             $this->tableNames->libraryBookTypes() => [
                 "CHAR_LENGTH(TRIM(display_name)) > 0",

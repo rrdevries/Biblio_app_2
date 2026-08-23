@@ -1,0 +1,2 @@
+<?php
+declare(strict_types=1);namespace Biblio\Core\Application\Assessments;use Biblio\Core\Assessments\{ContributionPublication,PublicationId,PublicationVersion};use Biblio\Core\Library\LibraryId;final readonly class RestoreContributionPublicationService{public function __construct(private PublicationService $publication){}public function restore(PublicationId $id,LibraryId $library,PublicationVersion $version):ContributionPublication{return $this->publication->restore($id,$library,$version);}}

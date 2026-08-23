@@ -1,0 +1,2 @@
+<?php
+declare(strict_types=1);namespace Biblio\Core\Application\Assessments;use Biblio\Core\Assessments\{Rating,RatingId,RatingValue,RatingVersion};final readonly class UpdateRatingValueService{public function __construct(private SourceContributionService $source){}public function update(RatingId $id,RatingVersion $version,RatingValue $value):Rating{return $this->source->updateRating($id,$version,$value);}}

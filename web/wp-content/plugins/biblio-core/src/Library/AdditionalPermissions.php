@@ -11,6 +11,7 @@ final readonly class AdditionalPermissions
     public const CATALOG_ITEM_ADD = "catalog.item_add";
     public const CATALOG_CLASSIFICATION_MANAGE =
         "catalog.classification_manage";
+    public const CONTRIBUTION_MODERATE = "contribution.moderate";
 
     /** @param list<string> $values */
     private function __construct(private array $values)

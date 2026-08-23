@@ -26,6 +26,16 @@ enum FailureReason: string
         "private_note_reading_round_unavailable";
     case PrivateNoteIdCollisionExhausted =
         "private_note_id_collision_exhausted";
+    case RatingNotAvailable = "rating_not_available";
+    case ReviewNotAvailable = "review_not_available";
+    case ContributionDuplicate = "contribution_duplicate";
+    case AssessmentStale = "assessment_stale";
+    case PublicationNotAvailable = "publication_not_available";
+    case PublicationIneligible = "publication_ineligible";
+    case PublicationAlreadyActive = "publication_already_active";
+    case PublicationStale = "publication_stale";
+    case ModerationForbidden = "moderation_forbidden";
+    case AssessmentIdCollisionExhausted = "assessment_id_collision_exhausted";
     case PersonalLibraryAlreadyProvisioned =
         "personal_library_already_provisioned";
     case PersonalLibraryDesignationConflict =

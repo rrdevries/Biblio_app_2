@@ -62,6 +62,24 @@ final class LibraryAuthorizationPolicy
         return $assignment->membership()->status() === MembershipStatus::Active;
     }
 
+    public function canPublishContribution(
+        LibraryContext $context,
+        LibraryMembershipAssignment $assignment
+    ): bool {
+        return $this->canViewCollection($context, $assignment);
+    }
+
+    public function canModerateContribution(
+        LibraryContext $context,
+        LibraryMembershipAssignment $assignment
+    ): bool {
+        return $this->canUseManagementPermission(
+            $context,
+            $assignment,
+            AdditionalPermissions::CONTRIBUTION_MODERATE
+        );
+    }
+
     public function canUseItemDirectly(
         LibraryContext $context,
         LibraryMembershipAssignment $assignment

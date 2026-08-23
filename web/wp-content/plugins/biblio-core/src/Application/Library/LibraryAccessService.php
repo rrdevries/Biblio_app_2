@@ -91,6 +91,20 @@ final readonly class LibraryAccessService
         );
     }
 
+    public function canPublishContribution(LibraryContext $context): bool
+    {
+        $assignment = $this->findMembership($context);
+        return $assignment !== null
+            && $this->authorizationPolicy->canPublishContribution($context, $assignment);
+    }
+
+    public function canModerateContribution(LibraryContext $context): bool
+    {
+        $assignment = $this->findMembership($context);
+        return $assignment !== null
+            && $this->authorizationPolicy->canModerateContribution($context, $assignment);
+    }
+
     public function canUseItemDirectly(LibraryContext $context): bool
     {
         $assignment = $this->findMembership($context);

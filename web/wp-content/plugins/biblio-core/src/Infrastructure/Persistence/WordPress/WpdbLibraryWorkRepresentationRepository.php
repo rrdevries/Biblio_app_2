@@ -16,6 +16,20 @@ use wpdb;
 final readonly class WpdbLibraryWorkRepresentationRepository implements
     LibraryWorkRepresentationRepository
 {
+    public function hasActiveWorkRepresentation(
+        LibraryId $libraryId,
+        WorkId $workId
+    ): bool {
+        $items = $this->tableNames->items();
+        $editions = $this->tableNames->editions();
+        return (int) $this->database->get_var($this->database->prepare(
+            "SELECT COUNT(*) FROM `{$items}` i INNER JOIN `{$editions}` e "
+            . "ON e.edition_id=i.edition_id WHERE i.library_id=%s "
+            . "AND i.item_status='active' AND e.work_id=%s",
+            $libraryId->value(),
+            $workId->value()
+        )) > 0;
+    }
     public function __construct(
         private wpdb $database,
         private CoreTableNames $tableNames

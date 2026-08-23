@@ -1,0 +1,2 @@
+<?php
+declare(strict_types=1);namespace Biblio\Core\Application\Assessments;use Biblio\Core\Assessments\{ContributionPublication,ReviewId};use Biblio\Core\Library\LibraryId;final readonly class PublishReviewToLibraryService{public function __construct(private PublicationService $publication){}public function publish(ReviewId $id,LibraryId $library):ContributionPublication{return $this->publication->publishReview($id,$library);}}

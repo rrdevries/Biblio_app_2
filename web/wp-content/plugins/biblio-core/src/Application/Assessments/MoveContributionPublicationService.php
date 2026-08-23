@@ -1,0 +1,2 @@
+<?php
+declare(strict_types=1);namespace Biblio\Core\Application\Assessments;use Biblio\Core\Assessments\{ContributionPublication,PublicationId,PublicationVersion};use Biblio\Core\Library\LibraryId;final readonly class MoveContributionPublicationService{public function __construct(private PublicationService $publication){}public function move(PublicationId $id,PublicationVersion $version,LibraryId $target):ContributionPublication{return $this->publication->move($id,$version,$target);}}

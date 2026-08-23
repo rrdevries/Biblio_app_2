@@ -1,0 +1,2 @@
+<?php
+declare(strict_types=1);namespace Biblio\Core\Application\Assessments;use Biblio\Core\Assessments\{ContributionPublication,PublicationId,PublicationVersion};final readonly class WithdrawContributionPublicationService{public function __construct(private PublicationService $publication){}public function withdraw(PublicationId $id,PublicationVersion $version):ContributionPublication{return $this->publication->withdraw($id,$version);}}

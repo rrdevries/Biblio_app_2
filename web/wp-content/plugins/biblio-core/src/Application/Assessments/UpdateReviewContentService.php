@@ -1,0 +1,2 @@
+<?php
+declare(strict_types=1);namespace Biblio\Core\Application\Assessments;use Biblio\Core\Assessments\{ReviewContent,ReviewId,ReviewVersion,WrittenReview};final readonly class UpdateReviewContentService{public function __construct(private SourceContributionService $source){}public function update(ReviewId $id,ReviewVersion $version,ReviewContent $content):WrittenReview{return $this->source->updateReview($id,$version,$content);}}
