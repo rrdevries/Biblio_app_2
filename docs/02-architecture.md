@@ -743,4 +743,36 @@ no repository, table, join, WordPress role assumption or user-owned data.
 
 F2.10 deliberately adds no switch session, implicit current-Library state,
 REST route, catalog overview/detail query, general rename/create lifecycle or
-Elementor behavior. F2.11 and F2.12 remain the next architectural layers.
+Elementor behavior. At F2.10 closure, F2.11 and F2.12 remained the next
+architectural layers; the section below records the now-completed F2.11 layer.
+
+## 21. F2.11 Catalog UI projection boundary
+
+`CatalogUiReadService` is the named adapter-facing A2 boundary. It accepts no
+actor, trusted context, repository or raw query shape. It resolves the actor
+through `AuthenticatedUser`, validates the explicit Library target through the
+F2.10 `LibraryContextQueryService`, and only then invokes a private projection
+port with the validated Library and actor identities.
+
+Overview and detail return immutable named DTOs rather than aggregates, wpdb
+rows or generic arrays. Overview is active-only, bounded to 1–100 records and
+uses a typed `(Work title, Item ID)` continuation cursor. Detail uses the same
+scope and returns one stable non-enumerating application failure for missing
+and cross-Library Items.
+
+The WordPress projection adapter performs one joined query per read. It starts
+from `items_by_library`, joins Edition and Work identities, and joins one
+actor-filtered ReadingRound aggregate plus exact-source active state. Personal
+status and summary are derived from source rows and are never persisted in the
+catalog. There is no per-item repository loop.
+
+Presentation capability is intentionally weaker than authorization. View is
+copied from the validated Library context; start-reading additionally reflects
+direct use and absence of an active Round for that exact Item. F2.12 and every
+mutation still perform current server-side authorization.
+
+Optional catalog data uses explicit known/missing/not-applicable/unknown
+states. Fields absent from the current Core schema remain unknown. This keeps
+the DTO honest and lets B3/B4 enrich persistence later without making
+Elementor or REST depend on table shape. F2.11 adds no schema, REST, WordPress
+Ability, serializer, cache or UI.

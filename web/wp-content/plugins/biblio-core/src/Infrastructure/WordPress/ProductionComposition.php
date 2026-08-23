@@ -8,6 +8,7 @@ use Biblio\Core\Application\Assessments\{AssessmentQueryService,CorrectRatingRea
 
 use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
 use Biblio\Core\Application\Catalog\AddLibraryItemService;
+use Biblio\Core\Application\Catalog\Read\CatalogUiReadService;
 use Biblio\Core\Application\Catalog\Classification\ClassificationTermActivity;
 use Biblio\Core\Application\Catalog\Classification\CreateLibraryCatalogContextService;
 use Biblio\Core\Application\Catalog\Classification\LibraryCatalogContextActivity;
@@ -65,6 +66,7 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbExternalLoanRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbItemRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMembershipRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbActorLibraryContextRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbCatalogUiReadRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPersonalLibraryRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPrivateNoteRepository;
@@ -186,6 +188,11 @@ final class ProductionComposition
             $authenticatedUser,
             new WpdbActorLibraryContextRepository($database, $tableNames),
             $authorizationPolicy
+        );
+        $catalogUiReads = new CatalogUiReadService(
+            $authenticatedUser,
+            $libraryContexts,
+            new WpdbCatalogUiReadRepository($database, $tableNames)
         );
         $activityFactory = new WordPressActivityEventFactory(
             new ActivityEventSource("core.classification")
@@ -487,6 +494,7 @@ final class ProductionComposition
         $this->application = new CoreApplication(
             $personalLibraries,
             $libraryContexts,
+            $catalogUiReads,
             $libraryItemCreation,
             $accessibleItems,
             $ownedExternalLoans,

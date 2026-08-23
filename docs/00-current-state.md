@@ -855,3 +855,38 @@ UI, general Library create/rename or membership lifecycle was added.
 
 The implementation and verification record is maintained in
 `docs/17-f2-10-exit-evidence.md`.
+
+### F2.11 — Catalog UI Read Models
+
+Status: **Implemented — GO**
+
+Production Core exposes one adapter-independent `CatalogUiReadService` for
+the first UI slice. Its overview accepts one explicit Library ID, a maximum
+100-item page size and an optional typed cursor. It first resolves F2.10
+Library Context for the authenticated actor and then projects active Items
+only, ordered by Work title and Item ID. The page includes Library identity,
+Item/Work/Edition identity, reliable Work title, active state, personal
+Work-reading status and server-derived view/start capabilities.
+
+Itemdetail uses the same scoped projection and fails non-enumerating for an
+unknown or cross-Library Item. It adds owned ReadingRound counts for active,
+completed, stopped and historical completed rounds. Reading status remains
+derived: active wins, otherwise any completion means read, otherwise not read.
+An active round blocks only presentation of start for that exact Item source;
+the mutation must still re-authorize.
+
+The current schema has no reliable Author, cover, ISBN, language, publisher,
+publication-date, Series, Location, Condition, Acquisition or lending-state
+source. The DTO therefore reports these as typed `unknown`, never as empty
+strings or fabricated placeholders. Physical-book form and Library source name
+are known. Missing, unknown and not-applicable remain distinct DTO states for
+future compatible enrichment.
+
+One SQL projection per overview/detail request joins active Item → Edition →
+Work and actor-owned ReadingRound aggregates; it does not expose rows or
+repositories. Cursor pagination is deterministic and the query plan uses
+`items_by_library`; no N+1, cache or schema 1008 was introduced. Search,
+archive, rich metadata, REST and Elementor remain out of scope.
+
+The implementation and verification record is maintained in
+`docs/18-f2-11-exit-evidence.md`.

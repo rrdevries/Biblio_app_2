@@ -782,3 +782,45 @@ No-go:
 - expansion into F2.11 catalog DTOs, F2.12 REST or F3.0 Elementor.
 
 The exact gate record is `docs/17-f2-10-exit-evidence.md`.
+
+## 37. F2.11 Catalog UI Read Models acceptance evidence
+
+Acceptance:
+
+- overview resolves authenticated actor plus explicit F2.10 Library Context
+  before reading catalog data;
+- only active Items from the validated Library are returned, ordered by Work
+  title then Item ID with a typed continuation cursor and page size 1–100;
+- empty Libraries return an empty page without technical error or fake Item;
+- overview and detail expose named Library/Item/Work/Edition identities,
+  reliable title, active state and adapter-independent DTOs;
+- author, cover, ISBN, language, publisher, publication date, Series,
+  Location, Condition, Acquisition and availability are explicit `unknown`
+  while the current schema has no reliable source; no placeholder is invented;
+- personal status is derived from actor-owned ReadingRounds for never-read,
+  active, stopped-only, completed, stopped-after-completion and historical
+  completion combinations;
+- detail counts active, completed, stopped and historical completed rounds
+  without exposing another user's records;
+- view/start capabilities come from the validated F2.10 context plus exact-
+  source active-round state; view-only access cannot start and capability
+  output never authorizes a mutation;
+- missing and foreign Item IDs share one non-enumerating failure; foreign or
+  inactive Library Context fails before the Item projection;
+- one projection query per overview/detail avoids Item-level N+1 and an
+  EXPLAIN assertion proves the bounded `items_by_library` access path;
+- production `CoreApplication` exposes the named read service but no query
+  repository, wpdb row, serializer or generic table interface;
+- all F2.10 context, F2.6 Reading and catalog creation regressions remain part
+  of the complete canonical gate.
+
+No-go:
+
+- trusting client actor, context or capability values;
+- unbounded Item lists, archived Item mixing or unstable pagination;
+- storing a second catalog reading-status truth;
+- empty strings or fabricated values for unimplemented metadata;
+- REST, WordPress Abilities, Elementor, search/filter, archive or rich catalog
+  persistence inside F2.11.
+
+The exact gate record is `docs/18-f2-11-exit-evidence.md`.
