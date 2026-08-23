@@ -723,6 +723,9 @@ owner isolation, Round cardinality and explicit delete choices, source and
 Publication CAS, server-issued ID retry, publish eligibility and lifecycle,
 moderation authorization/reasons, minimal public DTOs, exact personal/public
 averages, schema 1005 install/upgrade/retry/health and all earlier regressions.
+Dedicated independent-process tests cover concurrent unlinked/Round creation,
+divergent/equal source updates, cross-Library publication, publish/delete,
+withdraw/moderate and eligibility loss under the shared Library lock.
 
 The formal case-family mapping and exact gate results are recorded in
 `docs/13-f2-8b-exit-evidence.md`.

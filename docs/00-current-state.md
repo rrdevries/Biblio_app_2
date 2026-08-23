@@ -787,6 +787,10 @@ Schema 1005 adds `wp_biblio_ratings`, `wp_biblio_reviews` and
 `wp_biblio_contribution_publications` through formal migration 1004→1005.
 Explicit historical Round deletion choices resolve linked contributions
 atomically. No F2.8 mutation writes Library ActivityEvent or adds Timeline.
+Independent-process MariaDB races prove one-winner creation/publication,
+divergent/equal source CAS, publish-versus-delete, withdraw-versus-moderation
+and eligibility-change serialization. Owner publication mutations use the
+canonical source→Library→publication lock order.
 
 The complete implementation and verification record is maintained in
 `docs/13-f2-8b-exit-evidence.md`.

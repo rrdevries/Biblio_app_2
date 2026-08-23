@@ -89,15 +89,17 @@ healthy 1005. Existing 1004 data is preserved and no backfill is required.
 | 31–46 publication/visibility | application and projection tests |
 | 47–56 moderation/audit | authorization/application/boundary tests |
 | 57–64 reads/averages | projection and query-service tests |
-| 65–72 persistence/CAS/IDs | schema/persistence and ID-retry tests |
+| 65–72 persistence/CAS/IDs | schema/persistence, independent-process race and ID-retry tests |
 | 73–78 migration/regression/composition | migration/lifecycle/boundary suites |
 | 79 canonical gate | exact results below |
 
 Real MariaDB exercises relational invariants, Unicode/time/version roundtrips,
 conditional writes, conflict translation, visibility, aggregates, schema
-upgrade/retry/drift and cascade/restrict behavior. Lock ordering, CAS, the
-shared Library lock and named unique constraints protect race-sensitive paths;
-all existing independent-process Core concurrency regressions remain green.
+upgrade/retry/drift and cascade/restrict behavior. Dedicated independent-
+process races prove one-winner unlinked/Round creation, divergent/equal source
+CAS, cross-Library publish, publish/delete, withdraw/moderate and eligibility-
+loss serialization. They also prove the source→Library→publication lock order;
+all earlier independent-process Core concurrency regressions remain green.
 
 ## Canonical gate
 
@@ -107,7 +109,7 @@ all existing independent-process Core concurrency regressions remain green.
 - all PHP syntax valid;
 - PHPStan level 6: no errors;
 - unit: **213 tests, 792 assertions**;
-- MariaDB integration: **147 tests, 1,065 assertions**;
+- MariaDB integration: **153 tests, 1,131 assertions**;
 - WordPress smoke: plugin active, class loaded, init hook 1, HTTP 200;
 - manifest valid and Git whitespace checks clean;
 - duration: 53 seconds.
