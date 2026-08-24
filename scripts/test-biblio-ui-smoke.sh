@@ -15,6 +15,12 @@ ddev exec \
   --dir "/var/www/html/$PLUGIN_DIRECTORY" \
   php tests/smoke.php
 
-ddev exec \
-  --dir "/var/www/html/$PLUGIN_DIRECTORY" \
-  node --check assets/js/app.js
+find "$PLUGIN_DIRECTORY/assets/js" \
+  -type f \
+  -name "*.js" \
+  -print0 \
+  | xargs -0 -n1 node --check
+
+node \
+  --no-warnings=MODULE_TYPELESS_PACKAGE_JSON \
+  --test "$PLUGIN_DIRECTORY/tests/js/api.test.mjs"

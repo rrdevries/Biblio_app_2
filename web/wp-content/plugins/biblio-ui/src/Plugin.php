@@ -8,6 +8,7 @@ final class Plugin
 {
     public const VERSION = "0.1.0";
     public const SCRIPT_MODULE_ID = "biblio-ui/app";
+    public const API_SCRIPT_MODULE_ID = "biblio-ui/api";
     public const STYLE_HANDLE = "biblio-ui";
 
     private bool $booted = false;
@@ -37,9 +38,18 @@ final class Plugin
         $assetBaseUrl = plugin_dir_url($this->pluginFile) . "assets/";
 
         wp_register_script_module(
+            self::API_SCRIPT_MODULE_ID,
+            $assetBaseUrl . "js/api.js",
+            [],
+            self::VERSION
+        );
+        wp_register_script_module(
             self::SCRIPT_MODULE_ID,
             $assetBaseUrl . "js/app.js",
-            [],
+            [[
+                "id" => self::API_SCRIPT_MODULE_ID,
+                "import" => "static",
+            ]],
             self::VERSION
         );
         wp_register_style(
