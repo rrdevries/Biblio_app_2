@@ -7,12 +7,16 @@ namespace Biblio\UI;
 final class Plugin
 {
     public const VERSION = "0.1.0";
+    public const SCRIPT_MODULE_ID = "biblio-ui/app";
+    public const STYLE_HANDLE = "biblio-ui";
 
     private bool $booted = false;
     private readonly LibraryAppShortcode $libraryAppShortcode;
 
-    public function __construct(?LibraryAppShortcode $libraryAppShortcode = null)
-    {
+    public function __construct(
+        private readonly string $pluginFile,
+        ?LibraryAppShortcode $libraryAppShortcode = null
+    ) {
         $this->libraryAppShortcode = $libraryAppShortcode
             ?? new LibraryAppShortcode();
     }
@@ -24,6 +28,32 @@ final class Plugin
         }
 
         add_action("init", [$this->libraryAppShortcode, "register"]);
+        add_action("wp_enqueue_scripts", [$this, "registerAndEnqueueAssets"]);
         $this->booted = true;
+    }
+
+    public function registerAndEnqueueAssets(): void
+    {
+        $assetBaseUrl = plugin_dir_url($this->pluginFile) . "assets/";
+
+        wp_register_script_module(
+            self::SCRIPT_MODULE_ID,
+            $assetBaseUrl . "js/app.js",
+            [],
+            self::VERSION
+        );
+        wp_register_style(
+            self::STYLE_HANDLE,
+            $assetBaseUrl . "css/app.css",
+            [],
+            self::VERSION
+        );
+
+        if (!is_page(LibraryAppShortcode::PAGE_SLUG)) {
+            return;
+        }
+
+        wp_enqueue_script_module(self::SCRIPT_MODULE_ID);
+        wp_enqueue_style(self::STYLE_HANDLE);
     }
 }
