@@ -9,6 +9,8 @@ final class Plugin
     public const VERSION = "0.1.0";
     public const SCRIPT_MODULE_ID = "biblio-ui/app";
     public const API_SCRIPT_MODULE_ID = "biblio-ui/api";
+    public const ROUTE_SCRIPT_MODULE_ID = "biblio-ui/route-state";
+    public const LIBRARY_SCRIPT_MODULE_ID = "biblio-ui/library-state";
     public const STYLE_HANDLE = "biblio-ui";
 
     private bool $booted = false;
@@ -44,10 +46,28 @@ final class Plugin
             self::VERSION
         );
         wp_register_script_module(
+            self::ROUTE_SCRIPT_MODULE_ID,
+            $assetBaseUrl . "js/route-state.js",
+            [],
+            self::VERSION
+        );
+        wp_register_script_module(
+            self::LIBRARY_SCRIPT_MODULE_ID,
+            $assetBaseUrl . "js/library-state.js",
+            [],
+            self::VERSION
+        );
+        wp_register_script_module(
             self::SCRIPT_MODULE_ID,
             $assetBaseUrl . "js/app.js",
             [[
                 "id" => self::API_SCRIPT_MODULE_ID,
+                "import" => "static",
+            ], [
+                "id" => self::ROUTE_SCRIPT_MODULE_ID,
+                "import" => "static",
+            ], [
+                "id" => self::LIBRARY_SCRIPT_MODULE_ID,
                 "import" => "static",
             ]],
             self::VERSION

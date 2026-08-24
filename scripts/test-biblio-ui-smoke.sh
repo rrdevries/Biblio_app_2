@@ -23,4 +23,4 @@ find "$PLUGIN_DIRECTORY/assets/js" \
 
 node \
   --no-warnings=MODULE_TYPELESS_PACKAGE_JSON \
-  --test "$PLUGIN_DIRECTORY/tests/js/api.test.mjs"
+  --test "$PLUGIN_DIRECTORY/tests/js/"*.test.mjs
