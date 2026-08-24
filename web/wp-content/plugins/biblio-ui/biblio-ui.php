@@ -15,4 +15,4 @@ defined("ABSPATH") || exit;
 require_once __DIR__ . "/src/LibraryAppShortcode.php";
 require_once __DIR__ . "/src/Plugin.php";
 
-(new \Biblio\UI\Plugin())->boot();
+(new \Biblio\UI\Plugin(__FILE__))->boot();
