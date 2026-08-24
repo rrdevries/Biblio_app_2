@@ -26,6 +26,8 @@ vendor/
 /web/wp-content/plugins/*
 !/web/wp-content/plugins/biblio-core/
 !/web/wp-content/plugins/biblio-core/**
+!/web/wp-content/plugins/biblio-ui/
+!/web/wp-content/plugins/biblio-ui/**
 
 /config/elementor/*.local.*
 /config/jetengine/*.local.*
