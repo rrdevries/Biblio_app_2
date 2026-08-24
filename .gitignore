@@ -12,6 +12,8 @@ vendor/
 .env.*
 !.env.example
 
+/.local/
+
 .packages/*
 !.packages/.gitkeep
 
