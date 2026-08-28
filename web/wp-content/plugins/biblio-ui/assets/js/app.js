@@ -1,4 +1,5 @@
 import { BiblioApiError, createBiblioApi } from "biblio-ui/api";
+import { createDetailView } from "biblio-ui/detail-view";
 import { resolveLibraryContext } from "biblio-ui/library-state";
 import { createOverviewView } from "biblio-ui/overview-view";
 import {
@@ -7,6 +8,7 @@ import {
 } from "biblio-ui/route-state";
 
 export { BiblioApiError, createBiblioApi } from "biblio-ui/api";
+export { createDetailView } from "biblio-ui/detail-view";
 export { resolveLibraryContext } from "biblio-ui/library-state";
 export { createOverviewView } from "biblio-ui/overview-view";
 export {
@@ -116,12 +118,76 @@ function readOverview(payload, selectedLibraryId) {
     });
 }
 
+function assertReadingSummary(reading) {
+    if (
+        !isRecord(reading)
+        || !READING_STATUSES.has(reading.status)
+        || ![
+            "active_rounds",
+            "completed_rounds",
+            "stopped_rounds",
+            "historical_completed_rounds",
+        ].every((field) => (
+            Number.isInteger(reading[field]) && reading[field] >= 0
+        ))
+    ) {
+        throw new TypeError("The Biblio Reading summary contract is invalid.");
+    }
+}
+
+function readDetail(payload, selectedLibraryId, requestedItemId) {
+    const textFields = [
+        "cover_reference",
+        "isbn",
+        "language",
+        "publisher",
+        "publication_date",
+        "series",
+        "form",
+        "location",
+        "condition",
+        "acquisition",
+        "availability",
+    ];
+
+    if (
+        !isRecord(payload)
+        || !isRecord(payload.library)
+        || payload.library.library_id !== selectedLibraryId
+        || payload.item_id !== requestedItemId
+        || typeof payload.work_id !== "string"
+        || payload.work_id.length === 0
+        || typeof payload.edition_id !== "string"
+        || payload.edition_id.length === 0
+        || typeof payload.title !== "string"
+        || payload.title.length === 0
+        || !assertTextListValue(payload.authors)
+        || !textFields.every((field) => assertTextValue(payload[field]))
+        || typeof payload.item_status !== "string"
+        || !isRecord(payload.capabilities)
+        || typeof payload.capabilities.view_item !== "boolean"
+        || typeof payload.capabilities.start_reading !== "boolean"
+    ) {
+        throw new TypeError("The Biblio Item detail contract is invalid.");
+    }
+
+    assertLibraryPresentation(payload.library);
+    assertReadingSummary(payload.reading);
+
+    return payload;
+}
+
 function overviewPath(libraryId, cursor = null) {
     const path = `libraries/${encodeURIComponent(libraryId)}/items`;
 
     return cursor === null
         ? path
         : `${path}?cursor=${encodeURIComponent(cursor)}`;
+}
+
+function detailPath(libraryId, itemId) {
+    return `libraries/${encodeURIComponent(libraryId)}`
+        + `/items/${encodeURIComponent(itemId)}`;
 }
 
 function isAborted(error) {
@@ -152,6 +218,7 @@ export function createLibraryApp(mount, {
     eventTarget = globalThis,
     documentImpl = globalThis.document,
     viewFactory = createOverviewView,
+    detailViewFactory = createDetailView,
     abortControllerFactory = () => new AbortController(),
 } = {}) {
     const config = readMountConfig(mount);
@@ -172,6 +239,7 @@ export function createLibraryApp(mount, {
         eventTarget,
     });
     let view;
+    let detailView;
     let currentController = null;
     let generation = 0;
     let unsubscribePopState = null;
@@ -193,6 +261,14 @@ export function createLibraryApp(mount, {
         }
 
         return view;
+    }
+
+    function currentDetailView() {
+        if (detailView === undefined) {
+            detailView = detailViewFactory(mount, { documentImpl });
+        }
+
+        return detailView;
     }
 
     async function loadLibraryContext({ signal } = {}) {
@@ -244,6 +320,16 @@ export function createLibraryApp(mount, {
         return setIdle(navigate());
     }
 
+    function openOverview(libraryId) {
+        routes.push({ libraryId, itemId: null });
+        return beginNavigation();
+    }
+
+    function openDetail(libraryId, itemId) {
+        routes.push({ libraryId, itemId });
+        return beginNavigation();
+    }
+
     function renderResolution(resolution, render) {
         if (resolution.state === "empty") {
             render({ state: "zero-libraries" });
@@ -282,6 +368,9 @@ export function createLibraryApp(mount, {
         const controller = abortControllerFactory();
         currentController = controller;
         const render = currentView().render;
+        let operation = "library";
+        let detailBackUrl = null;
+        let selectedLibraryId = null;
         render({ state: "library-loading" });
 
         try {
@@ -301,6 +390,59 @@ export function createLibraryApp(mount, {
             }
 
             assertLibraryPresentation(resolution.library);
+            selectedLibraryId = resolution.library.library_id;
+            const routeState = routes.read();
+
+            if (routeState.itemId !== null) {
+                operation = "detail";
+                detailBackUrl = buildRouteUrl(config.overviewUrl, {
+                    libraryId: selectedLibraryId,
+                    itemId: null,
+                });
+                const renderDetail = currentDetailView().render;
+                const detailActions = {
+                    backToOverview() {
+                        return openOverview(selectedLibraryId);
+                    },
+                };
+
+                if (routeState.itemId.length === 0) {
+                    renderDetail(
+                        {
+                            state: "item-unavailable",
+                            backUrl: detailBackUrl,
+                        },
+                        detailActions
+                    );
+                    return;
+                }
+
+                renderDetail({ state: "detail-loading" });
+                const payload = await api.get(
+                    detailPath(selectedLibraryId, routeState.itemId),
+                    { signal: controller.signal }
+                );
+
+                if (!isCurrent(runGeneration, controller)) {
+                    return;
+                }
+
+                renderDetail(
+                    {
+                        state: "detail",
+                        detail: readDetail(
+                            payload,
+                            selectedLibraryId,
+                            routeState.itemId
+                        ),
+                        backUrl: detailBackUrl,
+                    },
+                    detailActions
+                );
+                return;
+            }
+
+            operation = "overview";
             render({
                 state: "overview-loading",
                 library: resolution.library,
@@ -343,6 +485,12 @@ export function createLibraryApp(mount, {
                             return setIdle(loadMore(true));
                         },
                         restart: beginNavigation,
+                        openItem(itemId) {
+                            return openDetail(
+                                resolution.library.library_id,
+                                itemId
+                            );
+                        },
                     }
                 );
             }
@@ -403,6 +551,25 @@ export function createLibraryApp(mount, {
             }
 
             if (isUnavailable(error)) {
+                if (
+                    operation === "detail"
+                    && detailBackUrl !== null
+                    && selectedLibraryId !== null
+                ) {
+                    currentDetailView().render(
+                        {
+                            state: "item-unavailable",
+                            backUrl: detailBackUrl,
+                        },
+                        {
+                            backToOverview() {
+                                return openOverview(selectedLibraryId);
+                            },
+                        }
+                    );
+                    return;
+                }
+
                 render({ state: "library-unavailable" });
                 return;
             }

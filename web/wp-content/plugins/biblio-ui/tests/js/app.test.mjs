@@ -9,6 +9,7 @@ let appSource = await readFile(appSourceUrl, "utf8");
 
 for (const [moduleId, file] of [
     ["biblio-ui/api", "api.js"],
+    ["biblio-ui/detail-view", "detail-view.js"],
     ["biblio-ui/library-state", "library-state.js"],
     ["biblio-ui/overview-view", "overview-view.js"],
     ["biblio-ui/route-state", "route-state.js"],
@@ -192,12 +193,13 @@ test("abort is control flow while other transport errors remain unchanged", asyn
     assert.deepEqual(browser.historyCalls, []);
 });
 
-test("step 6 modules contain no storage or later-slice operations", async () => {
+test("step 7 modules contain no storage or later-slice operations", async () => {
     const sources = await Promise.all([
         "app.js",
         "route-state.js",
         "library-state.js",
         "overview-view.js",
+        "detail-view.js",
     ].map((file) => readFile(
         new URL(`../../assets/js/${file}`, import.meta.url),
         "utf8"
@@ -210,7 +212,7 @@ test("step 6 modules contain no storage or later-slice operations", async () => 
     );
     assert.doesNotMatch(
         source,
-        /reading-rounds|started_on|\.post\(|detail-view|start-reading-view/
+        /reading-rounds|started_on|\.post\(|start-reading-view/
     );
     assert.equal((source.match(/me\/libraries/g) ?? []).length, 1);
     assert.equal((source.match(/page_size/g) ?? []).length, 0);
