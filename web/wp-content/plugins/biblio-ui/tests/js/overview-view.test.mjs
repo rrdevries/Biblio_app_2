@@ -34,8 +34,8 @@ class FakeElement {
         this.listeners.set(type, listener);
     }
 
-    click() {
-        return this.listeners.get("click")?.();
+    click(event) {
+        return this.listeners.get("click")?.(event);
     }
 }
 
@@ -129,6 +129,7 @@ function setup() {
 
 test("overview rendering uses only allowlisted known Item presentation", () => {
     const { root, view, itemUrls } = setup();
+    const opened = [];
     const first = item("one", {
         title: "De bekende titel",
         authors: { state: "known", values: ["Auteur A", "Auteur B"] },
@@ -147,7 +148,10 @@ test("overview rendering uses only allowlisted known Item presentation", () => {
         capabilities: { view_item: false, start_reading: false },
     });
 
-    view.render(overviewModel({ items: [first, second] }));
+    view.render(
+        overviewModel({ items: [first, second] }),
+        { openItem(itemId) { opened.push(itemId); } }
+    );
 
     assert.equal(root.children[0].getAttribute("data-biblio-view"), "overview");
     assert.equal(byTag(root, "h1").length, 1);
@@ -165,6 +169,26 @@ test("overview rendering uses only allowlisted known Item presentation", () => {
             + "?library_id=library-1&item_id=one"
     );
     assert.deepEqual(itemUrls, [["library-1", "one"]]);
+    const clickEvent = {
+        button: 0,
+        defaultPrevented: false,
+        preventDefault() {
+            this.defaultPrevented = true;
+        },
+    };
+    byTag(root, "a")[0].click(clickEvent);
+    assert.equal(clickEvent.defaultPrevented, true);
+    assert.deepEqual(opened, ["one"]);
+
+    byTag(root, "a")[0].click({
+        button: 0,
+        ctrlKey: true,
+        defaultPrevented: false,
+        preventDefault() {
+            throw new Error("Modified link clicks must keep browser behavior.");
+        },
+    });
+    assert.deepEqual(opened, ["one"]);
     assert.match(text(root), /Auteur A, Auteur B/);
     assert.match(text(root), /Boek · Kast B · Aan het lezen/);
     assert.match(text(root), /Zonder metadata Uitgelezen/);

@@ -9,6 +9,7 @@ let appSource = await readFile(appSourceUrl, "utf8");
 
 for (const [moduleId, file] of [
     ["biblio-ui/api", "api.js"],
+    ["biblio-ui/detail-view", "detail-view.js"],
     ["biblio-ui/library-state", "library-state.js"],
     ["biblio-ui/overview-view", "overview-view.js"],
     ["biblio-ui/route-state", "route-state.js"],
@@ -114,6 +115,40 @@ function overview(selectedLibrary, items, nextCursor = null) {
     };
 }
 
+function detail(selectedLibrary, itemId, overrides = {}) {
+    const unknown = { state: "unknown", value: null };
+
+    return {
+        library: selectedLibrary,
+        item_id: itemId,
+        work_id: `work-${itemId}`,
+        edition_id: `edition-${itemId}`,
+        title: `Book ${itemId}`,
+        authors: { state: "unknown", values: [] },
+        cover_reference: unknown,
+        isbn: unknown,
+        language: unknown,
+        publisher: unknown,
+        publication_date: unknown,
+        series: unknown,
+        form: { state: "known", value: "physical_book" },
+        location: unknown,
+        condition: unknown,
+        acquisition: unknown,
+        availability: unknown,
+        item_status: "active",
+        reading: {
+            status: "not_read",
+            active_rounds: 0,
+            completed_rounds: 0,
+            stopped_rounds: 0,
+            historical_completed_rounds: 0,
+        },
+        capabilities: { view_item: true, start_reading: true },
+        ...overrides,
+    };
+}
+
 function recorder() {
     const renders = [];
 
@@ -132,7 +167,7 @@ function recorder() {
     };
 }
 
-function createApp({ url, get, renders }) {
+function createApp({ url, get, renders, detailRenders = recorder() }) {
     const browser = browserDouble(url);
     const app = createLibraryApp(mount(), {
         apiFactory() {
@@ -142,9 +177,10 @@ function createApp({ url, get, renders }) {
         locationImpl: browser.location,
         eventTarget: browser.eventTarget,
         viewFactory: renders.factory,
+        detailViewFactory: detailRenders.factory,
     });
 
-    return { app, browser };
+    return { app, browser, detailRenders };
 }
 
 async function waitFor(predicate) {
@@ -302,6 +338,171 @@ test("a selected Library loads only the exact active overview contract", async (
         loadMoreError: false,
         canRetryCursor: false,
     });
+});
+
+test("a direct Item URL dispatches only the encoded detail contract", async () => {
+    const selected = library("library/one", { designated: true });
+    const requests = [];
+    const renders = recorder();
+    const detailRenders = recorder();
+    const { app } = createApp({
+        url: "https://example.test/mijn-bibliotheek/"
+            + "?library_id=library%2Fone&item_id=item%2Fone",
+        renders,
+        detailRenders,
+        async get(path, options) {
+            requests.push([path, options.signal]);
+
+            return path === "me/libraries"
+                ? { libraries: [selected] }
+                : detail(selected, "item/one");
+        },
+    });
+
+    await app.start();
+
+    assert.deepEqual(requests.map(([path]) => path), [
+        "me/libraries",
+        "libraries/library%2Fone/items/item%2Fone",
+    ]);
+    assert.ok(requests.every(([, signal]) => signal instanceof AbortSignal));
+    assert.deepEqual(
+        renders.renders.map(({ model }) => model.state),
+        ["library-loading"]
+    );
+    assert.deepEqual(
+        detailRenders.renders.map(({ model }) => model.state),
+        ["detail-loading", "detail"]
+    );
+    assert.equal(detailRenders.renders.at(-1).model.detail.item_id, "item/one");
+    assert.equal(
+        detailRenders.renders.at(-1).model.backUrl,
+        "https://example.test/mijn-bibliotheek/?library_id=library%2Fone"
+    );
+});
+
+test("overview and detail actions push canonical routes and rebuild fresh", async () => {
+    const selected = library("library-1", { designated: true });
+    const requests = [];
+    const renders = recorder();
+    const detailRenders = recorder();
+    const { app, browser } = createApp({
+        url: "https://example.test/mijn-bibliotheek/"
+            + "?library_id=library-1",
+        renders,
+        detailRenders,
+        async get(path) {
+            requests.push(path);
+
+            if (path === "me/libraries") {
+                return { libraries: [selected] };
+            }
+
+            return path.endsWith("/item-1")
+                ? detail(selected, "item-1")
+                : overview(selected, [item("item-1")]);
+        },
+    });
+
+    await app.start();
+    await renders.renders.at(-1).actions.openItem("item-1");
+    await detailRenders.renders.at(-1).actions.backToOverview();
+
+    assert.deepEqual(browser.historyCalls, [[
+        "push",
+        null,
+        "",
+        "https://example.test/mijn-bibliotheek/"
+            + "?library_id=library-1&item_id=item-1",
+    ], [
+        "push",
+        null,
+        "",
+        "https://example.test/mijn-bibliotheek/?library_id=library-1",
+    ]]);
+    assert.deepEqual(requests, [
+        "me/libraries",
+        "libraries/library-1/items",
+        "me/libraries",
+        "libraries/library-1/items/item-1",
+        "me/libraries",
+        "libraries/library-1/items",
+    ]);
+    assert.equal(renders.renders.at(-1).model.state, "overview");
+});
+
+test("Item 404 is non-enumerating while other detail errors stay generic", async () => {
+    const selected = library("library-1", { designated: true });
+    const unavailable = new BiblioApiError({
+        kind: "http",
+        code: "biblio_resource_not_available",
+        status: 404,
+        message: "A foreign title must not be displayed.",
+    });
+    const temporary = new BiblioApiError({
+        kind: "http",
+        code: "biblio_core_unavailable",
+        status: 503,
+        message: "Internal server detail.",
+    });
+
+    for (const [error, expectedState] of [
+        [unavailable, "item-unavailable"],
+        [temporary, "request-error"],
+    ]) {
+        const renders = recorder();
+        const detailRenders = recorder();
+        const { app } = createApp({
+            url: "https://example.test/mijn-bibliotheek/"
+                + "?library_id=library-1&item_id=foreign-item",
+            renders,
+            detailRenders,
+            async get(path) {
+                if (path === "me/libraries") {
+                    return { libraries: [selected] };
+                }
+
+                throw error;
+            },
+        });
+
+        await app.start();
+
+        const state = expectedState === "item-unavailable"
+            ? detailRenders.renders.at(-1).model.state
+            : renders.renders.at(-1).model.state;
+        assert.equal(state, expectedState);
+        assert.doesNotMatch(
+            JSON.stringify([
+                ...renders.renders.map(({ model }) => model),
+                ...detailRenders.renders.map(({ model }) => model),
+            ]),
+            /foreign title|Internal server detail/
+        );
+    }
+});
+
+test("an invalid URL Library with item_id never requests Item detail", async () => {
+    const selected = library("library-1", { designated: true });
+    const requests = [];
+    const renders = recorder();
+    const detailRenders = recorder();
+    const { app } = createApp({
+        url: "https://example.test/mijn-bibliotheek/"
+            + "?library_id=missing&item_id=item-1",
+        renders,
+        detailRenders,
+        async get(path) {
+            requests.push(path);
+            return { libraries: [selected] };
+        },
+    });
+
+    await app.start();
+
+    assert.deepEqual(requests, ["me/libraries"]);
+    assert.equal(renders.renders.at(-1).model.state, "library-unavailable");
+    assert.equal(detailRenders.renders.length, 0);
 });
 
 test("Meer laden follows only the opaque cursor and appends in order", async () => {
@@ -480,6 +681,107 @@ test("popstate aborts obsolete overview work and rebuilds from fresh URL data", 
         JSON.stringify(renders.renders.map(({ model }) => model)),
         /stale/
     );
+    assert.equal(
+        renders.renders.some(({ model }) => model.state === "request-error"),
+        false
+    );
+});
+
+test("popstate switches overview and detail from current URL with fresh context", async () => {
+    const selected = library("library-1", { designated: true });
+    const requests = [];
+    const renders = recorder();
+    const detailRenders = recorder();
+    const { app, browser } = createApp({
+        url: "https://example.test/mijn-bibliotheek/"
+            + "?library_id=library-1",
+        renders,
+        detailRenders,
+        async get(path) {
+            requests.push(path);
+
+            if (path === "me/libraries") {
+                return { libraries: [selected] };
+            }
+
+            return path.endsWith("/item-1")
+                ? detail(selected, "item-1")
+                : overview(selected, [item("item-1")]);
+        },
+    });
+
+    await app.start();
+    browser.location.href = "https://example.test/mijn-bibliotheek/"
+        + "?library_id=library-1&item_id=item-1";
+    browser.listeners.get("popstate")();
+    await app.whenIdle();
+    assert.equal(detailRenders.renders.at(-1).model.state, "detail");
+
+    browser.location.href = "https://example.test/mijn-bibliotheek/"
+        + "?library_id=library-1";
+    browser.listeners.get("popstate")();
+    await app.whenIdle();
+    assert.equal(renders.renders.at(-1).model.state, "overview");
+
+    assert.deepEqual(requests, [
+        "me/libraries",
+        "libraries/library-1/items",
+        "me/libraries",
+        "libraries/library-1/items/item-1",
+        "me/libraries",
+        "libraries/library-1/items",
+    ]);
+});
+
+test("popstate aborts stale detail and it cannot overwrite a newer overview", async () => {
+    const selected = library("library-1", { designated: true });
+    const requests = [];
+    const renders = recorder();
+    const detailRenders = recorder();
+    let resolveDetail;
+    const pendingDetail = new Promise((resolve) => {
+        resolveDetail = resolve;
+    });
+    const { app, browser } = createApp({
+        url: "https://example.test/mijn-bibliotheek/"
+            + "?library_id=library-1&item_id=stale-item",
+        renders,
+        detailRenders,
+        async get(path, options) {
+            requests.push([path, options.signal]);
+
+            if (path === "me/libraries") {
+                return { libraries: [selected] };
+            }
+
+            if (path.endsWith("/stale-item")) {
+                return pendingDetail;
+            }
+
+            return overview(selected, [item("current-item")]);
+        },
+    });
+
+    const staleRun = app.start();
+    await waitFor(() => requests.some(([path]) => path.endsWith("/stale-item")));
+    const staleSignal = requests.find(([path]) => (
+        path.endsWith("/stale-item")
+    ))[1];
+
+    browser.location.href = "https://example.test/mijn-bibliotheek/"
+        + "?library_id=library-1";
+    browser.listeners.get("popstate")();
+    await app.whenIdle();
+
+    assert.equal(staleSignal.aborted, true);
+    assert.equal(renders.renders.at(-1).model.state, "overview");
+    assert.equal(renders.renders.at(-1).model.items[0].item_id, "current-item");
+
+    resolveDetail(detail(selected, "stale-item"));
+    await staleRun;
+
+    assert.equal(renders.renders.at(-1).model.state, "overview");
+    assert.notEqual(detailRenders.renders.at(-1).model.state, "detail");
     assert.equal(
         renders.renders.some(({ model }) => model.state === "request-error"),
         false

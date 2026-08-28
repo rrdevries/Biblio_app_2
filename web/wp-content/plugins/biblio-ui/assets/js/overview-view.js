@@ -42,6 +42,15 @@ function actionButton(documentImpl, label, listener) {
     return button;
 }
 
+function shouldHandleNavigation(event) {
+    return !event?.defaultPrevented
+        && (event?.button === undefined || event.button === 0)
+        && event?.metaKey !== true
+        && event?.ctrlKey !== true
+        && event?.shiftKey !== true
+        && event?.altKey !== true;
+}
+
 function page(documentImpl, state, busy = false) {
     return element(documentImpl, "section", {
         attributes: {
@@ -102,7 +111,7 @@ function contextLine(item) {
     return segments.join(" · ");
 }
 
-function itemCard(documentImpl, item, libraryId, itemUrl) {
+function itemCard(documentImpl, item, libraryId, itemUrl, actions) {
     const listItem = element(documentImpl, "li", {
         attributes: { "data-biblio-item-id": item.item_id },
     });
@@ -113,6 +122,17 @@ function itemCard(documentImpl, item, libraryId, itemUrl) {
         })
         : element(documentImpl, "div");
     const cover = knownText(item.cover_reference);
+
+    if (canView) {
+        content.addEventListener("click", (event) => {
+            if (!shouldHandleNavigation(event)) {
+                return;
+            }
+
+            event?.preventDefault();
+            actions.openItem(item.item_id);
+        });
+    }
 
     if (cover !== null) {
         content.append(element(documentImpl, "img", {
@@ -292,7 +312,8 @@ function renderOverview(documentImpl, model, actions, itemUrl) {
             documentImpl,
             item,
             model.library.library_id,
-            itemUrl
+            itemUrl,
+            actions
         ));
     }
 
