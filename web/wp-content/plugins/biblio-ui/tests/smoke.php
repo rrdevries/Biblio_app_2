@@ -348,6 +348,9 @@ biblioUiAssertSame(
         ], [
             "id" => \Biblio\UI\Plugin::LIBRARY_SCRIPT_MODULE_ID,
             "import" => "static",
+        ], [
+            "id" => \Biblio\UI\Plugin::OVERVIEW_SCRIPT_MODULE_ID,
+            "import" => "static",
         ]],
         "version" => "0.1.0",
         "arguments" => [],
@@ -393,6 +396,19 @@ biblioUiAssertSame(
         \Biblio\UI\Plugin::LIBRARY_SCRIPT_MODULE_ID
     ] ?? null,
     "The library-state Script Module registration contract is incorrect."
+);
+biblioUiAssertSame(
+    [
+        "source" => "https://example.test/wp-content/plugins/biblio-ui/"
+            . "assets/js/overview-view.js",
+        "dependencies" => [],
+        "version" => "0.1.0",
+        "arguments" => [],
+    ],
+    $biblioUiTestRegisteredModules[
+        \Biblio\UI\Plugin::OVERVIEW_SCRIPT_MODULE_ID
+    ] ?? null,
+    "The overview-view Script Module registration contract is incorrect."
 );
 biblioUiAssertSame(
     [
@@ -446,6 +462,11 @@ biblioUiAssertSame(
 );
 biblioUiAssertSame(
     true,
+    is_file(__DIR__ . "/../assets/js/overview-view.js"),
+    "The overview-view Script Module file must exist."
+);
+biblioUiAssertSame(
+    true,
     is_file(__DIR__ . "/../assets/css/app.css"),
     "The stylesheet file must exist."
 );
@@ -483,6 +504,7 @@ echo "Script Module: biblio-ui/app@0.1.0" . PHP_EOL;
 echo "API Script Module: biblio-ui/api@0.1.0" . PHP_EOL;
 echo "Route Script Module: biblio-ui/route-state@0.1.0" . PHP_EOL;
 echo "Library Script Module: biblio-ui/library-state@0.1.0" . PHP_EOL;
+echo "Overview Script Module: biblio-ui/overview-view@0.1.0" . PHP_EOL;
 echo "Stylesheet: biblio-ui@0.1.0" . PHP_EOL;
 echo "Global enqueue: no" . PHP_EOL;
 echo "Library Page enqueue: yes" . PHP_EOL;
