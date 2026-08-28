@@ -11,6 +11,7 @@ class FakeElement {
         this.className = "";
         this.textContent = "";
         this.listeners = new Map();
+        this.focused = false;
     }
 
     setAttribute(name, value) {
@@ -35,6 +36,10 @@ class FakeElement {
 
     click(event) {
         return this.listeners.get("click")?.(event);
+    }
+
+    focus() {
+        this.focused = true;
     }
 }
 
@@ -222,6 +227,67 @@ test("unknown, missing and not-applicable values omit labels and sections", () =
         /Waarvan historisch|ISBN|Taal|Uitgever|Publicatiedatum|Serie/);
     assert.doesNotMatch(text(root),
         /Locatie|Conditie|Verwerving|Beschikbaarheid|undefined|null|Onbekend/);
+});
+
+test("Start Reading is presentation-only and focuses authoritative updates", () => {
+    const { root, view } = setup();
+    const openers = [];
+
+    view.render(
+        {
+            state: "detail",
+            detail: detail({
+                capabilities: { view_item: true, start_reading: true },
+            }),
+            backUrl: "https://example.test/mijn-bibliotheek/"
+                + "?library_id=library-1",
+        },
+        {
+            backToOverview() {},
+            startReading(opener) {
+                openers.push(opener);
+            },
+        }
+    );
+
+    assert.deepEqual(
+        byTag(root, "button").map((node) => node.textContent),
+        ["Lezen starten"]
+    );
+    byTag(root, "button")[0].click();
+    assert.equal(openers[0], byTag(root, "button")[0]);
+
+    view.render(
+        {
+            state: "detail",
+            detail: detail({
+                capabilities: { view_item: true, start_reading: false },
+            }),
+            backUrl: "https://example.test/mijn-bibliotheek/"
+                + "?library_id=library-1",
+        },
+        { backToOverview() {} }
+    );
+    assert.equal(byTag(root, "button").length, 0);
+
+    view.render(
+        {
+            state: "detail",
+            detail: detail({
+                capabilities: { view_item: true, start_reading: false },
+            }),
+            backUrl: "https://example.test/mijn-bibliotheek/"
+                + "?library_id=library-1",
+            notice: "Lezen is gestart.",
+            focusReading: true,
+        },
+        { backToOverview() {} }
+    );
+    const status = descendants(root, (node) => (
+        node.getAttribute("role") === "status"
+    ))[0];
+    assert.equal(status.textContent, "Lezen is gestart.");
+    assert.equal(status.focused, true);
 });
 
 test("detail loading and Item-unavailable states expose no server details", () => {

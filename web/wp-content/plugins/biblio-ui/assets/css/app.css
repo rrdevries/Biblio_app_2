@@ -1,1 +1,45 @@
-/* Component styles are added in later Vertical Slice 1a steps. */
+.biblio-ui__start-reading-dialog {
+    border: 0;
+    border-radius: 0.75rem;
+    box-sizing: border-box;
+    inline-size: min(32rem, calc(100% - 2rem));
+    max-inline-size: 32rem;
+    padding: 1.5rem;
+}
+
+.biblio-ui__start-reading-dialog::backdrop {
+    background: rgb(0 0 0 / 55%);
+}
+
+.biblio-ui__start-reading-dialog form,
+.biblio-ui__dialog-actions {
+    display: grid;
+    gap: 1rem;
+}
+
+.biblio-ui__dialog-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.biblio-ui__start-reading-dialog button,
+.biblio-ui__start-reading-dialog input,
+.biblio-ui__mutation-status button {
+    min-block-size: 44px;
+}
+
+.biblio-ui__field-error {
+    color: #b42318;
+}
+
+@media (max-width: 767px) {
+    .biblio-ui__start-reading-dialog {
+        border-radius: 0.75rem 0.75rem 0 0;
+        inline-size: 100%;
+        margin: auto 0 0;
+        max-inline-size: none;
+    }
+
+    .biblio-ui__dialog-actions {
+        grid-template-columns: 1fr;
+    }
+}

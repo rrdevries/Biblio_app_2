@@ -140,7 +140,8 @@ function renderUnavailable(documentImpl, model, actions) {
 function renderReading(documentImpl, reading) {
     const section = element(documentImpl, "section");
     const list = element(documentImpl, "dl");
-    section.append(element(documentImpl, "h2", { text: "Lezen" }));
+    const heading = element(documentImpl, "h2", { text: "Lezen" });
+    section.append(heading);
     definition(
         documentImpl,
         list,
@@ -161,7 +162,7 @@ function renderReading(documentImpl, reading) {
 
     section.append(list);
 
-    return section;
+    return { section, heading };
 }
 
 function renderDetail(documentImpl, model, actions) {
@@ -222,9 +223,36 @@ function renderDetail(documentImpl, model, actions) {
         view.append(summary);
     }
 
+    const reading = renderReading(documentImpl, detail.reading);
+    view.append(reading.section);
+    let focusTarget = reading.heading;
+
+    if (typeof model.notice === "string" && model.notice.length > 0) {
+        focusTarget = element(documentImpl, "p", {
+            text: model.notice,
+            attributes: {
+                "aria-live": "polite",
+                role: "status",
+                tabindex: "-1",
+            },
+        });
+        view.append(focusTarget);
+    }
+
+    if (detail.capabilities.start_reading === true) {
+        const startButton = element(documentImpl, "button", {
+            text: "Lezen starten",
+            attributes: { type: "button" },
+        });
+        startButton.addEventListener(
+            "click",
+            () => actions.startReading(startButton)
+        );
+        view.append(startButton);
+    }
+
     append(
         view,
-        renderReading(documentImpl, detail.reading),
         metadataSection(documentImpl, "Uitgave", [
             ["ISBN", detail.isbn],
             ["Taal", detail.language],
@@ -240,7 +268,7 @@ function renderDetail(documentImpl, model, actions) {
         ])
     );
 
-    return view;
+    return { focusTarget, view };
 }
 
 export function createDetailView(root, {
@@ -255,6 +283,7 @@ export function createDetailView(root, {
     }
 
     function render(model, actions = {}) {
+        let focusTarget = null;
         let view;
 
         switch (model.state) {
@@ -265,13 +294,23 @@ export function createDetailView(root, {
             view = renderUnavailable(documentImpl, model, actions);
             break;
         case "detail":
-            view = renderDetail(documentImpl, model, actions);
+            ({ focusTarget, view } = renderDetail(
+                documentImpl,
+                model,
+                actions
+            ));
             break;
         default:
             throw new TypeError("The Biblio detail view state is invalid.");
         }
 
         root.replaceChildren(view);
+
+        if (model.focusReading === true) {
+            focusTarget.setAttribute("tabindex", "-1");
+            focusTarget.focus();
+        }
+
         return view;
     }
 
