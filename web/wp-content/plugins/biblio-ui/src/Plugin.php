@@ -13,6 +13,7 @@ final class Plugin
     public const LIBRARY_SCRIPT_MODULE_ID = "biblio-ui/library-state";
     public const OVERVIEW_SCRIPT_MODULE_ID = "biblio-ui/overview-view";
     public const DETAIL_SCRIPT_MODULE_ID = "biblio-ui/detail-view";
+    public const START_READING_SCRIPT_MODULE_ID = "biblio-ui/start-reading-view";
     public const STYLE_HANDLE = "biblio-ui";
 
     private bool $booted = false;
@@ -72,6 +73,12 @@ final class Plugin
             self::VERSION
         );
         wp_register_script_module(
+            self::START_READING_SCRIPT_MODULE_ID,
+            $assetBaseUrl . "js/start-reading-view.js",
+            [],
+            self::VERSION
+        );
+        wp_register_script_module(
             self::SCRIPT_MODULE_ID,
             $assetBaseUrl . "js/app.js",
             [[
@@ -88,6 +95,9 @@ final class Plugin
                 "import" => "static",
             ], [
                 "id" => self::DETAIL_SCRIPT_MODULE_ID,
+                "import" => "static",
+            ], [
+                "id" => self::START_READING_SCRIPT_MODULE_ID,
                 "import" => "static",
             ]],
             self::VERSION

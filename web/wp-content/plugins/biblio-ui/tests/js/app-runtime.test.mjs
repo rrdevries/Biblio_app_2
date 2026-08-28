@@ -13,6 +13,7 @@ for (const [moduleId, file] of [
     ["biblio-ui/library-state", "library-state.js"],
     ["biblio-ui/overview-view", "overview-view.js"],
     ["biblio-ui/route-state", "route-state.js"],
+    ["biblio-ui/start-reading-view", "start-reading-view.js"],
 ]) {
     appSource = appSource.replaceAll(
         `"${moduleId}"`,
@@ -149,6 +150,19 @@ function detail(selectedLibrary, itemId, overrides = {}) {
     };
 }
 
+function startedRound(itemId, startedOn = "2026-08-28") {
+    const [year, month, day] = startedOn.split("-").map(Number);
+
+    return {
+        reading_round_id: "round-1",
+        work_id: `work-${itemId}`,
+        source: { type: "library_item", item_id: itemId },
+        lifecycle: "active",
+        started_on: { year, month, day },
+        version: 1,
+    };
+}
+
 function recorder() {
     const renders = [];
 
@@ -167,20 +181,53 @@ function recorder() {
     };
 }
 
-function createApp({ url, get, renders, detailRenders = recorder() }) {
+function startReadingRecorder() {
+    const opens = [];
+    let destroys = 0;
+
+    return {
+        opens,
+        get destroys() {
+            return destroys;
+        },
+        factory() {
+            return {
+                open(options) {
+                    opens.push(options);
+                    return { state: "open" };
+                },
+                destroy() {
+                    destroys += 1;
+                },
+            };
+        },
+    };
+}
+
+function createApp({
+    url,
+    get,
+    post = async () => {
+        throw new Error("Unexpected POST request.");
+    },
+    renders,
+    detailRenders = recorder(),
+    startReadingRenders = startReadingRecorder(),
+}) {
     const browser = browserDouble(url);
     const app = createLibraryApp(mount(), {
         apiFactory() {
-            return { get };
+            return { get, post };
         },
         historyImpl: browser.history,
         locationImpl: browser.location,
         eventTarget: browser.eventTarget,
         viewFactory: renders.factory,
         detailViewFactory: detailRenders.factory,
+        startReadingViewFactory: startReadingRenders.factory,
     });
 
-    return { app, browser, detailRenders };
+    return { app, browser, detailRenders, startReadingRenders };
 }
 
 async function waitFor(predicate) {
@@ -428,6 +475,391 @@ test("overview and detail actions push canonical routes and rebuild fresh", asyn
         "me/libraries",
         "libraries/library-1/items",
     ]);
+    assert.equal(renders.renders.at(-1).model.state, "overview");
+});
+
+test("Start Reading posts the exact contract then renders only reread truth", async () => {
+    const selected = library("library/one", { designated: true });
+    const renders = recorder();
+    const detailRenders = recorder();
+    const postRequests = [];
+    const acknowledgements = [];
+    let detailRequests = 0;
+    let resolveRefresh;
+    const refresh = new Promise((resolve) => {
+        resolveRefresh = resolve;
+    });
+    const { app, startReadingRenders } = createApp({
+        url: "https://example.test/mijn-bibliotheek/"
+            + "?library_id=library%2Fone&item_id=item%2Fone",
+        renders,
+        detailRenders,
+        async get(path) {
+            if (path === "me/libraries") {
+                return { libraries: [selected] };
+            }
+
+            detailRequests += 1;
+            return detailRequests === 1
+                ? detail(selected, "item/one")
+                : refresh;
+        },
+        async post(path, body, options) {
+            postRequests.push([path, structuredClone(body), options.signal]);
+            return startedRound("item/one");
+        },
+    });
+
+    await app.start();
+    const opener = { focus() {} };
+    detailRenders.renders.at(-1).actions.startReading(opener);
+    const submit = startReadingRenders.opens[0].submit(
+        "2026-08-28",
+        { acknowledge(message) { acknowledgements.push(message); } }
+    );
+    await waitFor(() => acknowledgements.length === 1);
+
+    assert.deepEqual(postRequests.map(([path, body]) => [path, body]), [[
+        "libraries/library%2Fone/items/item%2Fone/reading-rounds",
+        { started_on: "2026-08-28" },
+    ]]);
+    assert.ok(postRequests[0][2] instanceof AbortSignal);
+    assert.deepEqual(acknowledgements, [
+        "Lezen is gestart. Leesstatus bijwerken.",
+    ]);
+    assert.equal(detailRenders.renders.at(-1).model.detail.reading.status,
+        "not_read");
+    assert.equal(detailRenders.renders.at(-1).model.notice, null);
+
+    resolveRefresh(detail(selected, "item/one", {
+        reading: {
+            status: "reading",
+            active_rounds: 1,
+            completed_rounds: 0,
+            stopped_rounds: 0,
+            historical_completed_rounds: 0,
+        },
+        capabilities: { view_item: true, start_reading: false },
+    }));
+    assert.deepEqual(await submit, { state: "reconciled" });
+    assert.equal(detailRequests, 2);
+    assert.equal(detailRenders.renders.at(-1).model.detail.reading.status,
+        "reading");
+    assert.equal(detailRenders.renders.at(-1).model.notice,
+        "Lezen is gestart.");
+    assert.equal(detailRenders.renders.at(-1).model.focusReading, true);
+});
+
+test("Start Reading maps validation, nonce, auth and network without retry", async () => {
+    const selected = library("library-1", { designated: true });
+    const fixtures = [{
+        error: new BiblioApiError({
+            kind: "http",
+            code: "biblio_invalid_field_syntax",
+            status: 400,
+            message: "Unsafe parser detail.",
+        }),
+        expected: "validation-error",
+    }, {
+        error: new BiblioApiError({
+            kind: "http",
+            code: "biblio_validation_failed",
+            status: 422,
+            message: "Unsafe validation detail.",
+        }),
+        expected: "validation-error",
+    }, {
+        error: new BiblioApiError({
+            kind: "http",
+            code: "rest_cookie_invalid_nonce",
+            status: 403,
+            message: "Cookie nonce is invalid.",
+        }),
+        expected: "session-refresh",
+    }, {
+        error: new BiblioApiError({
+            kind: "http",
+            code: "biblio_authentication_required",
+            status: 401,
+            message: "Authentication is required.",
+        }),
+        expected: "authentication-required",
+    }, {
+        error: new BiblioApiError({
+            kind: "network",
+            code: "biblio_ui_network_error",
+            status: null,
+            message: "Network internals.",
+        }),
+        expected: "retryable",
+    }, {
+        error: new BiblioApiError({
+            kind: "http",
+            code: "biblio_internal_error",
+            status: 500,
+            message: "Internal server detail.",
+        }),
+        expected: "retryable",
+    }, {
+        error: new BiblioApiError({
+            kind: "http",
+            code: "biblio_core_unavailable",
+            status: 503,
+            message: "Temporary server internals.",
+        }),
+        expected: "retryable",
+    }];
+
+    for (const fixture of fixtures) {
+        const renders = recorder();
+        const detailRenders = recorder();
+        let posts = 0;
+        let detailGets = 0;
+        const { app, startReadingRenders } = createApp({
+            url: "https://example.test/mijn-bibliotheek/"
+                + "?library_id=library-1&item_id=item-1",
+            renders,
+            detailRenders,
+            async get(path) {
+                if (path === "me/libraries") {
+                    return { libraries: [selected] };
+                }
+
+                detailGets += 1;
+                return detail(selected, "item-1");
+            },
+            async post() {
+                posts += 1;
+                throw fixture.error;
+            },
+        });
+
+        await app.start();
+        detailRenders.renders.at(-1).actions.startReading({ focus() {} });
+        const outcome = await startReadingRenders.opens[0].submit(
+            "2026-08-28",
+            { acknowledge() { throw new Error("Must not reconcile."); } }
+        );
+
+        assert.deepEqual(outcome, { state: fixture.expected });
+        assert.equal(posts, 1);
+        assert.equal(detailGets, 1);
+        assert.doesNotMatch(JSON.stringify(outcome),
+            /Unsafe|Cookie|Authentication|Network/);
+    }
+});
+
+test("active-source conflict announces change and rereads authoritative detail", async () => {
+    const selected = library("library-1", { designated: true });
+    const renders = recorder();
+    const detailRenders = recorder();
+    const acknowledgements = [];
+    let detailGets = 0;
+    const conflict = new BiblioApiError({
+        kind: "http",
+        code: "biblio_reading_round_already_active_for_source",
+        status: 409,
+        message: "Conflict internals.",
+    });
+    const { app, startReadingRenders } = createApp({
+        url: "https://example.test/mijn-bibliotheek/"
+            + "?library_id=library-1&item_id=item-1",
+        renders,
+        detailRenders,
+        async get(path) {
+            if (path === "me/libraries") {
+                return { libraries: [selected] };
+            }
+
+            detailGets += 1;
+            return detail(selected, "item-1", detailGets === 1 ? {} : {
+                reading: {
+                    status: "reading",
+                    active_rounds: 1,
+                    completed_rounds: 0,
+                    stopped_rounds: 0,
+                    historical_completed_rounds: 0,
+                },
+                capabilities: { view_item: true, start_reading: false },
+            });
+        },
+        async post() {
+            throw conflict;
+        },
+    });
+
+    await app.start();
+    detailRenders.renders.at(-1).actions.startReading({ focus() {} });
+    const outcome = await startReadingRenders.opens[0].submit(
+        "2026-08-28",
+        { acknowledge(message) { acknowledgements.push(message); } }
+    );
+
+    assert.deepEqual(outcome, { state: "reconciled" });
+    assert.deepEqual(acknowledgements, [
+        "De leesstatus is gewijzigd. Leesstatus bijwerken.",
+    ]);
+    assert.equal(detailGets, 2);
+    assert.equal(detailRenders.renders.at(-1).model.detail.reading.status,
+        "reading");
+    assert.equal(detailRenders.renders.at(-1).model.notice,
+        "De leesstatus is gewijzigd.");
+});
+
+test("mutation 404 refreshes to the non-enumerating Item state", async () => {
+    const selected = library("library-1", { designated: true });
+    const renders = recorder();
+    const detailRenders = recorder();
+    let detailGets = 0;
+    const unavailable = new BiblioApiError({
+        kind: "http",
+        code: "biblio_resource_not_available",
+        status: 404,
+        message: "Foreign Item detail.",
+    });
+    const { app, startReadingRenders } = createApp({
+        url: "https://example.test/mijn-bibliotheek/"
+            + "?library_id=library-1&item_id=item-1",
+        renders,
+        detailRenders,
+        async get(path) {
+            if (path === "me/libraries") {
+                return { libraries: [selected] };
+            }
+
+            detailGets += 1;
+
+            if (detailGets > 1) {
+                throw unavailable;
+            }
+
+            return detail(selected, "item-1");
+        },
+        async post() {
+            throw unavailable;
+        },
+    });
+
+    await app.start();
+    detailRenders.renders.at(-1).actions.startReading({ focus() {} });
+    const outcome = await startReadingRenders.opens[0].submit(
+        "2026-08-28",
+        { acknowledge() {} }
+    );
+
+    assert.deepEqual(outcome, { state: "reconciled" });
+    assert.equal(detailGets, 2);
+    assert.equal(detailRenders.renders.at(-1).model.state,
+        "item-unavailable");
+    assert.doesNotMatch(
+        JSON.stringify(detailRenders.renders.map(({ model }) => model)),
+        /Foreign Item detail/
+    );
+});
+
+test("POST success plus reread failure never repeats mutation or claims refresh", async () => {
+    const selected = library("library-1", { designated: true });
+    const renders = recorder();
+    const detailRenders = recorder();
+    let posts = 0;
+    let detailGets = 0;
+    const temporary = new BiblioApiError({
+        kind: "http",
+        code: "biblio_core_unavailable",
+        status: 503,
+        message: "Server internals.",
+    });
+    const { app, startReadingRenders } = createApp({
+        url: "https://example.test/mijn-bibliotheek/"
+            + "?library_id=library-1&item_id=item-1",
+        renders,
+        detailRenders,
+        async get(path) {
+            if (path === "me/libraries") {
+                return { libraries: [selected] };
+            }
+
+            detailGets += 1;
+
+            if (detailGets > 1) {
+                throw temporary;
+            }
+
+            return detail(selected, "item-1");
+        },
+        async post() {
+            posts += 1;
+            return startedRound("item-1");
+        },
+    });
+
+    await app.start();
+    detailRenders.renders.at(-1).actions.startReading({ focus() {} });
+    const outcome = await startReadingRenders.opens[0].submit(
+        "2026-08-28",
+        { acknowledge() {} }
+    );
+
+    assert.deepEqual(outcome, {
+        state: "refresh-failed",
+        message: "Lezen is gestart, maar de actuele pagina kon niet worden vernieuwd.",
+    });
+    assert.equal(posts, 1);
+    assert.equal(detailGets, 2);
+    assert.equal(detailRenders.renders.at(-1).model.detail.reading.status,
+        "not_read");
+});
+
+test("route change aborts mutation and stale success cannot trigger reread", async () => {
+    const selected = library("library-1", { designated: true });
+    const renders = recorder();
+    const detailRenders = recorder();
+    let resolvePost;
+    let mutationSignal;
+    let detailGets = 0;
+    const pendingPost = new Promise((resolve) => {
+        resolvePost = resolve;
+    });
+    const { app, browser, startReadingRenders } = createApp({
+        url: "https://example.test/mijn-bibliotheek/"
+            + "?library_id=library-1&item_id=item-1",
+        renders,
+        detailRenders,
+        async get(path) {
+            if (path === "me/libraries") {
+                return { libraries: [selected] };
+            }
+
+            if (path === "libraries/library-1/items") {
+                return overview(selected, [item("item-1")]);
+            }
+
+            detailGets += 1;
+            return detail(selected, "item-1");
+        },
+        async post(path, body, options) {
+            mutationSignal = options.signal;
+            return pendingPost;
+        },
+    });
+
+    await app.start();
+    detailRenders.renders.at(-1).actions.startReading({ focus() {} });
+    const mutation = startReadingRenders.opens[0].submit(
+        "2026-08-28",
+        { acknowledge() { throw new Error("Stale mutation acknowledged."); } }
+    );
+    await waitFor(() => mutationSignal instanceof AbortSignal);
+
+    browser.location.href = "https://example.test/mijn-bibliotheek/"
+        + "?library_id=library-1";
+    browser.listeners.get("popstate")();
+    await app.whenIdle();
+    assert.equal(mutationSignal.aborted, true);
+
+    resolvePost(startedRound("item-1"));
+    assert.deepEqual(await mutation, { state: "aborted" });
+    assert.equal(detailGets, 1);
     assert.equal(renders.renders.at(-1).model.state, "overview");
 });
 

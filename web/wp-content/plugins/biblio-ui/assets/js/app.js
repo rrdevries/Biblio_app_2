@@ -2,6 +2,7 @@ import { BiblioApiError, createBiblioApi } from "biblio-ui/api";
 import { createDetailView } from "biblio-ui/detail-view";
 import { resolveLibraryContext } from "biblio-ui/library-state";
 import { createOverviewView } from "biblio-ui/overview-view";
+import { createStartReadingView } from "biblio-ui/start-reading-view";
 import {
     buildRouteUrl,
     createRouteController,
@@ -11,6 +12,7 @@ export { BiblioApiError, createBiblioApi } from "biblio-ui/api";
 export { createDetailView } from "biblio-ui/detail-view";
 export { resolveLibraryContext } from "biblio-ui/library-state";
 export { createOverviewView } from "biblio-ui/overview-view";
+export { createStartReadingView } from "biblio-ui/start-reading-view";
 export {
     buildRouteUrl,
     createRouteController,
@@ -177,6 +179,30 @@ function readDetail(payload, selectedLibraryId, requestedItemId) {
     return payload;
 }
 
+function assertStartedRound(payload, requestedItemId, startedOn) {
+    const [year, month, day] = startedOn.split("-").map(Number);
+
+    if (
+        !isRecord(payload)
+        || typeof payload.reading_round_id !== "string"
+        || payload.reading_round_id.length === 0
+        || typeof payload.work_id !== "string"
+        || payload.work_id.length === 0
+        || !isRecord(payload.source)
+        || payload.source.type !== "library_item"
+        || payload.source.item_id !== requestedItemId
+        || payload.lifecycle !== "active"
+        || !isRecord(payload.started_on)
+        || payload.started_on.year !== year
+        || payload.started_on.month !== month
+        || payload.started_on.day !== day
+        || !Number.isInteger(payload.version)
+        || payload.version < 1
+    ) {
+        throw new TypeError("The started ReadingRound contract is invalid.");
+    }
+}
+
 function overviewPath(libraryId, cursor = null) {
     const path = `libraries/${encodeURIComponent(libraryId)}/items`;
 
@@ -190,6 +216,10 @@ function detailPath(libraryId, itemId) {
         + `/items/${encodeURIComponent(itemId)}`;
 }
 
+function startReadingPath(libraryId, itemId) {
+    return `${detailPath(libraryId, itemId)}/reading-rounds`;
+}
+
 function isAborted(error) {
     return error instanceof BiblioApiError && error.kind === "aborted";
 }
@@ -199,6 +229,52 @@ function isUnavailable(error) {
         && error.kind === "http"
         && error.status === 404
         && error.code === "biblio_resource_not_available";
+}
+
+function isHttpError(error, status, code = null) {
+    return error instanceof BiblioApiError
+        && error.kind === "http"
+        && error.status === status
+        && (code === null || error.code === code);
+}
+
+function startReadingErrorOutcome(error) {
+    if (isAborted(error)) {
+        return Object.freeze({ state: "aborted" });
+    }
+
+    if (
+        isHttpError(error, 400)
+        || isHttpError(error, 422, "biblio_validation_failed")
+    ) {
+        return Object.freeze({ state: "validation-error" });
+    }
+
+    if (isHttpError(error, 403, "rest_cookie_invalid_nonce")) {
+        return Object.freeze({ state: "session-refresh" });
+    }
+
+    if (isHttpError(error, 401, "biblio_authentication_required")) {
+        return Object.freeze({ state: "authentication-required" });
+    }
+
+    if (isHttpError(error, 404, "biblio_resource_not_available")) {
+        return Object.freeze({
+            state: "reconcile",
+            notice: "Boek is niet meer beschikbaar. Leesstatus bijwerken.",
+            refreshedNotice: "Boek is niet meer beschikbaar.",
+        });
+    }
+
+    if (isHttpError(error, 409)) {
+        return Object.freeze({
+            state: "reconcile",
+            notice: "De leesstatus is gewijzigd. Leesstatus bijwerken.",
+            refreshedNotice: "De leesstatus is gewijzigd.",
+        });
+    }
+
+    return Object.freeze({ state: "retryable" });
 }
 
 export function readMountConfig(mount) {
@@ -219,6 +295,8 @@ export function createLibraryApp(mount, {
     documentImpl = globalThis.document,
     viewFactory = createOverviewView,
     detailViewFactory = createDetailView,
+    startReadingViewFactory = createStartReadingView,
+    reload = () => locationImpl.reload(),
     abortControllerFactory = () => new AbortController(),
 } = {}) {
     const config = readMountConfig(mount);
@@ -240,7 +318,9 @@ export function createLibraryApp(mount, {
     });
     let view;
     let detailView;
+    let startReadingView;
     let currentController = null;
+    let mutationController = null;
     let generation = 0;
     let unsubscribePopState = null;
     let started = false;
@@ -269,6 +349,18 @@ export function createLibraryApp(mount, {
         }
 
         return detailView;
+    }
+
+    function currentStartReadingView() {
+        if (startReadingView === undefined) {
+            startReadingView = startReadingViewFactory(mount, {
+                documentImpl,
+                loginUrl: config.loginUrl,
+                reload,
+            });
+        }
+
+        return startReadingView;
     }
 
     async function loadLibraryContext({ signal } = {}) {
@@ -364,6 +456,9 @@ export function createLibraryApp(mount, {
     async function navigate() {
         const runGeneration = generation + 1;
         generation = runGeneration;
+        startReadingView?.destroy();
+        mutationController?.abort();
+        mutationController = null;
         currentController?.abort();
         const controller = abortControllerFactory();
         currentController = controller;
@@ -399,14 +494,201 @@ export function createLibraryApp(mount, {
                     libraryId: selectedLibraryId,
                     itemId: null,
                 });
+                const requestedItemId = routeState.itemId;
+                const resourcePath = detailPath(
+                    selectedLibraryId,
+                    requestedItemId
+                );
                 const renderDetail = currentDetailView().render;
+                let currentDetail = null;
+
+                function renderCurrentDetail({
+                    notice = null,
+                    focusReading = false,
+                } = {}) {
+                    if (
+                        currentDetail === null
+                        || !isCurrent(runGeneration, controller)
+                    ) {
+                        return;
+                    }
+
+                    renderDetail(
+                        {
+                            state: "detail",
+                            detail: currentDetail,
+                            backUrl: detailBackUrl,
+                            notice,
+                            focusReading,
+                        },
+                        detailActions
+                    );
+                }
+
+                async function reconcileDetail({
+                    lifecycle,
+                    notice,
+                    refreshedNotice,
+                    refreshFailure,
+                }) {
+                    lifecycle.acknowledge(notice);
+
+                    try {
+                        const refreshedPayload = await api.get(resourcePath, {
+                            signal: controller.signal,
+                        });
+
+                        if (!isCurrent(runGeneration, controller)) {
+                            return Object.freeze({ state: "aborted" });
+                        }
+
+                        currentDetail = readDetail(
+                            refreshedPayload,
+                            selectedLibraryId,
+                            requestedItemId
+                        );
+                        renderCurrentDetail({
+                            notice: refreshedNotice,
+                            focusReading: true,
+                        });
+
+                        return Object.freeze({ state: "reconciled" });
+                    } catch (error) {
+                        if (
+                            isAborted(error)
+                            || !isCurrent(runGeneration, controller)
+                        ) {
+                            return Object.freeze({ state: "aborted" });
+                        }
+
+                        if (isUnavailable(error)) {
+                            renderDetail(
+                                {
+                                    state: "item-unavailable",
+                                    backUrl: detailBackUrl,
+                                },
+                                detailActions
+                            );
+                            return Object.freeze({ state: "reconciled" });
+                        }
+
+                        return Object.freeze({
+                            state: "refresh-failed",
+                            message: refreshFailure,
+                        });
+                    }
+                }
+
+                async function startReading(startedOn, lifecycle) {
+                    if (
+                        mutationController !== null
+                        || !isCurrent(runGeneration, controller)
+                    ) {
+                        return Object.freeze({ state: "aborted" });
+                    }
+
+                    const activeMutation = abortControllerFactory();
+                    mutationController = activeMutation;
+
+                    try {
+                        let acknowledgement;
+
+                        try {
+                            acknowledgement = await api.post(
+                                startReadingPath(
+                                    selectedLibraryId,
+                                    requestedItemId
+                                ),
+                                { started_on: startedOn },
+                                { signal: activeMutation.signal }
+                            );
+                        } catch (error) {
+                            if (
+                                isAborted(error)
+                                || !isCurrent(runGeneration, controller)
+                            ) {
+                                return Object.freeze({ state: "aborted" });
+                            }
+
+                            if (
+                                error instanceof BiblioApiError
+                                && error.kind === "invalid_response"
+                                && Number.isInteger(error.status)
+                                && error.status >= 200
+                                && error.status < 300
+                            ) {
+                                return reconcileDetail({
+                                    lifecycle,
+                                    notice: "Leesstatus bijwerken.",
+                                    refreshedNotice: "De leesstatus is bijgewerkt.",
+                                    refreshFailure: "De aanvraag is verwerkt, maar de actuele pagina kon niet worden vernieuwd.",
+                                });
+                            }
+
+                            const outcome = startReadingErrorOutcome(error);
+
+                            if (outcome.state !== "reconcile") {
+                                return outcome;
+                            }
+
+                            return reconcileDetail({
+                                lifecycle,
+                                notice: outcome.notice,
+                                refreshedNotice: outcome.refreshedNotice,
+                                refreshFailure: "De actuele pagina kon niet worden vernieuwd.",
+                            });
+                        }
+
+                        if (!isCurrent(runGeneration, controller)) {
+                            return Object.freeze({ state: "aborted" });
+                        }
+
+                        try {
+                            assertStartedRound(
+                                acknowledgement,
+                                requestedItemId,
+                                startedOn
+                            );
+                        } catch {
+                            return reconcileDetail({
+                                lifecycle,
+                                notice: "Leesstatus bijwerken.",
+                                refreshedNotice: "De leesstatus is bijgewerkt.",
+                                refreshFailure: "De aanvraag is verwerkt, maar de actuele pagina kon niet worden vernieuwd.",
+                            });
+                        }
+
+                        return reconcileDetail({
+                            lifecycle,
+                            notice: "Lezen is gestart. Leesstatus bijwerken.",
+                            refreshedNotice: "Lezen is gestart.",
+                            refreshFailure: "Lezen is gestart, maar de actuele pagina kon niet worden vernieuwd.",
+                        });
+                    } finally {
+                        if (mutationController === activeMutation) {
+                            mutationController = null;
+                        }
+                    }
+                }
+
                 const detailActions = {
                     backToOverview() {
                         return openOverview(selectedLibraryId);
                     },
+                    startReading(opener) {
+                        return currentStartReadingView().open({
+                            opener,
+                            submit(startedOn, lifecycle) {
+                                return setIdle(startReading(
+                                    startedOn,
+                                    lifecycle
+                                ));
+                            },
+                        });
+                    },
                 };
 
-                if (routeState.itemId.length === 0) {
+                if (requestedItemId.length === 0) {
                     renderDetail(
                         {
                             state: "item-unavailable",
@@ -419,7 +701,7 @@ export function createLibraryApp(mount, {
 
                 renderDetail({ state: "detail-loading" });
                 const payload = await api.get(
-                    detailPath(selectedLibraryId, routeState.itemId),
+                    resourcePath,
                     { signal: controller.signal }
                 );
 
@@ -427,18 +709,12 @@ export function createLibraryApp(mount, {
                     return;
                 }
 
-                renderDetail(
-                    {
-                        state: "detail",
-                        detail: readDetail(
-                            payload,
-                            selectedLibraryId,
-                            routeState.itemId
-                        ),
-                        backUrl: detailBackUrl,
-                    },
-                    detailActions
+                currentDetail = readDetail(
+                    payload,
+                    selectedLibraryId,
+                    requestedItemId
                 );
+                renderCurrentDetail();
                 return;
             }
 
@@ -594,6 +870,9 @@ export function createLibraryApp(mount, {
 
     function destroy() {
         generation += 1;
+        startReadingView?.destroy();
+        mutationController?.abort();
+        mutationController = null;
         currentController?.abort();
         currentController = null;
         unsubscribePopState?.();
