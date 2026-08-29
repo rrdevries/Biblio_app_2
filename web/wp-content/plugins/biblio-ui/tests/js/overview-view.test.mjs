@@ -12,6 +12,7 @@ class FakeElement {
         this.textContent = "";
         this.disabled = false;
         this.listeners = new Map();
+        this.focused = false;
     }
 
     setAttribute(name, value) {
@@ -36,6 +37,16 @@ class FakeElement {
 
     click(event) {
         return this.listeners.get("click")?.(event);
+    }
+
+    querySelector(selector) {
+        return descendants(this, (node) => (
+            selector === "h1" && node.tagName === "H1"
+        ))[0] ?? null;
+    }
+
+    focus() {
+        this.focused = true;
     }
 }
 
@@ -252,6 +263,10 @@ test("all Library bootstrap, chooser, unavailable and request states render safe
         { retry() { retries += 1; } }
     );
     assert.match(text(root), /Bibliotheek kon niet worden geladen/);
+    assert.equal(
+        descendants(root, (node) => node.getAttribute("role") === "alert").length,
+        1
+    );
     byTag(root, "button")[0].click();
     assert.equal(retries, 1);
 
@@ -306,4 +321,16 @@ test("empty overview and cursor controls follow the exact component states", () 
         { restart() { restarts += 1; } }
     );
     assert.equal(byTag(root, "button").length, 1);
+});
+
+test("overview mirrors busy state and focuses its heading when requested", () => {
+    const { root, view } = setup();
+
+    view.render({ state: "library-loading" });
+    assert.equal(root.getAttribute("aria-busy"), "true");
+
+    view.render(overviewModel({ focusHeading: true }));
+    assert.equal(root.getAttribute("aria-busy"), "false");
+    assert.equal(byTag(root, "h1")[0].getAttribute("tabindex"), "-1");
+    assert.equal(byTag(root, "h1")[0].focused, true);
 });

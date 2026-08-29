@@ -110,6 +110,7 @@ export function createStartReadingView(root, {
 
         if (reloadLabel !== null) {
             const reloadButton = button(documentImpl, reloadLabel);
+            reloadButton.className = "biblio-ui__control biblio-ui__control--primary";
             reloadButton.addEventListener("click", reload);
             status.append(reloadButton);
         }
@@ -183,6 +184,8 @@ export function createStartReadingView(root, {
         });
         const cancelButton = button(documentImpl, "Annuleren");
         const submitButton = button(documentImpl, "Lezen starten", "submit");
+        cancelButton.className = "biblio-ui__control biblio-ui__control--secondary";
+        submitButton.className = "biblio-ui__control biblio-ui__control--primary";
         controls.append(cancelButton, submitButton);
         form.append(
             title,
@@ -257,6 +260,7 @@ export function createStartReadingView(root, {
             submitButton.disabled = true;
             status.textContent = "Je sessie moet worden vernieuwd.";
             const refreshButton = button(documentImpl, "Sessie vernieuwen");
+            refreshButton.className = "biblio-ui__control biblio-ui__control--primary";
             refreshButton.addEventListener("click", reload);
             controls.replaceChildren(cancelButton, refreshButton);
         }
@@ -269,6 +273,7 @@ export function createStartReadingView(root, {
             controls.replaceChildren(
                 cancelButton,
                 element(documentImpl, "a", {
+                    className: "biblio-ui__control biblio-ui__control--primary",
                     text: "Opnieuw inloggen",
                     attributes: { href: loginUrl },
                 })

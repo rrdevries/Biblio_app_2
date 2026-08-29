@@ -31,8 +31,9 @@ function append(parent, ...children) {
     return parent;
 }
 
-function actionButton(documentImpl, label, listener) {
+function actionButton(documentImpl, label, listener, modifier = "secondary") {
     const button = element(documentImpl, "button", {
+        className: `biblio-ui__control biblio-ui__control--${modifier}`,
         text: label,
         attributes: { type: "button" },
     });
@@ -53,6 +54,7 @@ function shouldHandleNavigation(event) {
 
 function page(documentImpl, state, busy = false) {
     return element(documentImpl, "section", {
+        className: "biblio-ui__view",
         attributes: {
             "aria-busy": busy ? "true" : "false",
             "data-biblio-view": state,
@@ -61,7 +63,10 @@ function page(documentImpl, state, busy = false) {
 }
 
 function appHeading(documentImpl, parent) {
-    parent.append(element(documentImpl, "h1", { text: "Mijn Bibliotheek" }));
+    parent.append(element(documentImpl, "h1", {
+        className: "biblio-ui__page-title",
+        text: "Mijn Bibliotheek",
+    }));
 }
 
 function libraryAccessLabel(library) {
@@ -113,14 +118,18 @@ function contextLine(item) {
 
 function itemCard(documentImpl, item, libraryId, itemUrl, actions) {
     const listItem = element(documentImpl, "li", {
+        className: "biblio-ui__catalog-item",
         attributes: { "data-biblio-item-id": item.item_id },
     });
     const canView = item?.capabilities?.view_item === true;
     const content = canView
         ? element(documentImpl, "a", {
+            className: "biblio-ui__card-link",
             attributes: { href: itemUrl(libraryId, item.item_id) },
         })
-        : element(documentImpl, "div");
+        : element(documentImpl, "div", {
+            className: "biblio-ui__card-link",
+        });
     const cover = knownText(item.cover_reference);
 
     if (canView) {
@@ -136,6 +145,7 @@ function itemCard(documentImpl, item, libraryId, itemUrl, actions) {
 
     if (cover !== null) {
         content.append(element(documentImpl, "img", {
+            className: "biblio-ui__cover biblio-ui__cover--overview",
             attributes: {
                 alt: `Omslag van ${item.title}`,
                 src: cover,
@@ -143,23 +153,27 @@ function itemCard(documentImpl, item, libraryId, itemUrl, actions) {
         }));
     }
 
-    content.append(element(documentImpl, "h3", { text: item.title }));
+    const body = element(documentImpl, "div", {
+        className: "biblio-ui__card-body",
+    });
+    body.append(element(documentImpl, "h3", { text: item.title }));
 
     if (
         item?.authors?.state === "known"
         && Array.isArray(item.authors.values)
         && item.authors.values.length > 0
     ) {
-        content.append(element(documentImpl, "p", {
+        body.append(element(documentImpl, "p", {
             className: "biblio-ui__authors",
             text: item.authors.values.join(", "),
         }));
     }
 
-    content.append(element(documentImpl, "p", {
+    body.append(element(documentImpl, "p", {
         className: "biblio-ui__context",
         text: contextLine(item),
     }));
+    content.append(body);
     listItem.append(content);
 
     return listItem;
@@ -168,7 +182,10 @@ function itemCard(documentImpl, item, libraryId, itemUrl, actions) {
 function renderLibraryLoading(documentImpl) {
     const view = page(documentImpl, "library-loading", true);
     view.setAttribute("aria-live", "polite");
-    view.append(element(documentImpl, "h1", { text: "Bibliotheek laden" }));
+    view.append(element(documentImpl, "h1", {
+        className: "biblio-ui__page-title",
+        text: "Bibliotheek laden",
+    }));
 
     return view;
 }
@@ -188,9 +205,16 @@ function renderOverviewLoading(documentImpl, model) {
 
 function renderZeroLibraries(documentImpl) {
     const view = page(documentImpl, "zero-libraries");
-    view.append(element(documentImpl, "h1", {
-        text: "Geen bibliotheek beschikbaar",
-    }));
+    append(
+        view,
+        element(documentImpl, "h1", {
+            className: "biblio-ui__page-title",
+            text: "Geen bibliotheek beschikbaar",
+        }),
+        element(documentImpl, "p", {
+            text: "Er is nog geen bibliotheek die je hier kunt openen.",
+        })
+    );
 
     return view;
 }
@@ -200,9 +224,15 @@ function renderLibraryUnavailable(documentImpl, overviewUrl) {
     append(
         view,
         element(documentImpl, "h1", {
+            className: "biblio-ui__page-title",
             text: "Bibliotheek niet beschikbaar",
         }),
+        element(documentImpl, "p", {
+            text: "Deze bibliotheek bestaat niet of is niet meer toegankelijk.",
+            attributes: { role: "alert" },
+        }),
         element(documentImpl, "a", {
+            className: "biblio-ui__control biblio-ui__control--primary",
             text: "Terug naar Mijn Bibliotheek",
             attributes: { href: overviewUrl },
         })
@@ -216,9 +246,14 @@ function renderRequestError(documentImpl, actions) {
     append(
         view,
         element(documentImpl, "h1", {
+            className: "biblio-ui__page-title",
             text: "Bibliotheek kon niet worden geladen",
         }),
-        actionButton(documentImpl, "Opnieuw proberen", actions.retry)
+        element(documentImpl, "p", {
+            text: "Probeer de bibliotheek opnieuw te laden.",
+            attributes: { role: "alert" },
+        }),
+        actionButton(documentImpl, "Opnieuw proberen", actions.retry, "primary")
     );
 
     return view;
@@ -228,7 +263,9 @@ function renderChooser(documentImpl, model, actions) {
     const view = page(documentImpl, "library-chooser");
     appHeading(documentImpl, view);
     view.append(element(documentImpl, "h2", { text: "Kies een bibliotheek" }));
-    const list = element(documentImpl, "ul");
+    const list = element(documentImpl, "ul", {
+        className: "biblio-ui__library-list",
+    });
 
     for (const library of model.libraries) {
         const listItem = element(documentImpl, "li");
@@ -253,10 +290,15 @@ function renderChooser(documentImpl, model, actions) {
 function renderLoadMore(documentImpl, model, actions) {
     if (model.loadMoreError === true) {
         const error = element(documentImpl, "section", {
+            className: "biblio-ui__inline-error",
             attributes: { "data-biblio-load-more-error": "true" },
         });
         error.append(element(documentImpl, "h3", {
             text: "Meer boeken konden niet worden geladen",
+        }));
+        error.append(element(documentImpl, "p", {
+            text: "De al geladen boeken blijven beschikbaar.",
+            attributes: { role: "alert" },
         }));
 
         if (model.canRetryCursor === true) {
@@ -281,6 +323,7 @@ function renderLoadMore(documentImpl, model, actions) {
     }
 
     const button = actionButton(documentImpl, "Meer laden", actions.loadMore);
+    button.className += " biblio-ui__load-more";
     button.disabled = model.loadingMore === true;
 
     if (model.loadingMore === true) {
@@ -304,6 +347,7 @@ function renderOverview(documentImpl, model, actions, itemUrl) {
 
     view.append(element(documentImpl, "h2", { text: "Boeken" }));
     const list = element(documentImpl, "ul", {
+        className: "biblio-ui__catalog-list",
         attributes: { "aria-label": "Actieve boeken" },
     });
 
@@ -378,6 +422,14 @@ export function createOverviewView(root, {
         }
 
         root.replaceChildren(view);
+        root.setAttribute("aria-busy", view.getAttribute("aria-busy"));
+
+        if (model.focusHeading === true) {
+            const heading = view.querySelector("h1");
+            heading?.setAttribute("tabindex", "-1");
+            heading?.focus();
+        }
+
         return view;
     }
 

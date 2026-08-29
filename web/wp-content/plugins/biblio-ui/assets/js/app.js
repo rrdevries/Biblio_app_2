@@ -412,6 +412,10 @@ export function createLibraryApp(mount, {
         return setIdle(navigate());
     }
 
+    function beginHistoryNavigation() {
+        return setIdle(navigate({ focusHeading: true }));
+    }
+
     function openOverview(libraryId) {
         routes.push({ libraryId, itemId: null });
         return beginNavigation();
@@ -422,14 +426,20 @@ export function createLibraryApp(mount, {
         return beginNavigation();
     }
 
-    function renderResolution(resolution, render) {
+    function renderResolution(resolution, render, consumeHeadingFocus) {
         if (resolution.state === "empty") {
-            render({ state: "zero-libraries" });
+            render({
+                state: "zero-libraries",
+                ...consumeHeadingFocus(),
+            });
             return true;
         }
 
         if (resolution.state === "unavailable") {
-            render({ state: "library-unavailable" });
+            render({
+                state: "library-unavailable",
+                ...consumeHeadingFocus(),
+            });
             return true;
         }
 
@@ -439,6 +449,7 @@ export function createLibraryApp(mount, {
                 {
                     state: "library-chooser",
                     libraries: resolution.libraries,
+                    ...consumeHeadingFocus(),
                 },
                 {
                     selectLibrary(libraryId) {
@@ -453,7 +464,7 @@ export function createLibraryApp(mount, {
         return false;
     }
 
-    async function navigate() {
+    async function navigate({ focusHeading = false } = {}) {
         const runGeneration = generation + 1;
         generation = runGeneration;
         startReadingView?.destroy();
@@ -466,6 +477,17 @@ export function createLibraryApp(mount, {
         let operation = "library";
         let detailBackUrl = null;
         let selectedLibraryId = null;
+        let headingFocusPending = focusHeading;
+
+        function consumeHeadingFocus() {
+            if (!headingFocusPending) {
+                return {};
+            }
+
+            headingFocusPending = false;
+            return { focusHeading: true };
+        }
+
         render({ state: "library-loading" });
 
         try {
@@ -480,7 +502,7 @@ export function createLibraryApp(mount, {
                 return;
             }
 
-            if (renderResolution(resolution, render)) {
+            if (renderResolution(resolution, render, consumeHeadingFocus)) {
                 return;
             }
 
@@ -520,6 +542,7 @@ export function createLibraryApp(mount, {
                             backUrl: detailBackUrl,
                             notice,
                             focusReading,
+                            ...consumeHeadingFocus(),
                         },
                         detailActions
                     );
@@ -566,6 +589,7 @@ export function createLibraryApp(mount, {
                                 {
                                     state: "item-unavailable",
                                     backUrl: detailBackUrl,
+                                    ...consumeHeadingFocus(),
                                 },
                                 detailActions
                             );
@@ -693,6 +717,7 @@ export function createLibraryApp(mount, {
                         {
                             state: "item-unavailable",
                             backUrl: detailBackUrl,
+                            ...consumeHeadingFocus(),
                         },
                         detailActions
                     );
@@ -752,7 +777,11 @@ export function createLibraryApp(mount, {
                 }
 
                 render(
-                    { state: "overview", ...overview },
+                    {
+                        state: "overview",
+                        ...overview,
+                        ...consumeHeadingFocus(),
+                    },
                     {
                         loadMore() {
                             return setIdle(loadMore(false));
@@ -836,6 +865,7 @@ export function createLibraryApp(mount, {
                         {
                             state: "item-unavailable",
                             backUrl: detailBackUrl,
+                            ...consumeHeadingFocus(),
                         },
                         {
                             backToOverview() {
@@ -846,12 +876,18 @@ export function createLibraryApp(mount, {
                     return;
                 }
 
-                render({ state: "library-unavailable" });
+                render({
+                    state: "library-unavailable",
+                    ...consumeHeadingFocus(),
+                });
                 return;
             }
 
             render(
-                { state: "request-error" },
+                {
+                    state: "request-error",
+                    ...consumeHeadingFocus(),
+                },
                 { retry: beginNavigation }
             );
         }
@@ -862,7 +898,7 @@ export function createLibraryApp(mount, {
             return idlePromise;
         }
 
-        unsubscribePopState = routes.onPopState(beginNavigation);
+        unsubscribePopState = routes.onPopState(beginHistoryNavigation);
         started = true;
 
         return beginNavigation();

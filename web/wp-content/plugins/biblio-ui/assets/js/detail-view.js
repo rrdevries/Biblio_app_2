@@ -90,8 +90,12 @@ function metadataSection(documentImpl, heading, fields) {
         return null;
     }
 
-    const section = element(documentImpl, "section");
-    const list = element(documentImpl, "dl");
+    const section = element(documentImpl, "section", {
+        className: "biblio-ui__section",
+    });
+    const list = element(documentImpl, "dl", {
+        className: "biblio-ui__metadata",
+    });
     section.append(element(documentImpl, "h2", { text: heading }));
 
     for (const [label, value] of knownFields) {
@@ -105,19 +109,24 @@ function metadataSection(documentImpl, heading, fields) {
 
 function renderLoading(documentImpl) {
     const view = element(documentImpl, "section", {
+        className: "biblio-ui__view",
         attributes: {
             "aria-busy": "true",
             "aria-live": "polite",
             "data-biblio-view": "detail-loading",
         },
     });
-    view.append(element(documentImpl, "h1", { text: "Boek laden" }));
+    view.append(element(documentImpl, "h1", {
+        className: "biblio-ui__page-title",
+        text: "Boek laden",
+    }));
 
     return view;
 }
 
 function renderUnavailable(documentImpl, model, actions) {
     const view = element(documentImpl, "section", {
+        className: "biblio-ui__view",
         attributes: {
             "aria-busy": "false",
             "data-biblio-view": "item-unavailable",
@@ -125,7 +134,14 @@ function renderUnavailable(documentImpl, model, actions) {
     });
     append(
         view,
-        element(documentImpl, "h1", { text: "Boek niet beschikbaar" }),
+        element(documentImpl, "h1", {
+            className: "biblio-ui__page-title",
+            text: "Boek niet beschikbaar",
+        }),
+        element(documentImpl, "p", {
+            text: "Dit boek bestaat niet of is niet meer toegankelijk.",
+            attributes: { role: "alert" },
+        }),
         navigationLink(
             documentImpl,
             "Terug naar bibliotheek",
@@ -138,8 +154,12 @@ function renderUnavailable(documentImpl, model, actions) {
 }
 
 function renderReading(documentImpl, reading) {
-    const section = element(documentImpl, "section");
-    const list = element(documentImpl, "dl");
+    const section = element(documentImpl, "section", {
+        className: "biblio-ui__section biblio-ui__reading",
+    });
+    const list = element(documentImpl, "dl", {
+        className: "biblio-ui__metadata",
+    });
     const heading = element(documentImpl, "h2", { text: "Lezen" });
     section.append(heading);
     definition(
@@ -168,29 +188,39 @@ function renderReading(documentImpl, reading) {
 function renderDetail(documentImpl, model, actions) {
     const detail = model.detail;
     const view = element(documentImpl, "article", {
+        className: "biblio-ui__view biblio-ui__detail",
         attributes: {
             "aria-busy": "false",
             "data-biblio-view": "detail",
         },
     });
+    const backLink = navigationLink(
+        documentImpl,
+        "Terug naar bibliotheek",
+        model.backUrl,
+        actions.backToOverview
+    );
+    backLink.className = "biblio-ui__quiet-link";
+    view.append(backLink);
     append(
         view,
-        navigationLink(
-            documentImpl,
-            "Terug naar bibliotheek",
-            model.backUrl,
-            actions.backToOverview
-        ),
         element(documentImpl, "p", {
             className: "biblio-ui__eyebrow",
             text: "Mijn Bibliotheek",
         })
     );
 
+    const layout = element(documentImpl, "div", {
+        className: "biblio-ui__detail-layout",
+    });
+    const content = element(documentImpl, "div", {
+        className: "biblio-ui__detail-content",
+    });
     const cover = knownText(detail.cover_reference);
 
     if (cover !== null) {
-        view.append(element(documentImpl, "img", {
+        layout.append(element(documentImpl, "img", {
+            className: "biblio-ui__cover biblio-ui__cover--detail",
             attributes: {
                 alt: `Omslag van ${detail.title}`,
                 src: cover,
@@ -198,19 +228,22 @@ function renderDetail(documentImpl, model, actions) {
         }));
     }
 
-    view.append(element(documentImpl, "h1", { text: detail.title }));
+    content.append(element(documentImpl, "h1", {
+        className: "biblio-ui__page-title",
+        text: detail.title,
+    }));
 
     if (
         detail.authors.state === "known"
         && detail.authors.values.length > 0
     ) {
-        view.append(element(documentImpl, "p", {
+        content.append(element(documentImpl, "p", {
             className: "biblio-ui__authors",
             text: detail.authors.values.join(", "),
         }));
     }
 
-    view.append(element(documentImpl, "p", {
+    content.append(element(documentImpl, "p", {
         className: "biblio-ui__library",
         text: detail.library.name,
     }));
@@ -220,11 +253,11 @@ function renderDetail(documentImpl, model, actions) {
             className: "biblio-ui__summary",
         });
         definition(documentImpl, summary, "Vorm", "Boek");
-        view.append(summary);
+        content.append(summary);
     }
 
     const reading = renderReading(documentImpl, detail.reading);
-    view.append(reading.section);
+    content.append(reading.section);
     let focusTarget = reading.heading;
 
     if (typeof model.notice === "string" && model.notice.length > 0) {
@@ -236,11 +269,12 @@ function renderDetail(documentImpl, model, actions) {
                 tabindex: "-1",
             },
         });
-        view.append(focusTarget);
+        content.append(focusTarget);
     }
 
     if (detail.capabilities.start_reading === true) {
         const startButton = element(documentImpl, "button", {
+            className: "biblio-ui__control biblio-ui__control--primary biblio-ui__start-reading",
             text: "Lezen starten",
             attributes: { type: "button" },
         });
@@ -248,11 +282,11 @@ function renderDetail(documentImpl, model, actions) {
             "click",
             () => actions.startReading(startButton)
         );
-        view.append(startButton);
+        content.append(startButton);
     }
 
     append(
-        view,
+        content,
         metadataSection(documentImpl, "Uitgave", [
             ["ISBN", detail.isbn],
             ["Taal", detail.language],
@@ -267,6 +301,8 @@ function renderDetail(documentImpl, model, actions) {
             ["Beschikbaarheid", detail.availability],
         ])
     );
+    layout.append(content);
+    view.append(layout);
 
     return { focusTarget, view };
 }
@@ -305,10 +341,17 @@ export function createDetailView(root, {
         }
 
         root.replaceChildren(view);
+        root.setAttribute("aria-busy", view.getAttribute("aria-busy"));
 
         if (model.focusReading === true) {
             focusTarget.setAttribute("tabindex", "-1");
             focusTarget.focus();
+        }
+
+        if (model.focusHeading === true) {
+            const heading = view.querySelector("h1");
+            heading?.setAttribute("tabindex", "-1");
+            heading?.focus();
         }
 
         return view;

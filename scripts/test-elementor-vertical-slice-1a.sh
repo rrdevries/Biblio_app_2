@@ -98,7 +98,7 @@ step9_wp elementor flush-css --regenerate
 [[ "$(step9_wp plugin get elementor --field=version)" == "4.2.3" ]]
 [[ "$(step9_wp plugin get elementor-pro --field=version)" == "4.2.2" ]]
 [[ "$(step9_wp plugin get biblio-core --field=version)" == "2.1.0" ]]
-[[ "$(step9_wp plugin get biblio-ui --field=version)" == "0.1.0" ]]
+[[ "$(step9_wp plugin get biblio-ui --field=version)" == "0.2.0" ]]
 
 step9_wp eval-file "${STEP9_VERIFY}" page --user=1
 step9_wp eval-file "${STEP9_VERIFY}" assets-off --user=1

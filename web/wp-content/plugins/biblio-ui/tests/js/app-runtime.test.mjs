@@ -1148,12 +1148,14 @@ test("popstate switches overview and detail from current URL with fresh context"
     browser.listeners.get("popstate")();
     await app.whenIdle();
     assert.equal(detailRenders.renders.at(-1).model.state, "detail");
+    assert.equal(detailRenders.renders.at(-1).model.focusHeading, true);
 
     browser.location.href = "https://example.test/mijn-bibliotheek/"
         + "?library_id=library-1";
     browser.listeners.get("popstate")();
     await app.whenIdle();
     assert.equal(renders.renders.at(-1).model.state, "overview");
+    assert.equal(renders.renders.at(-1).model.focusHeading, true);
 
     assert.deepEqual(requests, [
         "me/libraries",
