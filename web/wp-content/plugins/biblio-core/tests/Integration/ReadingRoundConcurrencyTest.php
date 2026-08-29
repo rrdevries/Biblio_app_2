@@ -24,12 +24,120 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionManager;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbWorkRepository;
 use Biblio\Core\Library\Library;
 use Biblio\Core\Library\LibraryId;
+use Biblio\Core\Reading\ReadingDate;
+use Biblio\Core\Reading\ReadingRound;
+use Biblio\Core\Reading\ReadingRoundId;
+use Biblio\Core\Reading\ReadingRoundOutcome;
 use Biblio\Core\Reading\ReadingSource;
 use DateTimeImmutable;
 use RuntimeException;
 
 final class ReadingRoundConcurrencyTest extends PersistenceIntegrationTestCase
 {
+    public function testIndependentDivergentEndRequestsFromSameVersionYieldTypedStale(): void
+    {
+        $user = new UserId("concurrent-end-reader");
+        $library = new LibraryId("concurrent-end-library");
+        $item = $this->persistFixture($user, $library);
+        $round = ReadingRound::active(
+            new ReadingRoundId("concurrent-end-round"),
+            $user,
+            new WorkId("work-w"),
+            ReadingSource::libraryItem($item->id()),
+            ReadingDate::exact(2026, 8, 1),
+            new DateTimeImmutable("2026-08-29T10:00:00.000000+00:00")
+        );
+        $repository = new WpdbReadingRoundRepository(
+            $this->database,
+            $this->tableNames
+        );
+        (new WpdbTransactionManager($this->database))->run(
+            function () use ($repository, $user, $round): void {
+                $repository->addForUser($user, $round);
+            }
+        );
+        $temporaryDirectory = sys_get_temp_dir()
+            . "/biblio-reading-end-race-"
+            . bin2hex(random_bytes(8));
+
+        if (!mkdir($temporaryDirectory, 0700)) {
+            throw new RuntimeException("Could not create end race directory.");
+        }
+
+        $readyPaths = [
+            $temporaryDirectory . "/completed-ready",
+            $temporaryDirectory . "/stopped-ready",
+        ];
+        $releasePaths = [
+            $temporaryDirectory . "/completed-release",
+            $temporaryDirectory . "/stopped-release",
+        ];
+        $workers = [
+            $this->startEndWorker(
+                "completed",
+                $round,
+                $readyPaths[0],
+                $releasePaths[0]
+            ),
+            $this->startEndWorker(
+                "stopped",
+                $round,
+                $readyPaths[1],
+                $releasePaths[1]
+            ),
+        ];
+
+        try {
+            $this->awaitBothWorkers($workers, $readyPaths);
+
+            if (file_put_contents($releasePaths[0], "release") === false) {
+                throw new RuntimeException("Could not release completed worker.");
+            }
+            $completed = $this->finishWorker($workers[0]);
+
+            if (file_put_contents($releasePaths[1], "release") === false) {
+                throw new RuntimeException("Could not release stopped worker.");
+            }
+            $stale = $this->finishWorker($workers[1]);
+
+            self::assertSame([
+                "status" => "ended",
+                "outcome" => "completed",
+                "version" => 2,
+            ], $completed);
+            self::assertSame([
+                "status" => "stale",
+                "outcome" => "completed",
+                "version" => 2,
+            ], $stale);
+
+            $persisted = $repository->findForUser($round->id(), $user);
+            self::assertNotNull($persisted);
+            self::assertSame(ReadingRoundOutcome::Completed, $persisted->outcome());
+            self::assertSame(2, $persisted->version()->value());
+            $persistedFinishedOn = $persisted->period()->finishedOn();
+            self::assertNotNull($persistedFinishedOn);
+            self::assertTrue(
+                ReadingDate::exact(2026, 8, 20)->equals(
+                    $persistedFinishedOn
+                )
+            );
+            self::assertSame(1, $this->roundCount());
+        } finally {
+            foreach ($workers as $worker) {
+                $this->terminateWorkerIfRunning($worker);
+            }
+
+            foreach ([...$readyPaths, ...$releasePaths] as $path) {
+                if (is_file($path)) {
+                    unlink($path);
+                }
+            }
+
+            rmdir($temporaryDirectory);
+        }
+    }
+
     public function testConcurrentStartsCreateExactlyOneActiveRound(): void
     {
         $user = new UserId("concurrent-reader");
@@ -276,6 +384,39 @@ final class ReadingRoundConcurrencyTest extends PersistenceIntegrationTestCase
 
         if (!is_resource($process)) {
             throw new RuntimeException("Could not start race worker.");
+        }
+
+        return ["process" => $process, "pipes" => $pipes];
+    }
+
+    private function startEndWorker(
+        string $action,
+        ReadingRound $round,
+        string $readyPath,
+        string $releasePath
+    ): array {
+        $pipes = [];
+        $process = proc_open(
+            [
+                PHP_BINARY,
+                __DIR__ . "/Support/ReadingRoundEndWorker.php",
+                $action,
+                $round->id()->value(),
+                $round->userId()->value(),
+                (string) $round->version()->value(),
+                "2026-08-20",
+                $readyPath,
+                $releasePath,
+            ],
+            [
+                1 => ["pipe", "w"],
+                2 => ["pipe", "w"],
+            ],
+            $pipes
+        );
+
+        if (!is_resource($process)) {
+            throw new RuntimeException("Could not start end race worker.");
         }
 
         return ["process" => $process, "pipes" => $pipes];

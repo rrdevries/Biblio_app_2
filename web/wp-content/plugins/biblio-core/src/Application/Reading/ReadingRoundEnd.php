@@ -85,14 +85,14 @@ final readonly class ReadingRoundEnd
                 return $current;
             }
 
+            if (!$current->version()->equals($expectedVersion)) {
+                throw new ReadingRoundStale($current);
+            }
+
             if ($current->lifecycle() === ReadingRoundLifecycle::Ended) {
                 throw new ValidationException(
                     "An ended Reading Round can only change through correction."
                 );
-            }
-
-            if (!$current->version()->equals($expectedVersion)) {
-                throw new ReadingRoundStale($current);
             }
 
             $replacement = $current->end(
