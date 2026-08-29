@@ -15,6 +15,7 @@ use Biblio\Core\Application\Catalog\Read\CatalogTextValue;
 use Biblio\Core\Application\Library\LibraryContextView;
 use Biblio\Core\Reading\ReadingDate;
 use Biblio\Core\Reading\ReadingRound;
+use LogicException;
 
 final readonly class RestResponseSerializer
 {
@@ -89,6 +90,25 @@ final readonly class RestResponseSerializer
             ],
             "lifecycle" => $round->lifecycle()->value,
             "started_on" => $this->readingDate($round->period()->startedOn()),
+            "version" => $round->version()->value(),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    public function endedReadingRound(ReadingRound $round): array
+    {
+        $outcome = $round->outcome();
+        $finishedOn = $round->period()->finishedOn();
+
+        if ($outcome === null || $finishedOn === null) {
+            throw new LogicException("An ended Reading Round response was expected.");
+        }
+
+        return [
+            "reading_round_id" => $round->id()->value(),
+            "lifecycle" => $round->lifecycle()->value,
+            "outcome" => $outcome->value,
+            "finished_on" => $this->readingDate($finishedOn),
             "version" => $round->version()->value(),
         ];
     }

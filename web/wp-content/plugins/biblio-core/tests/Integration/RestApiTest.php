@@ -14,6 +14,7 @@ use Biblio\Core\Infrastructure\WordPress\Rest\RestController;
 use Biblio\Core\Infrastructure\WordPress\Rest\RestRequestParser;
 use Biblio\Core\Infrastructure\WordPress\Rest\RestResponseSerializer;
 use RuntimeException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -74,6 +75,7 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         $routes = $this->server->get_routes();
         $expected = [
             "/biblio/v1/me/libraries",
+            "/biblio/v1/me/reading-rounds/(?P<reading_round_id>[^/]+)/end",
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/items",
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/items/(?P<item_id>[^/]+)",
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/items/"
@@ -88,6 +90,27 @@ final class RestApiTest extends PersistenceIntegrationTestCase
                 }
             }
         }
+
+        self::assertCount(5, array_filter(
+            array_keys($routes),
+            static fn (string $route): bool => str_starts_with(
+                $route,
+                "/biblio/v1/"
+            )
+        ));
+        $endRoute = $routes[
+            "/biblio/v1/me/reading-rounds/(?P<reading_round_id>[^/]+)/end"
+        ];
+        $endMethods = [];
+
+        foreach ($endRoute as $endpoint) {
+            if (isset($endpoint["callback"])) {
+                $endMethods = $endpoint["methods"];
+            }
+        }
+
+        self::assertArrayHasKey("POST", $endMethods);
+        self::assertArrayNotHasKey("GET", $endMethods);
 
         $routeCount = count($this->server->get_routes());
         $this->api->registerRoutes();
@@ -114,6 +137,23 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         self::assertInstanceOf(WP_Error::class, $unavailable);
         self::assertSame("biblio_core_unavailable", $unavailable->get_error_code());
         self::assertSame(503, $unavailable->get_error_data()["status"]);
+
+        $endUnavailable = (new RestController(
+            static fn () => null,
+            new RestRequestParser($cursors),
+            new RestResponseSerializer($cursors),
+            new RestErrorMapper()
+        ))->endReading($this->endRequest("round-unavailable", [
+            "outcome" => "completed",
+            "finished_on" => "2026-08-29",
+            "expected_version" => 1,
+        ]));
+        self::assertInstanceOf(WP_Error::class, $endUnavailable);
+        self::assertSame(
+            "biblio_core_unavailable",
+            $endUnavailable->get_error_code()
+        );
+        self::assertSame(503, $endUnavailable->get_error_data()["status"]);
     }
 
     public function testAuthenticatedActorGetsOnlyServerResolvedLibraries(): void
@@ -590,6 +630,342 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         );
     }
 
+    public function testEndReadingRequiresAuthenticationAndWordPressNonce(): void
+    {
+        $request = $this->endRequest("round-auth", [
+            "outcome" => "completed",
+            "finished_on" => "2026-08-29",
+            "expected_version" => 1,
+        ]);
+
+        $anonymous = $this->server->dispatch($request);
+        self::assertSame(401, $anonymous->get_status());
+        self::assertSame(
+            "biblio_authentication_required",
+            $anonymous->get_data()["code"]
+        );
+
+        $missingNonce = $this->dispatchAsActor($request, null);
+        self::assertSame(401, $missingNonce->get_status());
+        self::assertSame(
+            "biblio_authentication_required",
+            $missingNonce->get_data()["code"]
+        );
+
+        $invalidNonce = $this->dispatchAsActor($request, "invalid");
+        self::assertSame(403, $invalidNonce->get_status());
+        self::assertSame(
+            "rest_cookie_invalid_nonce",
+            $invalidNonce->get_data()["code"]
+        );
+    }
+
+    public function testOwnerCanCompleteAndStopWithMinimalEndedResponse(): void
+    {
+        $this->seedLibrary("library-end", "Eindigen", $this->actorId, "owner");
+        $this->seedItem("item-complete", "library-end", "work-complete", "Compleet");
+        $this->seedItem("item-stop", "library-end", "work-stop", "Gestopt");
+        $this->seedRound(
+            "round-complete",
+            $this->actorId,
+            "work-complete",
+            "item-complete"
+        );
+        $this->seedRound(
+            "round-stop",
+            $this->actorId,
+            "work-stop",
+            "item-stop"
+        );
+
+        $completedResponse = $this->dispatchAsActor($this->endRequest(
+            "round-complete",
+            [
+                "outcome" => "completed",
+                "finished_on" => "2026-08-29",
+                "expected_version" => 1,
+            ]
+        ));
+        $stoppedResponse = $this->dispatchAsActor($this->endRequest(
+            "round-stop",
+            [
+                "outcome" => "stopped",
+                "finished_on" => "2026-08-28",
+                "expected_version" => 1,
+            ]
+        ));
+
+        self::assertSame(200, $completedResponse->get_status());
+        self::assertSame([
+            "reading_round_id" => "round-complete",
+            "lifecycle" => "ended",
+            "outcome" => "completed",
+            "finished_on" => ["year" => 2026, "month" => 8, "day" => 29],
+            "version" => 2,
+        ], $this->successData($completedResponse));
+        self::assertSame(200, $stoppedResponse->get_status());
+        self::assertSame([
+            "reading_round_id" => "round-stop",
+            "lifecycle" => "ended",
+            "outcome" => "stopped",
+            "finished_on" => ["year" => 2026, "month" => 8, "day" => 28],
+            "version" => 2,
+        ], $this->successData($stoppedResponse));
+
+        self::assertSame([
+            "round-complete" => ["round_outcome" => "completed", "round_version" => "2"],
+            "round-stop" => ["round_outcome" => "stopped", "round_version" => "2"],
+        ], $this->storedEndTruth("round-complete", "round-stop"));
+        $completedTruth = $this->storedRound("round-complete");
+        self::assertSame("2026", $completedTruth["reading_finished_year"]);
+        self::assertSame("8", $completedTruth["reading_finished_month"]);
+        self::assertSame("29", $completedTruth["reading_finished_day"]);
+        $stoppedTruth = $this->storedRound("round-stop");
+        self::assertSame("2026", $stoppedTruth["reading_finished_year"]);
+        self::assertSame("8", $stoppedTruth["reading_finished_month"]);
+        self::assertSame("28", $stoppedTruth["reading_finished_day"]);
+        self::assertSame(
+            0,
+            (int) $this->database->get_var(
+                "SELECT COUNT(*) FROM `{$this->tableNames->libraryActivityEvents()}`"
+            )
+        );
+    }
+
+    public function testIdenticalCompletedAndStoppedRetriesAreSuccessfulNoOps(): void
+    {
+        $this->seedLibrary("library-retry", "Retry", $this->actorId, "owner");
+        $this->seedItem("item-retry-complete", "library-retry", "work-retry-complete", "Compleet");
+        $this->seedItem("item-retry-stop", "library-retry", "work-retry-stop", "Gestopt");
+        $this->seedRound(
+            "round-retry-complete",
+            $this->actorId,
+            "work-retry-complete",
+            "item-retry-complete"
+        );
+        $this->seedRound(
+            "round-retry-stop",
+            $this->actorId,
+            "work-retry-stop",
+            "item-retry-stop"
+        );
+
+        foreach ([
+            ["round-retry-complete", "completed", "2026-08-29"],
+            ["round-retry-stop", "stopped", "2026-08-28"],
+        ] as [$roundId, $outcome, $finishedOn]) {
+            $request = $this->endRequest($roundId, [
+                "outcome" => $outcome,
+                "finished_on" => $finishedOn,
+                "expected_version" => 1,
+            ]);
+            $first = $this->dispatchAsActor($request);
+            $truthAfterFirst = $this->storedRound($roundId);
+            $retry = $this->dispatchAsActor($request);
+
+            self::assertSame(200, $first->get_status());
+            self::assertSame(200, $retry->get_status());
+            self::assertSame(2, $this->successData($first)["version"]);
+            self::assertSame($this->successData($first), $this->successData($retry));
+            self::assertSame($truthAfterFirst, $this->storedRound($roundId));
+            self::assertSame("2", $truthAfterFirst["round_version"]);
+        }
+    }
+
+    public function testDivergentStaleEndIntentionsMapToConflict(): void
+    {
+        $this->seedLibrary("library-stale", "Stale", $this->actorId, "owner");
+        $scenarios = [
+            ["a", "completed", "2026-08-20", "stopped", "2026-08-20"],
+            ["b", "completed", "2026-08-20", "completed", "2026-08-21"],
+            ["c", "stopped", "2026-08-20", "completed", "2026-08-20"],
+        ];
+
+        foreach ($scenarios as [$suffix, $firstOutcome, $firstDate, $retryOutcome, $retryDate]) {
+            $itemId = "item-stale-{$suffix}";
+            $workId = "work-stale-{$suffix}";
+            $roundId = "round-stale-{$suffix}";
+            $this->seedItem($itemId, "library-stale", $workId, "Stale {$suffix}");
+            $this->seedRound(
+                $roundId,
+                $this->actorId,
+                $workId,
+                $itemId
+            );
+
+            $first = $this->dispatchAsActor($this->endRequest($roundId, [
+                "outcome" => $firstOutcome,
+                "finished_on" => $firstDate,
+                "expected_version" => 1,
+            ]));
+            $truthAfterFirst = $this->storedRound($roundId);
+            $retry = $this->dispatchAsActor($this->endRequest($roundId, [
+                "outcome" => $retryOutcome,
+                "finished_on" => $retryDate,
+                "expected_version" => 1,
+            ]));
+
+            self::assertSame(200, $first->get_status());
+            self::assertSame(409, $retry->get_status());
+            self::assertSame(
+                "biblio_reading_round_stale",
+                $retry->get_data()["code"]
+            );
+            self::assertSame($truthAfterFirst, $this->storedRound($roundId));
+            self::assertSame("2", $truthAfterFirst["round_version"]);
+        }
+    }
+
+    public function testCurrentVersionLifecycleAndDateValidationRemainCoreOwned(): void
+    {
+        $this->seedLibrary("library-domain", "Domein", $this->actorId, "owner");
+
+        foreach (["current", "early", "future"] as $suffix) {
+            $this->seedItem(
+                "item-domain-{$suffix}",
+                "library-domain",
+                "work-domain-{$suffix}",
+                "Domein {$suffix}"
+            );
+            $this->seedRound(
+                "round-domain-{$suffix}",
+                $this->actorId,
+                "work-domain-{$suffix}",
+                "item-domain-{$suffix}"
+            );
+        }
+
+        self::assertSame(200, $this->dispatchAsActor($this->endRequest(
+            "round-domain-current",
+            [
+                "outcome" => "completed",
+                "finished_on" => "2026-08-20",
+                "expected_version" => 1,
+            ]
+        ))->get_status());
+        $currentVersionDivergent = $this->dispatchAsActor($this->endRequest(
+            "round-domain-current",
+            [
+                "outcome" => "stopped",
+                "finished_on" => "2026-08-20",
+                "expected_version" => 2,
+            ]
+        ));
+        self::assertSame(422, $currentVersionDivergent->get_status());
+        self::assertSame(
+            "biblio_validation_failed",
+            $currentVersionDivergent->get_data()["code"]
+        );
+
+        $beforeStart = $this->dispatchAsActor($this->endRequest(
+            "round-domain-early",
+            [
+                "outcome" => "completed",
+                "finished_on" => "2026-07-31",
+                "expected_version" => 1,
+            ]
+        ));
+        self::assertSame(422, $beforeStart->get_status());
+
+        $future = $this->dispatchAsActor($this->endRequest(
+            "round-domain-future",
+            [
+                "outcome" => "completed",
+                "finished_on" => "2026-08-30",
+                "expected_version" => 1,
+            ]
+        ));
+        self::assertSame(200, $future->get_status());
+        self::assertSame(
+            ["year" => 2026, "month" => 8, "day" => 30],
+            $this->successData($future)["finished_on"]
+        );
+    }
+
+    public function testUnknownForeignAndLibraryManagerRoundsAreNonEnumerating(): void
+    {
+        $this->seedLibrary("library-private", "Privé", $this->otherId, "owner");
+        $this->database->insert($this->tableNames->memberships(), [
+            "library_id" => "library-private",
+            "user_id" => (string) $this->actorId,
+            "membership_status" => "active",
+            "management_role" => "manager",
+            "use_access" => "direct",
+            "additional_permissions" => "[]",
+        ]);
+        $this->seedItem(
+            "item-private",
+            "library-private",
+            "work-private",
+            "Privé"
+        );
+        $this->seedRound(
+            "round-private",
+            $this->otherId,
+            "work-private",
+            "item-private"
+        );
+        $body = [
+            "outcome" => "completed",
+            "finished_on" => "2026-08-29",
+            "expected_version" => 1,
+        ];
+
+        $unknown = $this->dispatchAsActor($this->endRequest(
+            "round-unknown",
+            $body
+        ));
+        $foreign = $this->dispatchAsActor($this->endRequest(
+            "round-private",
+            $body
+        ));
+
+        $this->assertEquivalentNotAvailable($unknown, $foreign);
+        $foreignTruth = $this->storedRound("round-private");
+        self::assertNull($foreignTruth["round_outcome"]);
+        self::assertSame("1", $foreignTruth["round_version"]);
+    }
+
+    /** @return iterable<string, array{string, array<string, mixed>, string}> */
+    public static function invalidEndRequests(): iterable
+    {
+        $valid = [
+            "outcome" => "completed",
+            "finished_on" => "2026-08-29",
+            "expected_version" => 1,
+        ];
+
+        yield "malformed ReadingRound ID" => [
+            str_repeat("x", 192),
+            $valid,
+            "biblio_invalid_field_syntax",
+        ];
+        yield "missing outcome" => ["round", array_diff_key($valid, ["outcome" => true]), "biblio_missing_required_field"];
+        yield "unknown outcome" => ["round", [...$valid, "outcome" => "done"], "biblio_invalid_field_syntax"];
+        yield "outcome wrong type" => ["round", [...$valid, "outcome" => true], "biblio_invalid_field_type"];
+        yield "missing finished_on" => ["round", array_diff_key($valid, ["finished_on" => true]), "biblio_missing_required_field"];
+        yield "malformed finished_on" => ["round", [...$valid, "finished_on" => "29-08-2026"], "biblio_invalid_field_syntax"];
+        yield "impossible finished_on" => ["round", [...$valid, "finished_on" => "2026-02-30"], "biblio_invalid_field_syntax"];
+        yield "finished_on wrong type" => ["round", [...$valid, "finished_on" => 20260829], "biblio_invalid_field_type"];
+        yield "missing expected_version" => ["round", array_diff_key($valid, ["expected_version" => true]), "biblio_missing_required_field"];
+        yield "zero expected_version" => ["round", [...$valid, "expected_version" => 0], "biblio_invalid_field_syntax"];
+        yield "string expected_version" => ["round", [...$valid, "expected_version" => "1"], "biblio_invalid_field_type"];
+        yield "unknown field" => ["round", [...$valid, "user_id" => "other"], "biblio_unknown_request_fields"];
+    }
+
+    /** @param array<string, mixed> $body */
+    #[DataProvider("invalidEndRequests")]
+    public function testEndReadingStrictlyRejectsInvalidRequests(
+        string $roundId,
+        array $body,
+        string $code
+    ): void {
+        $response = $this->dispatchAsActor($this->endRequest($roundId, $body));
+
+        self::assertSame(400, $response->get_status());
+        self::assertSame($code, $response->get_data()["code"]);
+    }
+
     private function dispatchAsActor(
         WP_REST_Request $request,
         ?string $nonce = "valid"
@@ -629,6 +1005,54 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         $request->set_body((string) wp_json_encode($body));
 
         return $request;
+    }
+
+    /** @param array<string, mixed> $body */
+    private function endRequest(
+        string $roundId,
+        array $body
+    ): WP_REST_Request {
+        $request = new WP_REST_Request(
+            "POST",
+            "/biblio/v1/me/reading-rounds/{$roundId}/end"
+        );
+        $request->set_header("content-type", "application/json");
+        $request->set_body((string) wp_json_encode($body));
+
+        return $request;
+    }
+
+    /** @return array<string, null|string> */
+    private function storedRound(string $roundId): array
+    {
+        $row = $this->database->get_row($this->database->prepare(
+            "SELECT round_outcome, reading_finished_year, "
+                . "reading_finished_month, reading_finished_day, round_version, "
+                . "updated_at, ended_at FROM `{$this->tableNames->readingRounds()}` "
+                . "WHERE reading_round_id = %s",
+            $roundId
+        ), ARRAY_A);
+        self::assertIsArray($row);
+
+        return $row;
+    }
+
+    /** @return array<string, array{round_outcome: string, round_version: string}> */
+    private function storedEndTruth(string ...$roundIds): array
+    {
+        $truth = [];
+
+        foreach ($roundIds as $roundId) {
+            $row = $this->storedRound($roundId);
+            self::assertIsString($row["round_outcome"]);
+            self::assertIsString($row["round_version"]);
+            $truth[$roundId] = [
+                "round_outcome" => $row["round_outcome"],
+                "round_version" => $row["round_version"],
+            ];
+        }
+
+        return $truth;
     }
 
     /** @return array<string, mixed> */
