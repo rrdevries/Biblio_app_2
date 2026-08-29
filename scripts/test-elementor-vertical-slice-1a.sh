@@ -10,6 +10,7 @@ STEP9_ARTIFACT+="biblio-vertical-slice-1a.zip"
 STEP9_VERIFY="/var/www/html/scripts/verify-elementor-vertical-slice-1a.php"
 STEP9_DB_CREATED=0
 STEP9_UPLOAD_DIR=""
+STEP9_UPLOAD_CONTAINER=""
 
 if [[ "${STEP9_DB_NAME}" != "biblio_elementor_step9_import_test" ]]; then
     echo "Refusing an unexpected database target." >&2
@@ -21,8 +22,15 @@ cleanup() {
         ddev mysql -e "DROP DATABASE \`${STEP9_DB_NAME}\`" >/dev/null
     fi
 
+    if [[ -n "${STEP9_UPLOAD_CONTAINER}" \
+        && "${STEP9_UPLOAD_CONTAINER}" == "/var/www/html/.local/step9-import-uploads."* ]]; then
+        # Remove the container-side Mutagen source first, otherwise its stale
+        # copy can recreate the host directory after host-side cleanup.
+        ddev exec rm -rf -- "${STEP9_UPLOAD_CONTAINER}" >/dev/null 2>&1 || true
+    fi
+
     if [[ -n "${STEP9_UPLOAD_DIR}" \
-        && "${STEP9_UPLOAD_DIR}" == "${STEP9_PROJECT_ROOT}/.local/"* ]]; then
+        && "${STEP9_UPLOAD_DIR}" == "${STEP9_PROJECT_ROOT}/.local/step9-import-uploads."* ]]; then
         rm -rf "${STEP9_UPLOAD_DIR}"
     fi
 }
