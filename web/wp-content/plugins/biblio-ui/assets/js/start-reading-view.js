@@ -137,7 +137,7 @@ export function createStartReadingView(root, {
         const descriptionId = `${id}-description`;
         const errorId = `${id}-error`;
         const dialog = element(documentImpl, "dialog", {
-            className: "biblio-ui__start-reading-dialog",
+            className: "biblio-ui__reading-dialog biblio-ui__start-reading-dialog",
             attributes: {
                 "aria-describedby": descriptionId,
                 "aria-labelledby": titleId,

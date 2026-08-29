@@ -10,6 +10,7 @@ let appSource = await readFile(appSourceUrl, "utf8");
 for (const [moduleId, file] of [
     ["biblio-ui/api", "api.js"],
     ["biblio-ui/detail-view", "detail-view.js"],
+    ["biblio-ui/end-reading-view", "end-reading-view.js"],
     ["biblio-ui/library-state", "library-state.js"],
     ["biblio-ui/overview-view", "overview-view.js"],
     ["biblio-ui/route-state", "route-state.js"],
@@ -271,6 +272,10 @@ function startReadingRecorder() {
     };
 }
 
+function endReadingRecorder() {
+    return startReadingRecorder();
+}
+
 function createApp({
     url,
     get,
@@ -279,6 +284,7 @@ function createApp({
     },
     renders,
     detailRenders = recorder(),
+    endReadingRenders = endReadingRecorder(),
     startReadingRenders = startReadingRecorder(),
 }) {
     const browser = browserDouble(url);
@@ -291,10 +297,21 @@ function createApp({
         eventTarget: browser.eventTarget,
         viewFactory: renders.factory,
         detailViewFactory: detailRenders.factory,
+        endReadingViewFactory: endReadingRenders.factory,
         startReadingViewFactory: startReadingRenders.factory,
     });
 
-    return { app, browser, detailRenders, startReadingRenders };
+    return {
+        app,
+        browser,
+        detailRenders,
+        endReadingRenders,
+        startReadingRenders,
+        submitEndReading(intent) {
+            detailRenders.renders.at(-1).actions.endReading({ focus() {} });
+            return endReadingRenders.opens.at(-1).submit(intent);
+        },
+    };
 }
 
 async function waitFor(predicate) {
@@ -1062,7 +1079,7 @@ test("End Reading completed and stopped post server detail identity then reread"
                     historical_completed_rounds: 0,
                 },
             });
-            const { app } = createApp({
+            const { app, submitEndReading } = createApp({
                 url: "https://example.test/mijn-bibliotheek/"
                     + "?library_id=library-1&item_id=item-1",
                 renders,
@@ -1088,7 +1105,7 @@ test("End Reading completed and stopped post server detail identity then reread"
             });
 
             await app.start();
-            const result = await detailRenders.renders.at(-1).actions.endReading({
+            const result = await submitEndReading({
                 outcome,
                 finishedOn,
             });
@@ -1111,6 +1128,10 @@ test("End Reading completed and stopped post server detail identity then reread"
             assert.equal(
                 detailRenders.renders.at(-1).model.notice,
                 "De leesstatus is bijgewerkt."
+            );
+            assert.equal(
+                detailRenders.renders.at(-1).model.focusReading,
+                true
             );
         });
     }
@@ -1136,7 +1157,7 @@ test("End Reading rejects presentation-supplied identity and unavailable state",
     }];
     let posts = 0;
     const activeRenders = recorder();
-    const { app: activeApp } = createApp({
+    const { app: activeApp, submitEndReading: submitActive } = createApp({
         url: "https://example.test/mijn-bibliotheek/"
             + "?library_id=library-1&item_id=item-1",
         renders: recorder(),
@@ -1154,13 +1175,13 @@ test("End Reading rejects presentation-supplied identity and unavailable state",
 
     for (const intent of invalidIntents) {
         assert.deepEqual(
-            await activeRenders.renders.at(-1).actions.endReading(intent),
+            await submitActive(intent),
             { state: "validation-error" }
         );
     }
 
     const inactiveRenders = recorder();
-    const { app: inactiveApp } = createApp({
+    const { app: inactiveApp, submitEndReading: submitInactive } = createApp({
         url: "https://example.test/mijn-bibliotheek/"
             + "?library_id=library-1&item_id=item-1",
         renders: recorder(),
@@ -1175,7 +1196,7 @@ test("End Reading rejects presentation-supplied identity and unavailable state",
         },
     });
     await inactiveApp.start();
-    assert.deepEqual(await inactiveRenders.renders.at(-1).actions.endReading({
+    assert.deepEqual(await submitInactive({
         outcome: "completed",
         finishedOn: "2026-08-29",
     }), { state: "unavailable" });
@@ -1191,7 +1212,7 @@ test("End Reading duplicate submit shares the mutation lock and sends one POST",
     const pendingPost = new Promise((resolve) => {
         resolvePost = resolve;
     });
-    const { app } = createApp({
+    const { app, submitEndReading } = createApp({
         url: "https://example.test/mijn-bibliotheek/"
             + "?library_id=library-1&item_id=item-1",
         renders: recorder(),
@@ -1212,11 +1233,10 @@ test("End Reading duplicate submit shares the mutation lock and sends one POST",
         },
     });
     await app.start();
-    const action = detailRenders.renders.at(-1).actions.endReading;
     const intent = { outcome: "completed", finishedOn: "2026-08-29" };
-    const first = action(intent);
+    const first = submitEndReading(intent);
     await waitFor(() => posts === 1);
-    const duplicate = await action(intent);
+    const duplicate = await submitEndReading(intent);
 
     assert.deepEqual(duplicate, { state: "pending" });
     assert.equal(posts, 1);
@@ -1243,7 +1263,7 @@ test("End Reading 409 and 404 reconcile without retry or stale payload trust", a
             const detailRenders = recorder();
             let posts = 0;
             let detailGets = 0;
-            const { app } = createApp({
+            const { app, submitEndReading } = createApp({
                 url: "https://example.test/mijn-bibliotheek/"
                     + "?library_id=library-1&item_id=item-1",
                 renders: recorder(),
@@ -1277,7 +1297,7 @@ test("End Reading 409 and 404 reconcile without retry or stale payload trust", a
                 },
             });
             await app.start();
-            const result = await detailRenders.renders.at(-1).actions.endReading({
+            const result = await submitEndReading({
                 outcome: "completed",
                 finishedOn: "2026-08-29",
             });
@@ -1288,6 +1308,10 @@ test("End Reading 409 and 404 reconcile without retry or stale payload trust", a
             assert.equal(
                 detailRenders.renders.at(-1).model.state,
                 fixture.rereadUnavailable ? "item-unavailable" : "detail"
+            );
+            assert.equal(
+                detailRenders.renders.at(-1).model.focusHeading === true,
+                fixture.rereadUnavailable
             );
             assert.doesNotMatch(
                 JSON.stringify(detailRenders.renders.map(({ model }) => model)),
@@ -1330,7 +1354,7 @@ test("End Reading normalizes non-reconciled errors without retry", async (t) => 
             const detailRenders = recorder();
             let posts = 0;
             let detailGets = 0;
-            const { app } = createApp({
+            const { app, submitEndReading } = createApp({
                 url: "https://example.test/mijn-bibliotheek/"
                     + "?library_id=library-1&item_id=item-1",
                 renders: recorder(),
@@ -1349,7 +1373,7 @@ test("End Reading normalizes non-reconciled errors without retry", async (t) => 
                 },
             });
             await app.start();
-            const result = await detailRenders.renders.at(-1).actions.endReading({
+            const result = await submitEndReading({
                 outcome: "completed",
                 finishedOn: "2026-08-29",
             });
@@ -1369,7 +1393,7 @@ test("End Reading malformed success reconciles but reread failure stays uncertai
             const detailRenders = recorder();
             let posts = 0;
             let detailGets = 0;
-            const { app } = createApp({
+            const { app, submitEndReading } = createApp({
                 url: "https://example.test/mijn-bibliotheek/"
                     + "?library_id=library-1&item_id=item-1",
                 renders: recorder(),
@@ -1406,7 +1430,7 @@ test("End Reading malformed success reconciles but reread failure stays uncertai
                 },
             });
             await app.start();
-            const result = await detailRenders.renders.at(-1).actions.endReading({
+            const result = await submitEndReading({
                 outcome: "completed",
                 finishedOn: "2026-08-29",
             });
@@ -1446,7 +1470,7 @@ test("End Reading navigation abort marks outcome unknown and cannot reread stale
     const pendingPost = new Promise((resolve) => {
         resolvePost = resolve;
     });
-    const { app, browser } = createApp({
+    const { app, browser, submitEndReading } = createApp({
         url: "https://example.test/mijn-bibliotheek/"
             + "?library_id=library-1&item_id=item-1",
         renders,
@@ -1469,7 +1493,7 @@ test("End Reading navigation abort marks outcome unknown and cannot reread stale
         },
     });
     await app.start();
-    const mutation = detailRenders.renders.at(-1).actions.endReading({
+    const mutation = submitEndReading({
         outcome: "completed",
         finishedOn: "2026-08-29",
     });
