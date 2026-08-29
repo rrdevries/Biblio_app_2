@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Biblio\Core\Infrastructure\WordPress\Rest;
 
 use Biblio\Core\Application\CoreApplication;
+use Biblio\Core\Reading\ReadingRoundOutcome;
 use Closure;
 use Throwable;
 use WP_Error;
@@ -67,6 +68,15 @@ final class RestController
             [
                 "methods" => WP_REST_Server::CREATABLE,
                 "callback" => [$this, "startReading"],
+                "permission_callback" => [$this, "authenticated"],
+            ]
+        );
+        register_rest_route(
+            self::NAMESPACE,
+            "/me/reading-rounds/(?P<reading_round_id>[^/]+)/end",
+            [
+                "methods" => WP_REST_Server::CREATABLE,
+                "callback" => [$this, "endReading"],
                 "permission_callback" => [$this, "authenticated"],
             ]
         );
@@ -136,6 +146,31 @@ final class RestController
             return $this->success(
                 $this->responses->startedReadingRound($round),
                 201
+            );
+        });
+    }
+
+    public function endReading(
+        WP_REST_Request $request
+    ): WP_REST_Response|WP_Error {
+        return $this->execute(function (
+            CoreApplication $application
+        ) use ($request): WP_REST_Response {
+            $input = $this->requests->endReadingRound($request);
+            $round = $input->outcome() === ReadingRoundOutcome::Completed
+                ? $application->finishReadingRound()->finish(
+                    $input->readingRoundId(),
+                    $input->expectedVersion(),
+                    $input->finishedOn()
+                )
+                : $application->stopReadingRound()->stop(
+                    $input->readingRoundId(),
+                    $input->expectedVersion(),
+                    $input->finishedOn()
+                );
+
+            return $this->success(
+                $this->responses->endedReadingRound($round)
             );
         });
     }

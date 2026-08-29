@@ -945,3 +945,26 @@ data at zero after acceptance.
 
 The complete final verification record is maintained in
 `docs/21-elementor-vertical-slice-1a-exit-evidence.md`.
+
+### Vertical Slice 1B — ReadingRound detail and end support
+
+Status: **Core/REST support implemented; browser UI deferred**
+
+The private `biblio/v1` surface now contains five routes. The additional
+owner-scoped mutation is:
+
+- `POST /me/reading-rounds/{reading_round_id}/end`.
+
+It accepts only `outcome` (`completed` or `stopped`), exact `finished_on` and
+integer `expected_version`. The authenticated WordPress actor is the sole
+identity source; no Library Context, membership or caller-supplied identity is
+accepted. Dispatch goes to the existing `FinishReadingRoundService` or
+`StopReadingRoundService`, so lifecycle, ownership, date, version, no-op and
+stale behavior remain Core decisions. Unknown and foreign-owned rounds share
+the same non-enumerating 404 response.
+
+Itemdetail already exposes the actor-owned exact-Item active-round identity,
+version and start date plus the presentation capability `end_reading`. The
+end mutation returns only ended identity, lifecycle, outcome, finish date and
+version. Biblio UI, Elementor, Crocoblock and E2E fixtures have not yet been
+extended for Slice 1B.

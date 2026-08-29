@@ -9,6 +9,9 @@ use Biblio\Core\Application\Catalog\Read\CatalogOverviewPageSize;
 use Biblio\Core\Catalog\ItemId;
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Reading\ReadingDate;
+use Biblio\Core\Reading\ReadingRoundId;
+use Biblio\Core\Reading\ReadingRoundOutcome;
+use Biblio\Core\Reading\ReadingRoundVersion;
 use Throwable;
 use WP_REST_Request;
 
@@ -97,15 +100,91 @@ final readonly class RestRequestParser
             throw RestRequestException::wrongType("started_on", "a string");
         }
 
+        return $this->exactReadingDate($body["started_on"], "started_on");
+    }
+
+    public function endReadingRound(
+        WP_REST_Request $request
+    ): RestEndReadingRoundRequest {
+        $readingRoundId = $this->identifier(
+            $request->get_url_params()["reading_round_id"] ?? null,
+            "reading_round_id",
+            static fn (string $value): ReadingRoundId => new ReadingRoundId($value)
+        );
+
+        /** @var mixed $body */
+        $body = $request->get_json_params();
+
+        if ($body === null) {
+            throw RestRequestException::missing("outcome");
+        }
+
+        if (!is_array($body)) {
+            throw RestRequestException::wrongType("body", "a JSON object");
+        }
+
+        if (array_diff(array_keys($body), [
+            "outcome",
+            "finished_on",
+            "expected_version",
+        ]) !== []) {
+            throw RestRequestException::unknownFields();
+        }
+
+        foreach (["outcome", "finished_on", "expected_version"] as $field) {
+            if (!array_key_exists($field, $body)) {
+                throw RestRequestException::missing($field);
+            }
+        }
+
+        if (!is_string($body["outcome"])) {
+            throw RestRequestException::wrongType("outcome", "a string");
+        }
+
+        $outcome = ReadingRoundOutcome::tryFrom($body["outcome"]);
+
+        if ($outcome === null) {
+            throw RestRequestException::invalid("outcome");
+        }
+
+        if (!is_string($body["finished_on"])) {
+            throw RestRequestException::wrongType("finished_on", "a string");
+        }
+
+        if (!is_int($body["expected_version"])) {
+            throw RestRequestException::wrongType(
+                "expected_version",
+                "an integer"
+            );
+        }
+
+        try {
+            $expectedVersion = new ReadingRoundVersion(
+                $body["expected_version"]
+            );
+        } catch (Throwable) {
+            throw RestRequestException::invalid("expected_version");
+        }
+
+        return new RestEndReadingRoundRequest(
+            $readingRoundId,
+            $outcome,
+            $this->exactReadingDate($body["finished_on"], "finished_on"),
+            $expectedVersion
+        );
+    }
+
+    private function exactReadingDate(string $value, string $field): ReadingDate
+    {
         if (
             preg_match(
                 '/^(?<year>[0-9]{4})-(?<month>[0-9]{2})-(?<day>[0-9]{2})$/D',
-                $body["started_on"],
+                $value,
                 $parts
             ) !== 1
             || !checkdate((int) $parts["month"], (int) $parts["day"], (int) $parts["year"])
         ) {
-            throw RestRequestException::invalid("started_on");
+            throw RestRequestException::invalid($field);
         }
 
         return ReadingDate::exact(
