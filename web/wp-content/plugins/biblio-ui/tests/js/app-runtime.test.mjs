@@ -145,7 +145,12 @@ function detail(selectedLibrary, itemId, overrides = {}) {
             stopped_rounds: 0,
             historical_completed_rounds: 0,
         },
-        capabilities: { view_item: true, start_reading: true },
+        active_reading_round: null,
+        capabilities: {
+            view_item: true,
+            start_reading: true,
+            end_reading: false,
+        },
         ...overrides,
     };
 }
@@ -161,6 +166,68 @@ function startedRound(itemId, startedOn = "2026-08-28") {
         started_on: { year, month, day },
         version: 1,
     };
+}
+
+function activeRound(
+    readingRoundId = "round/active",
+    version = 1,
+    startedOn = { year: 2026, month: 8, day: 1 }
+) {
+    return {
+        reading_round_id: readingRoundId,
+        version,
+        started_on: startedOn,
+    };
+}
+
+function activeDetail(
+    selectedLibrary,
+    itemId,
+    round = activeRound(),
+    overrides = {}
+) {
+    return detail(selectedLibrary, itemId, {
+        active_reading_round: round,
+        capabilities: {
+            view_item: true,
+            start_reading: false,
+            end_reading: true,
+        },
+        reading: {
+            status: "reading",
+            active_rounds: 1,
+            completed_rounds: 0,
+            stopped_rounds: 0,
+            historical_completed_rounds: 0,
+        },
+        ...overrides,
+    });
+}
+
+function endedRound(
+    readingRoundId,
+    outcome,
+    finishedOn,
+    version = 2
+) {
+    const [year, month, day] = finishedOn.split("-").map(Number);
+
+    return {
+        reading_round_id: readingRoundId,
+        lifecycle: "ended",
+        outcome,
+        finished_on: { year, month, day },
+        version,
+    };
+}
+
+function apiError(status, code) {
+    return new BiblioApiError({
+        kind: "http",
+        code,
+        status,
+        message: "Unsafe server detail.",
+    });
 }
 
 function recorder() {
@@ -478,6 +545,103 @@ test("overview and detail actions push canonical routes and rebuild fresh", asyn
     assert.equal(renders.renders.at(-1).model.state, "overview");
 });
 
+test("Item detail strictly validates active ReadingRound and end capability", async (t) => {
+    const selected = library("library-1", { designated: true });
+    const cases = [{
+        name: "null active round",
+        payload: detail(selected, "item-1"),
+        expectedState: "detail",
+    }, {
+        name: "valid exact active round",
+        payload: activeDetail(selected, "item-1"),
+        expectedState: "detail",
+    }, {
+        name: "active round may be present while end is false",
+        payload: activeDetail(selected, "item-1", activeRound(
+            "round-legacy",
+            3,
+            null
+        ), {
+            capabilities: {
+                view_item: true,
+                start_reading: false,
+                end_reading: false,
+            },
+        }),
+        expectedState: "detail",
+    }, {
+        name: "malformed reading_round_id",
+        payload: activeDetail(selected, "item-1", activeRound("")),
+        expectedState: "request-error",
+    }, {
+        name: "malformed version",
+        payload: activeDetail(selected, "item-1", activeRound(
+            "round-1",
+            "1"
+        )),
+        expectedState: "request-error",
+    }, {
+        name: "malformed started_on",
+        payload: activeDetail(selected, "item-1", activeRound(
+            "round-1",
+            1,
+            { year: 2026, month: 2, day: 30 }
+        )),
+        expectedState: "request-error",
+    }, {
+        name: "malformed end_reading",
+        payload: activeDetail(selected, "item-1", activeRound(), {
+            capabilities: {
+                view_item: true,
+                start_reading: false,
+                end_reading: "yes",
+            },
+        }),
+        expectedState: "request-error",
+    }, {
+        name: "end true without active round",
+        payload: detail(selected, "item-1", {
+            capabilities: {
+                view_item: true,
+                start_reading: false,
+                end_reading: true,
+            },
+        }),
+        expectedState: "request-error",
+    }, {
+        name: "active round rejects non-allowlisted fields",
+        payload: activeDetail(selected, "item-1", {
+            ...activeRound(),
+            user_id: "other",
+        }),
+        expectedState: "request-error",
+    }];
+
+    for (const fixture of cases) {
+        await t.test(fixture.name, async () => {
+            const renders = recorder();
+            const detailRenders = recorder();
+            const { app } = createApp({
+                url: "https://example.test/mijn-bibliotheek/"
+                    + "?library_id=library-1&item_id=item-1",
+                renders,
+                detailRenders,
+                async get(path) {
+                    return path === "me/libraries"
+                        ? { libraries: [selected] }
+                        : fixture.payload;
+                },
+            });
+
+            await app.start();
+            const lastModel = fixture.expectedState === "detail"
+                ? detailRenders.renders.at(-1).model
+                : renders.renders.at(-1).model;
+            assert.equal(lastModel.state, fixture.expectedState);
+        });
+    }
+});
+
 test("Start Reading posts the exact contract then renders only reread truth", async () => {
     const selected = library("library/one", { designated: true });
     const renders = recorder();
@@ -539,7 +703,11 @@ test("Start Reading posts the exact contract then renders only reread truth", as
             stopped_rounds: 0,
             historical_completed_rounds: 0,
         },
-        capabilities: { view_item: true, start_reading: false },
+        capabilities: {
+            view_item: true,
+            start_reading: false,
+            end_reading: false,
+        },
     }));
     assert.deepEqual(await submit, { state: "reconciled" });
     assert.equal(detailRequests, 2);
@@ -680,7 +848,11 @@ test("active-source conflict announces change and rereads authoritative detail",
                     stopped_rounds: 0,
                     historical_completed_rounds: 0,
                 },
-                capabilities: { view_item: true, start_reading: false },
+                capabilities: {
+                    view_item: true,
+                    start_reading: false,
+                    end_reading: false,
+                },
             });
         },
         async post() {
@@ -859,6 +1031,462 @@ test("route change aborts mutation and stale success cannot trigger reread", asy
 
     resolvePost(startedRound("item-1"));
     assert.deepEqual(await mutation, { state: "aborted" });
+    assert.equal(detailGets, 1);
+    assert.equal(renders.renders.at(-1).model.state, "overview");
+});
+
+test("End Reading completed and stopped post server detail identity then reread", async (t) => {
+    for (const outcome of ["completed", "stopped"]) {
+        await t.test(outcome, async () => {
+            const selected = library("library-1", { designated: true });
+            const renders = recorder();
+            const detailRenders = recorder();
+            const posts = [];
+            let detailGets = 0;
+            const roundId = `round/${outcome}`;
+            const finishedOn = outcome === "completed"
+                ? "2026-08-29"
+                : "2026-08-28";
+            const reread = detail(selected, "item-1", {
+                active_reading_round: null,
+                capabilities: {
+                    view_item: true,
+                    start_reading: true,
+                    end_reading: false,
+                },
+                reading: {
+                    status: outcome === "completed" ? "read" : "not_read",
+                    active_rounds: 0,
+                    completed_rounds: outcome === "completed" ? 1 : 0,
+                    stopped_rounds: outcome === "stopped" ? 1 : 0,
+                    historical_completed_rounds: 0,
+                },
+            });
+            const { app } = createApp({
+                url: "https://example.test/mijn-bibliotheek/"
+                    + "?library_id=library-1&item_id=item-1",
+                renders,
+                detailRenders,
+                async get(path) {
+                    if (path === "me/libraries") {
+                        return { libraries: [selected] };
+                    }
+
+                    detailGets += 1;
+                    return detailGets === 1
+                        ? activeDetail(
+                            selected,
+                            "item-1",
+                            activeRound(roundId, 7)
+                        )
+                        : reread;
+                },
+                async post(path, body, options) {
+                    posts.push([path, structuredClone(body), options.signal]);
+                    return endedRound(roundId, outcome, finishedOn, 8);
+                },
+            });
+
+            await app.start();
+            const result = await detailRenders.renders.at(-1).actions.endReading({
+                outcome,
+                finishedOn,
+            });
+
+            assert.deepEqual(result, { state: "reconciled" });
+            assert.deepEqual(posts.map(([path, body]) => [path, body]), [[
+                `me/reading-rounds/round%2F${outcome}/end`,
+                {
+                    outcome,
+                    finished_on: finishedOn,
+                    expected_version: 7,
+                },
+            ]]);
+            assert.ok(posts[0][2] instanceof AbortSignal);
+            assert.equal(detailGets, 2);
+            assert.deepEqual(
+                detailRenders.renders.at(-1).model.detail,
+                reread
+            );
+            assert.equal(
+                detailRenders.renders.at(-1).model.notice,
+                "De leesstatus is bijgewerkt."
+            );
+        });
+    }
+});
+
+test("End Reading rejects presentation-supplied identity and unavailable state", async () => {
+    const selected = library("library-1", { designated: true });
+    const invalidIntents = [{
+        outcome: "done",
+        finishedOn: "2026-08-29",
+    }, {
+        outcome: "completed",
+        finishedOn: "2026-02-30",
+    }, {
+        outcome: "completed",
+        finishedOn: "2026-08-29",
+        user_id: "other",
+    }, {
+        outcome: "completed",
+        finishedOn: "2026-08-29",
+        reading_round_id: "caller-round",
+        expected_version: 99,
+    }];
+    let posts = 0;
+    const activeRenders = recorder();
+    const { app: activeApp } = createApp({
+        url: "https://example.test/mijn-bibliotheek/"
+            + "?library_id=library-1&item_id=item-1",
+        renders: recorder(),
+        detailRenders: activeRenders,
+        async get(path) {
+            return path === "me/libraries"
+                ? { libraries: [selected] }
+                : activeDetail(selected, "item-1");
+        },
+        async post() {
+            posts += 1;
+        },
+    });
+    await activeApp.start();
+
+    for (const intent of invalidIntents) {
+        assert.deepEqual(
+            await activeRenders.renders.at(-1).actions.endReading(intent),
+            { state: "validation-error" }
+        );
+    }
+
+    const inactiveRenders = recorder();
+    const { app: inactiveApp } = createApp({
+        url: "https://example.test/mijn-bibliotheek/"
+            + "?library_id=library-1&item_id=item-1",
+        renders: recorder(),
+        detailRenders: inactiveRenders,
+        async get(path) {
+            return path === "me/libraries"
+                ? { libraries: [selected] }
+                : detail(selected, "item-1");
+        },
+        async post() {
+            posts += 1;
+        },
+    });
+    await inactiveApp.start();
+    assert.deepEqual(await inactiveRenders.renders.at(-1).actions.endReading({
+        outcome: "completed",
+        finishedOn: "2026-08-29",
+    }), { state: "unavailable" });
+    assert.equal(posts, 0);
+});
+
+test("End Reading duplicate submit shares the mutation lock and sends one POST", async () => {
+    const selected = library("library-1", { designated: true });
+    const detailRenders = recorder();
+    let resolvePost;
+    let posts = 0;
+    let detailGets = 0;
+    const pendingPost = new Promise((resolve) => {
+        resolvePost = resolve;
+    });
+    const { app } = createApp({
+        url: "https://example.test/mijn-bibliotheek/"
+            + "?library_id=library-1&item_id=item-1",
+        renders: recorder(),
+        detailRenders,
+        async get(path) {
+            if (path === "me/libraries") {
+                return { libraries: [selected] };
+            }
+
+            detailGets += 1;
+            return detailGets === 1
+                ? activeDetail(selected, "item-1")
+                : detail(selected, "item-1");
+        },
+        async post() {
+            posts += 1;
+            return pendingPost;
+        },
+    });
+    await app.start();
+    const action = detailRenders.renders.at(-1).actions.endReading;
+    const intent = { outcome: "completed", finishedOn: "2026-08-29" };
+    const first = action(intent);
+    await waitFor(() => posts === 1);
+    const duplicate = await action(intent);
+
+    assert.deepEqual(duplicate, { state: "pending" });
+    assert.equal(posts, 1);
+    resolvePost(endedRound("round/active", "completed", "2026-08-29"));
+    assert.deepEqual(await first, { state: "reconciled" });
+    assert.equal(posts, 1);
+    assert.equal(detailGets, 2);
+});
+
+test("End Reading 409 and 404 reconcile without retry or stale payload trust", async (t) => {
+    const fixtures = [{
+        name: "stale",
+        error: apiError(409, "biblio_reading_round_stale"),
+        rereadUnavailable: false,
+    }, {
+        name: "unavailable",
+        error: apiError(404, "biblio_resource_not_available"),
+        rereadUnavailable: true,
+    }];
+
+    for (const fixture of fixtures) {
+        await t.test(fixture.name, async () => {
+            const selected = library("library-1", { designated: true });
+            const detailRenders = recorder();
+            let posts = 0;
+            let detailGets = 0;
+            const { app } = createApp({
+                url: "https://example.test/mijn-bibliotheek/"
+                    + "?library_id=library-1&item_id=item-1",
+                renders: recorder(),
+                detailRenders,
+                async get(path) {
+                    if (path === "me/libraries") {
+                        return { libraries: [selected] };
+                    }
+
+                    detailGets += 1;
+
+                    if (detailGets > 1 && fixture.rereadUnavailable) {
+                        throw apiError(404, "biblio_resource_not_available");
+                    }
+
+                    return detailGets === 1
+                        ? activeDetail(selected, "item-1")
+                        : detail(selected, "item-1", {
+                            reading: {
+                                status: "read",
+                                active_rounds: 0,
+                                completed_rounds: 1,
+                                stopped_rounds: 0,
+                                historical_completed_rounds: 0,
+                            },
+                        });
+                },
+                async post() {
+                    posts += 1;
+                    throw fixture.error;
+                },
+            });
+            await app.start();
+            const result = await detailRenders.renders.at(-1).actions.endReading({
+                outcome: "completed",
+                finishedOn: "2026-08-29",
+            });
+
+            assert.deepEqual(result, { state: "reconciled" });
+            assert.equal(posts, 1);
+            assert.equal(detailGets, 2);
+            assert.equal(
+                detailRenders.renders.at(-1).model.state,
+                fixture.rereadUnavailable ? "item-unavailable" : "detail"
+            );
+            assert.doesNotMatch(
+                JSON.stringify(detailRenders.renders.map(({ model }) => model)),
+                /Unsafe server detail/
+            );
+        });
+    }
+});
+
+test("End Reading normalizes non-reconciled errors without retry", async (t) => {
+    const fixtures = [{
+        status: 400,
+        code: "biblio_invalid_field_syntax",
+        expected: "validation-error",
+    }, {
+        status: 401,
+        code: "biblio_authentication_required",
+        expected: "authentication-required",
+    }, {
+        status: 403,
+        code: "rest_cookie_invalid_nonce",
+        expected: "session-refresh",
+    }, {
+        status: 422,
+        code: "biblio_validation_failed",
+        expected: "validation-error",
+    }, {
+        status: 503,
+        code: "biblio_core_unavailable",
+        expected: "service-unavailable",
+    }, {
+        status: 500,
+        code: "biblio_internal_error",
+        expected: "internal-error",
+    }];
+
+    for (const fixture of fixtures) {
+        await t.test(String(fixture.status), async () => {
+            const selected = library("library-1", { designated: true });
+            const detailRenders = recorder();
+            let posts = 0;
+            let detailGets = 0;
+            const { app } = createApp({
+                url: "https://example.test/mijn-bibliotheek/"
+                    + "?library_id=library-1&item_id=item-1",
+                renders: recorder(),
+                detailRenders,
+                async get(path) {
+                    if (path === "me/libraries") {
+                        return { libraries: [selected] };
+                    }
+
+                    detailGets += 1;
+                    return activeDetail(selected, "item-1");
+                },
+                async post() {
+                    posts += 1;
+                    throw apiError(fixture.status, fixture.code);
+                },
+            });
+            await app.start();
+            const result = await detailRenders.renders.at(-1).actions.endReading({
+                outcome: "completed",
+                finishedOn: "2026-08-29",
+            });
+
+            assert.deepEqual(result, { state: fixture.expected });
+            assert.equal(posts, 1);
+            assert.equal(detailGets, 1);
+            assert.doesNotMatch(JSON.stringify(result), /Unsafe/);
+        });
+    }
+});
+
+test("End Reading malformed success reconciles but reread failure stays uncertain", async (t) => {
+    for (const rereadFails of [false, true]) {
+        await t.test(rereadFails ? "reread failure" : "malformed success", async () => {
+            const selected = library("library-1", { designated: true });
+            const detailRenders = recorder();
+            let posts = 0;
+            let detailGets = 0;
+            const { app } = createApp({
+                url: "https://example.test/mijn-bibliotheek/"
+                    + "?library_id=library-1&item_id=item-1",
+                renders: recorder(),
+                detailRenders,
+                async get(path) {
+                    if (path === "me/libraries") {
+                        return { libraries: [selected] };
+                    }
+
+                    detailGets += 1;
+
+                    if (detailGets > 1 && rereadFails) {
+                        throw apiError(503, "biblio_core_unavailable");
+                    }
+
+                    return detailGets === 1
+                        ? activeDetail(selected, "item-1")
+                        : detail(selected, "item-1");
+                },
+                async post() {
+                    posts += 1;
+
+                    return rereadFails
+                        ? endedRound(
+                            "round/active",
+                            "completed",
+                            "2026-08-29"
+                        )
+                        : endedRound(
+                            "wrong-round",
+                            "completed",
+                            "2026-08-29"
+                        );
+                },
+            });
+            await app.start();
+            const result = await detailRenders.renders.at(-1).actions.endReading({
+                outcome: "completed",
+                finishedOn: "2026-08-29",
+            });
+
+            assert.equal(posts, 1);
+            assert.equal(detailGets, 2);
+
+            if (rereadFails) {
+                assert.deepEqual(result, {
+                    state: "refresh-failed",
+                    message: "De aanvraag is verwerkt, maar de actuele pagina kon niet worden vernieuwd.",
+                });
+                assert.equal(
+                    detailRenders.renders.at(-1).model.detail
+                        .active_reading_round.reading_round_id,
+                    "round/active"
+                );
+            } else {
+                assert.deepEqual(result, { state: "reconciled" });
+                assert.equal(
+                    detailRenders.renders.at(-1).model.detail
+                        .active_reading_round,
+                    null
+                );
+            }
+        });
+    }
+});
+
+test("End Reading navigation abort marks outcome unknown and cannot reread stale detail", async () => {
+    const selected = library("library-1", { designated: true });
+    const renders = recorder();
+    const detailRenders = recorder();
+    let resolvePost;
+    let mutationSignal;
+    let detailGets = 0;
+    const pendingPost = new Promise((resolve) => {
+        resolvePost = resolve;
+    });
+    const { app, browser } = createApp({
+        url: "https://example.test/mijn-bibliotheek/"
+            + "?library_id=library-1&item_id=item-1",
+        renders,
+        detailRenders,
+        async get(path) {
+            if (path === "me/libraries") {
+                return { libraries: [selected] };
+            }
+
+            if (path === "libraries/library-1/items") {
+                return overview(selected, [item("item-1")]);
+            }
+
+            detailGets += 1;
+            return activeDetail(selected, "item-1");
+        },
+        async post(path, body, options) {
+            mutationSignal = options.signal;
+            return pendingPost;
+        },
+    });
+    await app.start();
+    const mutation = detailRenders.renders.at(-1).actions.endReading({
+        outcome: "completed",
+        finishedOn: "2026-08-29",
+    });
+    await waitFor(() => mutationSignal instanceof AbortSignal);
+
+    browser.location.href = "https://example.test/mijn-bibliotheek/"
+        + "?library_id=library-1";
+    browser.listeners.get("popstate")();
+    await app.whenIdle();
+    assert.equal(mutationSignal.aborted, true);
+
+    resolvePost(endedRound(
+        "round/active",
+        "completed",
+        "2026-08-29"
+    ));
+    assert.deepEqual(await mutation, { state: "outcome-unknown" });
     assert.equal(detailGets, 1);
     assert.equal(renders.renders.at(-1).model.state, "overview");
 });

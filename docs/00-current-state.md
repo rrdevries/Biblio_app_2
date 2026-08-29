@@ -948,7 +948,7 @@ The complete final verification record is maintained in
 
 ### Vertical Slice 1B — ReadingRound detail and end support
 
-Status: **Core/REST support implemented; browser UI deferred**
+Status: **Core/REST and frontend runtime implemented; visible UI deferred**
 
 The private `biblio/v1` surface now contains five routes. The additional
 owner-scoped mutation is:
@@ -966,5 +966,14 @@ the same non-enumerating 404 response.
 Itemdetail already exposes the actor-owned exact-Item active-round identity,
 version and start date plus the presentation capability `end_reading`. The
 end mutation returns only ended identity, lifecycle, outcome, finish date and
-version. Biblio UI, Elementor, Crocoblock and E2E fixtures have not yet been
-extended for Slice 1B.
+version.
+
+The Biblio UI runtime strictly validates that detail projection and exposes an
+internal `endReading({ outcome, finishedOn })` action for the later visual UI.
+The runtime snapshots ReadingRound ID/version only from the current validated
+detail, sends one nonce-protected mutation, never retries it automatically and
+always reconciles success, stale conflict, resource unavailability or a
+malformed success acknowledgement through an authoritative detail reread.
+Navigation abort marks the POST outcome as unknown and stale responses cannot
+overwrite a newer route. No visible end action or dialog exists yet;
+Elementor, Crocoblock and E2E fixtures remain unchanged.
