@@ -27,6 +27,7 @@ const METADATA_STATES = new Set([
     "unknown",
 ]);
 const READING_STATUSES = new Set(["not_read", "reading", "read"]);
+const READING_ROUND_END_OUTCOMES = new Set(["completed", "stopped"]);
 
 function mountValue(mount, key) {
     const value = mount?.dataset?.[key];
@@ -137,6 +138,76 @@ function assertReadingSummary(reading) {
     }
 }
 
+function hasExactFields(value, fields) {
+    const keys = Object.keys(value);
+
+    return keys.length === fields.length
+        && fields.every((field) => Object.hasOwn(value, field));
+}
+
+function isReadingDate(value) {
+    if (
+        !isRecord(value)
+        || !hasExactFields(value, ["year", "month", "day"])
+        || !Number.isInteger(value.year)
+        || value.year < 1000
+        || value.year > 9999
+        || !(value.month === null || (
+            Number.isInteger(value.month)
+            && value.month >= 1
+            && value.month <= 12
+        ))
+        || !(value.day === null || (
+            Number.isInteger(value.day)
+            && value.day >= 1
+        ))
+        || (value.month === null && value.day !== null)
+    ) {
+        return false;
+    }
+
+    return value.day === null
+        || value.day <= new Date(Date.UTC(
+            value.year,
+            value.month,
+            0
+        )).getUTCDate();
+}
+
+function isExactCalendarDate(value) {
+    const match = typeof value === "string"
+        ? /^(?<year>[0-9]{4})-(?<month>[0-9]{2})-(?<day>[0-9]{2})$/u.exec(value)
+        : null;
+
+    return match !== null && isReadingDate({
+        year: Number(match.groups.year),
+        month: Number(match.groups.month),
+        day: Number(match.groups.day),
+    });
+}
+
+function assertActiveReadingRound(round) {
+    if (round === null) {
+        return;
+    }
+
+    if (
+        !isRecord(round)
+        || !hasExactFields(round, [
+            "reading_round_id",
+            "version",
+            "started_on",
+        ])
+        || typeof round.reading_round_id !== "string"
+        || round.reading_round_id.length === 0
+        || !Number.isInteger(round.version)
+        || round.version < 1
+        || !(round.started_on === null || isReadingDate(round.started_on))
+    ) {
+        throw new TypeError("The active ReadingRound contract is invalid.");
+    }
+}
+
 function readDetail(payload, selectedLibraryId, requestedItemId) {
     const textFields = [
         "cover_reference",
@@ -169,12 +240,21 @@ function readDetail(payload, selectedLibraryId, requestedItemId) {
         || !isRecord(payload.capabilities)
         || typeof payload.capabilities.view_item !== "boolean"
         || typeof payload.capabilities.start_reading !== "boolean"
+        || typeof payload.capabilities.end_reading !== "boolean"
     ) {
         throw new TypeError("The Biblio Item detail contract is invalid.");
     }
 
     assertLibraryPresentation(payload.library);
     assertReadingSummary(payload.reading);
+    assertActiveReadingRound(payload.active_reading_round);
+
+    if (
+        payload.capabilities.end_reading === true
+        && payload.active_reading_round === null
+    ) {
+        throw new TypeError("The Biblio Item detail contract is invalid.");
+    }
 
     return payload;
 }
@@ -218,6 +298,52 @@ function detailPath(libraryId, itemId) {
 
 function startReadingPath(libraryId, itemId) {
     return `${detailPath(libraryId, itemId)}/reading-rounds`;
+}
+
+function endReadingPath(readingRoundId) {
+    return `me/reading-rounds/${encodeURIComponent(readingRoundId)}/end`;
+}
+
+function readEndReadingIntent(intent) {
+    if (
+        !isRecord(intent)
+        || !hasExactFields(intent, ["outcome", "finishedOn"])
+        || !READING_ROUND_END_OUTCOMES.has(intent.outcome)
+        || !isExactCalendarDate(intent.finishedOn)
+    ) {
+        throw new TypeError("The end ReadingRound intent is invalid.");
+    }
+
+    return Object.freeze({
+        outcome: intent.outcome,
+        finishedOn: intent.finishedOn,
+    });
+}
+
+function assertEndedRound(payload, readingRoundId, intent) {
+    const [year, month, day] = intent.finishedOn.split("-").map(Number);
+
+    if (
+        !isRecord(payload)
+        || !hasExactFields(payload, [
+            "reading_round_id",
+            "lifecycle",
+            "outcome",
+            "finished_on",
+            "version",
+        ])
+        || payload.reading_round_id !== readingRoundId
+        || payload.lifecycle !== "ended"
+        || payload.outcome !== intent.outcome
+        || !isReadingDate(payload.finished_on)
+        || payload.finished_on.year !== year
+        || payload.finished_on.month !== month
+        || payload.finished_on.day !== day
+        || !Number.isInteger(payload.version)
+        || payload.version < 1
+    ) {
+        throw new TypeError("The ended ReadingRound contract is invalid.");
+    }
 }
 
 function isAborted(error) {
@@ -275,6 +401,53 @@ function startReadingErrorOutcome(error) {
     }
 
     return Object.freeze({ state: "retryable" });
+}
+
+function endReadingErrorOutcome(error) {
+    if (isAborted(error)) {
+        return Object.freeze({ state: "outcome-unknown" });
+    }
+
+    if (
+        isHttpError(error, 400)
+        || isHttpError(error, 422, "biblio_validation_failed")
+    ) {
+        return Object.freeze({ state: "validation-error" });
+    }
+
+    if (isHttpError(error, 403, "rest_cookie_invalid_nonce")) {
+        return Object.freeze({ state: "session-refresh" });
+    }
+
+    if (isHttpError(error, 401, "biblio_authentication_required")) {
+        return Object.freeze({ state: "authentication-required" });
+    }
+
+    if (isHttpError(error, 404, "biblio_resource_not_available")) {
+        return Object.freeze({
+            state: "reconcile",
+            notice: "Leesstatus bijwerken.",
+            refreshedNotice: "De leesstatus is bijgewerkt.",
+        });
+    }
+
+    if (isHttpError(error, 409, "biblio_reading_round_stale")) {
+        return Object.freeze({
+            state: "reconcile",
+            notice: "De leesstatus is gewijzigd. Leesstatus bijwerken.",
+            refreshedNotice: "De leesstatus is gewijzigd.",
+        });
+    }
+
+    if (isHttpError(error, 503, "biblio_core_unavailable")) {
+        return Object.freeze({ state: "service-unavailable" });
+    }
+
+    if (isHttpError(error, 500, "biblio_internal_error")) {
+        return Object.freeze({ state: "internal-error" });
+    }
+
+    return Object.freeze({ state: "outcome-unknown" });
 }
 
 export function readMountConfig(mount) {
@@ -549,12 +722,12 @@ export function createLibraryApp(mount, {
                 }
 
                 async function reconcileDetail({
-                    lifecycle,
+                    acknowledge = () => {},
                     notice,
                     refreshedNotice,
                     refreshFailure,
                 }) {
-                    lifecycle.acknowledge(notice);
+                    acknowledge(notice);
 
                     try {
                         const refreshedPayload = await api.get(resourcePath, {
@@ -642,7 +815,7 @@ export function createLibraryApp(mount, {
                                 && error.status < 300
                             ) {
                                 return reconcileDetail({
-                                    lifecycle,
+                                    acknowledge: lifecycle.acknowledge,
                                     notice: "Leesstatus bijwerken.",
                                     refreshedNotice: "De leesstatus is bijgewerkt.",
                                     refreshFailure: "De aanvraag is verwerkt, maar de actuele pagina kon niet worden vernieuwd.",
@@ -656,7 +829,7 @@ export function createLibraryApp(mount, {
                             }
 
                             return reconcileDetail({
-                                lifecycle,
+                                acknowledge: lifecycle.acknowledge,
                                 notice: outcome.notice,
                                 refreshedNotice: outcome.refreshedNotice,
                                 refreshFailure: "De actuele pagina kon niet worden vernieuwd.",
@@ -675,7 +848,7 @@ export function createLibraryApp(mount, {
                             );
                         } catch {
                             return reconcileDetail({
-                                lifecycle,
+                                acknowledge: lifecycle.acknowledge,
                                 notice: "Leesstatus bijwerken.",
                                 refreshedNotice: "De leesstatus is bijgewerkt.",
                                 refreshFailure: "De aanvraag is verwerkt, maar de actuele pagina kon niet worden vernieuwd.",
@@ -683,10 +856,121 @@ export function createLibraryApp(mount, {
                         }
 
                         return reconcileDetail({
-                            lifecycle,
+                            acknowledge: lifecycle.acknowledge,
                             notice: "Lezen is gestart. Leesstatus bijwerken.",
                             refreshedNotice: "Lezen is gestart.",
                             refreshFailure: "Lezen is gestart, maar de actuele pagina kon niet worden vernieuwd.",
+                        });
+                    } finally {
+                        if (mutationController === activeMutation) {
+                            mutationController = null;
+                        }
+                    }
+                }
+
+                async function endReading(rawIntent) {
+                    let intent;
+
+                    try {
+                        intent = readEndReadingIntent(rawIntent);
+                    } catch {
+                        return Object.freeze({ state: "validation-error" });
+                    }
+
+                    if (
+                        mutationController !== null
+                        || !isCurrent(runGeneration, controller)
+                    ) {
+                        return Object.freeze({ state: "pending" });
+                    }
+
+                    const activeRound = currentDetail?.active_reading_round;
+
+                    if (
+                        activeRound === null
+                        || activeRound === undefined
+                        || currentDetail.capabilities.end_reading !== true
+                    ) {
+                        return Object.freeze({ state: "unavailable" });
+                    }
+
+                    const readingRoundId = activeRound.reading_round_id;
+                    const expectedVersion = activeRound.version;
+                    const activeMutation = abortControllerFactory();
+                    mutationController = activeMutation;
+
+                    try {
+                        let acknowledgement;
+
+                        try {
+                            acknowledgement = await api.post(
+                                endReadingPath(readingRoundId),
+                                {
+                                    outcome: intent.outcome,
+                                    finished_on: intent.finishedOn,
+                                    expected_version: expectedVersion,
+                                },
+                                { signal: activeMutation.signal }
+                            );
+                        } catch (error) {
+                            if (
+                                isAborted(error)
+                                || !isCurrent(runGeneration, controller)
+                            ) {
+                                return Object.freeze({
+                                    state: "outcome-unknown",
+                                });
+                            }
+
+                            if (
+                                error instanceof BiblioApiError
+                                && error.kind === "invalid_response"
+                                && Number.isInteger(error.status)
+                                && error.status >= 200
+                                && error.status < 300
+                            ) {
+                                return reconcileDetail({
+                                    notice: "Leesstatus bijwerken.",
+                                    refreshedNotice: "De leesstatus is bijgewerkt.",
+                                    refreshFailure: "De aanvraag is verwerkt, maar de actuele pagina kon niet worden vernieuwd.",
+                                });
+                            }
+
+                            const outcome = endReadingErrorOutcome(error);
+
+                            if (outcome.state !== "reconcile") {
+                                return outcome;
+                            }
+
+                            return reconcileDetail({
+                                notice: outcome.notice,
+                                refreshedNotice: outcome.refreshedNotice,
+                                refreshFailure: "De actuele pagina kon niet worden vernieuwd.",
+                            });
+                        }
+
+                        if (!isCurrent(runGeneration, controller)) {
+                            return Object.freeze({ state: "outcome-unknown" });
+                        }
+
+                        try {
+                            assertEndedRound(
+                                acknowledgement,
+                                readingRoundId,
+                                intent
+                            );
+                        } catch {
+                            return reconcileDetail({
+                                notice: "Leesstatus bijwerken.",
+                                refreshedNotice: "De leesstatus is bijgewerkt.",
+                                refreshFailure: "De aanvraag is verwerkt, maar de actuele pagina kon niet worden vernieuwd.",
+                            });
+                        }
+
+                        return reconcileDetail({
+                            notice: "Leesstatus bijwerken.",
+                            refreshedNotice: "De leesstatus is bijgewerkt.",
+                            refreshFailure: "De aanvraag is verwerkt, maar de actuele pagina kon niet worden vernieuwd.",
                         });
                     } finally {
                         if (mutationController === activeMutation) {
@@ -709,6 +993,9 @@ export function createLibraryApp(mount, {
                                 ));
                             },
                         });
+                    },
+                    endReading(intent) {
+                        return setIdle(endReading(intent));
                     },
                 };
 
