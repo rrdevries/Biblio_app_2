@@ -2,5 +2,15 @@
   "name": "biblio-v2",
   "version": "2.1.0",
   "private": true,
-  "biblioVersion": "v2.001"
+  "biblioVersion": "v2.001",
+  "scripts": {
+    "e2e:setup": "./scripts/e2e-fixture.sh setup",
+    "e2e:cleanup": "./scripts/e2e-fixture.sh cleanup",
+    "e2e:verify-clean": "./scripts/e2e-fixture.sh verify-clean",
+    "e2e:test": "playwright test",
+    "test:e2e": "./scripts/run-biblio-e2e.sh"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1"
+  }
 }
