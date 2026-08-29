@@ -42,6 +42,8 @@ test("responsive CSS expresses the three breakpoint families and component layou
     assert.match(css, /inline-size: 4rem/);
     assert.match(css, /\.biblio-ui__load-more,[\s\S]*inline-size: 100%/);
     assert.match(css, /\.biblio-ui__detail-layout[\s\S]*grid-template-columns/);
-    assert.match(css, /\.biblio-ui__start-reading-dialog[\s\S]*margin: auto 0 0/);
+    assert.match(css, /\.biblio-ui__reading-dialog[\s\S]*margin: auto 0 0/);
+    assert.match(css, /\.biblio-ui__reading-dialog[\s\S]*32rem/);
+    assert.match(css, /\.biblio-ui__radio-option[\s\S]*44px/);
     assert.doesNotMatch(css, /position:\s*(?:fixed|sticky)/);
 });

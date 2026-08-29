@@ -285,6 +285,23 @@ function renderDetail(documentImpl, model, actions) {
         content.append(startButton);
     }
 
+    if (
+        detail.capabilities.end_reading === true
+        && detail.active_reading_round !== null
+        && detail.active_reading_round !== undefined
+    ) {
+        const endButton = element(documentImpl, "button", {
+            className: "biblio-ui__control biblio-ui__control--secondary biblio-ui__end-reading",
+            text: "Leesronde afronden",
+            attributes: { type: "button" },
+        });
+        endButton.addEventListener(
+            "click",
+            () => actions.endReading(endButton)
+        );
+        content.append(endButton);
+    }
+
     append(
         content,
         metadataSection(documentImpl, "Uitgave", [

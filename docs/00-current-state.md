@@ -948,7 +948,7 @@ The complete final verification record is maintained in
 
 ### Vertical Slice 1B — ReadingRound detail and end support
 
-Status: **Core/REST and frontend runtime implemented; visible UI deferred**
+Status: **Core/REST, frontend runtime and visible end dialog implemented**
 
 The private `biblio/v1` surface now contains five routes. The additional
 owner-scoped mutation is:
@@ -969,11 +969,24 @@ end mutation returns only ended identity, lifecycle, outcome, finish date and
 version.
 
 The Biblio UI runtime strictly validates that detail projection and exposes an
-internal `endReading({ outcome, finishedOn })` action for the later visual UI.
+internal `endReading({ outcome, finishedOn })` action to the visible UI.
 The runtime snapshots ReadingRound ID/version only from the current validated
 detail, sends one nonce-protected mutation, never retries it automatically and
 always reconciles success, stale conflict, resource unavailability or a
 malformed success acknowledgement through an authoritative detail reread.
 Navigation abort marks the POST outcome as unknown and stale responses cannot
-overwrite a newer route. No visible end action or dialog exists yet;
-Elementor, Crocoblock and E2E fixtures remain unchanged.
+overwrite a newer route.
+
+Itemdetail now renders `Leesronde afronden` only when the validated detail
+projection has both `end_reading=true` and an active round. A native modal
+requires an explicit completed/stopped choice and proposes the browser-local
+calendar day without imposing a today maximum. The view submits only
+`{ outcome, finishedOn }`; ReadingRound identity and version stay internal to
+the runtime. Pending submission blocks duplicate dismissal and submission.
+Success, conflict and non-availability close stale dialog state only after the
+runtime's authoritative reread; nonce, authentication and uncertain outcomes
+offer safe recovery without an automatic second POST or false success claim.
+The compact dialog is centered on tablet/desktop and becomes a mobile bottom
+sheet using the existing Biblio tokens and accessibility patterns. Elementor,
+Crocoblock and E2E fixtures remain unchanged; browser E2E remains a later
+Vertical Slice 1B step.

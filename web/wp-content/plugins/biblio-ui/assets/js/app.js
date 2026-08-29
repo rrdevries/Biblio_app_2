@@ -1,5 +1,6 @@
 import { BiblioApiError, createBiblioApi } from "biblio-ui/api";
 import { createDetailView } from "biblio-ui/detail-view";
+import { createEndReadingView } from "biblio-ui/end-reading-view";
 import { resolveLibraryContext } from "biblio-ui/library-state";
 import { createOverviewView } from "biblio-ui/overview-view";
 import { createStartReadingView } from "biblio-ui/start-reading-view";
@@ -10,6 +11,7 @@ import {
 
 export { BiblioApiError, createBiblioApi } from "biblio-ui/api";
 export { createDetailView } from "biblio-ui/detail-view";
+export { createEndReadingView } from "biblio-ui/end-reading-view";
 export { resolveLibraryContext } from "biblio-ui/library-state";
 export { createOverviewView } from "biblio-ui/overview-view";
 export { createStartReadingView } from "biblio-ui/start-reading-view";
@@ -468,6 +470,7 @@ export function createLibraryApp(mount, {
     documentImpl = globalThis.document,
     viewFactory = createOverviewView,
     detailViewFactory = createDetailView,
+    endReadingViewFactory = createEndReadingView,
     startReadingViewFactory = createStartReadingView,
     reload = () => locationImpl.reload(),
     abortControllerFactory = () => new AbortController(),
@@ -491,6 +494,7 @@ export function createLibraryApp(mount, {
     });
     let view;
     let detailView;
+    let endReadingView;
     let startReadingView;
     let currentController = null;
     let mutationController = null;
@@ -534,6 +538,18 @@ export function createLibraryApp(mount, {
         }
 
         return startReadingView;
+    }
+
+    function currentEndReadingView() {
+        if (endReadingView === undefined) {
+            endReadingView = endReadingViewFactory(mount, {
+                documentImpl,
+                loginUrl: config.loginUrl,
+                reload,
+            });
+        }
+
+        return endReadingView;
     }
 
     async function loadLibraryContext({ signal } = {}) {
@@ -641,6 +657,7 @@ export function createLibraryApp(mount, {
         const runGeneration = generation + 1;
         generation = runGeneration;
         startReadingView?.destroy();
+        endReadingView?.destroy();
         mutationController?.abort();
         mutationController = null;
         currentController?.abort();
@@ -762,6 +779,7 @@ export function createLibraryApp(mount, {
                                 {
                                     state: "item-unavailable",
                                     backUrl: detailBackUrl,
+                                    focusHeading: true,
                                     ...consumeHeadingFocus(),
                                 },
                                 detailActions
@@ -868,7 +886,7 @@ export function createLibraryApp(mount, {
                     }
                 }
 
-                async function endReading(rawIntent) {
+                async function endReadingMutation(rawIntent) {
                     let intent;
 
                     try {
@@ -994,8 +1012,13 @@ export function createLibraryApp(mount, {
                             },
                         });
                     },
-                    endReading(intent) {
-                        return setIdle(endReading(intent));
+                    endReading(opener) {
+                        return currentEndReadingView().open({
+                            opener,
+                            submit(intent) {
+                                return setIdle(endReadingMutation(intent));
+                            },
+                        });
                     },
                 };
 
@@ -1194,6 +1217,7 @@ export function createLibraryApp(mount, {
     function destroy() {
         generation += 1;
         startReadingView?.destroy();
+        endReadingView?.destroy();
         mutationController?.abort();
         mutationController = null;
         currentController?.abort();

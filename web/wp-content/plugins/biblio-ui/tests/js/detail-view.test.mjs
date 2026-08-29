@@ -118,7 +118,12 @@ function detail(overrides = {}) {
             stopped_rounds: 2,
             historical_completed_rounds: 1,
         },
-        capabilities: { view_item: true, start_reading: false },
+        capabilities: {
+            view_item: true,
+            start_reading: false,
+            end_reading: false,
+        },
+        active_reading_round: null,
         internal_secret: "never render this",
         ...overrides,
     };
@@ -294,6 +299,66 @@ test("Start Reading is presentation-only and focuses authoritative updates", () 
     ))[0];
     assert.equal(status.textContent, "Lezen is gestart.");
     assert.equal(status.focused, true);
+});
+
+test("End Reading appears only for capability plus active round and passes its opener", () => {
+    const { root, view } = setup();
+    const openers = [];
+    const activeRound = {
+        reading_round_id: "private-round",
+        version: 4,
+        started_on: { year: 2026, month: 8, day: 20 },
+    };
+
+    view.render(
+        {
+            state: "detail",
+            detail: detail({
+                capabilities: {
+                    view_item: true,
+                    start_reading: false,
+                    end_reading: true,
+                },
+                active_reading_round: activeRound,
+            }),
+            backUrl: "https://example.test/mijn-bibliotheek/"
+                + "?library_id=library-1",
+        },
+        {
+            backToOverview() {},
+            endReading(opener) {
+                openers.push(opener);
+            },
+        }
+    );
+
+    assert.deepEqual(
+        byTag(root, "button").map((node) => node.textContent),
+        ["Leesronde afronden"]
+    );
+    byTag(root, "button")[0].click();
+    assert.equal(openers[0], byTag(root, "button")[0]);
+    assert.doesNotMatch(text(root), /private-round|version/);
+
+    for (const [endReading, activeReadingRound] of [
+        [false, activeRound],
+        [true, null],
+    ]) {
+        view.render({
+            state: "detail",
+            detail: detail({
+                capabilities: {
+                    view_item: true,
+                    start_reading: false,
+                    end_reading: endReading,
+                },
+                active_reading_round: activeReadingRound,
+            }),
+            backUrl: "https://example.test/mijn-bibliotheek/"
+                + "?library_id=library-1",
+        });
+        assert.equal(byTag(root, "button").length, 0);
+    }
 });
 
 test("detail loading and Item-unavailable states expose no server details", () => {

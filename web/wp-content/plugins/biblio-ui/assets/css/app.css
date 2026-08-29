@@ -65,14 +65,14 @@
 [data-biblio-ui-root] :where(button, a, input) { min-block-size: var(--biblio-control-min); }
 
 [data-biblio-ui-root] :where(a, button, input):focus-visible,
-.biblio-ui__start-reading-dialog :where(a, button, input):focus-visible,
+.biblio-ui__reading-dialog :where(a, button, input):focus-visible,
 [data-biblio-ui-root] [tabindex="-1"]:focus {
     outline: var(--biblio-focus-width) solid var(--biblio-color-focus);
     outline-offset: 3px;
 }
 
 [data-biblio-ui-root] .biblio-ui__control,
-.biblio-ui__start-reading-dialog .biblio-ui__control {
+.biblio-ui__reading-dialog .biblio-ui__control {
     align-items: center;
     border: var(--biblio-boundary-width) solid var(--biblio-color-primary);
     border-radius: 0.375rem;
@@ -91,13 +91,13 @@
 }
 
 [data-biblio-ui-root] .biblio-ui__control--primary,
-.biblio-ui__start-reading-dialog .biblio-ui__control--primary {
+.biblio-ui__reading-dialog .biblio-ui__control--primary {
     background: var(--biblio-color-primary);
     color: var(--biblio-color-primary-contrast);
 }
 
 [data-biblio-ui-root] .biblio-ui__control--secondary,
-.biblio-ui__start-reading-dialog .biblio-ui__control--secondary {
+.biblio-ui__reading-dialog .biblio-ui__control--secondary {
     background: var(--biblio-color-surface);
     color: var(--biblio-color-primary);
 }
@@ -181,9 +181,9 @@
 
 [data-biblio-ui-root] .biblio-ui__metadata :where(dt, dd) { margin: 0; min-inline-size: 0; }
 [data-biblio-ui-root] .biblio-ui__metadata dt { font-weight: 600; }
-[data-biblio-ui-root] .biblio-ui__start-reading { justify-self: start; }
+[data-biblio-ui-root] :where(.biblio-ui__start-reading, .biblio-ui__end-reading) { justify-self: start; }
 
-.biblio-ui__start-reading-dialog {
+.biblio-ui__reading-dialog {
     background: var(--biblio-color-surface, #fff);
     border: var(--biblio-boundary-width, 1px) solid var(--biblio-color-boundary, #bcccdc);
     border-radius: var(--biblio-card-radius, 0.75rem);
@@ -196,17 +196,43 @@
     padding: var(--biblio-space-6, 1.5rem);
 }
 
-.biblio-ui__start-reading-dialog::backdrop { background: rgb(0 0 0 / 55%); }
+.biblio-ui__reading-dialog::backdrop { background: rgb(0 0 0 / 55%); }
 
-.biblio-ui__start-reading-dialog form,
+.biblio-ui__reading-dialog form,
 .biblio-ui__dialog-actions { display: grid; gap: var(--biblio-space-4, 1rem); }
 
-.biblio-ui__start-reading-dialog input {
+.biblio-ui__reading-dialog input[type="date"] {
     inline-size: 100%;
     min-block-size: var(--biblio-control-min, 44px);
     padding: var(--biblio-space-2, 0.5rem);
 }
 
+.biblio-ui__outcome-group {
+    border: 0;
+    display: grid;
+    gap: var(--biblio-space-2, 0.5rem);
+    margin: 0;
+    min-inline-size: 0;
+    padding: 0;
+}
+
+.biblio-ui__outcome-group legend {
+    font-weight: 600;
+    margin-block-end: var(--biblio-space-2, 0.5rem);
+}
+
+.biblio-ui__radio-option {
+    align-items: center;
+    border: var(--biblio-boundary-width, 1px) solid var(--biblio-color-boundary, #bcccdc);
+    border-radius: 0.375rem;
+    cursor: pointer;
+    display: flex;
+    gap: var(--biblio-space-3, 0.75rem);
+    min-block-size: var(--biblio-control-min, 44px);
+    padding: var(--biblio-space-2, 0.5rem) var(--biblio-space-3, 0.75rem);
+}
+
+.biblio-ui__radio-option input { min-block-size: 1.25rem; min-inline-size: 1.25rem; }
 .biblio-ui__dialog-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .biblio-ui__field-error { color: var(--biblio-color-error, #9b1c1c); }
 
@@ -222,7 +248,7 @@
     [data-biblio-ui-root] .biblio-ui__cover--overview { inline-size: 4rem; }
 
     [data-biblio-ui-root] .biblio-ui__load-more,
-    [data-biblio-ui-root] .biblio-ui__start-reading {
+    [data-biblio-ui-root] :where(.biblio-ui__start-reading, .biblio-ui__end-reading) {
         inline-size: 100%;
         justify-self: stretch;
     }
@@ -231,7 +257,7 @@
     [data-biblio-ui-root] .biblio-ui__cover--detail { inline-size: min(100%, 16rem); }
     [data-biblio-ui-root] .biblio-ui__metadata { grid-template-columns: minmax(0, 1fr); }
 
-    .biblio-ui__start-reading-dialog {
+    .biblio-ui__reading-dialog {
         border-block-end: 0;
         border-radius: var(--biblio-card-radius, 0.75rem) var(--biblio-card-radius, 0.75rem) 0 0;
         inline-size: 100%;

@@ -10,6 +10,7 @@ let appSource = await readFile(appSourceUrl, "utf8");
 for (const [moduleId, file] of [
     ["biblio-ui/api", "api.js"],
     ["biblio-ui/detail-view", "detail-view.js"],
+    ["biblio-ui/end-reading-view", "end-reading-view.js"],
     ["biblio-ui/library-state", "library-state.js"],
     ["biblio-ui/overview-view", "overview-view.js"],
     ["biblio-ui/route-state", "route-state.js"],
@@ -201,6 +202,7 @@ test("step 8 modules contain no storage or later-slice operations", async () => 
         "library-state.js",
         "overview-view.js",
         "detail-view.js",
+        "end-reading-view.js",
         "start-reading-view.js",
     ].map((file) => readFile(
         new URL(`../../assets/js/${file}`, import.meta.url),
