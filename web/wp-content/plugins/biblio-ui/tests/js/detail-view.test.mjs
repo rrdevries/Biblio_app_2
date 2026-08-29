@@ -38,6 +38,12 @@ class FakeElement {
         return this.listeners.get("click")?.(event);
     }
 
+    querySelector(selector) {
+        return descendants(this, (node) => (
+            selector === "h1" && node.tagName === "H1"
+        ))[0] ?? null;
+    }
+
     focus() {
         this.focused = true;
     }
@@ -316,7 +322,28 @@ test("detail loading and Item-unavailable states expose no server details", () =
         "item-unavailable"
     );
     assert.match(text(root), /Boek niet beschikbaar/);
+    assert.equal(
+        descendants(root, (node) => node.getAttribute("role") === "alert").length,
+        1
+    );
     assert.doesNotMatch(text(root), /Foreign title|database details/);
     byTag(root, "a")[0].click();
     assert.equal(backCalls, 1);
+});
+
+test("detail mirrors busy state and can focus the new view heading", () => {
+    const { root, view } = setup();
+
+    view.render({ state: "detail-loading" });
+    assert.equal(root.getAttribute("aria-busy"), "true");
+
+    view.render({
+        state: "detail",
+        detail: detail(),
+        backUrl: "https://example.test/mijn-bibliotheek/?library_id=library-1",
+        focusHeading: true,
+    });
+    assert.equal(root.getAttribute("aria-busy"), "false");
+    assert.equal(byTag(root, "h1")[0].getAttribute("tabindex"), "-1");
+    assert.equal(byTag(root, "h1")[0].focused, true);
 });

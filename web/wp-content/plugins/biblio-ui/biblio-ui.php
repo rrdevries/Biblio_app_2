@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Biblio UI
  * Description: Browser presentation adapter for Biblio V2.
- * Version: 0.1.0
+ * Version: 0.2.0
  * Requires at least: 7.0
  * Requires PHP: 8.3
  * Text Domain: biblio-ui

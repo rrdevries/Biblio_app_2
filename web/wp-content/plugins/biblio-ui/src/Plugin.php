@@ -6,7 +6,7 @@ namespace Biblio\UI;
 
 final class Plugin
 {
-    public const VERSION = "0.1.0";
+    public const VERSION = "0.2.0";
     public const SCRIPT_MODULE_ID = "biblio-ui/app";
     public const API_SCRIPT_MODULE_ID = "biblio-ui/api";
     public const ROUTE_SCRIPT_MODULE_ID = "biblio-ui/route-state";
