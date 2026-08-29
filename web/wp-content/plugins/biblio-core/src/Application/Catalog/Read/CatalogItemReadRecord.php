@@ -22,7 +22,7 @@ final readonly class CatalogItemReadRecord
         private int $completedRoundCount,
         private int $stoppedRoundCount,
         private int $historicalCompletedRoundCount,
-        private bool $activeRoundForItem
+        private ?CatalogActiveReadingRoundView $activeReadingRound
     ) {
     }
 
@@ -38,7 +38,14 @@ final readonly class CatalogItemReadRecord
     {
         return $this->historicalCompletedRoundCount;
     }
-    public function hasActiveRoundForItem(): bool { return $this->activeRoundForItem; }
+    public function activeReadingRound(): ?CatalogActiveReadingRoundView
+    {
+        return $this->activeReadingRound;
+    }
+    public function hasActiveRoundForItem(): bool
+    {
+        return $this->activeReadingRound !== null;
+    }
 
     public function readingStatus(): PersonalWorkReadingStatus
     {

@@ -32,6 +32,7 @@ final readonly class CatalogItemDetailView
         private CatalogTextValue $availability,
         private ItemStatus $itemStatus,
         private CatalogReadingSummary $reading,
+        private ?CatalogActiveReadingRoundView $activeReadingRound,
         private CatalogItemCapabilities $capabilities
     ) {
     }
@@ -55,5 +56,9 @@ final readonly class CatalogItemDetailView
     public function availability(): CatalogTextValue { return $this->availability; }
     public function itemStatus(): ItemStatus { return $this->itemStatus; }
     public function reading(): CatalogReadingSummary { return $this->reading; }
+    public function activeReadingRound(): ?CatalogActiveReadingRoundView
+    {
+        return $this->activeReadingRound;
+    }
     public function capabilities(): CatalogItemCapabilities { return $this->capabilities; }
 }

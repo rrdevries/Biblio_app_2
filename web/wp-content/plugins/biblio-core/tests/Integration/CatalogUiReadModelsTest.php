@@ -114,6 +114,76 @@ final class CatalogUiReadModelsTest extends PersistenceIntegrationTestCase
         self::assertSame(CatalogDataState::Unknown, $detail->acquisition()->state());
         self::assertSame(CatalogDataState::Unknown, $detail->availability()->state());
         self::assertTrue($detail->capabilities()->canStartReading());
+        self::assertFalse($detail->capabilities()->canEndReading());
+        self::assertNull($detail->activeReadingRound());
+    }
+
+    public function testDetailActiveRoundIsActorAndExactItemScoped(): void
+    {
+        $actor = new UserId("507");
+        $other = new UserId("508");
+        $library = new LibraryId("source-exact-library");
+        $this->seedLibrary($library->value(), "Bronexact", $actor, "direct");
+        $this->seedItem(
+            "source-item-a",
+            $library->value(),
+            "source-work",
+            "Zelfde Work"
+        );
+        $this->seedItem(
+            "source-item-b",
+            $library->value(),
+            "source-work",
+            "Zelfde Work"
+        );
+        $this->seedRound(
+            "source-round-a",
+            $actor,
+            "source-work",
+            "source-item-a",
+            null,
+            "source_started",
+            null,
+            7
+        );
+        $this->seedRound(
+            "foreign-round-b",
+            $other,
+            "source-work",
+            "source-item-b",
+            null,
+            "source_started"
+        );
+        $this->seedExternalLoan("source-loan", $actor, "source-work");
+        $this->seedRound(
+            "external-round",
+            $actor,
+            "source-work",
+            null,
+            null,
+            "source_started",
+            "source-loan"
+        );
+
+        $service = $this->service($actor);
+        $itemA = $service->itemDetail($library, new ItemId("source-item-a"));
+        $itemB = $service->itemDetail($library, new ItemId("source-item-b"));
+        $active = $itemA->activeReadingRound();
+
+        self::assertNotNull($active);
+        self::assertSame("source-round-a", $active->readingRoundId()->value());
+        self::assertSame(7, $active->version()->value());
+        self::assertSame(2026, $active->startedOn()?->yearValue());
+        self::assertSame(8, $active->startedOn()?->monthValue());
+        self::assertSame(1, $active->startedOn()?->dayValue());
+        self::assertTrue($itemA->capabilities()->canEndReading());
+        self::assertFalse($itemA->capabilities()->canStartReading());
+
+        self::assertNull($itemB->activeReadingRound());
+        self::assertFalse($itemB->capabilities()->canEndReading());
+        self::assertTrue($itemB->capabilities()->canStartReading());
+        self::assertSame(PersonalWorkReadingStatus::Reading, $itemB->reading()->status());
+        self::assertSame(2, $itemB->reading()->activeRounds());
     }
 
     public function testEmptyLibraryAndViewOnlyCapabilitiesAreExplicit(): void
@@ -275,7 +345,9 @@ final class CatalogUiReadModelsTest extends PersistenceIntegrationTestCase
         string $workId,
         ?string $itemId,
         ?string $outcome,
-        string $provenance
+        string $provenance,
+        ?string $externalLoanId = null,
+        int $version = 1
     ): void {
         $historical = $provenance === "historical_manual";
         $this->database->insert($this->tableNames->readingRounds(), [
@@ -283,7 +355,7 @@ final class CatalogUiReadModelsTest extends PersistenceIntegrationTestCase
             "user_id" => $userId->value(),
             "work_id" => $workId,
             "item_id" => $itemId,
-            "external_loan_id" => null,
+            "external_loan_id" => $externalLoanId,
             "started_at" => null,
             "round_outcome" => $outcome,
             "provenance" => $provenance,
@@ -296,7 +368,22 @@ final class CatalogUiReadModelsTest extends PersistenceIntegrationTestCase
             "created_at" => "2026-08-01 10:00:00.000000",
             "updated_at" => "2026-08-02 10:00:00.000000",
             "ended_at" => $outcome === null ? null : "2026-08-02 10:00:00.000000",
-            "round_version" => 1,
+            "round_version" => $version,
+        ]);
+    }
+
+    private function seedExternalLoan(
+        string $loanId,
+        UserId $userId,
+        string $workId
+    ): void {
+        $this->database->insert($this->tableNames->externalLoans(), [
+            "external_loan_id" => $loanId,
+            "user_id" => $userId->value(),
+            "work_id" => $workId,
+            "loan_status" => "active",
+            "borrowed_at" => "2026-08-01 10:00:00.000000",
+            "due_at" => null,
         ]);
     }
 }
