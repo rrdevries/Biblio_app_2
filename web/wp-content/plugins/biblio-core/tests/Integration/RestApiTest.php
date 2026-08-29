@@ -202,6 +202,14 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             "item_status",
             "capabilities",
         ], array_keys($firstData["items"][0]));
+        self::assertSame(
+            ["view_item", "start_reading"],
+            array_keys($firstData["items"][0]["capabilities"])
+        );
+        self::assertArrayNotHasKey(
+            "active_reading_round",
+            $firstData["items"][0]
+        );
         self::assertTrue($firstData["items"][0]["capabilities"]["start_reading"]);
         self::assertArrayNotHasKey("library_id", $firstData["items"][0]);
         self::assertArrayNotHasKey("user_id", $firstData["items"][0]);
@@ -257,6 +265,9 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         self::assertSame(["state" => "unknown", "value" => null], $detail["isbn"]);
         self::assertSame(["state" => "unknown", "values" => []], $detail["authors"]);
         self::assertSame("not_read", $detail["reading"]["status"]);
+        self::assertNull($detail["active_reading_round"]);
+        self::assertFalse($detail["capabilities"]["end_reading"]);
+        self::assertTrue($detail["capabilities"]["start_reading"]);
         self::assertArrayNotHasKey("created_at", $detail);
         self::assertArrayNotHasKey("active_round_user_ids", $detail["reading"]);
 
@@ -272,6 +283,124 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             $this->dispatchAsActor($foreign),
             $this->dispatchAsActor($missing)
         );
+    }
+
+    public function testDetailSerializesOnlyActorOwnedExactItemActiveRound(): void
+    {
+        $this->seedLibrary(
+            "library-source-exact",
+            "Bronexact",
+            $this->actorId,
+            "manager"
+        );
+        $this->seedItem(
+            "item-source-a",
+            "library-source-exact",
+            "work-source",
+            "Zelfde Work"
+        );
+        $this->seedItem(
+            "item-source-b",
+            "library-source-exact",
+            "work-source",
+            "Zelfde Work"
+        );
+        $this->seedRound(
+            "round-source-a",
+            $this->actorId,
+            "work-source",
+            "item-source-a",
+            null,
+            null,
+            5
+        );
+        $this->seedRound(
+            "round-foreign-b",
+            $this->otherId,
+            "work-source",
+            "item-source-b"
+        );
+        $this->seedRound(
+            "round-ended-b",
+            $this->actorId,
+            "work-source",
+            "item-source-b",
+            null,
+            "completed"
+        );
+        $this->seedExternalLoan("loan-source", $this->actorId, "work-source");
+        $this->seedRound(
+            "round-external",
+            $this->actorId,
+            "work-source",
+            null,
+            "loan-source"
+        );
+
+        $itemARequest = new WP_REST_Request(
+            "GET",
+            "/biblio/v1/libraries/library-source-exact/items/item-source-a"
+        );
+        $itemARequest->set_query_params(["user_id" => (string) $this->otherId]);
+        $itemA = $this->successData($this->dispatchAsActor($itemARequest));
+
+        self::assertSame([
+            "library",
+            "item_id",
+            "work_id",
+            "edition_id",
+            "title",
+            "authors",
+            "cover_reference",
+            "isbn",
+            "language",
+            "publisher",
+            "publication_date",
+            "series",
+            "form",
+            "location",
+            "condition",
+            "acquisition",
+            "availability",
+            "item_status",
+            "reading",
+            "active_reading_round",
+            "capabilities",
+        ], array_keys($itemA));
+        self::assertSame([
+            "reading_round_id",
+            "version",
+            "started_on",
+        ], array_keys($itemA["active_reading_round"]));
+        self::assertSame("round-source-a", $itemA["active_reading_round"]["reading_round_id"]);
+        self::assertSame(5, $itemA["active_reading_round"]["version"]);
+        self::assertSame([
+            "year" => 2026,
+            "month" => 8,
+            "day" => 1,
+        ], $itemA["active_reading_round"]["started_on"]);
+        self::assertSame([
+            "view_item" => true,
+            "start_reading" => false,
+            "end_reading" => true,
+        ], $itemA["capabilities"]);
+        self::assertArrayNotHasKey("user_id", $itemA["active_reading_round"]);
+        self::assertArrayNotHasKey("provenance", $itemA["active_reading_round"]);
+        self::assertArrayNotHasKey("created_at", $itemA["active_reading_round"]);
+        self::assertArrayNotHasKey("updated_at", $itemA["active_reading_round"]);
+        self::assertArrayNotHasKey("ended_at", $itemA["active_reading_round"]);
+        self::assertArrayNotHasKey("source", $itemA["active_reading_round"]);
+
+        $itemB = $this->successData($this->dispatchAsActor(new WP_REST_Request(
+            "GET",
+            "/biblio/v1/libraries/library-source-exact/items/item-source-b"
+        )));
+        self::assertNull($itemB["active_reading_round"]);
+        self::assertFalse($itemB["capabilities"]["end_reading"]);
+        self::assertTrue($itemB["capabilities"]["start_reading"]);
+        self::assertSame("reading", $itemB["reading"]["status"]);
+        self::assertSame(2, $itemB["reading"]["active_rounds"]);
+        self::assertSame(1, $itemB["reading"]["completed_rounds"]);
     }
 
     public function testStartReadingUsesWordPressNonceAndCoreAuthorization(): void
@@ -559,7 +688,11 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             "library_id" => $libraryId,
             "user_id" => (string) $userId,
             "membership_status" => $active ? "active" : "inactive",
-            "management_role" => $access === "owner" ? "owner" : "member",
+            "management_role" => match ($access) {
+                "owner" => "owner",
+                "manager" => "manager",
+                default => "member",
+            },
             "use_access" => $access === "view_only" ? "view_only" : "direct",
             "additional_permissions" => "[]",
         ]);
@@ -571,10 +704,15 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         string $workId,
         string $title
     ): void {
-        $this->database->insert($this->tableNames->works(), [
-            "work_id" => $workId,
-            "work_title" => $title,
-        ]);
+        if ((int) $this->database->get_var($this->database->prepare(
+            "SELECT COUNT(*) FROM `{$this->tableNames->works()}` WHERE work_id = %s",
+            $workId
+        )) === 0) {
+            $this->database->insert($this->tableNames->works(), [
+                "work_id" => $workId,
+                "work_title" => $title,
+            ]);
+        }
         $this->database->insert($this->tableNames->editions(), [
             "edition_id" => "edition-{$itemId}",
             "work_id" => $workId,
@@ -584,6 +722,54 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             "library_id" => $libraryId,
             "edition_id" => "edition-{$itemId}",
             "item_status" => "active",
+        ]);
+    }
+
+    private function seedRound(
+        string $roundId,
+        int $userId,
+        string $workId,
+        ?string $itemId,
+        ?string $externalLoanId = null,
+        ?string $outcome = null,
+        int $version = 1
+    ): void {
+        $this->database->insert($this->tableNames->readingRounds(), [
+            "reading_round_id" => $roundId,
+            "user_id" => (string) $userId,
+            "work_id" => $workId,
+            "item_id" => $itemId,
+            "external_loan_id" => $externalLoanId,
+            "started_at" => null,
+            "round_outcome" => $outcome,
+            "provenance" => "source_started",
+            "reading_started_year" => 2026,
+            "reading_started_month" => 8,
+            "reading_started_day" => 1,
+            "reading_finished_year" => $outcome === null ? null : 2026,
+            "reading_finished_month" => $outcome === null ? null : 8,
+            "reading_finished_day" => $outcome === null ? null : 2,
+            "created_at" => "2026-08-01 10:00:00.000000",
+            "updated_at" => "2026-08-02 10:00:00.000000",
+            "ended_at" => $outcome === null
+                ? null
+                : "2026-08-02 10:00:00.000000",
+            "round_version" => $version,
+        ]);
+    }
+
+    private function seedExternalLoan(
+        string $loanId,
+        int $userId,
+        string $workId
+    ): void {
+        $this->database->insert($this->tableNames->externalLoans(), [
+            "external_loan_id" => $loanId,
+            "user_id" => (string) $userId,
+            "work_id" => $workId,
+            "loan_status" => "active",
+            "borrowed_at" => "2026-08-01 10:00:00.000000",
+            "due_at" => null,
         ]);
     }
 }

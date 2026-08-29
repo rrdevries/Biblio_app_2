@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Infrastructure\Persistence\WordPress;
 
+use Biblio\Core\Application\Catalog\Read\CatalogActiveReadingRoundView;
 use Biblio\Core\Application\Catalog\Read\CatalogItemReadRecord;
 use Biblio\Core\Application\Catalog\Read\CatalogItemReadRecordPage;
 use Biblio\Core\Application\Catalog\Read\CatalogOverviewCursor;
@@ -17,6 +18,9 @@ use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Persistence\PersistenceException;
 use Biblio\Core\Library\LibraryId;
+use Biblio\Core\Reading\ReadingDate;
+use Biblio\Core\Reading\ReadingRoundId;
+use Biblio\Core\Reading\ReadingRoundVersion;
 use Throwable;
 use wpdb;
 
@@ -106,8 +110,11 @@ final readonly class WpdbCatalogUiReadRepository implements CatalogUiReadReposit
             . "COALESCE(rs.stopped_rounds, 0) AS stopped_rounds, "
             . "COALESCE(rs.historical_completed_rounds, 0) "
             . "AS historical_completed_rounds, "
-            . "CASE WHEN sr.reading_round_id IS NULL THEN 0 ELSE 1 END "
-            . "AS active_round_for_item "
+            . "sr.reading_round_id AS active_round_id, "
+            . "sr.round_version AS active_round_version, "
+            . "sr.reading_started_year AS active_round_started_year, "
+            . "sr.reading_started_month AS active_round_started_month, "
+            . "sr.reading_started_day AS active_round_started_day "
             . "FROM `{$items}` i{$itemIndex} "
             . "INNER JOIN `{$editions}` e ON e.edition_id = i.edition_id "
             . "INNER JOIN `{$works}` w ON w.work_id = e.work_id "
@@ -138,7 +145,7 @@ final readonly class WpdbCatalogUiReadRepository implements CatalogUiReadReposit
                 (int) $row->completed_rounds,
                 (int) $row->stopped_rounds,
                 (int) $row->historical_completed_rounds,
-                (int) $row->active_round_for_item === 1
+                $this->hydrateActiveReadingRound($row)
             );
         } catch (Throwable $exception) {
             throw new PersistenceException(
@@ -148,5 +155,31 @@ final readonly class WpdbCatalogUiReadRepository implements CatalogUiReadReposit
                 FailureReason::PersistenceReadFailed
             );
         }
+    }
+
+    private function hydrateActiveReadingRound(
+        object $row
+    ): ?CatalogActiveReadingRoundView {
+        if ($row->active_round_id === null) {
+            return null;
+        }
+
+        $startedOn = $row->active_round_started_year === null
+            ? null
+            : new ReadingDate(
+                (int) $row->active_round_started_year,
+                $row->active_round_started_month === null
+                    ? null
+                    : (int) $row->active_round_started_month,
+                $row->active_round_started_day === null
+                    ? null
+                    : (int) $row->active_round_started_day
+            );
+
+        return new CatalogActiveReadingRoundView(
+            new ReadingRoundId((string) $row->active_round_id),
+            new ReadingRoundVersion((int) $row->active_round_version),
+            $startedOn
+        );
     }
 }

@@ -84,6 +84,7 @@ final readonly class CatalogUiReadService
                 $record->stoppedRoundCount(),
                 $record->historicalCompletedRoundCount()
             ),
+            $record->activeReadingRound(),
             $this->capabilities($record, $library)
         );
     }
@@ -114,7 +115,8 @@ final readonly class CatalogUiReadService
         return new CatalogItemCapabilities(
             $library->capabilities()->canViewCollection(),
             $library->capabilities()->canUseItemDirectly()
-                && !$record->hasActiveRoundForItem()
+                && !$record->hasActiveRoundForItem(),
+            $record->hasActiveRoundForItem()
         );
     }
 }

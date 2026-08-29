@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Infrastructure\WordPress\Rest;
 
+use Biblio\Core\Application\Catalog\Read\CatalogActiveReadingRoundView;
 use Biblio\Core\Application\Catalog\Read\CatalogItemCapabilities;
 use Biblio\Core\Application\Catalog\Read\CatalogItemCardView;
 use Biblio\Core\Application\Catalog\Read\CatalogItemDetailView;
@@ -67,7 +68,10 @@ final readonly class RestResponseSerializer
             "availability" => $this->text($detail->availability()),
             "item_status" => $detail->itemStatus()->value,
             "reading" => $this->readingSummary($detail->reading()),
-            "capabilities" => $this->itemCapabilities($detail->capabilities()),
+            "active_reading_round" => $this->activeReadingRound(
+                $detail->activeReadingRound()
+            ),
+            "capabilities" => $this->detailCapabilities($detail->capabilities()),
         ];
     }
 
@@ -156,6 +160,34 @@ final readonly class RestResponseSerializer
         return [
             "view_item" => $capabilities->canViewItem(),
             "start_reading" => $capabilities->canStartReading(),
+        ];
+    }
+
+    /** @return array{view_item: bool, start_reading: bool, end_reading: bool} */
+    private function detailCapabilities(
+        CatalogItemCapabilities $capabilities
+    ): array {
+        return [
+            "view_item" => $capabilities->canViewItem(),
+            "start_reading" => $capabilities->canStartReading(),
+            "end_reading" => $capabilities->canEndReading(),
+        ];
+    }
+
+    /**
+     * @return null|array{
+     *     reading_round_id: string,
+     *     version: int,
+     *     started_on: null|array{year: int, month: ?int, day: ?int}
+     * }
+     */
+    private function activeReadingRound(
+        ?CatalogActiveReadingRoundView $round
+    ): ?array {
+        return $round === null ? null : [
+            "reading_round_id" => $round->readingRoundId()->value(),
+            "version" => $round->version()->value(),
+            "started_on" => $this->readingDate($round->startedOn()),
         ];
     }
 
