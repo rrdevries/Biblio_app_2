@@ -918,3 +918,30 @@ step is the first Elementor vertical slice—not broader endpoints or B/C scope.
 
 The complete contract, security evidence and readiness decision are maintained
 in `docs/19-f2-12-exit-evidence.md`.
+
+### Elementor Vertical Slice 1A — Mijn Bibliotheek
+
+Status: **Implemented — GO**
+
+The first browser-facing slice is complete on the ordinary published Page
+`/mijn-bibliotheek/`: active catalog overview, scoped Item detail, Start
+Reading and an authoritative detail reread. URL state is limited to
+`library_id` and `item_id`. The standalone Biblio UI plugin owns vanilla
+ES-module browser state and presentation; Elementor remains one outer
+container with one `[biblio_library_app]` Shortcode widget and no application
+business logic.
+
+The slice uses only the four existing private `biblio/v1` routes. Core still
+owns authenticated actor, Library Context, authorization, source/lifecycle
+rules and conflicts; UI visibility is not authorization. Search, filters,
+Archive, Collections, Notes, Ratings/Reviews, Next Reading and other later
+features were not added.
+
+The exact Elementor 4.2.3/Pro 4.2.2 Page/Kit artifact clean-imports into an
+isolated local database. Frontend, Core, Playwright, tenant-isolation,
+fixture-cleanup, responsive and accessibility gates are green. Guarded local
+fixtures close the former real-content browser condition and leave formal E2E
+data at zero after acceptance.
+
+The complete final verification record is maintained in
+`docs/21-elementor-vertical-slice-1a-exit-evidence.md`.

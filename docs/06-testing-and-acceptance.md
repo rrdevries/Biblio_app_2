@@ -869,3 +869,47 @@ No-go:
 
 The exact contract and Elementor Readiness Gate are
 `docs/19-f2-12-exit-evidence.md`.
+
+## 39. Elementor Vertical Slice 1A acceptance evidence
+
+Acceptance:
+
+- the published ordinary Page `/mijn-bibliotheek/` has one outer Elementor
+  container, one Shortcode widget, exactly one `[biblio_library_app]`, one
+  frontend mount and one visible view H1;
+- Biblio UI assets are Page-only and the isolated UI smoke proves no Elementor
+  or Core dependency inside the presentation plugin;
+- URL state is limited to `library_id` and `item_id`, with working direct link,
+  reload, back and forward behavior;
+- overview requests active Items only and renders a semantic list from the
+  allowlisted Core-backed contract; unknown optional metadata is omitted;
+- detail remains non-enumerating for unknown/cross-Library Items and exposes no
+  foreign title or Library identity;
+- Start Reading sends one exact nonce-protected mutation, prevents duplicate
+  submit and presents success/conflict only after an authoritative reread;
+- invalid nonce is not retried, stale active-source conflict leaves one Round
+  and client capabilities never replace server authorization;
+- desktop, tablet and mobile acceptance covers no horizontal overflow,
+  logical headings, visible focus, at least 44 px targets, native dialog
+  labels/focus, Escape/return focus and the mobile sheet;
+- the exact Elementor Page/Kit artifact clean-imports into an isolated local
+  database after CSS regeneration, with Page/mount/title/asset verification;
+- guarded fixture setup/cleanup refuses missing opt-in, non-local WordPress,
+  another DDEV project or another host; cleanup is allowlisted, transactional,
+  idempotent and leaves all formal E2E data at zero;
+- `biblio_dev` and the complete non-E2E user fingerprint remain unchanged;
+- the full UI, Core, PHPStan, smoke, Playwright, import, repository and secret
+  gates remain green.
+
+No-go:
+
+- application or authorization logic in Elementor or Biblio UI;
+- a new UI REST route, test-only endpoint or hidden database dependency;
+- retrying a mutation after invalid nonce or creating a second Round after a
+  conflict;
+- broad fixture cleanup, production-capable fixture tooling, tracked
+  credentials or private Biblio1 data;
+- search/filter/archive or another later-slice feature entering this exit.
+
+The authoritative counts, runtime, security proof and final **GO** verdict are
+recorded in `docs/21-elementor-vertical-slice-1a-exit-evidence.md`.

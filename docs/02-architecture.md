@@ -804,3 +804,34 @@ existing health-gated application through a request-time provider. Failed Core
 boot therefore yields a registered route with a safe 503 rather than partial
 functionality. The adapter adds no persistent truth, schema migration, Ability,
 Elementor code or generic endpoint framework.
+
+## 23. Elementor Vertical Slice 1A presentation boundary
+
+The first UI slice preserves the modular-monolith boundary across four layers:
+
+- Core owns current WordPress actor resolution, Library Context,
+  authorization, catalog read projection, Reading source/Work derivation,
+  lifecycle and conflict decisions;
+- the existing `biblio/v1` adapter owns private cookie/nonce transport,
+  typed request parsing, explicit allowlist serialization and safe error
+  mapping;
+- the standalone `biblio-ui` plugin owns only browser URL state and semantic
+  presentation through vanilla ES modules;
+- Elementor owns only the ordinary Page shell containing one
+  `[biblio_library_app]` Shortcode widget.
+
+The Page route is `/mijn-bibliotheek/`; `library_id` and `item_id` are opaque
+navigation targets, never client authority. Start Reading sends one nonce-
+protected POST and renders success only after an authoritative detail reread.
+Invalid nonce is not retried, and conflict/non-availability returns to server
+truth without creating another lifecycle state.
+
+Biblio UI has no repository/table access, domain service implementation,
+client actor selection, capability authorization, Elementor dependency,
+frontend framework or product build step. Assets enqueue only on the Library
+Page. Elementor contains no Loop Grid, direct form mutation, query or dynamic
+visibility implementation for the flow. The versioned Page/Kit export is a
+reproducible layout artifact, not a second application truth.
+
+The accepted boundary and final evidence are recorded in
+`docs/21-elementor-vertical-slice-1a-exit-evidence.md`.
