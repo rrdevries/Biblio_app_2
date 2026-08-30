@@ -50,9 +50,15 @@ test("primary flow logs in, starts reading once, rereads and survives reload", a
     await expect(page.getByText("E2E Privébibliotheek", { exact: true })).toBeVisible();
     expect(new URL(page.url()).searchParams.get("library_id")).toBe(IDS.actorLibrary);
     const cards = page.locator("[data-biblio-view='overview'] [data-biblio-item-id]");
-    await expect(cards).toHaveCount(3);
+    await expect(cards).toHaveCount(9);
     await expect(cards.locator("h3")).toHaveText([
         "Dagboek van een slecht jaar",
+        "E2E Completed Flow",
+        "E2E Idempotent Flow",
+        "E2E Lifecycle Flow",
+        "E2E Nonce Flow",
+        "E2E Stale Flow",
+        "E2E Stopped Flow",
         "The Secret Commonwealth",
         "Utopia Avenue",
     ]);

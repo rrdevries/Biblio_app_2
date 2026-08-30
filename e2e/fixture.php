@@ -18,8 +18,15 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionManager;
 use Biblio\Core\Infrastructure\WordPress\ProductionComposition;
 use Biblio\Core\Library\Library;
 use Biblio\Core\Library\LibraryId;
+use Biblio\Core\Library\LibraryMembership;
+use Biblio\Core\Library\LibraryMembershipAssignment;
 use Biblio\Core\Library\LibraryName;
+use Biblio\Core\Library\ManagementRole;
+use Biblio\Core\Library\MembershipStatus;
+use Biblio\Core\Library\UseAccess;
 use Biblio\Core\Reading\ReadingDate;
+use Biblio\Core\Reading\ReadingRoundId;
+use Biblio\Core\Reading\ReadingRoundVersion;
 
 defined("WP_CLI") || exit(1);
 
@@ -33,6 +40,12 @@ const BIBLIO_E2E_PRIMARY_ITEM = "e2e-item-primary";
 const BIBLIO_E2E_MISSING_ITEM = "e2e-item-missing-metadata";
 const BIBLIO_E2E_CONFLICT_ITEM = "e2e-item-active-conflict";
 const BIBLIO_E2E_FOREIGN_ITEM = "e2e-item-foreign";
+const BIBLIO_E2E_END_COMPLETED_ITEM = "e2e-item-end-completed";
+const BIBLIO_E2E_END_STOPPED_ITEM = "e2e-item-end-stopped";
+const BIBLIO_E2E_END_STALE_ITEM = "e2e-item-end-stale";
+const BIBLIO_E2E_END_NONCE_ITEM = "e2e-item-end-nonce";
+const BIBLIO_E2E_END_IDEMPOTENT_ITEM = "e2e-item-end-idempotent";
+const BIBLIO_E2E_END_LIFECYCLE_ITEM = "e2e-item-end-lifecycle";
 
 /** @return never */
 function biblioE2eFail(string $message): void
@@ -83,14 +96,32 @@ function biblioE2eIds(): array
         "missing_work" => "e2e-work-missing-metadata",
         "conflict_work" => "e2e-work-active-conflict",
         "foreign_work" => "e2e-work-foreign",
+        "end_completed_work" => "e2e-work-end-completed",
+        "end_stopped_work" => "e2e-work-end-stopped",
+        "end_stale_work" => "e2e-work-end-stale",
+        "end_nonce_work" => "e2e-work-end-nonce",
+        "end_idempotent_work" => "e2e-work-end-idempotent",
+        "end_lifecycle_work" => "e2e-work-end-lifecycle",
         "primary_edition" => "e2e-edition-primary",
         "missing_edition" => "e2e-edition-missing-metadata",
         "conflict_edition" => "e2e-edition-active-conflict",
         "foreign_edition" => "e2e-edition-foreign",
+        "end_completed_edition" => "e2e-edition-end-completed",
+        "end_stopped_edition" => "e2e-edition-end-stopped",
+        "end_stale_edition" => "e2e-edition-end-stale",
+        "end_nonce_edition" => "e2e-edition-end-nonce",
+        "end_idempotent_edition" => "e2e-edition-end-idempotent",
+        "end_lifecycle_edition" => "e2e-edition-end-lifecycle",
         "primary_item" => BIBLIO_E2E_PRIMARY_ITEM,
         "missing_item" => BIBLIO_E2E_MISSING_ITEM,
         "conflict_item" => BIBLIO_E2E_CONFLICT_ITEM,
         "foreign_item" => BIBLIO_E2E_FOREIGN_ITEM,
+        "end_completed_item" => BIBLIO_E2E_END_COMPLETED_ITEM,
+        "end_stopped_item" => BIBLIO_E2E_END_STOPPED_ITEM,
+        "end_stale_item" => BIBLIO_E2E_END_STALE_ITEM,
+        "end_nonce_item" => BIBLIO_E2E_END_NONCE_ITEM,
+        "end_idempotent_item" => BIBLIO_E2E_END_IDEMPOTENT_ITEM,
+        "end_lifecycle_item" => BIBLIO_E2E_END_LIFECYCLE_ITEM,
     ];
 }
 
@@ -133,14 +164,23 @@ function biblioE2eCleanupCore(wpdb $database): void
     $works = [
         $ids["primary_work"], $ids["missing_work"],
         $ids["conflict_work"], $ids["foreign_work"],
+        $ids["end_completed_work"], $ids["end_stopped_work"],
+        $ids["end_stale_work"], $ids["end_nonce_work"],
+        $ids["end_idempotent_work"], $ids["end_lifecycle_work"],
     ];
     $editions = [
         $ids["primary_edition"], $ids["missing_edition"],
         $ids["conflict_edition"], $ids["foreign_edition"],
+        $ids["end_completed_edition"], $ids["end_stopped_edition"],
+        $ids["end_stale_edition"], $ids["end_nonce_edition"],
+        $ids["end_idempotent_edition"], $ids["end_lifecycle_edition"],
     ];
     $items = [
         $ids["primary_item"], $ids["missing_item"],
         $ids["conflict_item"], $ids["foreign_item"],
+        $ids["end_completed_item"], $ids["end_stopped_item"],
+        $ids["end_stale_item"], $ids["end_nonce_item"],
+        $ids["end_idempotent_item"], $ids["end_lifecycle_item"],
     ];
 
     if ($database->query("START TRANSACTION") === false) {
@@ -301,19 +341,36 @@ function biblioE2eAddItem(
     );
 }
 
-function biblioE2eActivateConflict(wpdb $database): void
+function biblioE2eStartRound(
+    wpdb $database,
+    string $username,
+    string $libraryId,
+    string $itemId,
+    ReadingDate $startedOn
+): void
 {
-    [$actor] = biblioE2eUsernames();
-    $user = get_user_by("login", $actor);
+    $user = get_user_by("login", $username);
 
     if (!$user instanceof WP_User) {
-        biblioE2eFail("actor fixture user does not exist.");
+        biblioE2eFail("required fixture user does not exist.");
     }
 
     wp_set_current_user($user->ID);
     (new ProductionComposition($database))->application()->libraryItemReading()->start(
-        new LibraryId(BIBLIO_E2E_ACTOR_LIBRARY),
-        new ItemId(BIBLIO_E2E_CONFLICT_ITEM),
+        new LibraryId($libraryId),
+        new ItemId($itemId),
+        $startedOn
+    );
+}
+
+function biblioE2eActivateConflict(wpdb $database): void
+{
+    [$actor] = biblioE2eUsernames();
+    biblioE2eStartRound(
+        $database,
+        $actor,
+        BIBLIO_E2E_ACTOR_LIBRARY,
+        BIBLIO_E2E_CONFLICT_ITEM,
         ReadingDate::exact(2026, 8, 1)
     );
 }
@@ -338,16 +395,25 @@ function biblioE2eCounts(wpdb $database): array
     $items = [
         $ids["primary_item"], $ids["missing_item"],
         $ids["conflict_item"], $ids["foreign_item"],
+        $ids["end_completed_item"], $ids["end_stopped_item"],
+        $ids["end_stale_item"], $ids["end_nonce_item"],
+        $ids["end_idempotent_item"], $ids["end_lifecycle_item"],
     ];
     $librarySql = implode(",", array_fill(0, count($libraries), "%s"));
     $itemSql = implode(",", array_fill(0, count($items), "%s"));
     $workValues = [
         $ids["primary_work"], $ids["missing_work"],
         $ids["conflict_work"], $ids["foreign_work"],
+        $ids["end_completed_work"], $ids["end_stopped_work"],
+        $ids["end_stale_work"], $ids["end_nonce_work"],
+        $ids["end_idempotent_work"], $ids["end_lifecycle_work"],
     ];
     $editionValues = [
         $ids["primary_edition"], $ids["missing_edition"],
         $ids["conflict_edition"], $ids["foreign_edition"],
+        $ids["end_completed_edition"], $ids["end_stopped_edition"],
+        $ids["end_stale_edition"], $ids["end_nonce_edition"],
+        $ids["end_idempotent_edition"], $ids["end_lifecycle_edition"],
     ];
     $workSql = implode(",", array_fill(0, count($workValues), "%s"));
     $editionSql = implode(",", array_fill(0, count($editionValues), "%s"));
@@ -410,6 +476,160 @@ function biblioE2eCounts(wpdb $database): array
     ];
 }
 
+/** @return array<string, mixed> */
+function biblioE2eRoundState(wpdb $database): array
+{
+    $tables = new CoreTableNames($database->prefix);
+    $ids = biblioE2eIds();
+    $items = [
+        $ids["end_completed_item"],
+        $ids["end_stopped_item"],
+        $ids["end_stale_item"],
+        $ids["end_nonce_item"],
+        $ids["end_idempotent_item"],
+        $ids["end_lifecycle_item"],
+        $ids["foreign_item"],
+    ];
+    $itemSql = implode(",", array_fill(0, count($items), "%s"));
+    $rows = $database->get_results($database->prepare(
+        "SELECT reading_round_id, item_id, round_outcome, round_version, "
+        . "reading_finished_year, reading_finished_month, reading_finished_day "
+        . "FROM `{$tables->readingRounds()}` WHERE item_id IN ({$itemSql}) "
+        . "ORDER BY item_id, reading_round_id",
+        ...$items
+    ), ARRAY_A);
+
+    $rounds = [];
+    foreach ($rows as $row) {
+        $outcome = $row["round_outcome"] === null
+            ? null
+            : (string) $row["round_outcome"];
+        $itemId = (string) $row["item_id"];
+        $previous = $rounds[$itemId] ?? null;
+        $rounds[$itemId] = [
+            "reading_round_id" => (string) $row["reading_round_id"],
+            "lifecycle" => $outcome === null ? "active" : "ended",
+            "outcome" => $outcome,
+            "version" => (int) $row["round_version"],
+            "row_count" => is_array($previous)
+                ? (int) $previous["row_count"] + 1
+                : 1,
+            "active_rounds" => (is_array($previous)
+                ? (int) $previous["active_rounds"]
+                : 0) + ($outcome === null ? 1 : 0),
+            "finished_on" => $outcome === null ? null : [
+                "year" => (int) $row["reading_finished_year"],
+                "month" => (int) $row["reading_finished_month"],
+                "day" => (int) $row["reading_finished_day"],
+            ],
+        ];
+    }
+
+    [$actorName] = biblioE2eUsernames();
+    $actor = get_user_by("login", $actorName);
+    $membership = $actor instanceof WP_User
+        ? (new WpdbLibraryMembershipRepository(
+            $database,
+            $tables
+        ))->findFor(
+            new LibraryId(BIBLIO_E2E_OTHER_LIBRARY),
+            new UserId((string) $actor->ID)
+        )
+        : null;
+
+    return [
+        "rounds" => $rounds,
+        "actor_manages_other_library" => $membership !== null
+            && $membership->membership()->managementRole() === ManagementRole::Manager
+            && $membership->membership()->useAccess() === UseAccess::Direct
+            && $membership->membership()->status() === MembershipStatus::Active,
+    ];
+}
+
+/** @return array<string, int|string|bool> */
+function biblioE2eFingerprint(wpdb $database): array
+{
+    $payload = [];
+    $rowCount = 0;
+
+    foreach ((new CoreTableNames($database->prefix))->schema1006() as $table) {
+        $rows = $database->get_results("SELECT * FROM `{$table}`", ARRAY_A);
+        $serialized = [];
+
+        foreach ($rows as $row) {
+            ksort($row);
+            $serialized[] = wp_json_encode(
+                $row,
+                JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+            );
+        }
+
+        sort($serialized, SORT_STRING);
+        $payload[$table] = $serialized;
+        $rowCount += count($serialized);
+    }
+
+    ksort($payload);
+    [$actor, $other] = biblioE2eUsernames();
+    $users = $database->get_results($database->prepare(
+        "SELECT ID, user_login FROM `{$database->users}` "
+        . "WHERE user_login NOT IN (%s, %s) ORDER BY ID",
+        $actor,
+        $other
+    ), ARRAY_A);
+
+    return [
+        "core_rows" => $rowCount,
+        "core_sha256" => hash("sha256", wp_json_encode(
+            $payload,
+            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+        )),
+        "non_e2e_users" => count($users),
+        "non_e2e_users_sha256" => hash("sha256", wp_json_encode(
+            $users,
+            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+        )),
+        "biblio_dev_present" => get_user_by("login", "biblio_dev") instanceof WP_User,
+    ];
+}
+
+function biblioE2eAdvanceStaleRound(wpdb $database): void
+{
+    [$actorName] = biblioE2eUsernames();
+    $actor = get_user_by("login", $actorName);
+
+    if (!$actor instanceof WP_User) {
+        biblioE2eFail("actor fixture user does not exist.");
+    }
+
+    wp_set_current_user($actor->ID);
+    $application = (new ProductionComposition($database))->application();
+    $state = biblioE2eRoundState($database);
+    $row = $state["rounds"][BIBLIO_E2E_END_STALE_ITEM] ?? null;
+
+    if (!is_array($row)) {
+        throw new RuntimeException("Exact stale fixture ReadingRound is missing.");
+    }
+
+    if (
+        ($row["lifecycle"] ?? null) === "ended"
+        && ($row["outcome"] ?? null) === "completed"
+        && ($row["version"] ?? null) === 2
+    ) {
+        return;
+    }
+
+    if (($row["lifecycle"] ?? null) !== "active" || ($row["version"] ?? null) !== 1) {
+        throw new RuntimeException("Exact stale fixture ReadingRound has drifted.");
+    }
+
+    $application->finishReadingRound()->finish(
+        new ReadingRoundId((string) $row["reading_round_id"]),
+        new ReadingRoundVersion(1),
+        ReadingDate::exact(2026, 8, 18)
+    );
+}
+
 function biblioE2eSetup(wpdb $database): void
 {
     biblioE2eCleanup();
@@ -438,14 +658,41 @@ function biblioE2eSetup(wpdb $database): void
         $other
     );
 
+    (new WpdbLibraryMembershipRepository(
+        $database,
+        new CoreTableNames($database->prefix)
+    ))->add(new LibraryMembershipAssignment(
+        new LibraryId(BIBLIO_E2E_OTHER_LIBRARY),
+        new UserId((string) $actor),
+        new LibraryMembership(
+            ManagementRole::Manager,
+            UseAccess::Direct,
+            MembershipStatus::Active
+        )
+    ));
+
     $composition = new ProductionComposition($database);
     wp_set_current_user($actor);
     biblioE2eAddItem($database, $composition, BIBLIO_E2E_ACTOR_LIBRARY, BIBLIO_E2E_PRIMARY_ITEM, "e2e-work-primary", "Dagboek van een slecht jaar", "e2e-edition-primary");
     biblioE2eAddItem($database, $composition, BIBLIO_E2E_ACTOR_LIBRARY, BIBLIO_E2E_MISSING_ITEM, "e2e-work-missing-metadata", "The Secret Commonwealth", "e2e-edition-missing-metadata");
     biblioE2eAddItem($database, $composition, BIBLIO_E2E_ACTOR_LIBRARY, BIBLIO_E2E_CONFLICT_ITEM, "e2e-work-active-conflict", "Utopia Avenue", "e2e-edition-active-conflict");
+    biblioE2eAddItem($database, $composition, BIBLIO_E2E_ACTOR_LIBRARY, BIBLIO_E2E_END_COMPLETED_ITEM, "e2e-work-end-completed", "E2E Completed Flow", "e2e-edition-end-completed");
+    biblioE2eAddItem($database, $composition, BIBLIO_E2E_ACTOR_LIBRARY, BIBLIO_E2E_END_STOPPED_ITEM, "e2e-work-end-stopped", "E2E Stopped Flow", "e2e-edition-end-stopped");
+    biblioE2eAddItem($database, $composition, BIBLIO_E2E_ACTOR_LIBRARY, BIBLIO_E2E_END_STALE_ITEM, "e2e-work-end-stale", "E2E Stale Flow", "e2e-edition-end-stale");
+    biblioE2eAddItem($database, $composition, BIBLIO_E2E_ACTOR_LIBRARY, BIBLIO_E2E_END_NONCE_ITEM, "e2e-work-end-nonce", "E2E Nonce Flow", "e2e-edition-end-nonce");
+    biblioE2eAddItem($database, $composition, BIBLIO_E2E_ACTOR_LIBRARY, BIBLIO_E2E_END_IDEMPOTENT_ITEM, "e2e-work-end-idempotent", "E2E Idempotent Flow", "e2e-edition-end-idempotent");
+    biblioE2eAddItem($database, $composition, BIBLIO_E2E_ACTOR_LIBRARY, BIBLIO_E2E_END_LIFECYCLE_ITEM, "e2e-work-end-lifecycle", "E2E Lifecycle Flow", "e2e-edition-end-lifecycle");
 
     wp_set_current_user($other);
     biblioE2eAddItem($database, $composition, BIBLIO_E2E_OTHER_LIBRARY, BIBLIO_E2E_FOREIGN_ITEM, "e2e-work-foreign", "Ripper", "e2e-edition-foreign");
+
+    biblioE2eStartRound($database, $actorName, BIBLIO_E2E_ACTOR_LIBRARY, BIBLIO_E2E_END_COMPLETED_ITEM, ReadingDate::exact(2026, 8, 2));
+    biblioE2eStartRound($database, $actorName, BIBLIO_E2E_ACTOR_LIBRARY, BIBLIO_E2E_END_STOPPED_ITEM, ReadingDate::exact(2026, 8, 3));
+    biblioE2eStartRound($database, $actorName, BIBLIO_E2E_ACTOR_LIBRARY, BIBLIO_E2E_END_STALE_ITEM, ReadingDate::exact(2026, 8, 4));
+    biblioE2eStartRound($database, $actorName, BIBLIO_E2E_ACTOR_LIBRARY, BIBLIO_E2E_END_NONCE_ITEM, ReadingDate::exact(2026, 8, 5));
+    biblioE2eStartRound($database, $actorName, BIBLIO_E2E_ACTOR_LIBRARY, BIBLIO_E2E_END_IDEMPOTENT_ITEM, ReadingDate::exact(2026, 8, 6));
+    biblioE2eStartRound($database, $actorName, BIBLIO_E2E_ACTOR_LIBRARY, BIBLIO_E2E_END_LIFECYCLE_ITEM, ReadingDate::exact(2026, 8, 7));
+    biblioE2eStartRound($database, $otherName, BIBLIO_E2E_OTHER_LIBRARY, BIBLIO_E2E_FOREIGN_ITEM, ReadingDate::exact(2026, 8, 8));
     biblioE2eActivateConflict($database);
 }
 
@@ -473,16 +720,35 @@ try {
         case "conflict-activate":
             biblioE2eActivateConflict($wpdb);
             break;
+        case "stale-end":
+            biblioE2eAdvanceStaleRound($wpdb);
+            break;
+        case "state":
+        case "fingerprint":
+            break;
         default:
             biblioE2eFail("unknown action.");
     }
 
-    echo wp_json_encode([
+    $response = [
         "action" => $action,
         "host" => BIBLIO_E2E_HOST,
         "ids" => biblioE2eIds(),
         "counts" => biblioE2eCounts($wpdb),
-    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL;
+    ];
+
+    if (in_array($action, ["setup", "state", "stale-end"], true)) {
+        $response["state"] = biblioE2eRoundState($wpdb);
+    }
+
+    if ($action === "fingerprint") {
+        $response["fingerprint"] = biblioE2eFingerprint($wpdb);
+    }
+
+    echo wp_json_encode(
+        $response,
+        JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
+    ) . PHP_EOL;
 } catch (Throwable $exception) {
     fwrite(STDERR, "Biblio E2E fixture failed: {$exception->getMessage()}\n");
     exit(1);
