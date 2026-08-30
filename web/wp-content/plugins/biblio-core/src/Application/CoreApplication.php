@@ -34,6 +34,7 @@ use Biblio\Core\Application\Reading\DeleteHistoricalReadingRoundService;
 use Biblio\Core\Application\Reading\FinishReadingRoundService;
 use Biblio\Core\Application\Reading\GetPersonalWorkReadingStatusService;
 use Biblio\Core\Application\Reading\GetReadingSequenceService;
+use Biblio\Core\Application\Reading\History\GetMyReadingHistoryForWorkService;
 use Biblio\Core\Application\Reading\RegisterHistoricalReadingRoundService;
 use Biblio\Core\Application\Reading\StartReadingFromExternalLoanService;
 use Biblio\Core\Application\Reading\StartReadingFromLibraryItemService;
@@ -65,6 +66,7 @@ final readonly class CoreApplication
         private DeleteHistoricalReadingRoundService $historicalReadingRoundDeletion,
         private GetPersonalWorkReadingStatusService $personalWorkReadingStatus,
         private GetReadingSequenceService $readingSequence,
+        private GetMyReadingHistoryForWorkService $readingHistory,
         private CreatePrivateNoteService $privateNoteCreation,
         private UpdatePrivateNoteContentService $privateNoteContentUpdate,
         private CorrectPrivateNoteReadingRoundService $privateNoteContextCorrection,
@@ -189,6 +191,11 @@ final readonly class CoreApplication
     public function readingSequence(): GetReadingSequenceService
     {
         return $this->readingSequence;
+    }
+
+    public function readingHistory(): GetMyReadingHistoryForWorkService
+    {
+        return $this->readingHistory;
     }
 
     public function privateNoteCreation(): CreatePrivateNoteService

@@ -43,6 +43,7 @@ use Biblio\Core\Application\Reading\FinishReadingRoundService;
 use Biblio\Core\Application\Reading\GetOwnedReadingRoundService;
 use Biblio\Core\Application\Reading\GetPersonalWorkReadingStatusService;
 use Biblio\Core\Application\Reading\GetReadingSequenceService;
+use Biblio\Core\Application\Reading\History\GetMyReadingHistoryForWorkService;
 use Biblio\Core\Application\Reading\ReadingRoundCreation;
 use Biblio\Core\Application\Reading\ReadingRoundEnd;
 use Biblio\Core\Application\Reading\RegisterHistoricalReadingRoundService;
@@ -75,6 +76,7 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPublicationRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbRatingRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbReviewRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbReadingRoundRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbReadingHistoryReadRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionConnection;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionManager;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbWorkRepository;
@@ -373,6 +375,10 @@ final class ProductionComposition
             $authenticatedUser,
             $readingRoundRepository
         );
+        $readingHistory = new GetMyReadingHistoryForWorkService(
+            $authenticatedUser,
+            new WpdbReadingHistoryReadRepository($database, $tableNames)
+        );
         $privateNoteContentPolicy = new StrictPrivateNoteContentPolicy();
         $privateNoteRepository = new WpdbPrivateNoteRepository(
             $database,
@@ -509,6 +515,7 @@ final class ProductionComposition
             $historicalReadingRoundDeletion,
             $personalWorkReadingStatus,
             $readingSequence,
+            $readingHistory,
             $privateNoteCreate,
             $privateNoteContentUpdate,
             $privateNoteContextCorrection,
