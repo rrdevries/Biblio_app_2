@@ -948,7 +948,7 @@ The complete final verification record is maintained in
 
 ### Vertical Slice 1B — ReadingRound detail and end support
 
-Status: **Core/REST, frontend runtime and visible end dialog implemented**
+Status: **Core/REST, frontend runtime, visible end dialog and local browser E2E implemented**
 
 The private `biblio/v1` surface now contains five routes. The additional
 owner-scoped mutation is:
@@ -987,6 +987,17 @@ Success, conflict and non-availability close stale dialog state only after the
 runtime's authoritative reread; nonce, authentication and uncertain outcomes
 offer safe recovery without an automatic second POST or false success claim.
 The compact dialog is centered on tablet/desktop and becomes a mobile bottom
-sheet using the existing Biblio tokens and accessibility patterns. Elementor,
-Crocoblock and E2E fixtures remain unchanged; browser E2E remains a later
-Vertical Slice 1B step.
+sheet using the existing Biblio tokens and accessibility patterns. Elementor
+and Crocoblock remain unchanged.
+
+The existing guarded local Playwright layer now also proves completed and
+stopped outcomes through the visible UI, one-POST pending behavior,
+authoritative reread and persistence, reload/back/forward behavior, divergent
+stale 409 reconciliation, invalid-nonce 403 without retry, non-enumerating
+foreign/unknown 404 even for a Library manager, identical stale idempotency
+and the current-version incompatible 422 lifecycle boundary. Independent
+allowlisted records isolate those scenarios. The same fixture stack performs
+the stale competing action through the owner-scoped Core service, exposes
+read-only state evidence and verifies exact cleanup twice plus an unchanged
+non-E2E Core/user fingerprint. Responsive and native-dialog keyboard evidence
+covers 390x844, 900x900 and 1280x900.

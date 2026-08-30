@@ -913,3 +913,34 @@ No-go:
 
 The authoritative counts, runtime, security proof and final **GO** verdict are
 recorded in `docs/21-elementor-vertical-slice-1a-exit-evidence.md`.
+
+## 40. Vertical Slice 1B ReadingRound end browser evidence
+
+The local-only Playwright acceptance layer extends the existing 1A fixture,
+login, browser and runner architecture. Technical coverage now includes:
+
+- independent active ReadingRounds for completed, stopped, stale, invalid
+  nonce, idempotent retry and incompatible lifecycle scenarios;
+- visible overview/detail/dialog flows with one mutation, locked pending state,
+  authoritative detail reread and persistence checks after reload and browser
+  history navigation;
+- same-owner Core-driven competing completion followed by a divergent stale
+  stop request, one 409 response and no client retry;
+- equal non-enumerating 404 responses for known foreign-owned and unknown
+  ReadingRound IDs, including when the actor manages and directly accesses the
+  foreign Library;
+- a repeated identical version-1 request returning the same ended state
+  without another write, and a divergent version-2 request returning 422
+  without changing the completed state;
+- invalid nonce returning 403 once and leaving the round active;
+- native dialog labels, radio keyboard operation, Escape/return focus, modal
+  focus containment, pending dismissal lock and responsive behavior at
+  390x844, 900x900 and 1280x900;
+- explicit refusal checks for missing opt-in, non-local WordPress, another
+  DDEV project and another host;
+- exact allowlisted cleanup twice, zero formal fixture residue and an unchanged
+  before/after fingerprint of all Core-table rows and non-E2E users.
+
+This is technical status and acceptance coverage only; it does not create a
+new exit-evidence record or change the Core, REST, Item-detail, Elementor,
+Crocoblock or schema contracts.

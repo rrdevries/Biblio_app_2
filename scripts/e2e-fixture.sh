@@ -7,9 +7,9 @@ readonly ACTION="${1:-}"
 readonly ENV_FILE=".local/e2e.env"
 
 case "$ACTION" in
-  setup|cleanup|verify-clean|conflict-reset|conflict-activate) ;;
+  setup|cleanup|verify-clean|conflict-reset|conflict-activate|stale-end|state|fingerprint) ;;
   *)
-    echo "Usage: $0 {setup|cleanup|verify-clean|conflict-reset|conflict-activate}" >&2
+    echo "Usage: $0 {setup|cleanup|verify-clean|conflict-reset|conflict-activate|stale-end|state|fingerprint}" >&2
     exit 64
     ;;
 esac
