@@ -13,14 +13,18 @@ use Biblio\Core\Application\Catalog\Read\CatalogReadingSummary;
 use Biblio\Core\Application\Catalog\Read\CatalogTextListValue;
 use Biblio\Core\Application\Catalog\Read\CatalogTextValue;
 use Biblio\Core\Application\Library\LibraryContextView;
+use Biblio\Core\Application\Reading\History\ReadingHistoryEntry;
+use Biblio\Core\Application\Reading\History\ReadingHistoryPage;
 use Biblio\Core\Reading\ReadingDate;
 use Biblio\Core\Reading\ReadingRound;
 use LogicException;
 
 final readonly class RestResponseSerializer
 {
-    public function __construct(private CatalogCursorCodec $cursors)
-    {
+    public function __construct(
+        private CatalogCursorCodec $cursors,
+        private ReadingHistoryCursorCodec $historyCursors
+    ) {
     }
 
     /**
@@ -110,6 +114,32 @@ final readonly class RestResponseSerializer
             "outcome" => $outcome->value,
             "finished_on" => $this->readingDate($finishedOn),
             "version" => $round->version()->value(),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    public function readingHistory(ReadingHistoryPage $page): array
+    {
+        return [
+            "items" => array_map(
+                $this->readingHistoryEntry(...),
+                $page->entries()
+            ),
+            "next_cursor" => $page->nextCursor() === null
+                ? null
+                : $this->historyCursors->encode($page->nextCursor()),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function readingHistoryEntry(ReadingHistoryEntry $entry): array
+    {
+        return [
+            "outcome" => $entry->outcome()->value,
+            "started_on" => $this->readingDate($entry->startedOn()),
+            "finished_on" => $this->readingDate($entry->finishedOn()),
+            "source_type" => $entry->sourceType()->value,
+            "historical_registration" => $entry->historicalRegistration(),
         ];
     }
 
