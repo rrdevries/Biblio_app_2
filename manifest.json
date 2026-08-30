@@ -2,7 +2,7 @@
   "project": "Biblio V2",
   "root": "Biblio_app_2",
   "version": "v2.001",
-  "status": "completed F1.1-F1.7 foundation, F2.3 catalog creation, F2.5 local classification, F2.6 ReadingRound lifecycle/history, F2.7 Private Notes, F2.8 Ratings/Reviews, F2.9 Next Reading, F2.10 Library Identity/Context, F2.11 Catalog UI Read Models, F2.12 WordPress REST Adapter Foundation, Elementor Vertical Slice 1A and Vertical Slice 1B steps 1-6 including end-dialog browser E2E; Vertical Slice 1A exit: GO; Vertical Slice 1B exit deferred",
+  "status": "completed F1.1-F1.7 foundation, F2.3 catalog creation, F2.5 local classification, F2.6 ReadingRound lifecycle/history, F2.7 Private Notes, F2.8 Ratings/Reviews, F2.9 Next Reading, F2.10 Library Identity/Context, F2.11 Catalog UI Read Models, F2.12 WordPress REST Adapter Foundation, Elementor Vertical Slice 1A and Vertical Slice 1B ReadingRound end; Vertical Slice 1A exit: GO; Vertical Slice 1B exit: GO",
   "files": [
     "AGENTS.md",
     "README.md",
@@ -28,6 +28,7 @@
     "docs/19-f2-12-exit-evidence.md",
     "docs/20-elementor-vertical-slice-1a-build-plan.md",
     "docs/21-elementor-vertical-slice-1a-exit-evidence.md",
+    "docs/22-elementor-vertical-slice-1b-exit-evidence.md",
     "docs/decisions/ADR-001-single-site-tenancy.md",
     "docs/decisions/ADR-002-modular-monolith.md",
     "docs/decisions/ADR-003-biblio-core-owns-domain-logic.md",
