@@ -15,11 +15,12 @@ final class RestApi
     /** @param Closure(): ?CoreApplication $applicationProvider */
     public function __construct(Closure $applicationProvider)
     {
-        $cursors = new CatalogCursorCodec();
+        $catalogCursors = new CatalogCursorCodec();
+        $historyCursors = new ReadingHistoryCursorCodec();
         $this->controller = new RestController(
             $applicationProvider,
-            new RestRequestParser($cursors),
-            new RestResponseSerializer($cursors),
+            new RestRequestParser($catalogCursors, $historyCursors),
+            new RestResponseSerializer($catalogCursors, $historyCursors),
             new RestErrorMapper()
         );
     }

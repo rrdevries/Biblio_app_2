@@ -1046,6 +1046,38 @@ table scan or unrelated User/Work scan occurred. All temporary rows and Works
 were rolled back with zero residue.
 
 Schema remains 1007. No migration, table, index, REST route, Itemdetail field,
-Biblio UI, Elementor, Crocoblock or Playwright fixture changed. The next slice
-may add the separately approved private REST adapter, but 1C.2 itself exposes
-only the Core application boundary.
+Biblio UI, Elementor, Crocoblock or Playwright fixture changed in 1C.2. That
+slice exposes only the Core application boundary; 1C.3 below adds the
+separately approved private REST adapter.
+
+### Vertical Slice 1C.3 — Reading History private REST read route
+
+Status: **Implemented — GO**
+
+The private `biblio/v1` surface now contains exactly six routes. The sixth is
+the read-only owner-scoped
+`GET /biblio/v1/me/works/{work_id}/reading-history` route. It uses the same
+cookie plus `X-WP-Nonce` convention and thin F2.12 adapter boundary as the
+existing routes, then delegates directly to
+`CoreApplication::readingHistory()`. Actor identity is never accepted from the
+request and Library ownership or management grants no access to another
+user's Reading history.
+
+The request accepts only typed `work_id`, optional `limit` (default 10,
+maximum 50) and an optional dedicated versioned URL-safe history cursor. The
+response keeps the existing `{ "data": ... }` envelope and contains only
+`items` plus `next_cursor`. Each item allowlists exactly outcome, nullable
+precision-aware start, required precision-aware finish, coarse source type and
+the historical-registration flag. ReadingRound/source identities, actor,
+Library, Work, version, raw provenance and technical timestamps remain absent.
+
+Unknown valid Works, no own history and foreign-only history are deliberately
+equivalent empty 200 pages. Malformed request values are 400, unauthenticated
+requests are 401, invalid cookie nonces use WordPress's standard 403, Core
+unavailability is 503 and unexpected failures remain safely generic. Cursor
+pages are re-scoped by current actor plus URL Work on every call. Itemdetail is
+unchanged and contains no embedded history.
+
+Schema remains 1007. No migration, lifecycle mutation, Biblio UI, Elementor,
+Crocoblock or E2E fixture is part of 1C.3. The route performs no writes or
+Library ActivityEvent/audit side effect.

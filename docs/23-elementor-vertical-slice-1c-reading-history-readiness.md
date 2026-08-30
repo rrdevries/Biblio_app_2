@@ -3,7 +3,7 @@
 Date: 2026-08-30
 Readiness verdict: **READY WITH CONDITIONS**
 
-Current implementation status: **1C.2 GO** — see §17
+Current implementation status: **1C.3 GO** — see §§17–18
 
 ## 1. Authority, baseline and analysis scope
 
@@ -200,7 +200,7 @@ Add one private read route:
 Query parameters:
 
 - `cursor`: optional versioned URL-safe continuation token;
-- `page_size`: optional integer, default 10, maximum 50.
+- `limit`: optional integer, default 10, maximum 50.
 
 The Item detail response remains byte-for-byte backwards-compatible. Biblio
 UI obtains its already validated `work_id` from current detail state, then
@@ -249,24 +249,26 @@ Recommended response:
 
 ```json
 {
-  "entries": [
-    {
-      "outcome": "completed",
-      "started_on": {
-        "year": 2025,
-        "month": 3,
-        "day": 12
-      },
-      "finished_on": {
-        "year": 2025,
-        "month": 3,
-        "day": 28
-      },
-      "source_type": "library_item",
-      "historical_registration": false
-    }
-  ],
-  "next_cursor": null
+  "data": {
+    "items": [
+      {
+        "outcome": "completed",
+        "started_on": {
+          "year": 2025,
+          "month": 3,
+          "day": 12
+        },
+        "finished_on": {
+          "year": 2025,
+          "month": 3,
+          "day": 28
+        },
+        "source_type": "library_item",
+        "historical_registration": false
+      }
+    ],
+    "next_cursor": null
+  }
 }
 ```
 
@@ -526,8 +528,8 @@ Implementation must not begin until these contract conditions are accepted:
 
 At the 1C.1 readiness point the verdict was **READY WITH CONDITIONS**. The
 binding product choices were subsequently approved for 1C.2 and the measured
-index condition is closed by §17. This does not mark 1C.3 REST or later UI/E2E
-slices as implemented.
+index condition is closed by §17. The subsequent REST contract is closed by
+§18; later UI/E2E slices remain unimplemented.
 
 ## 17. 1C.2 implementation evidence
 
@@ -561,5 +563,33 @@ unimplemented.
 - schema stays 1007: no migration, table or index change was made.
 
 No REST route, Itemdetail change, Biblio UI, Elementor, Crocoblock or E2E
-fixture is part of this implementation. Sections 1C.3 and later remain future
+fixture was part of the 1C.2 implementation.
+
+## 18. 1C.3 implementation evidence
+
+The separately approved thin REST adapter is now **GO**.
+
+- exactly one sixth private route was added:
+  `GET /biblio/v1/me/works/{work_id}/reading-history`;
+- the controller delegates only to the existing 1C.2 application service and
+  accepts no actor, Library role or capability override;
+- typed parsing accepts only `work_id`, optional `limit` (10 default, 50
+  maximum) and an optional dedicated versioned URL-safe cursor;
+- each cursor page is re-scoped through current actor plus URL Work in Core;
+- the existing envelope contains only `items` and `next_cursor`; entries emit
+  exactly the five approved fields and no identity, version, raw provenance or
+  technical timestamp;
+- exact/month/year precision, null legacy start, all three source types and the
+  historical-registration marker are preserved;
+- valid unknown, empty and foreign-only history are equivalent empty 200
+  pages, including a foreign source Library managed by the requesting actor;
+- malformed input is 400, unauthenticated/missing nonce is 401, invalid nonce
+  is WordPress 403 and Core unavailable is 503;
+- keyset roundtrip tests cover default/explicit/max bounds and tied finish
+  dates without duplicates or skips;
+- read-only regression evidence proves unchanged ReadingRound and Library
+  ActivityEvent counts; Itemdetail has no history field.
+
+Schema remains 1007. No ReadingRound lifecycle, Itemdetail, Biblio UI,
+Elementor, Crocoblock or E2E file changed. Sections 1C.4 and later remain future
 work.

@@ -8,6 +8,7 @@ use Biblio\Core\Exception\AuthorizationException;
 use Biblio\Core\Exception\ValidationException;
 use Biblio\Core\Infrastructure\WordPress\ProductionComposition;
 use Biblio\Core\Infrastructure\WordPress\Rest\CatalogCursorCodec;
+use Biblio\Core\Infrastructure\WordPress\Rest\ReadingHistoryCursorCodec;
 use Biblio\Core\Infrastructure\WordPress\Rest\RestApi;
 use Biblio\Core\Infrastructure\WordPress\Rest\RestErrorMapper;
 use Biblio\Core\Infrastructure\WordPress\Rest\RestController;
@@ -76,6 +77,7 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         $expected = [
             "/biblio/v1/me/libraries",
             "/biblio/v1/me/reading-rounds/(?P<reading_round_id>[^/]+)/end",
+            "/biblio/v1/me/works/(?P<work_id>[^/]+)/reading-history",
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/items",
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/items/(?P<item_id>[^/]+)",
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/items/"
@@ -91,7 +93,7 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             }
         }
 
-        self::assertCount(5, array_filter(
+        self::assertCount(6, array_filter(
             array_keys($routes),
             static fn (string $route): bool => str_starts_with(
                 $route,
@@ -112,6 +114,20 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         self::assertArrayHasKey("POST", $endMethods);
         self::assertArrayNotHasKey("GET", $endMethods);
 
+        $historyRoute = $routes[
+            "/biblio/v1/me/works/(?P<work_id>[^/]+)/reading-history"
+        ];
+        $historyMethods = [];
+
+        foreach ($historyRoute as $endpoint) {
+            if (isset($endpoint["callback"])) {
+                $historyMethods = $endpoint["methods"];
+            }
+        }
+
+        self::assertArrayHasKey("GET", $historyMethods);
+        self::assertArrayNotHasKey("POST", $historyMethods);
+
         $routeCount = count($this->server->get_routes());
         $this->api->registerRoutes();
         self::assertCount($routeCount, $this->server->get_routes());
@@ -128,10 +144,11 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         );
 
         $cursors = new CatalogCursorCodec();
+        $historyCursors = new ReadingHistoryCursorCodec();
         $unavailable = (new RestController(
             static fn () => null,
-            new RestRequestParser($cursors),
-            new RestResponseSerializer($cursors),
+            new RestRequestParser($cursors, $historyCursors),
+            new RestResponseSerializer($cursors, $historyCursors),
             new RestErrorMapper()
         ))->libraries($request);
         self::assertInstanceOf(WP_Error::class, $unavailable);
@@ -140,8 +157,8 @@ final class RestApiTest extends PersistenceIntegrationTestCase
 
         $endUnavailable = (new RestController(
             static fn () => null,
-            new RestRequestParser($cursors),
-            new RestResponseSerializer($cursors),
+            new RestRequestParser($cursors, $historyCursors),
+            new RestResponseSerializer($cursors, $historyCursors),
             new RestErrorMapper()
         ))->endReading($this->endRequest("round-unavailable", [
             "outcome" => "completed",
@@ -154,6 +171,19 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             $endUnavailable->get_error_code()
         );
         self::assertSame(503, $endUnavailable->get_error_data()["status"]);
+
+        $historyUnavailable = (new RestController(
+            static fn () => null,
+            new RestRequestParser($cursors, $historyCursors),
+            new RestResponseSerializer($cursors, $historyCursors),
+            new RestErrorMapper()
+        ))->readingHistory($this->historyRequest("work-unavailable"));
+        self::assertInstanceOf(WP_Error::class, $historyUnavailable);
+        self::assertSame(
+            "biblio_core_unavailable",
+            $historyUnavailable->get_error_code()
+        );
+        self::assertSame(503, $historyUnavailable->get_error_data()["status"]);
     }
 
     public function testAuthenticatedActorGetsOnlyServerResolvedLibraries(): void
@@ -310,6 +340,7 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         self::assertTrue($detail["capabilities"]["start_reading"]);
         self::assertArrayNotHasKey("created_at", $detail);
         self::assertArrayNotHasKey("active_round_user_ids", $detail["reading"]);
+        self::assertArrayNotHasKey("reading_history", $detail);
 
         $foreign = new WP_REST_Request(
             "GET",
@@ -322,6 +353,335 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         $this->assertEquivalentNotAvailable(
             $this->dispatchAsActor($foreign),
             $this->dispatchAsActor($missing)
+        );
+    }
+
+    public function testReadingHistoryRequiresCookieNonceAndReturnsEmptyWithoutOracle(): void
+    {
+        $request = $this->historyRequest("history-unknown-work");
+
+        $anonymous = $this->server->dispatch($request);
+        self::assertSame(401, $anonymous->get_status());
+        self::assertSame(
+            "biblio_authentication_required",
+            $anonymous->get_data()["code"]
+        );
+
+        $missingNonce = $this->dispatchAsActor($request, null);
+        self::assertSame(401, $missingNonce->get_status());
+        self::assertSame(
+            "biblio_authentication_required",
+            $missingNonce->get_data()["code"]
+        );
+
+        $invalidNonce = $this->dispatchAsActor($request, "invalid");
+        self::assertSame(403, $invalidNonce->get_status());
+        self::assertSame(
+            "rest_cookie_invalid_nonce",
+            $invalidNonce->get_data()["code"]
+        );
+
+        $unknown = $this->dispatchAsActor($request);
+        self::assertSame(200, $unknown->get_status());
+        self::assertSame(
+            ["items" => [], "next_cursor" => null],
+            $this->successData($unknown)
+        );
+    }
+
+    public function testReadingHistoryIsOwnerScopedAllowlistedAndPrecisionAware(): void
+    {
+        $this->seedLibrary(
+            "history-library",
+            "History",
+            $this->actorId,
+            "owner"
+        );
+        $this->seedItem(
+            "history-item",
+            "history-library",
+            "history-work",
+            "History Work"
+        );
+        $this->seedExternalLoan(
+            "history-loan",
+            $this->actorId,
+            "history-work"
+        );
+        $this->seedHistoryRound(
+            "history-round-item",
+            $this->actorId,
+            "history-work",
+            "completed",
+            "source_started",
+            [2026, 8, 1],
+            [2026, 8, 29],
+            itemId: "history-item"
+        );
+        $this->seedHistoryRound(
+            "history-round-loan",
+            $this->actorId,
+            "history-work",
+            "stopped",
+            "source_started",
+            [2026, 7, 1],
+            [2026, 7, null],
+            externalLoanId: "history-loan"
+        );
+        $this->seedHistoryRound(
+            "history-round-manual",
+            $this->actorId,
+            "history-work",
+            "completed",
+            "historical_manual",
+            [2025, null, null],
+            [2025, null, null]
+        );
+        $this->seedHistoryRound(
+            "history-round-legacy",
+            $this->actorId,
+            "history-work",
+            "stopped",
+            "legacy_source_started",
+            null,
+            [2024, 2, 3]
+        );
+        $this->seedHistoryRound(
+            "history-round-foreign-same-work",
+            $this->otherId,
+            "history-work",
+            "completed",
+            "historical_manual",
+            null,
+            [2026, 8, 30]
+        );
+
+        $this->seedLibrary(
+            "history-private-library",
+            "Foreign history",
+            $this->otherId,
+            "owner"
+        );
+        $this->database->insert($this->tableNames->memberships(), [
+            "library_id" => "history-private-library",
+            "user_id" => (string) $this->actorId,
+            "membership_status" => "active",
+            "management_role" => "manager",
+            "use_access" => "direct",
+            "additional_permissions" => "[]",
+        ]);
+        $this->seedItem(
+            "history-private-item",
+            "history-private-library",
+            "history-private-work",
+            "Foreign Work"
+        );
+        $this->seedHistoryRound(
+            "history-round-private",
+            $this->otherId,
+            "history-private-work",
+            "completed",
+            "source_started",
+            [2026, 1, 1],
+            [2026, 1, 2],
+            itemId: "history-private-item"
+        );
+
+        $roundCount = (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->readingRounds()}`"
+        );
+        $eventCount = (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->libraryActivityEvents()}`"
+        );
+        $response = $this->dispatchAsActor(
+            $this->historyRequest("history-work")
+        );
+        $data = $this->successData($response);
+
+        self::assertSame(200, $response->get_status());
+        self::assertSame(["items", "next_cursor"], array_keys($data));
+        self::assertNull($data["next_cursor"]);
+        self::assertCount(4, $data["items"]);
+        self::assertSame([
+            "outcome",
+            "started_on",
+            "finished_on",
+            "source_type",
+            "historical_registration",
+        ], array_keys($data["items"][0]));
+        self::assertSame([
+            "outcome" => "completed",
+            "started_on" => ["year" => 2026, "month" => 8, "day" => 1],
+            "finished_on" => ["year" => 2026, "month" => 8, "day" => 29],
+            "source_type" => "library_item",
+            "historical_registration" => false,
+        ], $data["items"][0]);
+        self::assertSame("external_loan", $data["items"][1]["source_type"]);
+        self::assertSame(
+            ["year" => 2026, "month" => 7, "day" => null],
+            $data["items"][1]["finished_on"]
+        );
+        self::assertSame(
+            ["year" => 2025, "month" => null, "day" => null],
+            $data["items"][2]["started_on"]
+        );
+        self::assertTrue($data["items"][2]["historical_registration"]);
+        self::assertNull($data["items"][3]["started_on"]);
+        self::assertSame("unknown", $data["items"][3]["source_type"]);
+
+        foreach ($data["items"] as $item) {
+            foreach ([
+                "user_id",
+                "library_id",
+                "work_id",
+                "item_id",
+                "edition_id",
+                "external_loan_id",
+                "reading_round_id",
+                "version",
+                "provenance",
+                "created_at",
+                "updated_at",
+                "ended_at",
+            ] as $forbidden) {
+                self::assertArrayNotHasKey($forbidden, $item);
+            }
+        }
+
+        self::assertSame(
+            ["items" => [], "next_cursor" => null],
+            $this->successData($this->dispatchAsActor(
+                $this->historyRequest("history-private-work")
+            ))
+        );
+        self::assertSame(
+            $roundCount,
+            (int) $this->database->get_var(
+                "SELECT COUNT(*) FROM `{$this->tableNames->readingRounds()}`"
+            )
+        );
+        self::assertSame(
+            $eventCount,
+            (int) $this->database->get_var(
+                "SELECT COUNT(*) FROM `{$this->tableNames->libraryActivityEvents()}`"
+            )
+        );
+    }
+
+    public function testReadingHistoryCursorRoundTripRescopesAndRejectsInvalidInput(): void
+    {
+        $this->seedWork("history-page-work", "Paged History");
+        $this->seedWork("history-empty-work", "Empty History");
+
+        for ($day = 1; $day <= 12; ++$day) {
+            $this->seedHistoryRound(
+                sprintf("history-page-%02d", $day),
+                $this->actorId,
+                "history-page-work",
+                $day % 2 === 0 ? "completed" : "stopped",
+                "historical_manual",
+                [2026, 1, $day],
+                [2026, 8, 29]
+            );
+        }
+        $this->seedHistoryRound(
+            "history-page-00-other-actor",
+            $this->otherId,
+            "history-page-work",
+            "completed",
+            "historical_manual",
+            [2025, 12, 31],
+            [2026, 8, 29]
+        );
+
+        $default = $this->successData($this->dispatchAsActor(
+            $this->historyRequest("history-page-work")
+        ));
+        self::assertCount(10, $default["items"]);
+        self::assertNotNull($default["next_cursor"]);
+
+        $maximum = $this->successData($this->dispatchAsActor(
+            $this->historyRequest("history-page-work", ["limit" => 50])
+        ));
+        self::assertCount(12, $maximum["items"]);
+        self::assertNull($maximum["next_cursor"]);
+
+        $exact = $this->successData($this->dispatchAsActor(
+            $this->historyRequest("history-page-work", ["limit" => 12])
+        ));
+        self::assertCount(12, $exact["items"]);
+        self::assertNull($exact["next_cursor"]);
+
+        $seenDays = [];
+        $cursor = null;
+
+        do {
+            $request = $this->historyRequest("history-page-work", [
+                "limit" => "5",
+                ...($cursor === null ? [] : ["cursor" => $cursor]),
+            ]);
+            $page = $this->successData($this->dispatchAsActor($request));
+            $seenDays = [
+                ...$seenDays,
+                ...array_map(
+                    static fn (array $item): int =>
+                        $item["started_on"]["day"],
+                    $page["items"]
+                ),
+            ];
+            $cursor = $page["next_cursor"];
+        } while ($cursor !== null);
+
+        self::assertSame(range(12, 1), $seenDays);
+        self::assertCount(12, array_unique($seenDays));
+
+        $first = $this->successData($this->dispatchAsActor(
+            $this->historyRequest("history-page-work", ["limit" => 5])
+        ));
+        self::assertIsString($first["next_cursor"]);
+        self::assertStringNotContainsString(
+            "history-page-",
+            $first["next_cursor"]
+        );
+        self::assertSame(
+            ["items" => [], "next_cursor" => null],
+            $this->successData($this->dispatchAsActor($this->historyRequest(
+                "history-empty-work",
+                ["limit" => 5, "cursor" => $first["next_cursor"]]
+            )))
+        );
+        $otherActorPage = $this->successData($this->dispatchAsUser(
+            $this->historyRequest("history-page-work", [
+                "limit" => 5,
+                "cursor" => $first["next_cursor"],
+            ]),
+            $this->otherId
+        ));
+        self::assertCount(1, $otherActorPage["items"]);
+        self::assertSame(31, $otherActorPage["items"][0]["started_on"]["day"]);
+
+        foreach ([
+            ["limit" => "0"],
+            ["limit" => "51"],
+            ["limit" => "1.5"],
+            ["limit" => []],
+            ["cursor" => "***"],
+            ["cursor" => rtrim(strtr(base64_encode('{"v":2}'), "+/", "-_"), "=")],
+            ["user_id" => (string) $this->otherId],
+        ] as $query) {
+            $invalid = $this->dispatchAsActor(
+                $this->historyRequest("history-page-work", $query)
+            );
+            self::assertSame(400, $invalid->get_status());
+        }
+
+        $malformedWork = $this->dispatchAsActor(
+            $this->historyRequest(str_repeat("w", 192))
+        );
+        self::assertSame(400, $malformedWork->get_status());
+        self::assertSame(
+            "biblio_invalid_field_syntax",
+            $malformedWork->get_data()["code"]
         );
     }
 
@@ -970,7 +1330,15 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         WP_REST_Request $request,
         ?string $nonce = "valid"
     ): WP_REST_Response {
-        wp_set_current_user($this->actorId);
+        return $this->dispatchAsUser($request, $this->actorId, $nonce);
+    }
+
+    private function dispatchAsUser(
+        WP_REST_Request $request,
+        int $userId,
+        ?string $nonce = "valid"
+    ): WP_REST_Response {
+        wp_set_current_user($userId);
 
         global $wp_rest_auth_cookie;
         $wp_rest_auth_cookie = true;
@@ -989,6 +1357,20 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         }
 
         return $this->server->dispatch($request);
+    }
+
+    /** @param array<string, mixed> $query */
+    private function historyRequest(
+        string $workId,
+        array $query = []
+    ): WP_REST_Request {
+        $request = new WP_REST_Request(
+            "GET",
+            "/biblio/v1/me/works/{$workId}/reading-history"
+        );
+        $request->set_query_params($query);
+
+        return $request;
     }
 
     /** @param array<string, mixed> $body */
@@ -1147,6 +1529,62 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             "edition_id" => "edition-{$itemId}",
             "item_status" => "active",
         ]);
+    }
+
+    private function seedWork(string $workId, string $title): void
+    {
+        if ((int) $this->database->get_var($this->database->prepare(
+            "SELECT COUNT(*) FROM `{$this->tableNames->works()}` WHERE work_id = %s",
+            $workId
+        )) === 0) {
+            $this->database->insert($this->tableNames->works(), [
+                "work_id" => $workId,
+                "work_title" => $title,
+            ]);
+        }
+    }
+
+    /**
+     * @param null|array{int, null|int, null|int} $startedOn
+     * @param array{int, null|int, null|int} $finishedOn
+     */
+    private function seedHistoryRound(
+        string $roundId,
+        int $userId,
+        string $workId,
+        string $outcome,
+        string $provenance,
+        ?array $startedOn,
+        array $finishedOn,
+        ?string $itemId = null,
+        ?string $externalLoanId = null
+    ): void {
+        $this->seedWork($workId, $workId);
+        self::assertSame(1, $this->database->insert(
+            $this->tableNames->readingRounds(),
+            [
+                "reading_round_id" => $roundId,
+                "user_id" => (string) $userId,
+                "work_id" => $workId,
+                "item_id" => $itemId,
+                "external_loan_id" => $externalLoanId,
+                "started_at" => $provenance === "legacy_source_started"
+                    ? "2024-01-01 10:00:00.000000"
+                    : null,
+                "round_outcome" => $outcome,
+                "provenance" => $provenance,
+                "reading_started_year" => $startedOn[0] ?? null,
+                "reading_started_month" => $startedOn[1] ?? null,
+                "reading_started_day" => $startedOn[2] ?? null,
+                "reading_finished_year" => $finishedOn[0],
+                "reading_finished_month" => $finishedOn[1],
+                "reading_finished_day" => $finishedOn[2],
+                "created_at" => "2026-08-01 10:00:00.000000",
+                "updated_at" => "2026-08-29 10:00:00.000000",
+                "ended_at" => "2026-08-29 10:00:00.000000",
+                "round_version" => 1,
+            ]
+        ), $this->database->last_error);
     }
 
     private function seedRound(

@@ -80,6 +80,15 @@ final class RestController
                 "permission_callback" => [$this, "authenticated"],
             ]
         );
+        register_rest_route(
+            self::NAMESPACE,
+            "/me/works/(?P<work_id>[^/]+)/reading-history",
+            [
+                "methods" => WP_REST_Server::READABLE,
+                "callback" => [$this, "readingHistory"],
+                "permission_callback" => [$this, "authenticated"],
+            ]
+        );
 
         $this->routesRegistered = true;
     }
@@ -171,6 +180,25 @@ final class RestController
 
             return $this->success(
                 $this->responses->endedReadingRound($round)
+            );
+        });
+    }
+
+    public function readingHistory(
+        WP_REST_Request $request
+    ): WP_REST_Response|WP_Error {
+        return $this->execute(function (
+            CoreApplication $application
+        ) use ($request): WP_REST_Response {
+            $this->requests->validateReadingHistoryQuery($request);
+            $history = $application->readingHistory()->forWork(
+                $this->requests->workId($request),
+                $this->requests->readingHistoryCursor($request),
+                $this->requests->readingHistoryLimit($request)
+            );
+
+            return $this->success(
+                $this->responses->readingHistory($history)
             );
         });
     }

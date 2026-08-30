@@ -6,7 +6,10 @@ namespace Biblio\Core\Infrastructure\WordPress\Rest;
 
 use Biblio\Core\Application\Catalog\Read\CatalogOverviewCursor;
 use Biblio\Core\Application\Catalog\Read\CatalogOverviewPageSize;
+use Biblio\Core\Application\Reading\History\ReadingHistoryCursor;
+use Biblio\Core\Application\Reading\History\ReadingHistoryPageSize;
 use Biblio\Core\Catalog\ItemId;
+use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Reading\ReadingDate;
 use Biblio\Core\Reading\ReadingRoundId;
@@ -17,8 +20,10 @@ use WP_REST_Request;
 
 final readonly class RestRequestParser
 {
-    public function __construct(private CatalogCursorCodec $cursors)
-    {
+    public function __construct(
+        private CatalogCursorCodec $cursors,
+        private ReadingHistoryCursorCodec $historyCursors
+    ) {
     }
 
     public function libraryId(WP_REST_Request $request): LibraryId
@@ -36,6 +41,15 @@ final readonly class RestRequestParser
             $request->get_url_params()["item_id"] ?? null,
             "item_id",
             static fn (string $value): ItemId => new ItemId($value)
+        );
+    }
+
+    public function workId(WP_REST_Request $request): WorkId
+    {
+        return $this->identifier(
+            $request->get_url_params()["work_id"] ?? null,
+            "work_id",
+            static fn (string $value): WorkId => new WorkId($value)
         );
     }
 
@@ -72,6 +86,56 @@ final readonly class RestRequestParser
             return new CatalogOverviewPageSize((int) $value);
         } catch (Throwable) {
             throw RestRequestException::invalid("page_size");
+        }
+    }
+
+    public function readingHistoryCursor(
+        WP_REST_Request $request
+    ): ?ReadingHistoryCursor {
+        $value = $request->get_query_params()["cursor"] ?? null;
+
+        if ($value === null) {
+            return null;
+        }
+
+        if (!is_string($value)) {
+            throw RestRequestException::wrongType("cursor", "a string");
+        }
+
+        return $this->historyCursors->decode($value);
+    }
+
+    public function validateReadingHistoryQuery(WP_REST_Request $request): void
+    {
+        if (
+            array_diff(
+                array_keys($request->get_query_params()),
+                ["limit", "cursor"]
+            ) !== []
+        ) {
+            throw RestRequestException::unknownFields();
+        }
+    }
+
+    public function readingHistoryLimit(
+        WP_REST_Request $request
+    ): ReadingHistoryPageSize {
+        $value = $request->get_query_params()["limit"] ?? null;
+
+        if ($value === null) {
+            return new ReadingHistoryPageSize();
+        }
+
+        if (
+            !(is_int($value) || (is_string($value) && preg_match('/^[0-9]+$/D', $value) === 1))
+        ) {
+            throw RestRequestException::wrongType("limit", "an integer");
+        }
+
+        try {
+            return new ReadingHistoryPageSize((int) $value);
+        } catch (Throwable) {
+            throw RestRequestException::invalid("limit");
         }
     }
 

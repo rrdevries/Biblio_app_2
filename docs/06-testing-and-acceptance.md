@@ -996,3 +996,43 @@ No-go:
 - a schema/index change without a separate measured migration decision;
 - REST, Itemdetail, Biblio UI, Elementor, Crocoblock or E2E expansion inside
   this Core-only slice.
+
+## 42. Vertical Slice 1C.3 Reading History REST evidence
+
+Status: **GO**
+
+Acceptance evidence:
+
+- exactly six `biblio/v1` routes register once; Reading history is GET-only and
+  has an explicit coarse authenticated permission callback;
+- cookie authentication plus valid, absent and invalid `X-WP-Nonce` behavior
+  follows the existing private GET convention: 200, 401 and WordPress 403;
+- the controller calls only the named Core Reading-history service; no REST
+  repository/table access or Library authorization rule was added;
+- request parsing accepts only `work_id`, optional `limit` and optional cursor;
+  invalid IDs, zero/over-maximum/non-integer limits, malformed/version-invalid
+  cursors and owner-spoofing query fields are rejected with safe 400 errors;
+- default 10, explicit pagination, maximum 50 and keyset cursor roundtrips are
+  covered, including identical finish-date ties with no duplicate or skipped
+  entries;
+- every page is re-scoped to the authenticated actor and URL Work; unknown,
+  empty and foreign-only history yield the same empty 200 page, including when
+  the actor is a manager of the foreign source Library;
+- the response envelope allowlists only `items` and `next_cursor`; every item
+  has exactly outcome, nullable start, finish, coarse source type and historical
+  registration, with exact/month/year/null precision preserved;
+- negative assertions exclude user, Library, Work, Item, Edition, ExternalLoan
+  and ReadingRound IDs, version, raw provenance and technical timestamps;
+- Core unavailable maps to 503 and the existing mapper retains generic 500
+  privacy for unexpected failures;
+- ReadingRound row counts and Library ActivityEvent counts are unchanged by
+  reads; Itemdetail's exact field contract still has no history field;
+- Schema 1007, ReadingRound lifecycle, Biblio UI, Elementor, Crocoblock and E2E
+  fixtures remain unchanged.
+
+No-go:
+
+- accepting an actor, Library role or capability as history authority;
+- returning a history-specific 404 or any private identity/raw provenance;
+- offset or unbounded pagination, cursor scope transfer or write side effects;
+- embedding history into Itemdetail or expanding into UI/E2E in this slice.
