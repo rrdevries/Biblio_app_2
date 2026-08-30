@@ -1,7 +1,9 @@
 # Elementor Vertical Slice 1C — Reading History Readiness
 
 Date: 2026-08-30
-Verdict: **READY WITH CONDITIONS**
+Readiness verdict: **READY WITH CONDITIONS**
+
+Current implementation status: **1C.2 GO** — see §17
 
 ## 1. Authority, baseline and analysis scope
 
@@ -522,9 +524,42 @@ Implementation must not begin until these contract conditions are accepted:
 3. in 1C.2, prove the exact mixed-outcome keyset query against the existing
    index; if it is not actor+Work bounded, stop and decide a formal migration.
 
-**READY WITH CONDITIONS.** The domain, ownership, precision and UI boundaries
-are mature enough for a small implementation. There is no discovered product
-defect, security blocker or currently proven schema requirement. The remaining
-block is an explicit product/transport choice that this analysis recommends
-but must not silently make on the user's behalf, plus a measured index gate
-before downstream REST/UI work.
+At the 1C.1 readiness point the verdict was **READY WITH CONDITIONS**. The
+binding product choices were subsequently approved for 1C.2 and the measured
+index condition is closed by §17. This does not mark 1C.3 REST or later UI/E2E
+slices as implemented.
+
+## 17. 1C.2 implementation evidence
+
+The binding 1C contracts in this document were approved for the Core-only
+1C.2 build. 1C.2 is now **GO** while the overall downstream REST/UI plan remains
+unimplemented.
+
+- `GetMyReadingHistoryForWorkService` resolves the actor and delegates to a
+  dedicated `ReadingHistoryReadRepository`;
+- immutable entry/page/page-size/cursor/source-type contracts contain only the
+  future allowlisted projection values;
+- `WpdbReadingHistoryReadRepository` executes one actor+Work+ended projection
+  query with the §4 order, keyset predicate and limit + 1;
+- default page size is 10 and maximum is 50;
+- legacy starts remain null, partial finish/start precision is unchanged and
+  the internal ID exists only inside the continuation cursor;
+- the §12 candidate index was tested with 50,000 temporary rows, including 600
+  mixed-outcome/mixed-precision target rows, 10,000 same-actor other-Work rows,
+  10,000 other-actor same-Work rows and 29,400 unrelated rows;
+- first and cursor page both selected
+  `reading_rounds_by_user_work_finish`, access type `range`, estimated/actual
+  rows 600, `Using index condition; Using filesort`; MariaDB's measured total
+  query time was approximately 0.79 ms for each local run and the limit sort
+  used a priority queue;
+- the filesort is accepted because it is structurally confined to exact
+  actor+Work+ended rows; no table scan or unrelated owner/Work scan occurs;
+- both 50,000-row runs were transactionally rolled back and residue checks
+  returned zero ReadingRounds and zero Works;
+- an automated 2,075-row integration case plus pagination tests prove one
+  query per page, owner/Work boundedness and no duplicates or skips;
+- schema stays 1007: no migration, table or index change was made.
+
+No REST route, Itemdetail change, Biblio UI, Elementor, Crocoblock or E2E
+fixture is part of this implementation. Sections 1C.3 and later remain future
+work.

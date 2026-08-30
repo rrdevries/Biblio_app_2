@@ -949,3 +949,50 @@ syntax, Composer, schema/migrations, WordPress/REST smoke, manifest, diff,
 fixture refusal/cleanup/residue/fingerprint and the clean canonical Elementor
 1A import are green. All 67 criteria are proven; see
 `docs/22-elementor-vertical-slice-1b-exit-evidence.md`.
+
+## 41. Vertical Slice 1C.2 Reading History Core read model evidence
+
+Acceptance:
+
+- the current actor is resolved server-side and every page is scoped by exact
+  actor + Work; caller owner override and Library Context are absent;
+- completed and stopped rounds share one newest-first stream, while active
+  rounds, another actor and another Work are excluded;
+- same-Work rounds through another Item, another Edition, an ExternalLoan,
+  `historical_manual` and `legacy_source_started` are included without joining
+  source metadata;
+- the entry exposes only outcome, nullable precision-aware start, required
+  precision-aware finish, coarse source type and historical-registration flag;
+  it exposes no technical or resource identity;
+- exact, month and year precision roundtrip without invented parts; a legacy
+  UTC start projects as null;
+- finish earliest DESC, finish latest DESC and internal ReadingRound ID DESC
+  form a deterministic non-semantic order;
+- page size defaults to 10, has maximum 50, fetches limit + 1 and emits a
+  validated continuation cursor; zero, below-limit, exact-limit, over-limit,
+  multi-page and tied-boundary cases have no skips or duplicates;
+- one service page performs exactly one projection query and no N+1, Work,
+  Item, Edition, Library or ExternalLoan lookup;
+- a 2,075-row integration fixture proves that large same-actor/other-Work,
+  other-actor/same-Work and unrelated populations do not alter the 75-row
+  actor+Work result;
+- a separate 50,000-row local MariaDB proof selected
+  `reading_rounds_by_user_work_finish` with `range` access for first and cursor
+  pages, estimated and read exactly the 600 target rows and left zero residue;
+- the precision-aware filesort is confined to the actor+Work partition and
+  uses the limit priority queue, so no new index or schema migration is needed;
+- reads write no Library ActivityEvent or private audit record;
+- the production `CoreApplication` exposes the named service, not its
+  repository or wpdb adapter;
+- ReadingRound, Catalog UI readmodel and the canonical full Core quality gates
+  remain required regressions.
+
+No-go:
+
+- unbounded aggregate hydration, offset pagination or a per-entry query;
+- Library role access to another user's history;
+- technical timestamps or filled unknown date parts as reading dates;
+- public ReadingRound/source identities or raw provenance in an entry;
+- a schema/index change without a separate measured migration decision;
+- REST, Itemdetail, Biblio UI, Elementor, Crocoblock or E2E expansion inside
+  this Core-only slice.

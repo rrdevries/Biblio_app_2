@@ -1008,3 +1008,44 @@ and repository gates are green; fixture residue is zero and the non-E2E
 fingerprint is unchanged. No product code, schema, Elementor or Crocoblock
 change was required for closure. The authoritative final verification record
 is `docs/22-elementor-vertical-slice-1b-exit-evidence.md`.
+
+### Vertical Slice 1C.2 — Reading History Core read model
+
+Status: **Implemented — GO**
+
+Core now exposes one named `GetMyReadingHistoryForWorkService` for the
+authenticated user's personal, Work-wide Reading history. It returns only
+ended `completed` and `stopped` ReadingRounds; active rounds stay outside this
+history. The service accepts no owner override or Library Context, resolves the
+actor server-side and delegates to a dedicated `ReadingHistoryReadRepository`.
+Library ownership or management therefore never grants access to another
+user's ReadingRounds.
+
+The immutable read contract contains outcome, nullable precision-aware start,
+required precision-aware finish, coarse current source type and the
+`historical_manual` registration marker. It contains no User, Library, Work,
+Item, Edition, ExternalLoan or ReadingRound identity, version, technical time
+or raw provenance. A legacy UTC start is never converted to a local
+`ReadingDate` and projects as `null`.
+
+`WpdbReadingHistoryReadRepository` performs exactly one projection query per
+page without aggregate hydration, joins or per-entry reads. It scopes every
+page by exact actor + Work + ended outcome, orders by finish earliest DESC,
+finish latest DESC and internal ReadingRound ID DESC, and uses a typed opaque-
+transport-ready cursor with `LIMIT page_size + 1`. Page size defaults to 10
+and is bounded at 50.
+
+The unchanged existing index
+`reading_rounds_by_user_work_finish(user_id, work_id, round_outcome,
+reading_finished_year, reading_finished_month, reading_finished_day,
+reading_round_id)` was proven against 50,000 temporary local rows. Both first
+and cursor pages used `range` access on that index and read only the 600-row
+actor+Work partition. The precision expressions require a filesort, but it is
+bounded inside that partition and used a priority queue for `LIMIT 11`; no
+table scan or unrelated User/Work scan occurred. All temporary rows and Works
+were rolled back with zero residue.
+
+Schema remains 1007. No migration, table, index, REST route, Itemdetail field,
+Biblio UI, Elementor, Crocoblock or Playwright fixture changed. The next slice
+may add the separately approved private REST adapter, but 1C.2 itself exposes
+only the Core application boundary.

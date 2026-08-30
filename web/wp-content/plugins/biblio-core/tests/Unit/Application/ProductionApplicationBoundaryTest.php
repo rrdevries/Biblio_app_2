@@ -27,6 +27,7 @@ use Biblio\Core\Application\Reading\GetOwnedReadingRoundService;
 use Biblio\Core\Application\Reading\CreateActiveReadingRoundService;
 use Biblio\Core\Application\Reading\StartReadingFromExternalLoanService;
 use Biblio\Core\Application\Reading\StartReadingFromLibraryItemService;
+use Biblio\Core\Application\Reading\History\GetMyReadingHistoryForWorkService;
 use Biblio\Core\Library\LibraryContext;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Catalog\WorkId;
@@ -55,6 +56,7 @@ final class ProductionApplicationBoundaryTest extends TestCase
             [GetOwnedReadingRoundService::class, "get"],
             [StartReadingFromLibraryItemService::class, "start"],
             [StartReadingFromExternalLoanService::class, "start"],
+            [GetMyReadingHistoryForWorkService::class, "forWork"],
             [CreatePrivateNoteService::class, "createForWork"],
             [CreatePrivateNoteService::class, "createForReadingRound"],
             [UpdatePrivateNoteContentService::class, "update"],
@@ -155,6 +157,7 @@ final class ProductionApplicationBoundaryTest extends TestCase
             "ratingForWorkCreation",
             "ratingPublication",
             "ratingValueUpdate",
+            "readingHistory",
             "readingRoundSourceCorrection",
             "readingSequence",
             "reviewContentUpdate",
