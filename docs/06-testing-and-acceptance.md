@@ -941,6 +941,11 @@ login, browser and runner architecture. Technical coverage now includes:
 - exact allowlisted cleanup twice, zero formal fixture residue and an unchanged
   before/after fingerprint of all Core-table rows and non-E2E users.
 
-This is technical status and acceptance coverage only; it does not create a
-new exit-evidence record or change the Core, REST, Item-detail, Elementor,
-Crocoblock or schema contracts.
+The formal 2026-08-30 exit rerun is **GO**: 230 Core unit tests with 882
+assertions, 209 Core integration tests with 1693 assertions, 112 frontend
+tests and 13 Playwright cases (5 existing 1A, 8 new 1B) all pass. The targeted
+ReadingRound end plus REST run passes 33 tests with 353 assertions. PHPStan,
+syntax, Composer, schema/migrations, WordPress/REST smoke, manifest, diff,
+fixture refusal/cleanup/residue/fingerprint and the clean canonical Elementor
+1A import are green. All 67 criteria are proven; see
+`docs/22-elementor-vertical-slice-1b-exit-evidence.md`.

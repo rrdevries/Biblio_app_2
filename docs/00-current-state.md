@@ -948,7 +948,7 @@ The complete final verification record is maintained in
 
 ### Vertical Slice 1B — ReadingRound detail and end support
 
-Status: **Core/REST, frontend runtime, visible end dialog and local browser E2E implemented**
+Status: **Implemented — GO**
 
 The private `biblio/v1` surface now contains five routes. The additional
 owner-scoped mutation is:
@@ -1001,3 +1001,10 @@ the stale competing action through the owner-scoped Core service, exposes
 read-only state evidence and verifies exact cleanup twice plus an unchanged
 non-E2E Core/user fingerprint. Responsive and native-dialog keyboard evidence
 covers 390x844, 900x900 and 1280x900.
+
+The formal exit audit classifies all 67 acceptance criteria as proven. Fresh
+Core, UI, REST/end-contract, Playwright, fixture safety, clean Elementor import
+and repository gates are green; fixture residue is zero and the non-E2E
+fingerprint is unchanged. No product code, schema, Elementor or Crocoblock
+change was required for closure. The authoritative final verification record
+is `docs/22-elementor-vertical-slice-1b-exit-evidence.md`.
