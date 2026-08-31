@@ -1228,3 +1228,30 @@ schema, migration, Elementor or Crocoblock change was required for 1C.7.
 
 The authoritative final record is
 `docs/24-elementor-vertical-slice-1c-exit-evidence.md`.
+
+### Vertical Slice 1D.1 — Private Notes readiness and contract
+
+Status: **Analysis complete — READY WITH CONDITIONS**
+
+The F2.7 contract is reconstructed and remains binding: Private Notes are
+server-authorized, user-owned, always private, Work-wide aggregates with
+optional ReadingRound context, strict safe HTML, conditional hard delete and
+optimistic concurrency. Library Context and Library/platform roles grant no
+access; Note mutations create no Library ActivityEvent or Timeline entry.
+
+F2.7 explicitly permits multiple Notes per User + Work and per ReadingRound.
+Vertical Slice 1D must therefore expose a Work-wide collection of separately
+identified Notes; a singular `/me/works/{work_id}/note` upsert or one-Note UI
+would conflict with the closed product contract. Schema 1004 persistence is
+ready and the current schema remains 1007. No schema or domain delta is needed.
+
+The normal remaining work is an adapter-facing render-validated Note page,
+thin owner-scoped REST collection/member routes, exact error/cursor mappings
+and Biblio UI list/editor/dialog/reconciliation state. Before implementation,
+the recommended multi-Note presentation, hierarchy/zero state, dirty-state UX
+and delete response/copy require explicit approval. The exact readiness,
+security, REST, UI, E2E and 1D.2–1D.7 contracts are recorded in
+`docs/25-elementor-vertical-slice-1d-private-notes-readiness.md`.
+
+1D.1 changes documentation only. It adds no product code, Core/REST/UI,
+Elementor/Crocoblock, E2E/Playwright, schema, migration or functionality.
