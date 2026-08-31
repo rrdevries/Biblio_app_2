@@ -183,6 +183,11 @@
 [data-biblio-ui-root] .biblio-ui__metadata dt { font-weight: 600; }
 [data-biblio-ui-root] :where(.biblio-ui__start-reading, .biblio-ui__end-reading) { justify-self: start; }
 
+[data-biblio-ui-root] .biblio-ui__history-region {
+    max-inline-size: 100%;
+    min-inline-size: 0;
+}
+
 [data-biblio-ui-root] .biblio-ui__history-region:empty { display: none; }
 
 [data-biblio-ui-root] .biblio-ui__history-loading {
@@ -193,22 +198,31 @@
 [data-biblio-ui-root] .biblio-ui__history-list {
     display: grid;
     gap: var(--biblio-space-3);
-    list-style: none;
-    padding: 0;
+    margin: 0;
+    padding-inline-start: var(--biblio-space-6);
 }
 
 [data-biblio-ui-root] .biblio-ui__history-entry {
     background: var(--biblio-color-surface-muted);
     border: var(--biblio-boundary-width) solid var(--biblio-color-boundary);
     border-radius: var(--biblio-card-radius);
-    display: grid;
-    gap: var(--biblio-space-1);
+    display: list-item;
     min-inline-size: 0;
     overflow-wrap: anywhere;
     padding: var(--biblio-space-4);
 }
 
 [data-biblio-ui-root] .biblio-ui__history-outcome { font-weight: 600; }
+[data-biblio-ui-root] .biblio-ui__history-entry > * + * { margin-block-start: var(--biblio-space-1); }
+[data-biblio-ui-root] :where(.biblio-ui__history-period, .biblio-ui__history-entry .biblio-ui__context) {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+}
+
+[data-biblio-ui-root] :where(.biblio-ui__history-load-more, .biblio-ui__history-error .biblio-ui__control) {
+    min-inline-size: var(--biblio-control-min);
+}
+
 [data-biblio-ui-root] .biblio-ui__history-error { margin-block: 0; }
 
 .biblio-ui__reading-dialog {
@@ -277,6 +291,7 @@
 
     [data-biblio-ui-root] .biblio-ui__load-more,
     [data-biblio-ui-root] .biblio-ui__history-load-more,
+    [data-biblio-ui-root] .biblio-ui__history-error .biblio-ui__control,
     [data-biblio-ui-root] :where(.biblio-ui__start-reading, .biblio-ui__end-reading) {
         inline-size: 100%;
         justify-self: stretch;
