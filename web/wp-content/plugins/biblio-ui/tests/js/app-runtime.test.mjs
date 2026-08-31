@@ -13,6 +13,7 @@ for (const [moduleId, file] of [
     ["biblio-ui/end-reading-view", "end-reading-view.js"],
     ["biblio-ui/library-state", "library-state.js"],
     ["biblio-ui/overview-view", "overview-view.js"],
+    ["biblio-ui/reading-history", "reading-history.js"],
     ["biblio-ui/route-state", "route-state.js"],
     ["biblio-ui/start-reading-view", "start-reading-view.js"],
 ]) {
@@ -222,6 +223,32 @@ function endedRound(
     };
 }
 
+function historyEntry(overrides = {}) {
+    return {
+        outcome: "completed",
+        started_on: { year: 2025, month: 3, day: 12 },
+        finished_on: { year: 2025, month: 3, day: 28 },
+        source_type: "library_item",
+        historical_registration: false,
+        ...overrides,
+    };
+}
+
+function historyPage(items = [], nextCursor = null) {
+    return { items, next_cursor: nextCursor };
+}
+
+function deferred() {
+    let resolve;
+    let reject;
+    const promise = new Promise((resolvePromise, rejectPromise) => {
+        resolve = resolvePromise;
+        reject = rejectPromise;
+    });
+
+    return { promise, resolve, reject };
+}
+
 function apiError(status, code) {
     return new BiblioApiError({
         kind: "http",
@@ -247,6 +274,10 @@ function recorder() {
             };
         },
     };
+}
+
+function historyRecorder() {
+    return recorder();
 }
 
 function startReadingRecorder() {
@@ -279,18 +310,27 @@ function endReadingRecorder() {
 function createApp({
     url,
     get,
+    historyGet = async () => ({ items: [], next_cursor: null }),
     post = async () => {
         throw new Error("Unexpected POST request.");
     },
     renders,
     detailRenders = recorder(),
     endReadingRenders = endReadingRecorder(),
+    historyRenders = historyRecorder(),
     startReadingRenders = startReadingRecorder(),
 }) {
     const browser = browserDouble(url);
     const app = createLibraryApp(mount(), {
         apiFactory() {
-            return { get, post };
+            return {
+                get(path, options) {
+                    return path.includes("/reading-history?")
+                        ? historyGet(path, options)
+                        : get(path, options);
+                },
+                post,
+            };
         },
         historyImpl: browser.history,
         locationImpl: browser.location,
@@ -298,6 +338,7 @@ function createApp({
         viewFactory: renders.factory,
         detailViewFactory: detailRenders.factory,
         endReadingViewFactory: endReadingRenders.factory,
+        readingHistoryViewFactory: historyRenders.factory,
         startReadingViewFactory: startReadingRenders.factory,
     });
 
@@ -306,6 +347,7 @@ function createApp({
         browser,
         detailRenders,
         endReadingRenders,
+        historyRenders,
         startReadingRenders,
         submitEndReading(intent) {
             detailRenders.renders.at(-1).actions.endReading({ focus() {} });
@@ -1913,4 +1955,462 @@ test("an aborted view request is control flow and never renders an error", async
         renders.renders.some(({ model }) => model.state === "request-error"),
         false
     );
+});
+
+test("Item detail renders before its independent history request resolves", async () => {
+    const selected = library("library-history");
+    const renders = recorder();
+    const historyRenders = historyRecorder();
+    const pendingHistory = deferred();
+    const { app, detailRenders } = createApp({
+        url: "https://example.test/mijn-bibliotheek/"
+            + "?library_id=library-history&item_id=item-history",
+        renders,
+        historyRenders,
+        async get(path) {
+            return path === "me/libraries"
+                ? { libraries: [selected] }
+                : detail(selected, "item-history");
+        },
+        historyGet(path) {
+            assert.equal(
+                path,
+                "me/works/work-item-history/reading-history?limit=10"
+            );
+            return pendingHistory.promise;
+        },
+    });
+
+    const start = app.start();
+    await waitFor(() => historyRenders.renders.length >= 1);
+
+    assert.equal(detailRenders.renders.at(-1).model.state, "detail");
+    assert.equal(
+        detailRenders.renders.at(-1).model.detail.item_id,
+        "item-history"
+    );
+    assert.equal(
+        historyRenders.renders.at(-1).model.state,
+        "loading"
+    );
+
+    pendingHistory.resolve(historyPage([historyEntry()]));
+    await start;
+
+    assert.equal(historyRenders.renders.at(-1).model.state, "ready");
+    assert.equal(historyRenders.renders.at(-1).model.items.length, 1);
+});
+
+test("history pagination uses one opaque cursor request and retries that cursor", async () => {
+    const selected = library("library-pages");
+    const renders = recorder();
+    const historyRenders = historyRecorder();
+    const pendingPage = deferred();
+    const paths = [];
+    let pageCall = 0;
+    const { app } = createApp({
+        url: "https://example.test/mijn-bibliotheek/"
+            + "?library_id=library-pages&item_id=item-pages",
+        renders,
+        historyRenders,
+        async get(path) {
+            return path === "me/libraries"
+                ? { libraries: [selected] }
+                : detail(selected, "item-pages");
+        },
+        historyGet(path) {
+            paths.push(path);
+            pageCall += 1;
+
+            if (pageCall === 1) {
+                return historyPage([historyEntry()], "opaque/next");
+            }
+
+            if (pageCall === 2) {
+                return pendingPage.promise;
+            }
+
+            if (pageCall === 3) {
+                throw apiError(503, "biblio_core_unavailable");
+            }
+
+            return historyPage([historyEntry({ outcome: "stopped" })]);
+        },
+    });
+
+    await app.start();
+    const firstLoad = historyRenders.renders.at(-1).actions.loadMore();
+    const duplicate = historyRenders.renders.at(-1).actions.loadMore();
+    assert.equal(await duplicate, false);
+    assert.equal(paths.length, 2);
+
+    pendingPage.resolve(historyPage([
+        historyEntry({ finished_on: { year: 2024, month: null, day: null } }),
+    ], "opaque/retry"));
+    assert.equal(await firstLoad, true);
+    assert.equal(historyRenders.renders.at(-1).model.items.length, 2);
+    assert.equal(historyRenders.renders.at(-1).model.nextCursor, "opaque/retry");
+
+    assert.equal(
+        await historyRenders.renders.at(-1).actions.loadMore(),
+        false
+    );
+    const failed = historyRenders.renders.at(-1);
+    assert.equal(failed.model.loadMoreError, true);
+    assert.equal(failed.model.items.length, 2);
+    assert.equal(
+        await failed.actions.retryLoadMore(),
+        true
+    );
+    assert.deepEqual(paths.slice(2), [
+        "me/works/work-item-pages/reading-history?limit=10"
+            + "&cursor=opaque%2Fretry",
+        "me/works/work-item-pages/reading-history?limit=10"
+            + "&cursor=opaque%2Fretry",
+    ]);
+    assert.equal(historyRenders.renders.at(-1).model.items.length, 3);
+    assert.equal(historyRenders.renders.at(-1).model.nextCursor, null);
+    assert.equal(historyRenders.renders.at(-1).model.focusAfterPagination, true);
+});
+
+test("navigation aborts old Work history and ignores its late response", async () => {
+    const selected = library("library-switch");
+    const renders = recorder();
+    const historyRenders = historyRecorder();
+    const oldHistory = deferred();
+    let oldSignal;
+    const { app, browser } = createApp({
+        url: "https://example.test/mijn-bibliotheek/"
+            + "?library_id=library-switch&item_id=item-one",
+        renders,
+        historyRenders,
+        async get(path) {
+            if (path === "me/libraries") {
+                return { libraries: [selected] };
+            }
+
+            return path.endsWith("item-one")
+                ? detail(selected, "item-one")
+                : detail(selected, "item-two");
+        },
+        historyGet(path, options) {
+            if (path.includes("work-item-one")) {
+                oldSignal = options.signal;
+                return oldHistory.promise;
+            }
+
+            return historyPage([historyEntry({
+                finished_on: { year: 2026, month: null, day: null },
+            })]);
+        },
+    });
+
+    const oldRun = app.start();
+    await waitFor(() => oldSignal !== undefined);
+    browser.location.href = "https://example.test/mijn-bibliotheek/"
+        + "?library_id=library-switch&item_id=item-two";
+    browser.listeners.get("popstate")();
+    await app.whenIdle();
+
+    assert.equal(oldSignal.aborted, true);
+    assert.equal(
+        historyRenders.renders.at(-1).model.items[0].finished_on.year,
+        2026
+    );
+
+    oldHistory.resolve(historyPage([historyEntry({
+        finished_on: { year: 1999, month: null, day: null },
+    })]));
+    await oldRun;
+    assert.equal(
+        historyRenders.renders.at(-1).model.items[0].finished_on.year,
+        2026
+    );
+});
+
+test("Start Reading preserves history without a duplicate history GET", async () => {
+    const selected = library("library-start-history");
+    const renders = recorder();
+    const historyRenders = historyRecorder();
+    let detailReads = 0;
+    let historyReads = 0;
+    const { app, detailRenders, startReadingRenders } = createApp({
+        url: "https://example.test/mijn-bibliotheek/"
+            + "?library_id=library-start-history&item_id=item-start-history",
+        renders,
+        historyRenders,
+        async get(path) {
+            if (path === "me/libraries") {
+                return { libraries: [selected] };
+            }
+
+            detailReads += 1;
+            return detailReads === 1
+                ? detail(selected, "item-start-history")
+                : activeDetail(selected, "item-start-history");
+        },
+        historyGet() {
+            historyReads += 1;
+            return historyPage([historyEntry()]);
+        },
+        async post() {
+            return startedRound("item-start-history");
+        },
+    });
+
+    await app.start();
+    detailRenders.renders.at(-1).actions.startReading({ focus() {} });
+    const result = await startReadingRenders.opens.at(-1).submit(
+        "2026-08-28",
+        { acknowledge() {} }
+    );
+
+    assert.deepEqual(result, { state: "reconciled" });
+    assert.equal(historyReads, 1);
+    assert.equal(historyRenders.renders.at(-1).model.items.length, 1);
+});
+
+test("End Reading rereads detail then replaces history from page one only", async () => {
+    const selected = library("library-end-history");
+    const renders = recorder();
+    const historyRenders = historyRecorder();
+    let detailReads = 0;
+    const historyPaths = [];
+    let historyReads = 0;
+    let posts = 0;
+    const round = activeRound("round-history", 4);
+    const newlyEnded = historyEntry({
+        finished_on: { year: 2026, month: 8, day: 30 },
+    });
+    const { app, submitEndReading } = createApp({
+        url: "https://example.test/mijn-bibliotheek/"
+            + "?library_id=library-end-history&item_id=item-end-history",
+        renders,
+        historyRenders,
+        async get(path) {
+            if (path === "me/libraries") {
+                return { libraries: [selected] };
+            }
+
+            detailReads += 1;
+            return detailReads === 1
+                ? activeDetail(selected, "item-end-history", round)
+                : detail(selected, "item-end-history", {
+                    reading: {
+                        status: "read",
+                        active_rounds: 0,
+                        completed_rounds: 1,
+                        stopped_rounds: 0,
+                        historical_completed_rounds: 0,
+                    },
+                    capabilities: {
+                        view_item: true,
+                        start_reading: true,
+                        end_reading: false,
+                    },
+                });
+        },
+        historyGet(path) {
+            historyPaths.push(path);
+            historyReads += 1;
+
+            return historyReads === 1
+                ? historyPage([historyEntry()], "old-cursor")
+                : historyPage([newlyEnded, historyEntry()], "new-cursor");
+        },
+        async post() {
+            posts += 1;
+            return endedRound("round-history", "completed", "2026-08-30", 5);
+        },
+    });
+
+    await app.start();
+    const result = await submitEndReading({
+        outcome: "completed",
+        finishedOn: "2026-08-30",
+    });
+
+    assert.deepEqual(result, { state: "reconciled" });
+    assert.equal(posts, 1);
+    assert.deepEqual(historyPaths, [
+        "me/works/work-item-end-history/reading-history?limit=10",
+        "me/works/work-item-end-history/reading-history?limit=10",
+    ]);
+    assert.deepEqual(
+        historyRenders.renders.at(-1).model.items,
+        [newlyEnded, historyEntry()]
+    );
+    assert.equal(historyRenders.renders.at(-1).model.nextCursor, "new-cursor");
+});
+
+test("history refresh failure after End stays local and never repeats mutation", async () => {
+    const selected = library("library-refresh-error");
+    const renders = recorder();
+    const historyRenders = historyRecorder();
+    let detailReads = 0;
+    let historyReads = 0;
+    let posts = 0;
+    const { app, submitEndReading } = createApp({
+        url: "https://example.test/mijn-bibliotheek/"
+            + "?library_id=library-refresh-error&item_id=item-refresh-error",
+        renders,
+        historyRenders,
+        async get(path) {
+            if (path === "me/libraries") {
+                return { libraries: [selected] };
+            }
+
+            detailReads += 1;
+            return detailReads === 1
+                ? activeDetail(selected, "item-refresh-error", activeRound("round-refresh"))
+                : detail(selected, "item-refresh-error");
+        },
+        historyGet() {
+            historyReads += 1;
+
+            if (historyReads === 1) {
+                return historyPage([historyEntry()]);
+            }
+
+            if (historyReads === 2) {
+                throw apiError(500, "biblio_internal_error");
+            }
+
+            return historyPage([historyEntry({ outcome: "stopped" })]);
+        },
+        async post() {
+            posts += 1;
+            return endedRound("round-refresh", "stopped", "2026-08-30");
+        },
+    });
+
+    await app.start();
+    assert.deepEqual(await submitEndReading({
+        outcome: "stopped",
+        finishedOn: "2026-08-30",
+    }), { state: "reconciled" });
+
+    const failed = historyRenders.renders.at(-1);
+    assert.equal(failed.model.state, "ready");
+    assert.equal(failed.model.refreshError, true);
+    assert.equal(failed.model.items.length, 1);
+    assert.equal(posts, 1);
+
+    assert.equal(await failed.actions.retry(), true);
+    assert.equal(posts, 1);
+    assert.equal(historyReads, 3);
+    assert.equal(historyRenders.renders.at(-1).model.refreshError, false);
+});
+
+test("deep-link history is requested fresh on every runtime start", async () => {
+    const selected = library("library-deep");
+    let historyReads = 0;
+
+    for (let load = 0; load < 2; load += 1) {
+        const renders = recorder();
+        const { app } = createApp({
+            url: "https://example.test/mijn-bibliotheek/"
+                + "?library_id=library-deep&item_id=item-deep",
+            renders,
+            async get(path) {
+                return path === "me/libraries"
+                    ? { libraries: [selected] }
+                    : detail(selected, "item-deep");
+            },
+            historyGet() {
+                historyReads += 1;
+                return historyPage([historyEntry()]);
+            },
+        });
+
+        await app.start();
+    }
+
+    assert.equal(historyReads, 2);
+});
+
+test("malformed initial history fails locally and explicit retry recovers", async () => {
+    const selected = library("library-history-retry");
+    const renders = recorder();
+    const historyRenders = historyRecorder();
+    let historyReads = 0;
+    const { app, detailRenders } = createApp({
+        url: "https://example.test/mijn-bibliotheek/"
+            + "?library_id=library-history-retry&item_id=item-history-retry",
+        renders,
+        historyRenders,
+        async get(path) {
+            return path === "me/libraries"
+                ? { libraries: [selected] }
+                : detail(selected, "item-history-retry");
+        },
+        historyGet() {
+            historyReads += 1;
+
+            return historyReads === 1
+                ? { items: [], next_cursor: null, unexpected: true }
+                : historyPage([historyEntry()]);
+        },
+    });
+
+    await app.start();
+    const failed = historyRenders.renders.at(-1);
+    assert.equal(failed.model.state, "error");
+    assert.equal(failed.model.recovery, "retry");
+    assert.equal(detailRenders.renders.at(-1).model.state, "detail");
+
+    assert.equal(await failed.actions.retry(), true);
+    assert.equal(historyReads, 2);
+    assert.equal(historyRenders.renders.at(-1).model.state, "ready");
+});
+
+test("initial history errors map to local authentication, session or retry recovery", async (t) => {
+    const fixtures = [{
+        status: 401,
+        code: "biblio_authentication_required",
+        expected: "authentication",
+    }, {
+        status: 403,
+        code: "rest_cookie_invalid_nonce",
+        expected: "session",
+    }, {
+        status: 503,
+        code: "biblio_core_unavailable",
+        expected: "retry",
+    }, {
+        status: 500,
+        code: "biblio_internal_error",
+        expected: "retry",
+    }];
+
+    for (const fixture of fixtures) {
+        await t.test(String(fixture.status), async () => {
+            const selected = library(`library-history-${fixture.status}`);
+            const renders = recorder();
+            const historyRenders = historyRecorder();
+            const { app, detailRenders } = createApp({
+                url: "https://example.test/mijn-bibliotheek/"
+                    + `?library_id=${selected.library_id}`
+                    + `&item_id=item-history-${fixture.status}`,
+                renders,
+                historyRenders,
+                async get(path) {
+                    return path === "me/libraries"
+                        ? { libraries: [selected] }
+                        : detail(selected, `item-history-${fixture.status}`);
+                },
+                historyGet() {
+                    throw apiError(fixture.status, fixture.code);
+                },
+            });
+
+            await app.start();
+            assert.equal(detailRenders.renders.at(-1).model.state, "detail");
+            assert.equal(historyRenders.renders.at(-1).model.state, "error");
+            assert.equal(
+                historyRenders.renders.at(-1).model.recovery,
+                fixture.expected
+            );
+        });
+    }
 });

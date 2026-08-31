@@ -183,6 +183,34 @@
 [data-biblio-ui-root] .biblio-ui__metadata dt { font-weight: 600; }
 [data-biblio-ui-root] :where(.biblio-ui__start-reading, .biblio-ui__end-reading) { justify-self: start; }
 
+[data-biblio-ui-root] .biblio-ui__history-region:empty { display: none; }
+
+[data-biblio-ui-root] .biblio-ui__history-loading {
+    color: var(--biblio-color-primary);
+    padding-block: var(--biblio-space-2);
+}
+
+[data-biblio-ui-root] .biblio-ui__history-list {
+    display: grid;
+    gap: var(--biblio-space-3);
+    list-style: none;
+    padding: 0;
+}
+
+[data-biblio-ui-root] .biblio-ui__history-entry {
+    background: var(--biblio-color-surface-muted);
+    border: var(--biblio-boundary-width) solid var(--biblio-color-boundary);
+    border-radius: var(--biblio-card-radius);
+    display: grid;
+    gap: var(--biblio-space-1);
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+    padding: var(--biblio-space-4);
+}
+
+[data-biblio-ui-root] .biblio-ui__history-outcome { font-weight: 600; }
+[data-biblio-ui-root] .biblio-ui__history-error { margin-block: 0; }
+
 .biblio-ui__reading-dialog {
     background: var(--biblio-color-surface, #fff);
     border: var(--biblio-boundary-width, 1px) solid var(--biblio-color-boundary, #bcccdc);
@@ -248,6 +276,7 @@
     [data-biblio-ui-root] .biblio-ui__cover--overview { inline-size: 4rem; }
 
     [data-biblio-ui-root] .biblio-ui__load-more,
+    [data-biblio-ui-root] .biblio-ui__history-load-more,
     [data-biblio-ui-root] :where(.biblio-ui__start-reading, .biblio-ui__end-reading) {
         inline-size: 100%;
         justify-self: stretch;

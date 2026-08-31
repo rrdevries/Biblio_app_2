@@ -1081,3 +1081,41 @@ unchanged and contains no embedded history.
 Schema remains 1007. No migration, lifecycle mutation, Biblio UI, Elementor,
 Crocoblock or E2E fixture is part of 1C.3. The route performs no writes or
 Library ActivityEvent/audit side effect.
+
+### Vertical Slice 1C.4 — Reading History UI
+
+Status: **Implemented — GO**
+
+The existing Itemdetail now renders a subordinate private Reading history
+region after the current reading summary/actions and before bibliographic
+metadata. Only the strictly validated `work_id` from the authoritative detail
+response is used for
+`GET /me/works/{work_id}/reading-history?limit=10`; history is separate runtime
+state and never becomes part of `currentDetail`.
+
+The valid Itemdetail renders before history loads and remains usable when the
+history request fails. Loading, error/recovery, pagination and refresh states
+are local to the subordinate region. An empty successful page removes that
+region without rendering a `Leesgeschiedenis` heading. Non-empty results use
+a semantic list, textual `Uitgelezen`/`Gestopt` outcomes and Dutch date copy
+that preserves exact, month or year precision without timezone conversion or
+invented date parts. Only `Externe lening` and, with presentation priority,
+`Historische registratie` add coarse source context; Library/unknown sources
+produce no speculative copy.
+
+`Meer laden` follows only the opaque validated cursor, allows one request at a
+time, retains existing entries on failure, appends server order and provides
+explicit same-cursor retry plus controlled focus. The detail navigation
+generation and shared AbortSignal prevent old Work responses from updating a
+new route, including back/forward navigation and direct-link reloads.
+
+A successful Start Reading authoritative reread preserves the existing ended
+history without an unnecessary duplicate history GET. After End Reading, the
+runtime first completes the authoritative detail reread and then fetches
+history page 1 again, replacing the list and cursor only with GET truth. It
+never appends from the POST acknowledgement or retries the mutation. If that
+history refresh fails, authoritative detail remains visible while the old
+history is explicitly marked as not refreshed and can be retried locally.
+
+Schema remains 1007. No Core, REST, Elementor, Crocoblock, E2E/Playwright,
+schema or migration change is part of 1C.4.

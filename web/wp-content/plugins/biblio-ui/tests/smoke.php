@@ -352,6 +352,9 @@ biblioUiAssertSame(
             "id" => \Biblio\UI\Plugin::OVERVIEW_SCRIPT_MODULE_ID,
             "import" => "static",
         ], [
+            "id" => \Biblio\UI\Plugin::READING_HISTORY_SCRIPT_MODULE_ID,
+            "import" => "static",
+        ], [
             "id" => \Biblio\UI\Plugin::DETAIL_SCRIPT_MODULE_ID,
             "import" => "static",
         ], [
@@ -418,6 +421,19 @@ biblioUiAssertSame(
         \Biblio\UI\Plugin::OVERVIEW_SCRIPT_MODULE_ID
     ] ?? null,
     "The overview-view Script Module registration contract is incorrect."
+);
+biblioUiAssertSame(
+    [
+        "source" => "https://example.test/wp-content/plugins/biblio-ui/"
+            . "assets/js/reading-history.js",
+        "dependencies" => [],
+        "version" => "0.2.0",
+        "arguments" => [],
+    ],
+    $biblioUiTestRegisteredModules[
+        \Biblio\UI\Plugin::READING_HISTORY_SCRIPT_MODULE_ID
+    ] ?? null,
+    "The Reading-history Script Module registration contract is incorrect."
 );
 biblioUiAssertSame(
     [
@@ -515,6 +531,11 @@ biblioUiAssertSame(
 );
 biblioUiAssertSame(
     true,
+    is_file(__DIR__ . "/../assets/js/reading-history.js"),
+    "The Reading-history Script Module file must exist."
+);
+biblioUiAssertSame(
+    true,
     is_file(__DIR__ . "/../assets/js/detail-view.js"),
     "The detail-view Script Module file must exist."
 );
@@ -568,6 +589,7 @@ echo "API Script Module: biblio-ui/api@0.2.0" . PHP_EOL;
 echo "Route Script Module: biblio-ui/route-state@0.2.0" . PHP_EOL;
 echo "Library Script Module: biblio-ui/library-state@0.2.0" . PHP_EOL;
 echo "Overview Script Module: biblio-ui/overview-view@0.2.0" . PHP_EOL;
+echo "Reading History Script Module: biblio-ui/reading-history@0.2.0" . PHP_EOL;
 echo "Detail Script Module: biblio-ui/detail-view@0.2.0" . PHP_EOL;
 echo "Start Reading Script Module: biblio-ui/start-reading-view@0.2.0" . PHP_EOL;
 echo "End Reading Script Module: biblio-ui/end-reading-view@0.2.0" . PHP_EOL;

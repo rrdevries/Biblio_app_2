@@ -1036,3 +1036,56 @@ No-go:
 - returning a history-specific 404 or any private identity/raw provenance;
 - offset or unbounded pagination, cursor scope transfer or write side effects;
 - embedding history into Itemdetail or expanding into UI/E2E in this slice.
+
+## 43. Vertical Slice 1C.4 Reading History UI evidence
+
+Status: **GO**
+
+Acceptance evidence:
+
+- the detail contract remains authoritative and strictly validates `work_id`
+  before the UI constructs the fixed-limit owner-history request;
+- history loading, empty, error, ready, pagination and refresh state remain
+  separate from `currentDetail`; a valid Itemdetail renders first and is never
+  replaced by a history failure;
+- the response validator requires exactly `items` plus `next_cursor`, and
+  exactly the five approved entry fields with valid outcome, source type and
+  precision-aware dates; malformed or additional fields fail locally;
+- empty history renders no section or H2, while non-empty history renders a
+  semantic list with textual `Uitgelezen`/`Gestopt` outcomes;
+- Dutch exact/month/year dates and nullable starts render without ISO copy,
+  timezone conversion or fabricated precision;
+- presentation exposes only `Externe lening` or the priority label
+  `Historische registratie`; Library and unknown sources add no speculative
+  label and no private/technical identity is rendered;
+- initial loading and safe 400/malformed, 401, invalid-nonce 403, 503/500
+  recovery stay local and require explicit user action;
+- `Meer laden` uses only the last valid opaque cursor, locks duplicates,
+  appends in server order, replaces the cursor and preserves entries plus the
+  same retry cursor on failure;
+- pagination focus remains on the continuing button or moves to the history
+  heading when the button disappears; initial passive loading moves no focus;
+- the active navigation AbortSignal plus generation/revision checks prevent a
+  late old-Work response from updating a newer route;
+- direct Item links and fresh runtime reloads request the matching Work history
+  without relying on previous in-memory navigation;
+- Start Reading preserves ended history and adds no duplicate history GET;
+  End Reading first rereads authoritative detail and only then refreshes page
+  1 from GET, resetting pagination without trusting the POST acknowledgement;
+- a failed post-End history refresh retains authoritative ended detail and old
+  entries with a local stale-history warning and retry, and never sends a
+  second mutation;
+- the one-column wrapping layout, native list/headings/status controls,
+  existing visible focus and 44 px control baseline remain usable across the
+  existing breakpoints;
+- frontend contract/runtime/view/design tests, complete Biblio UI JS and smoke
+  gates, relevant Core REST regression, syntax, manifest and repository gates
+  are required before the local 1C.4 commit.
+
+No-go:
+
+- embedding history in detail state or blocking/replacing valid detail;
+- deriving history from POST data, automatic mutation retry or client-side
+  authorization;
+- fabricated date precision, speculative source copy or exposed IDs;
+- Core, REST, Elementor, Crocoblock, E2E, schema or migration changes.

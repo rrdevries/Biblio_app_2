@@ -1,9 +1,10 @@
 # Elementor Vertical Slice 1C — Reading History Readiness
 
 Date: 2026-08-30
+Last updated: 2026-08-31
 Readiness verdict: **READY WITH CONDITIONS**
 
-Current implementation status: **1C.3 GO** — see §§17–18
+Current implementation status: **1C.4 GO** — see §§17–19
 
 ## 1. Authority, baseline and analysis scope
 
@@ -86,7 +87,8 @@ Treatment by case:
   omitted as a local calendar date;
 - active plus earlier ended rounds: active stays separate, ended rows appear
   in history;
-- source-free corrected normal history: included with `Bron onbekend`.
+- source-free corrected normal history: included without speculative source
+  copy.
 
 Do not claim `Eigen exemplaar`, a specific Library, the original start source
 or an exact current-versus-other Item relation. The stored source is current
@@ -296,8 +298,9 @@ summary/actions and before bibliographic metadata.
 - Use a semantic `<ul>` with one `<li>` per round, not a table.
 - Show `Uitgelezen` or `Gestopt` as text, never color alone.
 - Show the honest precision-aware date/range.
-- Optionally show one secondary context line: `Bibliotheekexemplaar`,
-  `Externe lening`, `Bron onbekend`, plus `Historische registratie` when true.
+- Optionally show one secondary context line: `Externe lening`, or
+  `Historische registratie` when true; do not add copy for Library/unknown
+  sources.
 - Do not render an empty section after a successful zero-entry response; the
   existing reading summary already communicates no ended rounds.
 - During loading use an independently busy history region.
@@ -308,9 +311,10 @@ summary/actions and before bibliographic metadata.
   to the first newly appended entry or the history heading.
 - Route change aborts history work and stale responses cannot update a newer
   Item.
-- Every successful Start/End authoritative detail reconciliation invalidates
-  and reloads history so a newly ended round appears without trusting the POST
-  response.
+- A successful Start authoritative detail reconciliation preserves ended
+  history without an unnecessary duplicate GET. A successful End
+  reconciliation reloads history page 1 so the newly ended round appears
+  without trusting the POST response.
 
 Likely frontend files:
 
@@ -529,7 +533,8 @@ Implementation must not begin until these contract conditions are accepted:
 At the 1C.1 readiness point the verdict was **READY WITH CONDITIONS**. The
 binding product choices were subsequently approved for 1C.2 and the measured
 index condition is closed by §17. The subsequent REST contract is closed by
-§18; later UI/E2E slices remain unimplemented.
+§18 and the UI runtime contract is closed by §19; later acceptance/E2E slices
+remain unimplemented.
 
 ## 17. 1C.2 implementation evidence
 
@@ -591,5 +596,41 @@ The separately approved thin REST adapter is now **GO**.
   ActivityEvent counts; Itemdetail has no history field.
 
 Schema remains 1007. No ReadingRound lifecycle, Itemdetail, Biblio UI,
-Elementor, Crocoblock or E2E file changed. Sections 1C.4 and later remain future
-work.
+Elementor, Crocoblock or E2E file changed in 1C.3.
+
+## 19. 1C.4 implementation evidence
+
+The separately approved Biblio UI runtime and semantic list are now **GO**.
+
+- Itemdetail supplies the only Work identity through its existing strict
+  validated response; no URL, presentation control or new backend field is
+  trusted for history scope;
+- `reading-history.js` strictly accepts only the approved page and five-field
+  entry shapes, formats Dutch ReadingDate precision and owns the semantic
+  subordinate view;
+- the detail renders before the fixed `limit=10` GET resolves; loading,
+  empty/error, ready, pagination and refresh state are independent from
+  `currentDetail`;
+- zero results produce no section/H2, while completed/stopped entries render
+  as `Uitgelezen`/`Gestopt` in a semantic list;
+- only `Externe lening` or the priority `Historische registratie` source line
+  is presented; Library/unknown sources and all IDs/provenance stay absent;
+- pagination locks duplicate requests, follows and replaces only a validated
+  opaque cursor, appends server order, retains entries on error, retries the
+  same cursor explicitly and maintains logical focus;
+- history requests use the existing same-origin nonce client and current
+  route AbortSignal, plus generation/revision checks against late old-Work
+  responses;
+- direct links and fresh runtime starts load history independently;
+- Start Reading preserves existing ended history without another GET; End
+  Reading first reconciles authoritative detail and then replaces history and
+  pagination from a fresh page-1 GET only;
+- a failed post-End refresh marks retained history locally stale, permits an
+  explicit history retry and never repeats the mutation;
+- one-column responsive CSS, wrapping entries, semantic status/error copy and
+  existing 44 px/focus controls provide the 1C.4 accessibility baseline.
+
+Schema stays 1007. No Core, REST, Elementor, Crocoblock, E2E/Playwright,
+schema or migration file changed. Formal expanded
+responsive/accessibility acceptance remains 1C.5 and guarded E2E remains
+1C.6.

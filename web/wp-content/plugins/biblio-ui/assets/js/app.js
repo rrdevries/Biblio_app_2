@@ -3,6 +3,11 @@ import { createDetailView } from "biblio-ui/detail-view";
 import { createEndReadingView } from "biblio-ui/end-reading-view";
 import { resolveLibraryContext } from "biblio-ui/library-state";
 import { createOverviewView } from "biblio-ui/overview-view";
+import {
+    createReadingHistoryView,
+    readingHistoryPath,
+    readReadingHistoryPage,
+} from "biblio-ui/reading-history";
 import { createStartReadingView } from "biblio-ui/start-reading-view";
 import {
     buildRouteUrl,
@@ -14,6 +19,12 @@ export { createDetailView } from "biblio-ui/detail-view";
 export { createEndReadingView } from "biblio-ui/end-reading-view";
 export { resolveLibraryContext } from "biblio-ui/library-state";
 export { createOverviewView } from "biblio-ui/overview-view";
+export {
+    createReadingHistoryView,
+    formatReadingDate,
+    readingHistoryPath,
+    readReadingHistoryPage,
+} from "biblio-ui/reading-history";
 export { createStartReadingView } from "biblio-ui/start-reading-view";
 export {
     buildRouteUrl,
@@ -452,6 +463,18 @@ function endReadingErrorOutcome(error) {
     return Object.freeze({ state: "outcome-unknown" });
 }
 
+function readingHistoryRecovery(error) {
+    if (isHttpError(error, 401, "biblio_authentication_required")) {
+        return "authentication";
+    }
+
+    if (isHttpError(error, 403, "rest_cookie_invalid_nonce")) {
+        return "session";
+    }
+
+    return "retry";
+}
+
 export function readMountConfig(mount) {
     return Object.freeze({
         restRoot: mountValue(mount, "restRoot"),
@@ -471,6 +494,7 @@ export function createLibraryApp(mount, {
     viewFactory = createOverviewView,
     detailViewFactory = createDetailView,
     endReadingViewFactory = createEndReadingView,
+    readingHistoryViewFactory = createReadingHistoryView,
     startReadingViewFactory = createStartReadingView,
     reload = () => locationImpl.reload(),
     abortControllerFactory = () => new AbortController(),
@@ -495,6 +519,7 @@ export function createLibraryApp(mount, {
     let view;
     let detailView;
     let endReadingView;
+    let readingHistoryView;
     let startReadingView;
     let currentController = null;
     let mutationController = null;
@@ -550,6 +575,16 @@ export function createLibraryApp(mount, {
         }
 
         return endReadingView;
+    }
+
+    function currentReadingHistoryView() {
+        if (readingHistoryView === undefined) {
+            readingHistoryView = readingHistoryViewFactory(mount, {
+                documentImpl,
+            });
+        }
+
+        return readingHistoryView;
     }
 
     async function loadLibraryContext({ signal } = {}) {
@@ -713,6 +748,222 @@ export function createLibraryApp(mount, {
                 );
                 const renderDetail = currentDetailView().render;
                 let currentDetail = null;
+                let historyRevision = 0;
+                let historyPagePending = false;
+                let historyFirstOperation = Promise.resolve();
+                let readingHistory = { state: "loading" };
+
+                const readingHistoryActions = {
+                    loadMore() {
+                        return setIdle(loadMoreHistory());
+                    },
+                    retryLoadMore() {
+                        return setIdle(loadMoreHistory());
+                    },
+                    retry() {
+                        return setIdle(queueHistoryFirstPage({
+                            preserveExisting: readingHistory.state === "ready",
+                        }));
+                    },
+                    reload,
+                    loginUrl: config.loginUrl,
+                };
+
+                function renderReadingHistory() {
+                    if (
+                        currentDetail === null
+                        || !isCurrent(runGeneration, controller)
+                    ) {
+                        return;
+                    }
+
+                    currentReadingHistoryView().render(
+                        readingHistory,
+                        readingHistoryActions
+                    );
+
+                    if (readingHistory.state === "ready") {
+                        readingHistory.focusAfterPagination = false;
+                        readingHistory.addedCount = 0;
+                    }
+                }
+
+                function historyReady(page, overrides = {}) {
+                    return {
+                        state: "ready",
+                        items: [...page.items],
+                        nextCursor: page.nextCursor,
+                        refreshing: false,
+                        refreshError: false,
+                        refreshRecovery: "retry",
+                        loadingMore: false,
+                        loadMoreError: false,
+                        paginationRecovery: "retry",
+                        focusAfterPagination: false,
+                        addedCount: 0,
+                        ...overrides,
+                    };
+                }
+
+                async function loadHistoryFirstPage({
+                    preserveExisting = false,
+                } = {}) {
+                    const requestRevision = historyRevision + 1;
+                    historyRevision = requestRevision;
+                    const preserved = preserveExisting
+                        && readingHistory.state === "ready"
+                        ? readingHistory
+                        : null;
+
+                    readingHistory = preserved === null
+                        ? { state: "loading" }
+                        : {
+                            ...preserved,
+                            refreshing: true,
+                            refreshError: false,
+                            loadingMore: false,
+                            loadMoreError: false,
+                            focusAfterPagination: false,
+                            addedCount: 0,
+                        };
+                    renderReadingHistory();
+
+                    try {
+                        const payload = await api.get(
+                            readingHistoryPath(currentDetail.work_id),
+                            { signal: controller.signal }
+                        );
+
+                        if (
+                            requestRevision !== historyRevision
+                            || !isCurrent(runGeneration, controller)
+                        ) {
+                            return false;
+                        }
+
+                        const page = readReadingHistoryPage(payload);
+                        readingHistory = page.items.length === 0
+                            ? { state: "empty" }
+                            : historyReady(page);
+                        renderReadingHistory();
+
+                        return true;
+                    } catch (error) {
+                        if (
+                            isAborted(error)
+                            || requestRevision !== historyRevision
+                            || !isCurrent(runGeneration, controller)
+                        ) {
+                            return false;
+                        }
+
+                        const recovery = readingHistoryRecovery(error);
+                        readingHistory = preserved === null
+                            ? {
+                                state: "error",
+                                message: "Leesgeschiedenis kon niet worden geladen.",
+                                recovery,
+                            }
+                            : {
+                                ...preserved,
+                                refreshing: false,
+                                refreshError: true,
+                                refreshRecovery: recovery,
+                                loadingMore: false,
+                                loadMoreError: false,
+                                focusAfterPagination: false,
+                                addedCount: 0,
+                            };
+                        renderReadingHistory();
+
+                        return false;
+                    }
+                }
+
+                function queueHistoryFirstPage(options = {}) {
+                    const queued = historyFirstOperation.then(() => (
+                        loadHistoryFirstPage(options)
+                    ));
+                    historyFirstOperation = queued.catch(() => false);
+
+                    return queued;
+                }
+
+                async function loadMoreHistory() {
+                    if (
+                        historyPagePending
+                        || readingHistory.state !== "ready"
+                        || readingHistory.nextCursor === null
+                        || !isCurrent(runGeneration, controller)
+                    ) {
+                        return false;
+                    }
+
+                    const requestRevision = historyRevision;
+                    const requestedCursor = readingHistory.nextCursor;
+                    historyPagePending = true;
+                    readingHistory = {
+                        ...readingHistory,
+                        loadingMore: true,
+                        loadMoreError: false,
+                        focusAfterPagination: false,
+                        addedCount: 0,
+                    };
+                    renderReadingHistory();
+
+                    try {
+                        const payload = await api.get(
+                            readingHistoryPath(
+                                currentDetail.work_id,
+                                requestedCursor
+                            ),
+                            { signal: controller.signal }
+                        );
+
+                        if (
+                            requestRevision !== historyRevision
+                            || !isCurrent(runGeneration, controller)
+                        ) {
+                            return false;
+                        }
+
+                        const page = readReadingHistoryPage(payload);
+                        readingHistory = {
+                            ...readingHistory,
+                            items: [...readingHistory.items, ...page.items],
+                            nextCursor: page.nextCursor,
+                            loadingMore: false,
+                            loadMoreError: false,
+                            focusAfterPagination: true,
+                            addedCount: page.items.length,
+                        };
+                        renderReadingHistory();
+
+                        return true;
+                    } catch (error) {
+                        if (
+                            isAborted(error)
+                            || requestRevision !== historyRevision
+                            || !isCurrent(runGeneration, controller)
+                        ) {
+                            return false;
+                        }
+
+                        readingHistory = {
+                            ...readingHistory,
+                            loadingMore: false,
+                            loadMoreError: true,
+                            paginationRecovery: readingHistoryRecovery(error),
+                            focusAfterPagination: false,
+                            addedCount: 0,
+                        };
+                        renderReadingHistory();
+
+                        return false;
+                    } finally {
+                        historyPagePending = false;
+                    }
+                }
 
                 function renderCurrentDetail({
                     notice = null,
@@ -736,6 +987,7 @@ export function createLibraryApp(mount, {
                         },
                         detailActions
                     );
+                    renderReadingHistory();
                 }
 
                 async function reconcileDetail({
@@ -743,6 +995,7 @@ export function createLibraryApp(mount, {
                     notice,
                     refreshedNotice,
                     refreshFailure,
+                    refreshHistory = false,
                 }) {
                     acknowledge(notice);
 
@@ -764,6 +1017,12 @@ export function createLibraryApp(mount, {
                             notice: refreshedNotice,
                             focusReading: true,
                         });
+
+                        if (refreshHistory) {
+                            await queueHistoryFirstPage({
+                                preserveExisting: true,
+                            });
+                        }
 
                         return Object.freeze({ state: "reconciled" });
                     } catch (error) {
@@ -951,6 +1210,7 @@ export function createLibraryApp(mount, {
                                     notice: "Leesstatus bijwerken.",
                                     refreshedNotice: "De leesstatus is bijgewerkt.",
                                     refreshFailure: "De aanvraag is verwerkt, maar de actuele pagina kon niet worden vernieuwd.",
+                                    refreshHistory: true,
                                 });
                             }
 
@@ -964,6 +1224,7 @@ export function createLibraryApp(mount, {
                                 notice: outcome.notice,
                                 refreshedNotice: outcome.refreshedNotice,
                                 refreshFailure: "De actuele pagina kon niet worden vernieuwd.",
+                                refreshHistory: true,
                             });
                         }
 
@@ -982,6 +1243,7 @@ export function createLibraryApp(mount, {
                                 notice: "Leesstatus bijwerken.",
                                 refreshedNotice: "De leesstatus is bijgewerkt.",
                                 refreshFailure: "De aanvraag is verwerkt, maar de actuele pagina kon niet worden vernieuwd.",
+                                refreshHistory: true,
                             });
                         }
 
@@ -989,6 +1251,7 @@ export function createLibraryApp(mount, {
                             notice: "Leesstatus bijwerken.",
                             refreshedNotice: "De leesstatus is bijgewerkt.",
                             refreshFailure: "De aanvraag is verwerkt, maar de actuele pagina kon niet worden vernieuwd.",
+                            refreshHistory: true,
                         });
                     } finally {
                         if (mutationController === activeMutation) {
@@ -1050,6 +1313,7 @@ export function createLibraryApp(mount, {
                     requestedItemId
                 );
                 renderCurrentDetail();
+                await queueHistoryFirstPage();
                 return;
             }
 

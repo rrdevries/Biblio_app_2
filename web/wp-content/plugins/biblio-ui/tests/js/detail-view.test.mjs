@@ -73,6 +73,10 @@ function byTag(root, tagName) {
     return descendants(root, (node) => node.tagName === tagName.toUpperCase());
 }
 
+function byAttribute(root, name, value) {
+    return descendants(root, (node) => node.getAttribute(name) === value);
+}
+
 function text(root) {
     return [
         root.textContent,
@@ -155,6 +159,11 @@ test("detail renders the allowlisted known contract and canonical back link", ()
         "Uitgave",
         "Exemplaar",
     ]);
+    assert.equal(
+        byAttribute(root, "data-biblio-reading-history", "true").length,
+        1
+    );
+    assert.doesNotMatch(text(root), /Leesgeschiedenis/);
     assert.equal(byTag(root, "a")[0].getAttribute("href"), backUrl);
     assert.equal(byTag(root, "img")[0].getAttribute("src"),
         "https://images.example.test/cover.jpg");
