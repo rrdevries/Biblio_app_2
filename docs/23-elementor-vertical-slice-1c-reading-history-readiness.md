@@ -4,7 +4,7 @@ Date: 2026-08-30
 Last updated: 2026-08-31
 Readiness verdict: **READY WITH CONDITIONS**
 
-Current implementation status: **1C.4 GO** — see §§17–19
+Current implementation status: **1C.5 GO** — see §§17–20
 
 ## 1. Authority, baseline and analysis scope
 
@@ -486,6 +486,8 @@ rows, implement owner filtering or paginate this Core-owned projection.
 
 ### 1C.5 — Responsive and accessibility acceptance
 
+Status: **Implemented — GO**; see §20.
+
 - Goal: close list, pagination, live-status, focus and three-breakpoint UX.
 - Expected files/layers: `app.css`, `detail-view.js`, frontend design/detail
   tests; no Elementor metadata.
@@ -533,8 +535,8 @@ Implementation must not begin until these contract conditions are accepted:
 At the 1C.1 readiness point the verdict was **READY WITH CONDITIONS**. The
 binding product choices were subsequently approved for 1C.2 and the measured
 index condition is closed by §17. The subsequent REST contract is closed by
-§18 and the UI runtime contract is closed by §19; later acceptance/E2E slices
-remain unimplemented.
+§18, the UI runtime contract is closed by §19 and the responsive/accessibility
+pass by §20; guarded 1C E2E and formal exit remain unimplemented.
 
 ## 17. 1C.2 implementation evidence
 
@@ -631,6 +633,50 @@ The separately approved Biblio UI runtime and semantic list are now **GO**.
   existing 44 px/focus controls provide the 1C.4 accessibility baseline.
 
 Schema stays 1007. No Core, REST, Elementor, Crocoblock, E2E/Playwright,
-schema or migration file changed. Formal expanded
-responsive/accessibility acceptance remains 1C.5 and guarded E2E remains
-1C.6.
+schema or migration file changed. Formal expanded responsive/accessibility
+acceptance is closed by §20 and guarded 1C E2E remains 1C.6.
+
+## 20. 1C.5 implementation evidence
+
+The separately approved responsive, focus, keyboard and accessibility pass is
+now **GO** without changing the 1C.4 product contract.
+
+- base history layout remains one column inside the existing readable detail
+  maximum for mobile, tablet and desktop; mobile load-more/recovery controls
+  follow the existing full-width pattern;
+- the stable region and entries use max/min inline containment, natural
+  wrapping and token padding; structural tests exclude fixed history heights,
+  nowrap, ellipsis, hidden overflow, absolute positioning and motion;
+- native `ul`/`li` behavior is retained, entries are not focusable, outcome
+  remains primary text and period/source text remains complete and wrapping;
+- the stable region owns busy state while scoped `aria-live=polite` messages
+  announce only loading, local errors and concise updates, never the complete
+  list;
+- history messages intentionally do not add another `role=status`; this keeps
+  the existing detail/mutation status unique while retaining polite history
+  announcements;
+- load-more and recovery remain native controls with visible names, true
+  disabled state, existing focus ring and token-backed 44 px minimum targets;
+- focus is now applied only after the replacement section is connected; a
+  continuing button stays in normal tab order, the final H2 is
+  programmatically focusable with `tabindex=-1`, and pagination failure
+  focuses its local recovery control;
+- initial loading/error/retry and automatic post-End refresh never request
+  focus; refresh failure explains that reading status is updated but history
+  could not be refreshed, without technical details;
+- exact/month/year and null-start copy, ten-entry content, local errors and
+  appended pages remain untruncated at the structural 320 px/200% reflow
+  boundary;
+- history-specific CSS is root-scoped, contains no hardcoded color and uses
+  existing Biblio spacing, surface, boundary, focus and control tokens;
+- static contrast calculations prove at least 4.5:1 for normal text and
+  controls and at least 3:1 for the focus indicator against white;
+- 106 targeted and 135 complete frontend tests pass; UI syntax/smoke, the
+  28-test/425-assertion REST regression and Core smoke are green;
+- the unchanged 1A/1B Playwright suite passes 13/13 with all guard refusals,
+  cleanup twice, zero residue and unchanged non-fixture fingerprint. No 1C
+  browser case or fixture was added.
+
+Schema remains 1007. No Core, REST, Elementor, Crocoblock, E2E/Playwright
+file, schema, migration, Reading History semantic or Start/End Reading
+semantic changed. Guarded Reading History browser acceptance remains 1C.6.

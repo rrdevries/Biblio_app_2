@@ -203,24 +203,23 @@ function recoveryControl(documentImpl, recovery, actions) {
 function renderError(documentImpl, model, actions) {
     const error = element(documentImpl, "div", {
         className: "biblio-ui__inline-error biblio-ui__history-error",
-        attributes: { role: "status" },
     });
+    const message = element(documentImpl, "p", {
+        text: model.message,
+        attributes: { "aria-live": "polite" },
+    });
+    const control = recoveryControl(documentImpl, model.recovery, actions);
     error.append(
-        element(documentImpl, "p", { text: model.message }),
-        recoveryControl(documentImpl, model.recovery, actions)
+        message,
+        control
     );
 
-    return error;
+    return { node: error, control };
 }
 
 function renderReady(documentImpl, model, actions, locale) {
     const section = element(documentImpl, "section", {
         className: "biblio-ui__section biblio-ui__reading-history",
-        attributes: {
-            "aria-busy": model.refreshing || model.loadingMore
-                ? "true"
-                : "false",
-        },
     });
     const heading = element(documentImpl, "h2", { text: "Leesgeschiedenis" });
     const list = element(documentImpl, "ul", {
@@ -258,18 +257,19 @@ function renderReady(documentImpl, model, actions, locale) {
     if (model.refreshing) {
         section.append(element(documentImpl, "p", {
             text: "Leesgeschiedenis vernieuwen…",
-            attributes: { "aria-live": "polite", role: "status" },
+            attributes: { "aria-live": "polite" },
         }));
     }
 
     if (model.refreshError) {
         section.append(renderError(documentImpl, {
-            message: "Leesgeschiedenis kon niet worden vernieuwd.",
+            message: "De leesstatus is bijgewerkt, maar de leesgeschiedenis kon niet worden vernieuwd.",
             recovery: model.refreshRecovery,
-        }, actions));
+        }, actions).node);
     }
 
     let paginationTarget = null;
+    let paginationErrorTarget = null;
 
     if (model.nextCursor !== null) {
         const button = element(documentImpl, "button", {
@@ -286,7 +286,7 @@ function renderReady(documentImpl, model, actions, locale) {
     if (model.loadingMore) {
         section.append(element(documentImpl, "p", {
             text: "Meer leesgeschiedenis laden…",
-            attributes: { "aria-live": "polite", role: "status" },
+            attributes: { "aria-live": "polite" },
         }));
     }
 
@@ -298,23 +298,32 @@ function renderReady(documentImpl, model, actions, locale) {
             ...actions,
             retry: actions.retryLoadMore,
         });
-        section.append(error);
+        section.append(error.node);
+        paginationErrorTarget = error.control;
     }
 
     if (model.addedCount > 0) {
         section.append(element(documentImpl, "p", {
             text: `${model.addedCount} leesrondes toegevoegd.`,
-            attributes: { "aria-live": "polite", role: "status" },
+            attributes: { "aria-live": "polite" },
         }));
     }
 
+    let focusTarget = null;
+    let makeFocusTargetProgrammatic = false;
+
     if (model.focusAfterPagination) {
-        const target = paginationTarget ?? heading;
-        target.setAttribute("tabindex", "-1");
-        target.focus();
+        focusTarget = paginationTarget ?? heading;
+        makeFocusTargetProgrammatic = paginationTarget === null;
+    } else if (model.focusAfterPaginationError) {
+        focusTarget = paginationErrorTarget;
     }
 
-    return section;
+    return {
+        section,
+        focusTarget,
+        makeFocusTargetProgrammatic,
+    };
 }
 
 export function createReadingHistoryView(root, {
@@ -347,7 +356,7 @@ export function createReadingHistoryView(root, {
             region.replaceChildren(element(documentImpl, "p", {
                 className: "biblio-ui__history-loading",
                 text: "Leesgeschiedenis laden…",
-                attributes: { "aria-live": "polite", role: "status" },
+                attributes: { "aria-live": "polite" },
             }));
             return region;
         }
@@ -357,7 +366,7 @@ export function createReadingHistoryView(root, {
                 documentImpl,
                 model,
                 actions
-            ));
+            ).node);
             return region;
         }
 
@@ -365,12 +374,25 @@ export function createReadingHistoryView(root, {
             throw new TypeError("The Reading history view state is invalid.");
         }
 
-        region.replaceChildren(renderReady(
+        region.setAttribute(
+            "aria-busy",
+            model.refreshing || model.loadingMore ? "true" : "false"
+        );
+        const rendered = renderReady(
             documentImpl,
             model,
             actions,
             locale
-        ));
+        );
+        region.replaceChildren(rendered.section);
+
+        if (rendered.focusTarget !== null) {
+            if (rendered.makeFocusTargetProgrammatic) {
+                rendered.focusTarget.setAttribute("tabindex", "-1");
+            }
+
+            rendered.focusTarget.focus();
+        }
 
         return region;
     }

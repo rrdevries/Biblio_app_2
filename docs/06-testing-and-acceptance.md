@@ -1089,3 +1089,57 @@ No-go:
   authorization;
 - fabricated date precision, speculative source copy or exposed IDs;
 - Core, REST, Elementor, Crocoblock, E2E, schema or migration changes.
+
+## 44. Vertical Slice 1C.5 Reading History responsive/accessibility evidence
+
+Status: **GO**
+
+Acceptance evidence:
+
+- the existing detail grid and breakpoint families remain authoritative:
+  mobile `<768px`, tablet `768–1023px` and desktop `>=1024px`; history is one
+  column within the readable detail width at every breakpoint;
+- structural 320 CSS-pixel and 200% zoom/reflow contracts exclude history
+  fixed widths/heights, nowrap, ellipsis, hidden overflow, absolute
+  positioning and horizontal scrolling;
+- exact, month, year and null-start date strings remain intact, including long
+  Dutch month names, ten entries and appended pages;
+- non-empty history has one H2, one native `ul` and native `li` entries; zero
+  history has no H2, section, residual spacing or hidden control;
+- textual outcomes and source context remain sufficient without color or
+  icons; no entry is interactive or focusable;
+- the stable subordinate region alone owns `aria-busy`; short history updates
+  are separate polite live messages and the complete list is not live;
+- history live messages do not claim `role=status`, preserving the existing
+  unique Itemdetail/Reading mutation status contract;
+- retry and load-more are native controls with visible accessible names,
+  genuine disabled behavior, the existing focus ring and at least 44 px
+  target size; mobile recovery/load-more controls are full width;
+- passive initial success/error, explicit initial retry and automatic
+  post-End refresh request no focus movement;
+- successful pagination focuses only after the replacement DOM is connected:
+  the continuing button remains in normal tab order, while a disappearing
+  final button moves focus to an H2 with `tabindex=-1`;
+- pagination failure retains entries and deliberately focuses its local
+  recovery control; retry follows the same success focus rules;
+- post-End refresh and refresh failure do not override existing End Reading
+  reconciliation focus; the error states that reading status was updated but
+  history could not be refreshed and exposes no technical detail;
+- all history rules are scoped below the Biblio UI root and use existing
+  `--biblio-*` tokens; measured text/control contrast remains at least 4.5:1
+  and the focus color at least 3:1 against white;
+- history defines no animation or transition, so no additional reduced-motion
+  rule is required;
+- 106 targeted history/design/runtime/detail/Start/End tests and all 135 UI
+  tests pass; PHP/JS syntax, UI smoke, 28 REST tests with 425 assertions and
+  Core smoke are green;
+- the unchanged existing 1A/1B Playwright suite passes 13/13 with guard
+  refusals, cleanup twice, zero residue and unchanged non-fixture fingerprint.
+
+No-go:
+
+- changing History, REST/Core or Start/End Reading semantics;
+- adding global shell styling, Elementor/Crocoblock coupling or a new
+  breakpoint system;
+- adding a second competing status role or announcing the complete list;
+- adding or changing an E2E case/fixture, schema or migration in 1C.5.

@@ -784,6 +784,7 @@ export function createLibraryApp(mount, {
 
                     if (readingHistory.state === "ready") {
                         readingHistory.focusAfterPagination = false;
+                        readingHistory.focusAfterPaginationError = false;
                         readingHistory.addedCount = 0;
                     }
                 }
@@ -800,6 +801,7 @@ export function createLibraryApp(mount, {
                         loadMoreError: false,
                         paginationRecovery: "retry",
                         focusAfterPagination: false,
+                        focusAfterPaginationError: false,
                         addedCount: 0,
                         ...overrides,
                     };
@@ -824,6 +826,7 @@ export function createLibraryApp(mount, {
                             loadingMore: false,
                             loadMoreError: false,
                             focusAfterPagination: false,
+                            focusAfterPaginationError: false,
                             addedCount: 0,
                         };
                     renderReadingHistory();
@@ -872,6 +875,7 @@ export function createLibraryApp(mount, {
                                 loadingMore: false,
                                 loadMoreError: false,
                                 focusAfterPagination: false,
+                                focusAfterPaginationError: false,
                                 addedCount: 0,
                             };
                         renderReadingHistory();
@@ -907,6 +911,7 @@ export function createLibraryApp(mount, {
                         loadingMore: true,
                         loadMoreError: false,
                         focusAfterPagination: false,
+                        focusAfterPaginationError: false,
                         addedCount: 0,
                     };
                     renderReadingHistory();
@@ -935,6 +940,7 @@ export function createLibraryApp(mount, {
                             loadingMore: false,
                             loadMoreError: false,
                             focusAfterPagination: true,
+                            focusAfterPaginationError: false,
                             addedCount: page.items.length,
                         };
                         renderReadingHistory();
@@ -955,6 +961,7 @@ export function createLibraryApp(mount, {
                             loadMoreError: true,
                             paginationRecovery: readingHistoryRecovery(error),
                             focusAfterPagination: false,
+                            focusAfterPaginationError: true,
                             addedCount: 0,
                         };
                         renderReadingHistory();

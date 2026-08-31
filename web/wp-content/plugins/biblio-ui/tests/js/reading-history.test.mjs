@@ -18,6 +18,9 @@ class FakeElement {
         this.listeners = new Map();
         this.disabled = false;
         this.focused = false;
+        this.focusCount = 0;
+        this.parentNode = null;
+        this.rootConnected = false;
     }
 
     setAttribute(name, value) {
@@ -29,10 +32,22 @@ class FakeElement {
     }
 
     append(...children) {
+        for (const child of children) {
+            child.parentNode = this;
+        }
+
         this.children.push(...children);
     }
 
     replaceChildren(...children) {
+        for (const child of this.children) {
+            child.parentNode = null;
+        }
+
+        for (const child of children) {
+            child.parentNode = this;
+        }
+
         this.children = [...children];
     }
 
@@ -47,7 +62,16 @@ class FakeElement {
     }
 
     focus() {
+        if (!this.isConnected) {
+            throw new Error("Focus target must be connected before focus().");
+        }
+
         this.focused = true;
+        this.focusCount += 1;
+    }
+
+    get isConnected() {
+        return this.rootConnected || this.parentNode?.isConnected === true;
     }
 
     querySelector(selector) {
@@ -82,6 +106,14 @@ function byTag(root, tagName) {
     return descendants(root, (node) => node.tagName === tagName.toUpperCase());
 }
 
+function byAttribute(root, name, value) {
+    return descendants(root, (node) => node.getAttribute(name) === value);
+}
+
+function focused(root) {
+    return descendants(root, (node) => node.focused);
+}
+
 function text(root) {
     return [root.textContent, ...root.children.map(text)].filter(Boolean).join(" ");
 }
@@ -109,6 +141,7 @@ function ready(overrides = {}) {
         loadMoreError: false,
         paginationRecovery: "retry",
         focusAfterPagination: false,
+        focusAfterPaginationError: false,
         addedCount: 0,
         ...overrides,
     };
@@ -116,6 +149,7 @@ function ready(overrides = {}) {
 
 function setup() {
     const root = new FakeElement("div");
+    root.rootConnected = true;
     const region = new FakeElement("div");
     region.setAttribute("data-biblio-reading-history", "true");
     root.append(region);
@@ -207,7 +241,7 @@ test("Dutch formatter preserves exact, month and year precision", () => {
     );
 });
 
-test("loading, empty and local retry never replace Item detail", () => {
+test("loading, empty and local retry stay subordinate without stealing focus", () => {
     const { region, view } = setup();
     let retries = 0;
     const actions = {
@@ -220,9 +254,13 @@ test("loading, empty and local retry never replace Item detail", () => {
     assert.equal(region.getAttribute("aria-busy"), "true");
     assert.match(text(region), /Leesgeschiedenis laden/);
     assert.equal(byTag(region, "h2").length, 0);
+    assert.equal(byAttribute(region, "aria-live", "polite").length, 1);
+    assert.equal(byAttribute(region, "role", "status").length, 0);
+    assert.equal(focused(region).length, 0);
 
     view.render({ state: "empty" }, actions);
     assert.equal(region.children.length, 0);
+    assert.equal(region.getAttribute("aria-busy"), "false");
 
     view.render({
         state: "error",
@@ -231,11 +269,22 @@ test("loading, empty and local retry never replace Item detail", () => {
     }, actions);
     assert.equal(byTag(region, "h2").length, 0);
     assert.match(text(region), /kon niet worden geladen/);
-    byTag(region, "button")[0].click();
+    assert.equal(region.getAttribute("aria-busy"), "false");
+    assert.equal(focused(region).length, 0);
+    assert.equal(byAttribute(region, "aria-live", "polite").length, 1);
+    assert.equal(byAttribute(region, "role", "status").length, 0);
+    const retry = byTag(region, "button")[0];
+    assert.equal(retry.getAttribute("type"), "button");
+    assert.equal(retry.textContent, "Opnieuw proberen");
+    retry.click();
     assert.equal(retries, 1);
+
+    view.render(ready(), actions);
+    assert.equal(region.getAttribute("aria-busy"), "false");
+    assert.equal(focused(region).length, 0);
 });
 
-test("history renders semantic outcomes, periods and only safe source copy", () => {
+test("history renders a native list, intact precision and text-only status", () => {
     const { region, view } = setup();
     view.render(ready({
         items: [
@@ -251,6 +300,21 @@ test("history renders semantic outcomes, periods and only safe source copy", () 
                 historical_registration: true,
             }),
             entry({ source_type: "unknown" }),
+            entry({
+                started_on: { year: 2025, month: 3, day: null },
+                finished_on: { year: 2025, month: 4, day: null },
+            }),
+            entry({
+                started_on: { year: 2024, month: null, day: null },
+                finished_on: { year: 2025, month: null, day: null },
+            }),
+            entry({
+                started_on: null,
+                finished_on: { year: 2025, month: 9, day: null },
+            }),
+            entry({ started_on: null }),
+            entry(),
+            entry({ outcome: "stopped" }),
         ],
     }), {});
 
@@ -258,17 +322,27 @@ test("history renders semantic outcomes, periods and only safe source copy", () 
         "Leesgeschiedenis",
     ]);
     assert.equal(byTag(region, "ul").length, 1);
-    assert.equal(byTag(region, "li").length, 4);
+    assert.equal(byTag(region, "li").length, 10);
+    assert.equal(byTag(region, "table").length, 0);
     assert.match(text(region), /Uitgelezen/);
     assert.match(text(region), /Gestopt/);
     assert.match(text(region), /12 maart 2025 – 28 maart 2025/);
     assert.match(text(region), /Afgerond februari 2024/);
+    assert.match(text(region), /maart 2025 – april 2025/);
+    assert.match(text(region), /2024 – 2025/);
+    assert.match(text(region), /Afgerond september 2025/);
+    assert.match(text(region), /Afgerond 28 maart 2025/);
     assert.match(text(region), /Externe lening/);
     assert.match(text(region), /Historische registratie/);
     assert.doesNotMatch(text(region), /Eigen exemplaar|Bron onbekend|paused/);
+    assert.equal(byAttribute(region, "aria-live", "polite").length, 0);
+    assert.equal(byTag(region, "li").some((node) => (
+        node.getAttribute("tabindex") !== null
+    )), false);
+    assert.equal(focused(region).length, 0);
 });
 
-test("pagination controls lock pending, preserve errors and focus logically", () => {
+test("pagination uses native disabled controls and restores deliberate focus", () => {
     const { region, view } = setup();
     let loads = 0;
     let retries = 0;
@@ -283,16 +357,26 @@ test("pagination controls lock pending, preserve errors and focus logically", ()
     view.render(ready({ nextCursor: "next", loadingMore: true }), actions);
     const pendingButton = byTag(region, "button")[0];
     assert.equal(pendingButton.textContent, "Meer laden");
+    assert.equal(pendingButton.getAttribute("type"), "button");
     assert.equal(pendingButton.disabled, true);
+    assert.equal(region.getAttribute("aria-busy"), "true");
+    assert.equal(byAttribute(region, "aria-live", "polite").length, 1);
+    assert.equal(byAttribute(region, "role", "status").length, 0);
+    assert.equal(pendingButton.listeners.has("keydown"), false);
     pendingButton.click();
     assert.equal(loads, 0);
 
     view.render(ready({
         nextCursor: "next",
         loadMoreError: true,
+        focusAfterPaginationError: true,
     }), actions);
     assert.match(text(region), /Meer leesgeschiedenis kon niet worden geladen/);
-    byTag(region, "button").at(-1).click();
+    assert.equal(region.getAttribute("aria-busy"), "false");
+    const paginationRetry = byTag(region, "button").at(-1);
+    assert.equal(paginationRetry.focused, true);
+    assert.equal(paginationRetry.getAttribute("type"), "button");
+    paginationRetry.click();
     assert.equal(retries, 1);
 
     view.render(ready({
@@ -300,13 +384,46 @@ test("pagination controls lock pending, preserve errors and focus logically", ()
         focusAfterPagination: true,
         addedCount: 2,
     }), actions);
-    assert.equal(byTag(region, "button")[0].focused, true);
+    const continuingButton = byTag(region, "button")[0];
+    assert.equal(continuingButton.focused, true);
+    assert.equal(continuingButton.getAttribute("tabindex"), null);
     assert.match(text(region), /2 leesrondes toegevoegd/);
+    assert.equal(byAttribute(region, "aria-live", "polite").length, 1);
 
     view.render(ready({
         nextCursor: null,
         focusAfterPagination: true,
     }), actions);
-    assert.equal(byTag(region, "h2")[0].focused, true);
+    const finalHeading = byTag(region, "h2")[0];
+    assert.equal(finalHeading.focused, true);
+    assert.equal(finalHeading.getAttribute("tabindex"), "-1");
     assert.equal(byTag(region, "button").length, 0);
+});
+
+test("automatic refresh stays busy and never overrides End Reading focus", () => {
+    const { region, view } = setup();
+    const actions = {
+        retry() {},
+        reload() {},
+        loginUrl: "https://example.test/login",
+    };
+
+    view.render(ready({ refreshing: true }), actions);
+    assert.equal(region.getAttribute("aria-busy"), "true");
+    assert.match(text(region), /Leesgeschiedenis vernieuwen/);
+    assert.equal(focused(region).length, 0);
+
+    view.render(ready({
+        refreshError: true,
+        refreshRecovery: "retry",
+    }), actions);
+    assert.equal(region.getAttribute("aria-busy"), "false");
+    assert.match(
+        text(region),
+        /leesstatus is bijgewerkt, maar de leesgeschiedenis kon niet worden vernieuwd/
+    );
+    assert.doesNotMatch(text(region), /500|nonce|REST|\/me\/works|stack/i);
+    assert.equal(focused(region).length, 0);
+    assert.equal(byAttribute(region, "aria-live", "polite").length, 1);
+    assert.equal(byAttribute(region, "role", "status").length, 0);
 });

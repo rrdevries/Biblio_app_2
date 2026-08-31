@@ -2057,6 +2057,7 @@ test("history pagination uses one opaque cursor request and retries that cursor"
     );
     const failed = historyRenders.renders.at(-1);
     assert.equal(failed.model.loadMoreError, true);
+    assert.equal(failed.model.focusAfterPaginationError, true);
     assert.equal(failed.model.items.length, 2);
     assert.equal(
         await failed.actions.retryLoadMore(),
@@ -2071,6 +2072,10 @@ test("history pagination uses one opaque cursor request and retries that cursor"
     assert.equal(historyRenders.renders.at(-1).model.items.length, 3);
     assert.equal(historyRenders.renders.at(-1).model.nextCursor, null);
     assert.equal(historyRenders.renders.at(-1).model.focusAfterPagination, true);
+    assert.equal(
+        historyRenders.renders.at(-1).model.focusAfterPaginationError,
+        false
+    );
 });
 
 test("navigation aborts old Work history and ignores its late response", async () => {
@@ -2241,6 +2246,14 @@ test("End Reading rereads detail then replaces history from page one only", asyn
         [newlyEnded, historyEntry()]
     );
     assert.equal(historyRenders.renders.at(-1).model.nextCursor, "new-cursor");
+    assert.equal(
+        historyRenders.renders.at(-1).model.focusAfterPagination,
+        false
+    );
+    assert.equal(
+        historyRenders.renders.at(-1).model.focusAfterPaginationError,
+        false
+    );
 });
 
 test("history refresh failure after End stays local and never repeats mutation", async () => {
@@ -2294,6 +2307,8 @@ test("history refresh failure after End stays local and never repeats mutation",
     assert.equal(failed.model.state, "ready");
     assert.equal(failed.model.refreshError, true);
     assert.equal(failed.model.items.length, 1);
+    assert.equal(failed.model.focusAfterPagination, false);
+    assert.equal(failed.model.focusAfterPaginationError, false);
     assert.equal(posts, 1);
 
     assert.equal(await failed.actions.retry(), true);

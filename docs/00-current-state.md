@@ -1119,3 +1119,45 @@ history is explicitly marked as not refreshed and can be retried locally.
 
 Schema remains 1007. No Core, REST, Elementor, Crocoblock, E2E/Playwright,
 schema or migration change is part of 1C.4.
+
+### Vertical Slice 1C.5 — Reading History responsive and accessibility pass
+
+Status: **Implemented — GO**
+
+The 1C.4 Reading history behavior and product semantics are unchanged. The
+formal frontend pass now proves one-column reflow at the existing mobile,
+tablet and desktop breakpoints, including a structural 320 CSS-pixel/200%
+zoom contract: no fixed history width/height, truncation, nowrap, absolute
+positioning, horizontal overflow, animation or transition was added. Long
+exact/month/year periods, null-start copy, long local errors and ten entries
+remain complete and wrapping. The empty stable region still has no residual
+layout.
+
+The history uses native `ul`/`li` semantics with visible list-item behavior,
+one H2 only for non-empty history and native buttons/links with visible text
+as their accessible names. Existing Biblio tokens supply spacing, surfaces,
+44 px controls, focus ring and colors; text, muted-surface, secondary-control
+and focus colors meet the tested contrast thresholds. Mobile load-more and
+history recovery controls use the existing full-width control pattern, while
+tablet/desktop retain the readable detail-column maximum.
+
+The stable history region owns `aria-busy`. Short loading, pagination,
+completion and error messages use scoped polite live text without assigning a
+second `role=status`, so they do not compete with the existing Itemdetail and
+Reading mutation status contract or announce the complete list. Initial load,
+initial error/retry and automatic post-End refresh never request focus.
+Successful pagination focuses the newly connected replacement control; when
+that control disappears, the connected history H2 receives programmatic
+focus with `tabindex=-1` and stays outside the normal tab sequence. Pagination
+failure focuses its local recovery control. No history item becomes focusable.
+
+The post-End refresh error now states that the reading status is updated while
+history could not be refreshed. It contains no technical detail and does not
+steal the existing End Reading reconciliation focus. The unchanged guarded
+1A/1B Playwright regression passes all 13 cases after proving fixture guards,
+double cleanup, zero residue and an unchanged non-fixture fingerprint; no 1C
+case or fixture was added.
+
+Schema remains 1007. No Core, REST, Elementor, Crocoblock, E2E/Playwright
+file, schema, migration, Reading History semantic or Start/End Reading
+semantic changed in 1C.5.
