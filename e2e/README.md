@@ -1,7 +1,8 @@
-# Vertical Slices 1A and 1B E2E
+# Vertical Slices 1A, 1B and 1C E2E
 
 This directory contains the shared local-only Playwright acceptance layer for
-Vertical Slice 1A and the ReadingRound end evidence in Vertical Slice 1B.
+Vertical Slice 1A, the ReadingRound end evidence in Vertical Slice 1B and the
+Reading History browser evidence in Vertical Slice 1C.
 
 ## Safety boundary
 
@@ -23,13 +24,28 @@ printed or stored in a tracked file.
 
 ## Fixture data
 
-The fixture has two designated personal Libraries, nine actor-owned active
-Items and one foreign active Item. Eight Items start with an active
+The fixture has two designated personal Libraries, nine original actor-Library
+Items and one foreign active Item. Eight original Items start with an active
 ReadingRound. Six dedicated actor records isolate the completed, stopped,
 stale, invalid-nonce, idempotent and incompatible-lifecycle end scenarios. The
 actor is also a direct manager of the other Library while the foreign active
 ReadingRound remains owned by the other user; this proves that Library
 management never transfers private ReadingRound ownership.
+
+The 1C layer adds eight Items in that other allowlisted Library across six
+Works. One shared Work has a primary Item, another Item for the same Edition,
+an Item for another Edition, one actor-owned ExternalLoan, thirteen ended
+actor rounds, one active actor round and one foreign ended round. Its exact,
+month, year, stopped, source-free historical and legacy dates are fixed. The
+remaining Works isolate zero history, active-only, successful End refresh,
+failed End refresh and rapid-navigation behavior. Setup contains 18 Items, 16
+Works, 17 Editions, one ExternalLoan and 29 ReadingRounds in total. The 1C
+browser spec never depends on a mutation from an earlier test.
+
+Cleanup removes ReadingRounds by the exact allowlisted Work set, including
+source-free, ExternalLoan and legacy rows, then removes the one exact
+ExternalLoan and the existing exact entity allowlists. Counts report every
+relevant fixture entity separately.
 
 The copied Biblio1 source was inspected only to select these safe
 bibliographic titles for the original 1A cases:

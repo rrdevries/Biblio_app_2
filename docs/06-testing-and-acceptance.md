@@ -1143,3 +1143,57 @@ No-go:
   breakpoint system;
 - adding a second competing status role or announcing the complete list;
 - adding or changing an E2E case/fixture, schema or migration in 1C.5.
+
+## 45. Vertical Slice 1C.6 Reading History browser evidence
+
+Status: **GO**
+
+Acceptance evidence:
+
+- the local-only fixture retains the exact opt-in, WordPress `local`, DDEV
+  project and hostname guards and expands only explicit `e2e-*` allowlists;
+- deterministic setup contains 2 Libraries, 18 Items, 16 Works, 17 Editions,
+  1 ExternalLoan, 29 ReadingRounds, 3 memberships, 2 designations, 16 catalog
+  contexts, 42 classification terms, 16 activity events and 2 marked users;
+- one shared Work has 13 actor-owned ended rows plus an excluded active row
+  and excluded foreign-owner row, with same-Item, same-Edition/other-Item,
+  other-Edition, ExternalLoan, historical-manual and legacy sources;
+- exact `12 maart 2025`, month `maart 2025`, year `2024` and legacy null-start
+  `Afgerond 2 februari 2025` render without a fabricated legacy/local or
+  partial-date day;
+- zero-history and active-only detail show neither history H2, list nor
+  load-more control; active-plus-ended detail keeps active status separate;
+- initial page is exactly 10 rows, one opaque-cursor request appends 3 rows in
+  server order, all 13 texts are unique and the final H2 receives focus;
+- initial failure and page-two failure remain local, preserve valid detail or
+  page-one entries and recover explicitly; page-two retry uses the identical
+  cursor; a Reading History-specific 403 exposes session recovery without an
+  automatic request loop;
+- the successful End case observes exactly one POST, authoritative detail GET
+  and then history page-one GET; holding the GET proves no POST-derived entry,
+  and reload proves persisted server truth;
+- failed post-End history refresh retains authoritative ended detail and old
+  history; explicit retry performs only another history GET and never repeats
+  the mutation;
+- a direct link, reload, back/forward and a controlled delayed old-Work
+  response prove route isolation without timing sleeps;
+- 390×844, 900×900 and 1280×900 browser checks prove semantic H1/H2/ul/li,
+  native 44 px controls, keyboard pagination focus and zero document/history
+  horizontal overflow;
+- Reading History Playwright passes 11/11; unchanged 1A/1B passes 13/13; the
+  combined one-worker run passes 24/24;
+- both cleanup passes report zero for every fixture entity, including
+  ExternalLoan and source-free/legacy ReadingRounds, and the non-fixture
+  fingerprint remains identical;
+- UI passes 135/135; targeted Core readmodel passes 7 tests/157 assertions;
+  REST passes 28/425; full Core passes 242 unit tests/919 assertions and 219
+  integration tests/2006 assertions; Composer/platform, PHPStan, syntax,
+  schema/migrations, smoke, manifest and diff checks are green.
+
+No-go:
+
+- treating this evidence step as final 1C exit evidence;
+- changing Core/REST/UI product contracts, Elementor/Crocoblock, schema or
+  migration to make a browser case pass;
+- broad cleanup, unmarked identities, non-local execution or test-order
+  dependence.

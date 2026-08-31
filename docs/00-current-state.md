@@ -1161,3 +1161,43 @@ case or fixture was added.
 Schema remains 1007. No Core, REST, Elementor, Crocoblock, E2E/Playwright
 file, schema, migration, Reading History semantic or Start/End Reading
 semantic changed in 1C.5.
+
+### Vertical Slice 1C.6 — Reading History browser and integration evidence
+
+Status: **Implemented — GO**
+
+The guarded local Playwright layer now contains a separate eleven-case
+Reading History spec. Its deterministic fixture reuses the two existing E2E
+Libraries and identities, keeps the original 1A actor-Library overview at
+nine Items, and places eight history-specific Items in the already accessible
+other Library. One shared Work covers the primary Item, a second Item on the
+same Edition, another Edition, ExternalLoan, source-free historical, legacy,
+active-plus-ended, foreign-owner and thirteen-row pagination cases. Separate
+Works isolate zero history, active-only, End refresh, refresh failure and
+rapid navigation.
+
+Browser assertions prove the semantic H2/list, completed/stopped and source
+copy, exact/month/year/null-start precision, Work-wide entries, actor privacy,
+10+3 opaque-cursor pagination without duplicates or skips, final-heading
+focus, initial and page-two retry, invalid-nonce recovery, direct links,
+reload/back/forward and a deliberately delayed stale response. The End flow
+observes `POST end` followed by authoritative `GET detail` and then page-one
+`GET history`; while that history response is held, no new entry appears.
+Refresh failure preserves ended detail and retained history, and explicit
+retry sends only another history GET.
+
+The 390×844, 900×900 and 1280×900 browser matrix proves native controls,
+one H1, one history H2, `ul`/`li`, 44 px targets and no document or history
+horizontal overflow. Initial history loading uses polite live text and does
+not move focus; End refresh retains the existing mutation-status focus.
+
+The complete Playwright run passes 24/24: all original 1A/1B cases pass 13/13
+unchanged and Reading History passes 11/11. Four environment/host/project/
+opt-in guards refuse correctly. Both cleanup runs report zero for Libraries,
+Items, Works, Editions, ExternalLoans, ReadingRounds, memberships,
+designations, catalog contexts, classification terms, activity events and
+users; the non-fixture fingerprint is identical before and after.
+
+Schema remains 1007. No Core, REST, Biblio UI product code, Elementor,
+Crocoblock, schema or migration changed in 1C.6. Formal Vertical Slice 1C exit
+evidence remains 1C.7 and is not claimed here.

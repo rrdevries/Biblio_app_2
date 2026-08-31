@@ -4,7 +4,7 @@ Date: 2026-08-30
 Last updated: 2026-08-31
 Readiness verdict: **READY WITH CONDITIONS**
 
-Current implementation status: **1C.5 GO** — see §§17–20
+Current implementation status: **1C.6 GO** — see §§17–21
 
 ## 1. Authority, baseline and analysis scope
 
@@ -536,7 +536,8 @@ At the 1C.1 readiness point the verdict was **READY WITH CONDITIONS**. The
 binding product choices were subsequently approved for 1C.2 and the measured
 index condition is closed by §17. The subsequent REST contract is closed by
 §18, the UI runtime contract is closed by §19 and the responsive/accessibility
-pass by §20; guarded 1C E2E and formal exit remain unimplemented.
+pass by §20 and guarded browser evidence by §21; formal exit remains
+unimplemented.
 
 ## 17. 1C.2 implementation evidence
 
@@ -634,7 +635,7 @@ The separately approved Biblio UI runtime and semantic list are now **GO**.
 
 Schema stays 1007. No Core, REST, Elementor, Crocoblock, E2E/Playwright,
 schema or migration file changed. Formal expanded responsive/accessibility
-acceptance is closed by §20 and guarded 1C E2E remains 1C.6.
+acceptance is closed by §20; guarded 1C E2E is subsequently closed by §21.
 
 ## 20. 1C.5 implementation evidence
 
@@ -680,3 +681,47 @@ now **GO** without changing the 1C.4 product contract.
 Schema remains 1007. No Core, REST, Elementor, Crocoblock, E2E/Playwright
 file, schema, migration, Reading History semantic or Start/End Reading
 semantic changed. Guarded Reading History browser acceptance remains 1C.6.
+That browser acceptance is subsequently closed by §21.
+
+## 21. 1C.6 implementation evidence
+
+The separately approved guarded fixture and browser acceptance step is now
+**GO** without changing any product contract.
+
+- the existing two marked identities and Libraries are reused; eight new
+  history Items live in the already direct-accessible other Library so the
+  original 1A actor-Library overview remains byte-for-byte testable;
+- setup produces 18 Items, 16 Works, 17 Editions, 1 ExternalLoan and 29 total
+  ReadingRounds; 13 actor-ended rows on one Work produce a default 10-row page
+  plus a 3-row cursor page;
+- the fixture explicitly covers no history, active-only, completed, stopped,
+  mixed finish dates, same Work through another Item/same Edition, another
+  Edition, ExternalLoan, source-free historical registration, legacy null
+  start, active plus ended, foreign actor and two isolated End flows;
+- browser-visible date evidence covers exact `12 maart 2025`, month
+  `maart 2025`, year `2024` and null-start `Afgerond ...`, with no fabricated
+  first day or legacy-local start;
+- actor privacy is proven both in the GET body and rendered count/text while
+  the actor manages and directly accesses the source Library;
+- pagination sends one initial GET and one opaque-cursor continuation,
+  appends without duplicates/skips and focuses the final connected H2;
+- controlled interception proves local initial/page-two errors and retry,
+  identical-cursor retry and Reading History invalid-nonce recovery;
+- the End flow records one POST, then authoritative detail GET, then page-one
+  history GET; a held history response proves the UI derives no entry from the
+  POST, and refresh failure plus retry proves the mutation is never repeated;
+- direct link, reload, back/forward and a released delayed old-Work response
+  prove route-generation/abort protection in the real browser;
+- live-DOM checks at 390×844, 900×900 and 1280×900 prove one H1, one history
+  H2, native list/buttons, keyboard behavior, 44 px targets and no horizontal
+  overflow;
+- the new spec passes 11/11, original 1A/1B passes 13/13 and the canonical
+  combined one-worker run passes 24/24;
+- all four guards refuse correctly; cleanup runs twice with every reported
+  entity at zero, and the before/after non-fixture fingerprint is identical;
+- UI 135/135, readmodel 7/157, REST 28/425, Core unit 242/919 and Core
+  integration 219/2006 pass with all static/runtime gates.
+
+Schema remains 1007. Only fixture, E2E and documentation/manifest evidence
+changed. No Core, REST, Biblio UI product code, Elementor, Crocoblock, schema
+or migration changed. Formal 1C exit evidence remains the separate 1C.7 step.
