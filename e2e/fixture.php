@@ -46,6 +46,15 @@ const BIBLIO_E2E_END_STALE_ITEM = "e2e-item-end-stale";
 const BIBLIO_E2E_END_NONCE_ITEM = "e2e-item-end-nonce";
 const BIBLIO_E2E_END_IDEMPOTENT_ITEM = "e2e-item-end-idempotent";
 const BIBLIO_E2E_END_LIFECYCLE_ITEM = "e2e-item-end-lifecycle";
+const BIBLIO_E2E_HISTORY_ITEM = "e2e-item-history";
+const BIBLIO_E2E_HISTORY_SAME_EDITION_ITEM = "e2e-item-history-same-edition";
+const BIBLIO_E2E_HISTORY_OTHER_EDITION_ITEM = "e2e-item-history-other-edition";
+const BIBLIO_E2E_HISTORY_ZERO_ITEM = "e2e-item-history-zero";
+const BIBLIO_E2E_HISTORY_ACTIVE_ITEM = "e2e-item-history-active-only";
+const BIBLIO_E2E_HISTORY_END_ITEM = "e2e-item-history-end";
+const BIBLIO_E2E_HISTORY_REFRESH_ITEM = "e2e-item-history-refresh";
+const BIBLIO_E2E_HISTORY_RAPID_ITEM = "e2e-item-history-rapid";
+const BIBLIO_E2E_HISTORY_EXTERNAL_LOAN = "e2e-external-loan-history";
 
 /** @return never */
 function biblioE2eFail(string $message): void
@@ -102,6 +111,12 @@ function biblioE2eIds(): array
         "end_nonce_work" => "e2e-work-end-nonce",
         "end_idempotent_work" => "e2e-work-end-idempotent",
         "end_lifecycle_work" => "e2e-work-end-lifecycle",
+        "history_work" => "e2e-work-history",
+        "history_zero_work" => "e2e-work-history-zero",
+        "history_active_work" => "e2e-work-history-active-only",
+        "history_end_work" => "e2e-work-history-end",
+        "history_refresh_work" => "e2e-work-history-refresh",
+        "history_rapid_work" => "e2e-work-history-rapid",
         "primary_edition" => "e2e-edition-primary",
         "missing_edition" => "e2e-edition-missing-metadata",
         "conflict_edition" => "e2e-edition-active-conflict",
@@ -112,6 +127,13 @@ function biblioE2eIds(): array
         "end_nonce_edition" => "e2e-edition-end-nonce",
         "end_idempotent_edition" => "e2e-edition-end-idempotent",
         "end_lifecycle_edition" => "e2e-edition-end-lifecycle",
+        "history_edition" => "e2e-edition-history",
+        "history_other_edition" => "e2e-edition-history-other",
+        "history_zero_edition" => "e2e-edition-history-zero",
+        "history_active_edition" => "e2e-edition-history-active-only",
+        "history_end_edition" => "e2e-edition-history-end",
+        "history_refresh_edition" => "e2e-edition-history-refresh",
+        "history_rapid_edition" => "e2e-edition-history-rapid",
         "primary_item" => BIBLIO_E2E_PRIMARY_ITEM,
         "missing_item" => BIBLIO_E2E_MISSING_ITEM,
         "conflict_item" => BIBLIO_E2E_CONFLICT_ITEM,
@@ -122,7 +144,52 @@ function biblioE2eIds(): array
         "end_nonce_item" => BIBLIO_E2E_END_NONCE_ITEM,
         "end_idempotent_item" => BIBLIO_E2E_END_IDEMPOTENT_ITEM,
         "end_lifecycle_item" => BIBLIO_E2E_END_LIFECYCLE_ITEM,
+        "history_item" => BIBLIO_E2E_HISTORY_ITEM,
+        "history_same_edition_item" => BIBLIO_E2E_HISTORY_SAME_EDITION_ITEM,
+        "history_other_edition_item" => BIBLIO_E2E_HISTORY_OTHER_EDITION_ITEM,
+        "history_zero_item" => BIBLIO_E2E_HISTORY_ZERO_ITEM,
+        "history_active_item" => BIBLIO_E2E_HISTORY_ACTIVE_ITEM,
+        "history_end_item" => BIBLIO_E2E_HISTORY_END_ITEM,
+        "history_refresh_item" => BIBLIO_E2E_HISTORY_REFRESH_ITEM,
+        "history_rapid_item" => BIBLIO_E2E_HISTORY_RAPID_ITEM,
+        "history_external_loan" => BIBLIO_E2E_HISTORY_EXTERNAL_LOAN,
     ];
+}
+
+/** @return list<string> */
+function biblioE2eWorks(): array
+{
+    $ids = biblioE2eIds();
+
+    return array_values(array_filter(
+        $ids,
+        static fn (string $value, string $key): bool => str_ends_with($key, "_work"),
+        ARRAY_FILTER_USE_BOTH
+    ));
+}
+
+/** @return list<string> */
+function biblioE2eEditions(): array
+{
+    $ids = biblioE2eIds();
+
+    return array_values(array_filter(
+        $ids,
+        static fn (string $value, string $key): bool => str_ends_with($key, "_edition"),
+        ARRAY_FILTER_USE_BOTH
+    ));
+}
+
+/** @return list<string> */
+function biblioE2eItems(): array
+{
+    $ids = biblioE2eIds();
+
+    return array_values(array_filter(
+        $ids,
+        static fn (string $value, string $key): bool => str_ends_with($key, "_item"),
+        ARRAY_FILTER_USE_BOTH
+    ));
 }
 
 /** @return list<string> */
@@ -161,27 +228,9 @@ function biblioE2eCleanupCore(wpdb $database): void
     $tables = new CoreTableNames($database->prefix);
     $ids = biblioE2eIds();
     $libraries = [$ids["actor_library"], $ids["other_library"]];
-    $works = [
-        $ids["primary_work"], $ids["missing_work"],
-        $ids["conflict_work"], $ids["foreign_work"],
-        $ids["end_completed_work"], $ids["end_stopped_work"],
-        $ids["end_stale_work"], $ids["end_nonce_work"],
-        $ids["end_idempotent_work"], $ids["end_lifecycle_work"],
-    ];
-    $editions = [
-        $ids["primary_edition"], $ids["missing_edition"],
-        $ids["conflict_edition"], $ids["foreign_edition"],
-        $ids["end_completed_edition"], $ids["end_stopped_edition"],
-        $ids["end_stale_edition"], $ids["end_nonce_edition"],
-        $ids["end_idempotent_edition"], $ids["end_lifecycle_edition"],
-    ];
-    $items = [
-        $ids["primary_item"], $ids["missing_item"],
-        $ids["conflict_item"], $ids["foreign_item"],
-        $ids["end_completed_item"], $ids["end_stopped_item"],
-        $ids["end_stale_item"], $ids["end_nonce_item"],
-        $ids["end_idempotent_item"], $ids["end_lifecycle_item"],
-    ];
+    $works = biblioE2eWorks();
+    $editions = biblioE2eEditions();
+    $items = biblioE2eItems();
 
     if ($database->query("START TRANSACTION") === false) {
         throw new RuntimeException("Could not start exact fixture cleanup.");
@@ -191,7 +240,13 @@ function biblioE2eCleanupCore(wpdb $database): void
         biblioE2eDeleteIn($database, $tables->contributionPublications(), "library_id", $libraries);
         biblioE2eDeleteIn($database, $tables->libraryActivityEvents(), "library_id", $libraries);
         biblioE2eDeleteIn($database, $tables->nextReadingEntries(), "item_id", $items);
-        biblioE2eDeleteIn($database, $tables->readingRounds(), "item_id", $items);
+        biblioE2eDeleteIn($database, $tables->readingRounds(), "work_id", $works);
+        biblioE2eDeleteIn(
+            $database,
+            $tables->externalLoans(),
+            "external_loan_id",
+            [BIBLIO_E2E_HISTORY_EXTERNAL_LOAN]
+        );
         biblioE2eDeleteIn($database, $tables->privateNotes(), "work_id", $works);
         biblioE2eDeleteIn($database, $tables->ratings(), "work_id", $works);
         biblioE2eDeleteIn($database, $tables->reviews(), "work_id", $works);
@@ -363,6 +418,198 @@ function biblioE2eStartRound(
     );
 }
 
+function biblioE2eSeedExternalLoan(
+    wpdb $database,
+    string $userId,
+    string $workId
+): void {
+    $tables = new CoreTableNames($database->prefix);
+    $inserted = $database->insert($tables->externalLoans(), [
+        "external_loan_id" => BIBLIO_E2E_HISTORY_EXTERNAL_LOAN,
+        "user_id" => $userId,
+        "work_id" => $workId,
+        "loan_status" => "active",
+        "borrowed_at" => "2025-01-02 10:00:00.000000",
+        "due_at" => null,
+    ]);
+
+    if ($inserted !== 1) {
+        throw new RuntimeException(
+            "Could not create exact history ExternalLoan fixture."
+        );
+    }
+}
+
+function biblioE2eSeedRound(
+    wpdb $database,
+    string $roundId,
+    string $userId,
+    string $workId,
+    ?string $itemId,
+    ?string $externalLoanId,
+    ?string $outcome,
+    string $provenance,
+    ?ReadingDate $startedOn,
+    ?ReadingDate $finishedOn,
+    ?string $legacyStartedAt = null
+): void {
+    $legacy = $provenance === "legacy_source_started";
+    $inserted = $database->insert(
+        (new CoreTableNames($database->prefix))->readingRounds(),
+        [
+            "reading_round_id" => $roundId,
+            "user_id" => $userId,
+            "work_id" => $workId,
+            "item_id" => $itemId,
+            "external_loan_id" => $externalLoanId,
+            "started_at" => $legacyStartedAt,
+            "round_outcome" => $outcome,
+            "provenance" => $provenance,
+            "reading_started_year" => $startedOn?->yearValue(),
+            "reading_started_month" => $startedOn?->monthValue(),
+            "reading_started_day" => $startedOn?->dayValue(),
+            "reading_finished_year" => $finishedOn?->yearValue(),
+            "reading_finished_month" => $finishedOn?->monthValue(),
+            "reading_finished_day" => $finishedOn?->dayValue(),
+            "created_at" => $legacy ? null : "2025-01-02 10:00:00.000000",
+            "updated_at" => $legacy ? null : "2025-01-03 10:00:00.000000",
+            "ended_at" => $outcome === null
+                ? null
+                : "2025-01-03 10:00:00.000000",
+            "round_version" => 1,
+        ]
+    );
+
+    if ($inserted !== 1) {
+        throw new RuntimeException(
+            "Could not create exact Reading History round {$roundId}."
+        );
+    }
+}
+
+function biblioE2eSeedHistoryRounds(
+    wpdb $database,
+    string $actorId,
+    string $otherId
+): void {
+    $workId = "e2e-work-history";
+    biblioE2eSeedExternalLoan($database, $actorId, $workId);
+
+    $exactRounds = [
+        ["13", "completed", BIBLIO_E2E_HISTORY_ITEM, null, ReadingDate::exact(2025, 3, 12), ReadingDate::exact(2025, 12, 13)],
+        ["12", "stopped", BIBLIO_E2E_HISTORY_ITEM, null, ReadingDate::exact(2025, 12, 1), ReadingDate::exact(2025, 12, 12)],
+        ["11", "completed", BIBLIO_E2E_HISTORY_SAME_EDITION_ITEM, null, ReadingDate::exact(2025, 11, 1), ReadingDate::exact(2025, 12, 11)],
+        ["10", "completed", BIBLIO_E2E_HISTORY_OTHER_EDITION_ITEM, null, ReadingDate::exact(2025, 10, 1), ReadingDate::exact(2025, 12, 10)],
+        ["09", "completed", null, BIBLIO_E2E_HISTORY_EXTERNAL_LOAN, ReadingDate::exact(2025, 9, 1), ReadingDate::exact(2025, 12, 9)],
+        ["08", "completed", BIBLIO_E2E_HISTORY_ITEM, null, ReadingDate::exact(2025, 8, 1), ReadingDate::exact(2025, 12, 8)],
+        ["07", "stopped", BIBLIO_E2E_HISTORY_ITEM, null, ReadingDate::exact(2025, 7, 1), ReadingDate::exact(2025, 12, 7)],
+        ["06", "completed", BIBLIO_E2E_HISTORY_ITEM, null, ReadingDate::exact(2025, 6, 1), ReadingDate::exact(2025, 12, 6)],
+        ["05", "completed", BIBLIO_E2E_HISTORY_ITEM, null, ReadingDate::exact(2025, 5, 1), ReadingDate::exact(2025, 12, 5)],
+        ["04", "completed", BIBLIO_E2E_HISTORY_ITEM, null, ReadingDate::exact(2025, 4, 1), ReadingDate::exact(2025, 12, 4)],
+    ];
+
+    foreach ($exactRounds as [$suffix, $outcome, $itemId, $loanId, $start, $finish]) {
+        biblioE2eSeedRound(
+            $database,
+            "e2e-reading-round-history-{$suffix}",
+            $actorId,
+            $workId,
+            $itemId,
+            $loanId,
+            $outcome,
+            "source_started",
+            $start,
+            $finish
+        );
+    }
+
+    biblioE2eSeedRound(
+        $database,
+        "e2e-reading-round-history-month",
+        $actorId,
+        $workId,
+        null,
+        null,
+        "completed",
+        "historical_manual",
+        ReadingDate::month(2025, 3),
+        ReadingDate::month(2025, 3)
+    );
+    biblioE2eSeedRound(
+        $database,
+        "e2e-reading-round-history-legacy",
+        $actorId,
+        $workId,
+        BIBLIO_E2E_HISTORY_ITEM,
+        null,
+        "completed",
+        "legacy_source_started",
+        null,
+        ReadingDate::exact(2025, 2, 2),
+        "2024-12-31 23:30:00.000000"
+    );
+    biblioE2eSeedRound(
+        $database,
+        "e2e-reading-round-history-year",
+        $actorId,
+        $workId,
+        null,
+        null,
+        "completed",
+        "historical_manual",
+        null,
+        ReadingDate::year(2024)
+    );
+    biblioE2eSeedRound(
+        $database,
+        "e2e-reading-round-history-foreign",
+        $otherId,
+        $workId,
+        null,
+        null,
+        "completed",
+        "historical_manual",
+        null,
+        ReadingDate::exact(2026, 1, 1)
+    );
+    biblioE2eSeedRound(
+        $database,
+        "e2e-reading-round-history-end-old",
+        $actorId,
+        "e2e-work-history-end",
+        null,
+        null,
+        "completed",
+        "historical_manual",
+        null,
+        ReadingDate::year(2023)
+    );
+    biblioE2eSeedRound(
+        $database,
+        "e2e-reading-round-history-refresh-old",
+        $actorId,
+        "e2e-work-history-refresh",
+        null,
+        null,
+        "stopped",
+        "historical_manual",
+        null,
+        ReadingDate::year(2022)
+    );
+    biblioE2eSeedRound(
+        $database,
+        "e2e-reading-round-history-rapid",
+        $actorId,
+        "e2e-work-history-rapid",
+        BIBLIO_E2E_HISTORY_RAPID_ITEM,
+        null,
+        "stopped",
+        "source_started",
+        ReadingDate::exact(2023, 1, 1),
+        ReadingDate::exact(2023, 1, 2)
+    );
+}
+
 function biblioE2eActivateConflict(wpdb $database): void
 {
     [$actor] = biblioE2eUsernames();
@@ -392,29 +639,11 @@ function biblioE2eCounts(wpdb $database): array
     $tables = new CoreTableNames($database->prefix);
     $ids = biblioE2eIds();
     $libraries = [$ids["actor_library"], $ids["other_library"]];
-    $items = [
-        $ids["primary_item"], $ids["missing_item"],
-        $ids["conflict_item"], $ids["foreign_item"],
-        $ids["end_completed_item"], $ids["end_stopped_item"],
-        $ids["end_stale_item"], $ids["end_nonce_item"],
-        $ids["end_idempotent_item"], $ids["end_lifecycle_item"],
-    ];
+    $items = biblioE2eItems();
     $librarySql = implode(",", array_fill(0, count($libraries), "%s"));
     $itemSql = implode(",", array_fill(0, count($items), "%s"));
-    $workValues = [
-        $ids["primary_work"], $ids["missing_work"],
-        $ids["conflict_work"], $ids["foreign_work"],
-        $ids["end_completed_work"], $ids["end_stopped_work"],
-        $ids["end_stale_work"], $ids["end_nonce_work"],
-        $ids["end_idempotent_work"], $ids["end_lifecycle_work"],
-    ];
-    $editionValues = [
-        $ids["primary_edition"], $ids["missing_edition"],
-        $ids["conflict_edition"], $ids["foreign_edition"],
-        $ids["end_completed_edition"], $ids["end_stopped_edition"],
-        $ids["end_stale_edition"], $ids["end_nonce_edition"],
-        $ids["end_idempotent_edition"], $ids["end_lifecycle_edition"],
-    ];
+    $workValues = biblioE2eWorks();
+    $editionValues = biblioE2eEditions();
     $workSql = implode(",", array_fill(0, count($workValues), "%s"));
     $editionSql = implode(",", array_fill(0, count($editionValues), "%s"));
 
@@ -435,9 +664,13 @@ function biblioE2eCounts(wpdb $database): array
             "SELECT COUNT(*) FROM `{$tables->editions()}` WHERE edition_id IN ({$editionSql})",
             ...$editionValues
         )),
+        "external_loans" => (int) $database->get_var($database->prepare(
+            "SELECT COUNT(*) FROM `{$tables->externalLoans()}` WHERE external_loan_id = %s",
+            BIBLIO_E2E_HISTORY_EXTERNAL_LOAN
+        )),
         "rounds" => (int) $database->get_var($database->prepare(
-            "SELECT COUNT(*) FROM `{$tables->readingRounds()}` WHERE item_id IN ({$itemSql})",
-            ...$items
+            "SELECT COUNT(*) FROM `{$tables->readingRounds()}` WHERE work_id IN ({$workSql})",
+            ...$workValues
         )),
         "memberships" => (int) $database->get_var($database->prepare(
             "SELECT COUNT(*) FROM `{$tables->memberships()}` WHERE library_id IN ({$librarySql})",
@@ -489,6 +722,8 @@ function biblioE2eRoundState(wpdb $database): array
         $ids["end_idempotent_item"],
         $ids["end_lifecycle_item"],
         $ids["foreign_item"],
+        $ids["history_end_item"],
+        $ids["history_refresh_item"],
     ];
     $itemSql = implode(",", array_fill(0, count($items), "%s"));
     $rows = $database->get_results($database->prepare(
@@ -684,6 +919,23 @@ function biblioE2eSetup(wpdb $database): void
     biblioE2eAddItem($database, $composition, BIBLIO_E2E_ACTOR_LIBRARY, BIBLIO_E2E_END_LIFECYCLE_ITEM, "e2e-work-end-lifecycle", "E2E Lifecycle Flow", "e2e-edition-end-lifecycle");
 
     wp_set_current_user($other);
+    biblioE2eAddItem($database, $composition, BIBLIO_E2E_OTHER_LIBRARY, BIBLIO_E2E_HISTORY_ITEM, "e2e-work-history", "E2E Leesgeschiedenis", "e2e-edition-history");
+    $composition->application()->libraryItemCreation()->addForExistingEdition(
+        new LibraryId(BIBLIO_E2E_OTHER_LIBRARY),
+        new ItemId(BIBLIO_E2E_HISTORY_SAME_EDITION_ITEM),
+        new EditionId("e2e-edition-history")
+    );
+    $composition->application()->libraryItemCreation()->addWithNewEditionForExistingWork(
+        new LibraryId(BIBLIO_E2E_OTHER_LIBRARY),
+        new ItemId(BIBLIO_E2E_HISTORY_OTHER_EDITION_ITEM),
+        new EditionId("e2e-edition-history-other"),
+        new WorkId("e2e-work-history")
+    );
+    biblioE2eAddItem($database, $composition, BIBLIO_E2E_OTHER_LIBRARY, BIBLIO_E2E_HISTORY_ZERO_ITEM, "e2e-work-history-zero", "E2E Geen Leesgeschiedenis", "e2e-edition-history-zero");
+    biblioE2eAddItem($database, $composition, BIBLIO_E2E_OTHER_LIBRARY, BIBLIO_E2E_HISTORY_ACTIVE_ITEM, "e2e-work-history-active-only", "E2E Alleen Actief", "e2e-edition-history-active-only");
+    biblioE2eAddItem($database, $composition, BIBLIO_E2E_OTHER_LIBRARY, BIBLIO_E2E_HISTORY_END_ITEM, "e2e-work-history-end", "E2E History End Flow", "e2e-edition-history-end");
+    biblioE2eAddItem($database, $composition, BIBLIO_E2E_OTHER_LIBRARY, BIBLIO_E2E_HISTORY_REFRESH_ITEM, "e2e-work-history-refresh", "E2E History Refresh Failure", "e2e-edition-history-refresh");
+    biblioE2eAddItem($database, $composition, BIBLIO_E2E_OTHER_LIBRARY, BIBLIO_E2E_HISTORY_RAPID_ITEM, "e2e-work-history-rapid", "E2E Andere Geschiedenis", "e2e-edition-history-rapid");
     biblioE2eAddItem($database, $composition, BIBLIO_E2E_OTHER_LIBRARY, BIBLIO_E2E_FOREIGN_ITEM, "e2e-work-foreign", "Ripper", "e2e-edition-foreign");
 
     biblioE2eStartRound($database, $actorName, BIBLIO_E2E_ACTOR_LIBRARY, BIBLIO_E2E_END_COMPLETED_ITEM, ReadingDate::exact(2026, 8, 2));
@@ -694,6 +946,15 @@ function biblioE2eSetup(wpdb $database): void
     biblioE2eStartRound($database, $actorName, BIBLIO_E2E_ACTOR_LIBRARY, BIBLIO_E2E_END_LIFECYCLE_ITEM, ReadingDate::exact(2026, 8, 7));
     biblioE2eStartRound($database, $otherName, BIBLIO_E2E_OTHER_LIBRARY, BIBLIO_E2E_FOREIGN_ITEM, ReadingDate::exact(2026, 8, 8));
     biblioE2eActivateConflict($database);
+    biblioE2eStartRound($database, $actorName, BIBLIO_E2E_OTHER_LIBRARY, BIBLIO_E2E_HISTORY_ITEM, ReadingDate::exact(2026, 1, 2));
+    biblioE2eStartRound($database, $actorName, BIBLIO_E2E_OTHER_LIBRARY, BIBLIO_E2E_HISTORY_ACTIVE_ITEM, ReadingDate::exact(2026, 1, 3));
+    biblioE2eStartRound($database, $actorName, BIBLIO_E2E_OTHER_LIBRARY, BIBLIO_E2E_HISTORY_END_ITEM, ReadingDate::exact(2026, 1, 4));
+    biblioE2eStartRound($database, $actorName, BIBLIO_E2E_OTHER_LIBRARY, BIBLIO_E2E_HISTORY_REFRESH_ITEM, ReadingDate::exact(2026, 1, 5));
+    biblioE2eSeedHistoryRounds(
+        $database,
+        (string) $actor,
+        (string) $other
+    );
 }
 
 biblioE2eGuard();
