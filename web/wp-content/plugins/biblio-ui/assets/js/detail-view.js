@@ -302,6 +302,14 @@ function renderDetail(documentImpl, model, actions) {
         content.append(endButton);
     }
 
+    content.append(element(documentImpl, "div", {
+        className: "biblio-ui__history-region",
+        attributes: {
+            "aria-busy": "false",
+            "data-biblio-reading-history": "true",
+        },
+    }));
+
     append(
         content,
         metadataSection(documentImpl, "Uitgave", [

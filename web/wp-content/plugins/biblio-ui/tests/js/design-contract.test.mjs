@@ -45,5 +45,9 @@ test("responsive CSS expresses the three breakpoint families and component layou
     assert.match(css, /\.biblio-ui__reading-dialog[\s\S]*margin: auto 0 0/);
     assert.match(css, /\.biblio-ui__reading-dialog[\s\S]*32rem/);
     assert.match(css, /\.biblio-ui__radio-option[\s\S]*44px/);
+    assert.match(css, /\.biblio-ui__history-list[\s\S]*display: grid/);
+    assert.match(css, /\.biblio-ui__history-entry[\s\S]*min-inline-size: 0/);
+    assert.match(css, /\.biblio-ui__history-load-more,[\s\S]*inline-size: 100%/);
     assert.doesNotMatch(css, /position:\s*(?:fixed|sticky)/);
+    assert.doesNotMatch(css, /\.biblio-ui__history[^\{]*\{[^}]*overflow-x:/);
 });
