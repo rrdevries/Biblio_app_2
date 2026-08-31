@@ -2,9 +2,9 @@
 
 Date: 2026-08-30
 Last updated: 2026-08-31
-Readiness verdict: **READY WITH CONDITIONS**
+Readiness verdict: **CLOSED — GO**
 
-Current implementation status: **1C.6 GO** — see §§17–21
+Current implementation status: **1C.7 FORMALLY COMPLETE — GO** — see §§17–22
 
 ## 1. Authority, baseline and analysis scope
 
@@ -536,14 +536,14 @@ At the 1C.1 readiness point the verdict was **READY WITH CONDITIONS**. The
 binding product choices were subsequently approved for 1C.2 and the measured
 index condition is closed by §17. The subsequent REST contract is closed by
 §18, the UI runtime contract is closed by §19 and the responsive/accessibility
-pass by §20 and guarded browser evidence by §21; formal exit remains
-unimplemented.
+pass by §20 and guarded browser evidence by §21. Formal exit is subsequently
+closed by §22.
 
 ## 17. 1C.2 implementation evidence
 
 The binding 1C contracts in this document were approved for the Core-only
-1C.2 build. 1C.2 is now **GO** while the overall downstream REST/UI plan remains
-unimplemented.
+1C.2 build. 1C.2 is **GO**; the downstream REST/UI/browser work and formal exit
+are subsequently closed by §§18–22.
 
 - `GetMyReadingHistoryForWorkService` resolves the actor and delegates to a
   dedicated `ReadingHistoryReadRepository`;
@@ -724,4 +724,29 @@ The separately approved guarded fixture and browser acceptance step is now
 
 Schema remains 1007. Only fixture, E2E and documentation/manifest evidence
 changed. No Core, REST, Biblio UI product code, Elementor, Crocoblock, schema
-or migration changed. Formal 1C exit evidence remains the separate 1C.7 step.
+or migration changed. At that step formal exit remained separate; §22 now
+records its completion.
+
+## 22. 1C.7 formal exit evidence
+
+Vertical Slice 1C is now **formally closed — GO**.
+
+- all 149 acceptance criteria are BEWEZEN; none is partial or unproven;
+- Core, REST, UI, Start/End integration and the combined 24-case browser suite
+  are freshly green;
+- private owner scope, non-enumeration, exact serializer allowlist and absence
+  of identity/provenance/timestamp leakage are proven;
+- the existing 50,000-row actor+Work performance evidence remains valid
+  because query, schema and index code did not change after 1C.2;
+- responsive acceptance is GO and accessibility is GO within the slice, with
+  a full WCAG audit documented as non-blocking future assurance;
+- cleanup is exact, zero and idempotent, and the non-fixture fingerprint is
+  unchanged;
+- the existing Elementor 1A shell/artifact remains unchanged and passes clean
+  import; Crocoblock is unused;
+- 1C.7 changes only documentation and manifest state, with no product code,
+  route, UI feature, E2E scenario, schema or migration delta.
+
+The final criterion matrix, exact fresh counts, privacy/performance analysis
+and exit verdict are in
+`docs/24-elementor-vertical-slice-1c-exit-evidence.md`.

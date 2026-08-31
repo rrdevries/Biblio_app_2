@@ -1197,3 +1197,47 @@ No-go:
   migration to make a browser case pass;
 - broad cleanup, unmarked identities, non-local execution or test-order
   dependence.
+
+## 46. Vertical Slice 1C.7 formal exit evidence
+
+Status: **GO — formally closed**
+
+The final exit audit classifies the 141 prescribed criteria plus eight
+additional binding 1C contract points: **149 BEWEZEN, 0 GEDEELTELIJK BEWEZEN,
+0 NIET BEWEZEN**. The additions make strict browser response validation,
+fail-closed stored projection data, exact once-only route registration, read
+side-effect freedom, contrast, scoped token CSS, absence of new motion and
+unknown-Work empty semantics explicit.
+
+Fresh canonical evidence:
+
+- complete Core: 242 unit tests/919 assertions and 219 integration tests/2005
+  assertions; Composer metadata, platform requirements, PHP syntax, PHPStan
+  level 6, schema/migrations/integrity and WordPress smoke are green;
+- focused Core Reading History: 12 unit tests/31 assertions and 7 real-MariaDB
+  integration tests/157 assertions;
+- complete REST: 28 tests/425 assertions, including six routes registered
+  once, GET-only history, auth/nonce, input/error, non-enumeration, cursor and
+  exact serializer contracts;
+- complete frontend: 135/135; targeted history/detail/runtime/navigation/
+  design 85/85; Start Reading 6/6; End Reading 19/19; PHP/JS syntax and UI
+  smoke are green;
+- complete browser: Reading History 11/11, unchanged 1A/1B 13/13, combined
+  24/24 with one worker;
+- four guard refusals pass, deterministic setup has the documented exact
+  entity counts, both cleanup passes report zero and the non-fixture
+  fingerprint is identical;
+- the unchanged canonical Elementor 1A artifact retains SHA-256
+  `4fcaa0aec73566e5313ed4df99e274ca19e4f22a2ae896b6614c18167c67723a`
+  and passes a fresh clean import; Crocoblock remains unused;
+- the committed 50,000-row performance proof remains applicable because no
+  post-1C.2 commit changed query, schema or index code.
+
+Responsive acceptance is GO. Accessibility is GO within the Vertical Slice
+acceptance contract; a full WCAG audit is a documented non-blocking future
+assurance activity. There are no privacy, security, lifecycle, pagination,
+performance, responsive or browser blockers.
+
+The complete matrix, architecture evidence, exact fingerprint and known
+limitations are recorded in
+`docs/24-elementor-vertical-slice-1c-exit-evidence.md`.

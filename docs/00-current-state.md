@@ -1199,5 +1199,32 @@ designations, catalog contexts, classification terms, activity events and
 users; the non-fixture fingerprint is identical before and after.
 
 Schema remains 1007. No Core, REST, Biblio UI product code, Elementor,
-Crocoblock, schema or migration changed in 1C.6. Formal Vertical Slice 1C exit
-evidence remains 1C.7 and is not claimed here.
+Crocoblock, schema or migration changed in 1C.6. At that implementation step,
+formal exit evidence was deliberately deferred to 1C.7; it is closed below.
+
+### Vertical Slice 1C.7 — Formal Reading History exit
+
+Status: **Complete — GO**
+
+The formal 2026-08-31 exit audit proves all 149 acceptance criteria: 149
+BEWEZEN, 0 GEDEELTELIJK BEWEZEN and 0 NIET BEWEZEN. There are no blockers.
+The actor-owned Work-wide ended-history, date-precision, keyset pagination,
+bounded one-query projection, private REST allowlist, independent UI state,
+navigation isolation and Start/End authoritative reconciliation contracts are
+all green.
+
+Fresh verification passes 242 Core unit tests/919 assertions, 219 Core
+integration tests/2005 assertions, the focused Reading History suite at
+7/157, REST at 28/425, all 135 frontend tests and all 24 Playwright cases.
+Four fixture guards refuse correctly; cleanup is zero and idempotent; the
+non-fixture fingerprint is unchanged. The existing Elementor artifact keeps
+SHA-256 `4fcaa0aec73566e5313ed4df99e274ca19e4f22a2ae896b6614c18167c67723a`
+and passes a fresh clean import. Crocoblock remains unused.
+
+Responsive acceptance is GO. Accessibility is GO within the Vertical Slice
+contract, with a full WCAG audit retained only as a non-blocking future
+assurance activity. No product code, route, UI feature, browser scenario,
+schema, migration, Elementor or Crocoblock change was required for 1C.7.
+
+The authoritative final record is
+`docs/24-elementor-vertical-slice-1c-exit-evidence.md`.
