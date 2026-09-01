@@ -3,6 +3,7 @@ import { createDetailView } from "biblio-ui/detail-view";
 import { createEndReadingView } from "biblio-ui/end-reading-view";
 import { resolveLibraryContext } from "biblio-ui/library-state";
 import { createOverviewView } from "biblio-ui/overview-view";
+import { createPrivateNotesController } from "biblio-ui/private-notes";
 import {
     createReadingHistoryView,
     readingHistoryPath,
@@ -19,6 +20,16 @@ export { createDetailView } from "biblio-ui/detail-view";
 export { createEndReadingView } from "biblio-ui/end-reading-view";
 export { resolveLibraryContext } from "biblio-ui/library-state";
 export { createOverviewView } from "biblio-ui/overview-view";
+export {
+    createPrivateNotesController,
+    createPrivateNotesView,
+    privateNotePath,
+    privateNotesPath,
+    readPrivateNote,
+    readPrivateNotesPage,
+    safePrivateNoteFragment,
+    serializePrivateNoteEditor,
+} from "biblio-ui/private-notes";
 export {
     createReadingHistoryView,
     formatReadingDate,
@@ -495,6 +506,7 @@ export function createLibraryApp(mount, {
     detailViewFactory = createDetailView,
     endReadingViewFactory = createEndReadingView,
     readingHistoryViewFactory = createReadingHistoryView,
+    privateNotesControllerFactory = createPrivateNotesController,
     startReadingViewFactory = createStartReadingView,
     reload = () => locationImpl.reload(),
     abortControllerFactory = () => new AbortController(),
@@ -520,6 +532,8 @@ export function createLibraryApp(mount, {
     let detailView;
     let endReadingView;
     let readingHistoryView;
+    let privateNotesController = null;
+    let activeRouteState = null;
     let startReadingView;
     let currentController = null;
     let mutationController = null;
@@ -636,18 +650,41 @@ export function createLibraryApp(mount, {
         return setIdle(navigate());
     }
 
-    function beginHistoryNavigation() {
+    function beginHistoryNavigation(targetRoute) {
+        if (privateNotesController?.isDirty()) {
+            if (activeRouteState !== null) {
+                routes.replace(activeRouteState);
+            }
+
+            return setIdle(privateNotesController.guardNavigation(() => {
+                routes.replace(targetRoute);
+                return navigate({ focusHeading: true });
+            }));
+        }
+
         return setIdle(navigate({ focusHeading: true }));
     }
 
     function openOverview(libraryId) {
-        routes.push({ libraryId, itemId: null });
-        return beginNavigation();
+        const proceed = () => {
+            routes.push({ libraryId, itemId: null });
+            return beginNavigation();
+        };
+
+        return privateNotesController === null
+            ? proceed()
+            : setIdle(privateNotesController.guardNavigation(proceed));
     }
 
     function openDetail(libraryId, itemId) {
-        routes.push({ libraryId, itemId });
-        return beginNavigation();
+        const proceed = () => {
+            routes.push({ libraryId, itemId });
+            return beginNavigation();
+        };
+
+        return privateNotesController === null
+            ? proceed()
+            : setIdle(privateNotesController.guardNavigation(proceed));
     }
 
     function renderResolution(resolution, render, consumeHeadingFocus) {
@@ -693,6 +730,9 @@ export function createLibraryApp(mount, {
         generation = runGeneration;
         startReadingView?.destroy();
         endReadingView?.destroy();
+        privateNotesController?.destroy();
+        privateNotesController = null;
+        activeRouteState = null;
         mutationController?.abort();
         mutationController = null;
         currentController?.abort();
@@ -828,7 +868,7 @@ export function createLibraryApp(mount, {
                             focusAfterPagination: false,
                             focusAfterPaginationError: false,
                             addedCount: 0,
-                        };
+                    };
                     renderReadingHistory();
 
                     try {
@@ -995,6 +1035,7 @@ export function createLibraryApp(mount, {
                         detailActions
                     );
                     renderReadingHistory();
+                    privateNotesController?.render();
                 }
 
                 async function reconcileDetail({
@@ -1319,8 +1360,25 @@ export function createLibraryApp(mount, {
                     selectedLibraryId,
                     requestedItemId
                 );
+                activeRouteState = Object.freeze({
+                    libraryId: selectedLibraryId,
+                    itemId: requestedItemId,
+                });
+                privateNotesController = privateNotesControllerFactory({
+                    root: mount,
+                    api,
+                    workId: currentDetail.work_id,
+                    signal: controller.signal,
+                    isCurrent: () => isCurrent(runGeneration, controller),
+                    eventTarget,
+                    loginUrl: config.loginUrl,
+                    reload,
+                });
                 renderCurrentDetail();
-                await queueHistoryFirstPage();
+                await Promise.all([
+                    queueHistoryFirstPage(),
+                    privateNotesController.load(),
+                ]);
                 return;
             }
 
@@ -1431,6 +1489,10 @@ export function createLibraryApp(mount, {
             }
 
             renderOverview();
+            activeRouteState = Object.freeze({
+                libraryId: resolution.library.library_id,
+                itemId: null,
+            });
         } catch (error) {
             if (isAborted(error) || !isCurrent(runGeneration, controller)) {
                 return;
@@ -1489,6 +1551,9 @@ export function createLibraryApp(mount, {
         generation += 1;
         startReadingView?.destroy();
         endReadingView?.destroy();
+        privateNotesController?.destroy();
+        privateNotesController = null;
+        activeRouteState = null;
         mutationController?.abort();
         mutationController = null;
         currentController?.abort();

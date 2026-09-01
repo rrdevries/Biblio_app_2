@@ -1328,3 +1328,75 @@ No-go:
   content echo, cursor authorization or client actor/Library authority;
 - Core/domain/persistence/schema changes, UI/Elementor/Crocoblock/Playwright,
   ActivityEvent/private audit or ReadingRound product changes in 1D.3.
+
+## 49. Vertical Slice 1D.4 Private Notes UI
+
+Status: **GO**
+
+Acceptance evidence:
+
+- Private Notes start only after authoritative Item-detail validation and use
+  only its Work ID; URL/Item identity never becomes Note scope;
+- the Item hierarchy is `Lezen`, `Leesgeschiedenis`, `Privénotities`,
+  `Uitgave`, `Exemplaar`; the H2 and add action remain present at zero Notes;
+- the collection is multi-Note, uses native list semantics, renders complete
+  safe content and exposes only per-record edit/delete controls;
+- page size is the explicit UI choice 10; opaque cursor continuation appends in
+  server order, deduplicates defensively, preserves existing Notes on error and
+  retries exactly the same cursor once per explicit action;
+- the exact Note/page response allowlists reject malformed fields, IDs,
+  versions and cursors locally without replacing Item detail;
+- saved HTML is parsed in an inert template, checked against exactly `p`, `br`,
+  `strong`, `em`, `ul`, `ol`, `li`, `blockquote` without attributes and
+  reconstructed with new DOM nodes only inside the Note body;
+- one active constrained editor supports that same subset, strips editor
+  attributes, normalizes browser `div`/`b`/`i` equivalents, escapes text,
+  reduces rich paste to plain text and fails closed on unsupported DOM;
+- create stays local until Save; POST sends only content once, update PATCH
+  sends only content plus authoritative expected version once, and neither
+  mutation performs local version arithmetic or optimistic saved rendering;
+- semantic/stale-identical 200 is authoritative success; divergent update 409
+  preserves local intent and offers explicit GET refresh without retry/merge;
+- dirty compares the canonical serializer output with the canonical saved
+  baseline, clears after exact revert, guards clean/dirty Cancel and internal
+  push/pop navigation, and owns `beforeunload` only while dirty;
+- delete uses a named native dialog with exact approved copy, idle Escape,
+  cancel-first focus, pending dismissal/duplicate locks, target ID plus current
+  version and no undo; 409/404 never remove the Note silently;
+- every successful POST/PATCH/DELETE performs fresh page-1 reconciliation and
+  resets continuation state; refresh failure never repeats the mutation and
+  exposes GET-only list recovery;
+- initial, pagination, editor validation, stale/unavailable, authentication,
+  nonce and uncertain-outcome failures remain local and preserve the maximum
+  confirmed state;
+- navigation generation, AbortSignal and request revision guards prevent late
+  Work/page/mutation-refresh responses from writing stale state;
+- accessibility baseline includes H2, native list, visible editor label/help,
+  native buttons/toolbar/textbox semantics, associated errors, busy states,
+  named dialogs, idle Escape, focus return and existing 44px controls;
+- responsive baseline uses the existing detail column, full-width wrapping
+  editor, wrapping toolbar/actions and the existing mobile bottom-sheet dialog
+  at `<768px`, without horizontal overflow;
+- Start Reading, End Reading and Reading History state and requests remain
+  independent; no Note reload is coupled to ReadingRound mutations.
+
+Fresh verification:
+
+- focused Private Notes frontend: 29 tests, PASS;
+- complete Biblio UI JavaScript: 167 tests, PASS;
+- Start/End Reading view selection: 25 tests, PASS;
+- Reading History module: 8 tests, PASS;
+- app runtime/detail/router selection: 74 tests, PASS;
+- JavaScript syntax, Biblio UI PHP syntax and isolated UI smoke: PASS;
+- focused Private Notes REST: 11 tests/311 assertions, PASS;
+- complete `RestApiTest`: 39 tests/747 assertions, PASS; the deliberately
+  logged privacy-safe unexpected-failure diagnostic is expected test output;
+- manifest JSON and Git whitespace: PASS.
+
+No-go remains any Core/domain/application/repository, schema/migration, REST
+route/contract, Elementor/Crocoblock, Playwright/E2E, ActivityEvent/private
+audit, Note title/context, autosave or new product-field delta. None occurred.
+The Biblio UI asset version remains `0.2.0` under the established convention
+that the prior Reading History and ReadingRound UI feature commits did not
+bump it. 1D.5 may perform only dedicated responsive/accessibility polish and
+acceptance without reopening CRUD, state or security semantics.

@@ -1,9 +1,9 @@
 # Elementor Vertical Slice 1D — Private Notes Readiness
 
 Date: 2026-08-31
-Readiness verdict: **GO for 1D.4**
+Readiness verdict: **GO for 1D.5**
 
-Current implementation status: **1D.3 PRIVATE NOTES REST COMPLETE — GO**
+Current implementation status: **1D.4 PRIVATE NOTES UI COMPLETE — GO**
 
 ## 1. Authority, baseline and scope
 
@@ -806,7 +806,7 @@ No E2E or fixture work is part of 1D.1.
 | 1D.1 | **Complete.** Audit and formalize existing contract/delta only. | Clean pushed 1C baseline. | This document, explicit verdict/conditions, docs gates. | Analysis/documentation. | Reopening F2.7 decisions. |
 | 1D.2 | **Complete.** Minimal adapter-facing Work Note page DTO/cursor/wiring; no domain/schema change. | Locked multi-Note UI/read contract and response fields. | Owner-scoped bounded render-validated views; focused tests; schema unchanged. | Core/application. | Aggregate leakage or invented uniqueness. |
 | 1D.3 | **Complete.** Four thin REST routes, parser/cursor/serializer/error mappings and integration tests. | 1D.2 boundary fixed. | Cookie/nonce, exact bodies/allowlists, empty/non-enumerating reads, 404/409/422, no rule duplication. | WordPress REST adapter. | XSS, IDOR, unsafe retry or ambiguous member semantics. |
-| 1D.4 | Add Work-wide multi-Note list, zero/add/read/edit/manual-save/delete and reconciliation state to existing Item detail. | Approved UX plus 1D.3. | Multiple Notes preserved; no autosave; dirty/pending/stale/error flows tested. | Biblio UI. | Treating one Note as singleton or losing unsaved text. |
+| 1D.4 | **Complete.** Work-wide multi-Note list, zero/add/read/edit/manual-save/delete and reconciliation state on existing Item detail. | Approved UX plus 1D.3. | Multiple Notes preserved; no autosave; dirty/pending/stale/error flows tested. | Biblio UI. | Treating one Note as singleton or losing unsaved text. |
 | 1D.5 | Complete responsive/accessibility pass without semantic changes. | 1D.4 stable. | Breakpoints, 320 CSS px/zoom, keyboard, labels, dialogs, focus, busy/error and 44 px controls pass. | Biblio UI QA. | Dialog/editor accessibility drift. |
 | 1D.6 | Add guarded deterministic fixture/API/browser evidence. | 1D.2–1D.5 complete. | Matrix §22, double cleanup, zero residue/fingerprint, 1A–1C regression green. | Fixture/E2E. | Private data leakage or unsafe cleanup. |
 | 1D.7 | Formal exit audit only. | All gates/evidence green. | Criterion matrix, exact commits, clean scope/status, GO/NO-GO, no new behavior. | Exit/documentation. | Calling partial evidence complete. |
@@ -827,10 +827,10 @@ All are **LOCKED**:
 
 ### 24.2 Remaining engineering work
 
-1. Implement/test a deterministic editor serializer for the exact safe HTML
-   subset. Blocks 1D.4/1D.6.
-2. Add authoritative collection reread and no-auto-retry behavior for stale,
-   nonce and ambiguous mutation outcomes. Blocks 1D.4/1D.6.
+The deterministic constrained editor serializer and authoritative page-1
+reconciliation are complete in 1D.4. Remaining engineering work is the
+dedicated responsive/accessibility polish and acceptance pass in 1D.5,
+followed by guarded 1D.6 browser evidence.
 
 The former REST items—cursor codec, strict parsing/serialization and Note error
 mapping—are complete in 1D.3. The remaining items are UI/E2E scope. Neither
@@ -847,8 +847,9 @@ read/create/update/delete services already provide the required owner, Work,
 semantic no-op, stale and conditional-delete behavior. Schema 1004 remains
 ready and current schema 1007 is unchanged.
 
-There is no remaining Core/domain/schema/REST uncertainty. **1D.4 is READY** to
-build the multi-Note UI against the implemented collection/member contract. A
+There is no remaining CRUD/state/security uncertainty. **1D.5 is READY** to
+polish and formally verify the implemented multi-Note UI without changing its
+product semantics. A
 singular Work-note, raw aggregate/content serialization, last-write-wins,
 Library-role bypass or direct Elementor/Crocoblock mutation remains a contract
 violation.
@@ -988,3 +989,93 @@ smoke, manifest and Git whitespace are green.
 Schema remains 1007. No Core application/domain, repository, wpdb query,
 schema/migration, Biblio UI, Elementor, Crocoblock, Playwright, ActivityEvent,
 private audit or ReadingRound product behavior changed.
+
+## 29. 1D.4 Private Notes UI evidence
+
+Status: **GO — 1D.5 READY**
+
+The existing Item detail owns the structural insertion point only. Its final
+order is `Lezen`, independent `Leesgeschiedenis`, independent
+`Privénotities`, `Uitgave`, `Exemplaar`. The Note controller is created only
+after the detail response has passed the exact Library/Item/Work presentation
+contract; its Work ID therefore comes from authoritative detail state and
+never from URL or editor input. Navigation destroys/aborts the previous
+controller and request revisions reject late initial, continuation or
+post-mutation page-1 responses.
+
+Private Notes use a separate minimal state: items, next cursor, initial and
+pagination loading/error, one optional editor, mutation pending, refresh
+warning/notice and request revision. The UI requests `limit=10` as a
+presentation choice. Initial zero retains the H2 and `Notitie toevoegen`
+without an empty card or persisted draft. Continuation appends exact server
+order, preserves loaded Notes on failure and retries the same opaque cursor.
+Every successful mutation resets state from a fresh page-1 GET.
+
+One constrained `contenteditable` editor is active at a time. Controls cover
+bold, emphasis, unordered/ordered list and blockquote; paragraph and line-break
+semantics remain native to the surface. Paste always requests `text/plain`.
+The single serializer normalizes browser `div`, `b` and `i`, escapes text,
+rebuilds only `p`, `br`, `strong`, `em`, `ul`, `ol`, `li`, `blockquote`, emits
+no attributes and fails closed on unsupported nodes/tags. The same canonical
+path establishes the edit baseline, so an exact semantic revert is clean.
+
+Authoritative saved HTML is never inserted as a trusted executable subtree.
+It is parsed in an inert template, checked against the identical exact
+allowlist/no-attribute contract and reconstructed node-by-node inside only the
+Note body. Mutation input is not rendered as saved state: POST/PATCH responses
+must first pass the exact public Note allowlist and saved-HTML validation.
+
+POST sends only serialized content; PATCH sends content and the authoritative
+version; DELETE sends only the selected Note version. Pending state blocks
+duplicates. No local version increment or mutation retry exists. POST/PATCH
+use the returned server Note for immediate reliable state and all three
+mutations then reread page 1 for ordering/cursor truth. If this GET fails, the
+confirmed mutation is never repeated and only list refresh remains available.
+
+Divergent update 409 and member 404 preserve the local editor until an explicit
+refresh action; there is no overwrite, merge or retry. Delete 409/404 retains
+the Note and dialog context and offers refresh only. Network, malformed-success
+or internal-error ambiguity also requires GET reconciliation before another
+destructive attempt. Authentication and nonce recovery reuse the existing
+login/reload patterns.
+
+Dirty state exists only when canonical current editor HTML differs from the
+canonical saved/open baseline. Clean Cancel closes immediately. Dirty Cancel,
+internal back/Item navigation and interceptable popstate use the native discard
+dialog with only `Terug naar notitie` and `Doorgaan zonder opslaan`; discard
+performs no mutation and commits the intended navigation once. `beforeunload`
+is registered only during dirty state and removed on revert, close, navigation
+or controller destruction.
+
+Delete uses the existing native Biblio dialog/bottom-sheet class with exact
+copy: `Privénotitie verwijderen?`, `Deze notitie wordt definitief verwijderd.
+Dit kan niet ongedaan worden gemaakt.`, `Annuleren`, `Definitief verwijderen`.
+Cancel receives initial focus; idle Escape/cancel restores the opener; pending
+disables dismissal/actions; success focuses the resulting scoped status.
+
+The 1D.4 accessibility/responsive baseline includes one H2, native `ul`/`li`,
+visible editor label/help, toolbar/textbox semantics, associated field errors,
+busy/live status, keyboard-native controls, existing 44px targets, one-column
+full-width editor, wrapping toolbar/actions, no horizontal overflow and the
+existing `<768px` mobile bottom-sheet dialog. The dedicated formal polish and
+acceptance pass remains 1D.5 scope; no full WCAG claim is made here.
+
+Fresh verification:
+
+- Private Notes frontend: 29/29 PASS;
+- complete Biblio UI JavaScript: 167/167 PASS;
+- Start/End Reading views: 25/25 PASS;
+- Reading History: 8/8 PASS;
+- app runtime/detail/router: 74/74 PASS;
+- JavaScript syntax, Biblio UI PHP syntax and isolated smoke: PASS;
+- Private Notes REST: 11 tests/311 assertions, PASS;
+- complete `RestApiTest`: 39 tests/747 assertions, PASS;
+- manifest JSON and Git whitespace: PASS.
+
+Biblio UI product code, focused frontend tests, the three required canonical
+documents and manifest status are the only intended scope. Core, REST route or
+server-contract code, schema/migration, Elementor/Crocoblock and Playwright are
+unchanged. The existing Biblio UI `0.2.0` asset version is retained under the
+repository convention established by the earlier ReadingRound end and Reading
+History feature commits. **1D.5 is READY** for responsive/accessibility polish
+without CRUD, state, security or product-semantic changes.

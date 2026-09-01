@@ -104,6 +104,55 @@ test("POST sends only the JSON transport contract and unwraps 201", async () => 
     ]]);
 });
 
+test("PATCH and DELETE use the same nonce-protected exact JSON transport", async () => {
+    const calls = [];
+    const responses = [
+        jsonResponse(200, { data: { private_note_id: "note-1" } }),
+        textResponse(204, ""),
+    ];
+    const api = createBiblioApi({
+        restRoot: REST_ROOT,
+        restNonce: REST_NONCE,
+        fetchImpl: async (...args) => {
+            calls.push(args);
+            return responses.shift();
+        },
+    });
+    const patchBody = { content: "<p>Nieuw</p>", expected_version: 2 };
+    const deleteBody = { expected_version: 3 };
+
+    assert.deepEqual(
+        await api.patch("me/private-notes/note-1", patchBody),
+        { private_note_id: "note-1" }
+    );
+    assert.equal(
+        await api.delete("me/private-notes/note-1", deleteBody),
+        null
+    );
+    assert.deepEqual(calls.map(([, options]) => options), [
+        {
+            method: "PATCH",
+            credentials: "same-origin",
+            headers: {
+                Accept: "application/json",
+                "X-WP-Nonce": REST_NONCE,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(patchBody),
+        },
+        {
+            method: "DELETE",
+            credentials: "same-origin",
+            headers: {
+                Accept: "application/json",
+                "X-WP-Nonce": REST_NONCE,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(deleteBody),
+        },
+    ]);
+});
+
 test("a successful response without a body resolves to null", async () => {
     const api = createBiblioApi({
         restRoot: REST_ROOT,

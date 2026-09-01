@@ -163,6 +163,10 @@ test("detail renders the allowlisted known contract and canonical back link", ()
         byAttribute(root, "data-biblio-reading-history", "true").length,
         1
     );
+    assert.equal(
+        byAttribute(root, "data-biblio-private-notes", "true").length,
+        1
+    );
     assert.doesNotMatch(text(root), /Leesgeschiedenis/);
     assert.equal(byTag(root, "a")[0].getAttribute("href"), backUrl);
     assert.equal(byTag(root, "img")[0].getAttribute("src"),

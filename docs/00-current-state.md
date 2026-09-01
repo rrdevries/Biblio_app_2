@@ -1313,3 +1313,38 @@ is reapplied on every page.
 Schema remains 1007. No Core application/domain, persistence query,
 schema/migration, Biblio UI, Elementor, Crocoblock, Playwright, ActivityEvent,
 private audit or ReadingRound product behavior changed. 1D.4 is READY.
+
+### Vertical Slice 1D.4 — Private Notes UI
+
+Status: **Implemented — GO**
+
+The existing Item detail now renders `Privénotities` after
+`Leesgeschiedenis` and before `Uitgave`/`Exemplaar`. The section is always
+present, uses authoritative Work identity only after successful Item-detail
+validation and loads an independent Work-wide multi-Note collection at an
+explicit UI page size of 10. Server order and opaque continuation cursors are
+preserved; zero state creates no card or persisted draft.
+
+One constrained editor can be active at a time. It supports exactly paragraph,
+line break, strong, emphasis, unordered/ordered list and blockquote semantics.
+Rich paste is reduced to plain text; the deterministic serializer rebuilds
+only the Core allowlist without attributes and fails closed for unsupported
+DOM. Saved HTML is independently validated and reconstructed inside the Note
+body; raw unsaved input never becomes authoritative read state.
+
+Create, update and conditional hard delete use the existing nonce-protected
+REST contracts, one-in-flight locks and server versions. Every successful
+mutation is followed by a fresh page-1 GET; a failed reconciliation never
+repeats the mutation and retains the best confirmed local state with GET-only
+recovery. Divergent 409 and unavailable 404 states never overwrite or delete
+silently. Dirty state is canonical-serializer based, protects Cancel and app
+navigation with a native dialog and registers native `beforeunload` only while
+dirty. Delete uses the locked accessible dialog copy and no undo.
+
+Focused Private Notes frontend verification passes 29 tests; the complete
+Biblio UI suite passes 167 tests. Start/End Reading passes 25 tests, Reading
+History 8 and app runtime/detail/router 74. UI PHP/JS syntax, isolated UI smoke,
+Private Notes REST 11/311, complete `RestApiTest` 39/747, manifest JSON and Git
+whitespace are green. No Core, REST route/contract, schema/migration,
+Elementor/Crocoblock or Playwright change was made. 1D.5 is READY for the
+dedicated responsive/accessibility polish and acceptance pass only.

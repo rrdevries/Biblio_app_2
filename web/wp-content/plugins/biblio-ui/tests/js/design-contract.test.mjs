@@ -125,6 +125,20 @@ test("Reading history CSS preserves reflow, native lists and scoped token use", 
     assert.doesNotMatch(historyCss, /position:\s*absolute|animation:|transition:/);
 });
 
+test("Private Notes CSS keeps native list semantics, wrapping editor controls and mobile dialogs", () => {
+    assert.match(css, /\.biblio-ui__note-list[\s\S]*display: grid/);
+    assert.match(css, /\.biblio-ui__note-list[\s\S]*list-style: none/);
+    assert.match(css, /\.biblio-ui__note-card[\s\S]*min-inline-size: 0/);
+    assert.match(css, /\.biblio-ui__editor-toolbar[\s\S]*flex-wrap: wrap/);
+    assert.match(css, /\.biblio-ui__editor-surface[\s\S]*inline-size: 100%/);
+    assert.match(css, /\.biblio-ui__format-control[\s\S]*--biblio-control-min/);
+    assert.match(
+        css,
+        /@media \(max-width: 767px\)[\s\S]*\.biblio-ui__note-actions \.biblio-ui__control[\s\S]*flex: 1 1 10rem/
+    );
+    assert.doesNotMatch(css, /\.biblio-ui__(?:note|editor)[^\{]*\{[^}]*overflow-x:/);
+});
+
 test("existing Biblio text, control and focus colors retain readable contrast", () => {
     assert.ok(contrast("1f2933", "ffffff") >= 4.5);
     assert.ok(contrast("1f2933", "f5f7fa") >= 4.5);
