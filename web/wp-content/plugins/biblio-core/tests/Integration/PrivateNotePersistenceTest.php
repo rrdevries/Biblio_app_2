@@ -12,6 +12,9 @@ use Biblio\Core\Application\Notes\ListMyPrivateNotesService;
 use Biblio\Core\Application\Notes\ListPrivateNotesForReadingRoundService;
 use Biblio\Core\Application\Notes\ListPrivateNotesForWorkService;
 use Biblio\Core\Application\Notes\PrivateNoteCreation;
+use Biblio\Core\Application\Notes\Read\GetMyPrivateNotesForWorkService;
+use Biblio\Core\Application\Notes\Read\PrivateNoteView;
+use Biblio\Core\Application\Notes\RenderPrivateNoteContentService;
 use Biblio\Core\Application\Notes\UpdatePrivateNoteContentService;
 use Biblio\Core\Application\Reading\DeleteHistoricalReadingRoundService;
 use Biblio\Core\Catalog\Work;
@@ -169,6 +172,13 @@ final class PrivateNotePersistenceTest extends PersistenceIntegrationTestCase
             $this->notes
         ))->list()->notes());
 
+        $memberRead = new GetPrivateNoteService($this->actor, $this->notes);
+        self::assertSame(
+            $activeOne->id()->value(),
+            $memberRead->get($activeOne->id())?->id()->value()
+        );
+        self::assertNull($memberRead->get(new PrivateNoteId('note-unknown')));
+
         $this->actor->authenticateAs(new UserId('user-b'));
         self::assertNull((new GetPrivateNoteService(
             $this->actor,
@@ -310,6 +320,16 @@ final class PrivateNotePersistenceTest extends PersistenceIntegrationTestCase
         $this->actor->authenticateAs(new UserId('user-a'));
         $delete->delete($note->id(), PrivateNoteVersion::initial());
         self::assertNull($this->notes->findForUser($note->id(), new UserId('user-a')));
+
+        foreach ([$note->id(), new PrivateNoteId('note-unknown')] as $unavailableId) {
+            try {
+                $delete->delete($unavailableId, PrivateNoteVersion::initial());
+                self::fail('Unavailable Private Note deletion succeeded.');
+            } catch (PrivateNoteNotAvailable) {
+                self::addToAssertionCount(1);
+            }
+        }
+
         self::assertNotNull($this->works->find(new WorkId('work-a')));
         self::assertNotNull($this->rounds->findForUser(
             new ReadingRoundId('round-ended'),
@@ -464,6 +484,135 @@ final class PrivateNotePersistenceTest extends PersistenceIntegrationTestCase
         }
         self::assertFalse($unknownWorkResult);
         self::assertFalse($unknownRoundResult);
+    }
+
+    public function testAdapterReadBoundaryIsOneQueryOwnerWorkBoundedAndDeterministic(): void
+    {
+        $create = $this->createService([
+            'view-note-z', 'view-note-m', 'view-note-a', 'view-other-work',
+        ]);
+        $create->createForWork(new WorkId('work-a'), '<p><strong>Z</strong></p>');
+        $create->createForWork(new WorkId('work-a'), '<p>M</p>');
+        $create->createForWork(new WorkId('work-a'), '<blockquote>A</blockquote>');
+        $create->createForWork(new WorkId('work-b'), '<p>Andere Work</p>');
+        $this->actor->authenticateAs(new UserId('user-b'));
+        $this->createService(['view-foreign'])->createForWork(
+            new WorkId('work-a'),
+            '<p>Vreemd</p>'
+        );
+        $this->actor->authenticateAs(new UserId('user-a'));
+
+        $table = $this->tableNames->privateNotes();
+        foreach ([
+            'view-note-z' => '2026-08-31 12:00:00.200000',
+            'view-note-m' => '2026-08-31 12:00:00.200000',
+            'view-note-a' => '2026-08-31 12:00:00.100000',
+            'view-other-work' => '2026-08-31 13:00:00.000000',
+            'view-foreign' => '2026-08-31 14:00:00.000000',
+        ] as $id => $updatedAt) {
+            self::assertSame(1, $this->database->query($this->database->prepare(
+                "UPDATE `{$table}` SET updated_at = %s WHERE private_note_id = %s",
+                $updatedAt,
+                $id
+            )));
+        }
+
+        $service = new GetMyPrivateNotesForWorkService(
+            $this->actor,
+            $this->notes,
+            new RenderPrivateNoteContentService($this->policy)
+        );
+        $beforeFirst = $this->database->num_queries;
+        $first = $service->forWork(
+            new WorkId('work-a'),
+            new PrivateNotePageRequest(2)
+        );
+
+        self::assertSame(1, $this->database->num_queries - $beforeFirst);
+        self::assertSame(
+            ['view-note-z', 'view-note-m'],
+            array_map(
+                static fn (PrivateNoteView $view): string => $view->id()->value(),
+                $first->notes()
+            )
+        );
+        self::assertSame(
+            ['<p><strong>Z</strong></p>', '<p>M</p>'],
+            array_map(
+                static fn (PrivateNoteView $view): string => $view->contentHtml(),
+                $first->notes()
+            )
+        );
+        self::assertSame(
+            '2026-08-31 12:00:00.200000',
+            $first->nextCursor()?->beforeUpdatedAt()->format('Y-m-d H:i:s.u')
+        );
+        self::assertSame('view-note-m', $first->nextCursor()?->beforeId()->value());
+
+        $cursor = $first->nextCursor();
+        self::assertNotNull($cursor);
+        $beforeSecond = $this->database->num_queries;
+        $second = $service->forWork(
+            new WorkId('work-a'),
+            new PrivateNotePageRequest(
+                2,
+                $cursor->beforeUpdatedAt(),
+                $cursor->beforeId()
+            )
+        );
+
+        self::assertSame(1, $this->database->num_queries - $beforeSecond);
+        self::assertSame(
+            ['view-note-a'],
+            array_map(
+                static fn (PrivateNoteView $view): string => $view->id()->value(),
+                $second->notes()
+            )
+        );
+        self::assertNull($second->nextCursor());
+        self::assertSame(3, count(array_unique(array_merge(
+            array_map(
+                static fn (PrivateNoteView $view): string => $view->id()->value(),
+                $first->notes()
+            ),
+            array_map(
+                static fn (PrivateNoteView $view): string => $view->id()->value(),
+                $second->notes()
+            )
+        ))));
+
+        $beforeZero = $this->database->num_queries;
+        $zero = $service->forWork(new WorkId('work-without-notes'));
+        self::assertSame(1, $this->database->num_queries - $beforeZero);
+        self::assertSame([], $zero->notes());
+        self::assertNull($zero->nextCursor());
+    }
+
+    public function testInvalidStoredContentCannotReachAdapterReadView(): void
+    {
+        $note = $this->createService(['view-compromised'])->createForWork(
+            new WorkId('work-a'),
+            '<p>Veilig</p>'
+        );
+        self::assertSame(1, $this->database->update(
+            $this->tableNames->privateNotes(),
+            ['note_content' => '<p onclick="alert(1)">Onveilig</p>'],
+            ['private_note_id' => $note->id()->value()],
+            ['%s'],
+            ['%s']
+        ));
+        $service = new GetMyPrivateNotesForWorkService(
+            $this->actor,
+            $this->notes,
+            new RenderPrivateNoteContentService($this->policy)
+        );
+
+        try {
+            $service->forWork(new WorkId('work-a'));
+            self::fail('Invalid stored Private Note content reached the view.');
+        } catch (PersistenceException $failure) {
+            self::assertSame(FailureReason::PersistenceReadFailed, $failure->reason());
+        }
     }
 
     /** @param list<string> $ids */

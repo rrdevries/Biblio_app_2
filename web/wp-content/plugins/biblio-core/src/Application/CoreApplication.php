@@ -24,6 +24,7 @@ use Biblio\Core\Application\Notes\GetPrivateNoteService;
 use Biblio\Core\Application\Notes\ListMyPrivateNotesService;
 use Biblio\Core\Application\Notes\ListPrivateNotesForReadingRoundService;
 use Biblio\Core\Application\Notes\ListPrivateNotesForWorkService;
+use Biblio\Core\Application\Notes\Read\GetMyPrivateNotesForWorkService;
 use Biblio\Core\Application\Notes\RenderPrivateNoteContentService;
 use Biblio\Core\Application\Notes\UpdatePrivateNoteContentService;
 use Biblio\Core\Application\NextReading\{AddExternalLoanToNextReadingService,AddLibraryItemToNextReadingService,AddWorkToNextReadingService,GetMyNextReadingListService,GetNextReadingHomeProjectionService,RemoveNextReadingEntryService,ReorderNextReadingListService};
@@ -76,6 +77,7 @@ final readonly class CoreApplication
         private ListPrivateNotesForReadingRoundService $privateNotesForReadingRound,
         private ListMyPrivateNotesService $myPrivateNotes,
         private RenderPrivateNoteContentService $privateNoteRendering,
+        private GetMyPrivateNotesForWorkService $privateNoteViewsForWork,
         private CreateLibraryCatalogContextService $catalogContextCreation,
         private SaveLibraryCatalogContextService $catalogContextManagement,
         private ManageLibraryBookTypesService $bookTypeManagement,
@@ -241,6 +243,11 @@ final readonly class CoreApplication
     public function privateNoteRendering(): RenderPrivateNoteContentService
     {
         return $this->privateNoteRendering;
+    }
+
+    public function privateNoteViewsForWork(): GetMyPrivateNotesForWorkService
+    {
+        return $this->privateNoteViewsForWork;
     }
 
     public function catalogContextCreation(): CreateLibraryCatalogContextService
