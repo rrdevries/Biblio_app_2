@@ -247,7 +247,11 @@ function recoveryControl(documentImpl, recovery, actions) {
 
     const button = control(
         documentImpl,
-        recovery === "session" ? "Sessie vernieuwen" : "Opnieuw proberen"
+        recovery === "session"
+            ? "Sessie vernieuwen"
+            : recovery === "refresh"
+                ? "Notities vernieuwen"
+                : "Opnieuw proberen"
     );
     button.addEventListener(
         "click",
@@ -261,32 +265,36 @@ function renderMessage(documentImpl, message, recovery, actions) {
     const wrapper = element(documentImpl, "div", {
         className: "biblio-ui__inline-error biblio-ui__notes-error",
     });
+    let recoveryElement = null;
     wrapper.append(element(documentImpl, "p", {
         text: message,
         attributes: { "aria-live": "polite" },
     }));
 
     if (recovery !== null) {
-        wrapper.append(recoveryControl(documentImpl, recovery, actions));
+        recoveryElement = recoveryControl(documentImpl, recovery, actions);
+        wrapper.append(recoveryElement);
     }
 
-    return wrapper;
+    return { wrapper, recoveryElement };
 }
 
 function appendSafeHtml(documentImpl, parent, html) {
     parent.append(safePrivateNoteFragment(documentImpl, html));
 }
 
-function formatButton(documentImpl, label, command, actions, pressed = null) {
+function formatButton(documentImpl, label, command, actions) {
     const button = control(documentImpl, label);
     button.className += " biblio-ui__format-control";
     button.setAttribute("data-biblio-format", command);
+    button.setAttribute("aria-pressed", "false");
+    button.addEventListener("click", () => {
+        const pressed = actions.format(command);
 
-    if (pressed !== null) {
-        button.setAttribute("aria-pressed", pressed ? "true" : "false");
-    }
-
-    button.addEventListener("click", () => actions.format(command));
+        if (typeof pressed === "boolean") {
+            button.setAttribute("aria-pressed", pressed ? "true" : "false");
+        }
+    });
 
     return button;
 }
@@ -307,6 +315,11 @@ function renderEditor(documentImpl, editor, actions) {
         className: "biblio-ui__editor-help",
         text: "Gebruik alinea’s, vet, cursief, lijsten of een citaat.",
         attributes: { id: editor.helpId },
+    });
+    const dirtyStatus = element(documentImpl, "p", {
+        className: "biblio-ui__editor-dirty-status",
+        text: editor.dirty ? "Niet-opgeslagen wijzigingen." : "",
+        attributes: { id: editor.dirtyId },
     });
     const toolbar = element(documentImpl, "div", {
         className: "biblio-ui__editor-toolbar",
@@ -330,8 +343,8 @@ function renderEditor(documentImpl, editor, actions) {
             "aria-multiline": "true",
             "aria-labelledby": editor.labelId,
             "aria-describedby": editor.error
-                ? `${editor.helpId} ${editor.errorId}`
-                : editor.helpId,
+                ? `${editor.helpId} ${editor.dirtyId} ${editor.errorId}`
+                : `${editor.helpId} ${editor.dirtyId}`,
             "aria-invalid": editor.error ? "true" : "false",
             "data-biblio-note-editor": "true",
         },
@@ -341,7 +354,10 @@ function renderEditor(documentImpl, editor, actions) {
         appendSafeHtml(documentImpl, editable, editor.contentHtml);
     }
 
-    editable.addEventListener("input", () => actions.changed(editable));
+    editable.addEventListener("input", () => {
+        const dirty = actions.changed(editable);
+        dirtyStatus.textContent = dirty ? "Niet-opgeslagen wijzigingen." : "";
+    });
     editable.addEventListener("paste", (event) => actions.paste(event));
     const error = element(documentImpl, "p", {
         className: "biblio-ui__field-error",
@@ -358,7 +374,7 @@ function renderEditor(documentImpl, editor, actions) {
     save.addEventListener("click", () => actions.save(editable));
     cancel.addEventListener("click", () => actions.cancel(cancel));
     controls.append(save, cancel);
-    wrapper.append(label, help, toolbar, editable, error, controls);
+    wrapper.append(label, help, dirtyStatus, toolbar, editable, error, controls);
 
     if (editor.recovery !== null) {
         wrapper.append(renderMessage(
@@ -369,7 +385,7 @@ function renderEditor(documentImpl, editor, actions) {
                 ...actions,
                 retry: editor.recovery.action,
             }
-        ));
+        ).wrapper);
     }
 
     return { wrapper, editable };
@@ -401,10 +417,13 @@ function renderNotes(documentImpl, model, actions) {
             "Privénotities konden niet worden geladen.",
             model.error,
             actions
-        ));
+        ).wrapper);
     }
 
     let editorElement = null;
+    const editElements = new Map();
+    let moreElement = null;
+    let paginationRecoveryElement = null;
 
     if (model.editor?.mode === "create") {
         ({ editable: editorElement } = renderEditor(
@@ -447,6 +466,7 @@ function renderNotes(documentImpl, model, actions) {
                 remove.disabled = model.mutationPending;
                 edit.addEventListener("click", () => actions.edit(note, edit));
                 remove.addEventListener("click", () => actions.remove(note, remove));
+                editElements.set(note.private_note_id, edit);
                 controls.append(edit, remove);
                 item.append(body, controls);
             }
@@ -459,9 +479,13 @@ function renderNotes(documentImpl, model, actions) {
 
     if (model.nextCursor !== null) {
         const more = control(documentImpl, "Meer laden");
-        more.disabled = model.paginationLoading;
+        more.setAttribute(
+            "aria-disabled",
+            model.paginationLoading ? "true" : "false"
+        );
         more.addEventListener("click", actions.loadMore);
         section.append(more);
+        moreElement = more;
     }
 
     if (model.paginationLoading) {
@@ -472,21 +496,23 @@ function renderNotes(documentImpl, model, actions) {
     }
 
     if (model.paginationError !== null) {
-        section.append(renderMessage(
+        const rendered = renderMessage(
             documentImpl,
             "Meer privénotities konden niet worden geladen.",
             model.paginationError,
             { ...actions, retry: actions.loadMore }
-        ));
+        );
+        section.append(rendered.wrapper);
+        paginationRecoveryElement = rendered.recoveryElement;
     }
 
     if (model.refreshWarning) {
         section.append(renderMessage(
             documentImpl,
             "De wijziging is opgeslagen, maar de notitielijst kon niet worden vernieuwd.",
-            "retry",
+            "refresh",
             { ...actions, retry: actions.refresh }
-        ));
+        ).wrapper);
     }
 
     if (model.notice !== null) {
@@ -496,7 +522,15 @@ function renderNotes(documentImpl, model, actions) {
         }));
     }
 
-    return { section, editorElement };
+    return {
+        section,
+        editorElement,
+        heading,
+        add,
+        editElements,
+        moreElement,
+        paginationRecoveryElement,
+    };
 }
 
 function dialogShell(documentImpl, className, titleText, bodyText) {
@@ -548,6 +582,24 @@ export function createPrivateNotesView(root, {
 
         if (model.focusNotice) {
             rendered.section.querySelector('[role="status"]')?.focus();
+        }
+
+        if (model.focusReadTarget?.kind === "add") {
+            rendered.add.focus();
+        } else if (model.focusReadTarget?.kind === "edit") {
+            rendered.editElements.get(model.focusReadTarget.privateNoteId)?.focus();
+        } else if (model.focusReadTarget?.kind === "heading") {
+            rendered.heading.setAttribute("tabindex", "-1");
+            rendered.heading.focus();
+        }
+
+        if (model.focusPagination === "more") {
+            rendered.moreElement?.focus();
+        } else if (model.focusPagination === "heading") {
+            rendered.heading.setAttribute("tabindex", "-1");
+            rendered.heading.focus();
+        } else if (model.focusPagination === "error") {
+            rendered.paginationRecoveryElement?.focus();
         }
 
         return target;
@@ -690,6 +742,9 @@ export function createPrivateNotesView(root, {
 
                     if (refreshed) {
                         closeDialog(false);
+                        const heading = region()?.querySelector("h2");
+                        heading?.setAttribute("tabindex", "-1");
+                        heading?.focus();
                     } else {
                         setPending(false);
                         status.textContent = "De notities konden niet worden vernieuwd.";
@@ -734,6 +789,13 @@ export function createPrivateNotesView(root, {
         const browserCommand = command === "blockquote" ? "formatBlock" : command;
         const value = command === "blockquote" ? "blockquote" : null;
         documentImpl.execCommand?.(browserCommand, false, value);
+
+        if (command === "blockquote") {
+            return String(documentImpl.queryCommandValue?.("formatBlock") ?? "")
+                .toLowerCase() === "blockquote";
+        }
+
+        return Boolean(documentImpl.queryCommandState?.(browserCommand));
     }
 
     function pastePlainText(event) {
@@ -828,6 +890,8 @@ export function createPrivateNotesController({
         notice: null,
         focusEditor: false,
         focusNotice: false,
+        focusReadTarget: null,
+        focusPagination: null,
     };
 
     function active() {
@@ -875,20 +939,26 @@ export function createPrivateNotesController({
         },
         changed(editorRoot) {
             if (state.editor === null || state.mutationPending) {
-                return;
+                return false;
             }
+
+            let dirty = true;
 
             try {
                 state.editor.contentHtml = serializePrivateNoteEditor(editorRoot);
                 state.editor.error = null;
+                dirty = editorDirty();
             } catch {
                 state.editor.error = "Deze opmaak kan niet veilig worden opgeslagen.";
             }
 
+            state.editor.dirty = dirty;
             syncBeforeUnload();
+
+            return state.editor.dirty;
         },
         format(command) {
-            view.execFormat(command);
+            return view.execFormat(command);
         },
         paste(event) {
             view.pastePlainText(event);
@@ -898,7 +968,7 @@ export function createPrivateNotesController({
         },
         cancel(opener) {
             if (!editorDirty()) {
-                closeEditor();
+                closeEditor({ restoreFocus: true });
                 render();
                 return;
             }
@@ -906,7 +976,7 @@ export function createPrivateNotesController({
             view.confirmDiscard({
                 opener,
                 discard() {
-                    closeEditor();
+                    closeEditor({ restoreFocus: true });
                     render();
                 },
                 retain() {
@@ -930,6 +1000,8 @@ export function createPrivateNotesController({
         view.render(state, actions);
         state.focusEditor = false;
         state.focusNotice = false;
+        state.focusReadTarget = null;
+        state.focusPagination = null;
     }
 
     function editorModel(mode, note) {
@@ -946,10 +1018,12 @@ export function createPrivateNotesController({
             baselineHtml: contentHtml,
             contentHtml,
             pending: false,
+            dirty: false,
             error: null,
             recovery: null,
             labelId: `${id}-label`,
             helpId: `${id}-help`,
+            dirtyId: `${id}-dirty`,
             errorId: `${id}-error`,
         };
     }
@@ -957,14 +1031,29 @@ export function createPrivateNotesController({
     function openEditor(mode, note) {
         state.editor = editorModel(mode, note);
         state.focusEditor = true;
+        state.focusReadTarget = null;
+        state.focusPagination = null;
         state.notice = null;
         syncBeforeUnload();
         render();
     }
 
-    function closeEditor() {
+    function closeEditor({ restoreFocus = false } = {}) {
+        const returnTarget = state.editor === null
+            ? null
+            : state.editor.mode === "create"
+                ? { kind: "add" }
+                : {
+                    kind: "edit",
+                    privateNoteId: state.editor.privateNoteId,
+                };
         state.editor = null;
         state.mutationPending = false;
+
+        if (restoreFocus) {
+            state.focusReadTarget = returnTarget;
+        }
+
         syncBeforeUnload();
     }
 
@@ -1014,7 +1103,10 @@ export function createPrivateNotesController({
 
         state.paginationLoading = false;
         state.paginationError = null;
-        render();
+
+        if (!preserve) {
+            render();
+        }
 
         try {
             const payload = await api.get(privateNotesPath(workId), { signal });
@@ -1028,6 +1120,9 @@ export function createPrivateNotesController({
 
             if (discardEditor) {
                 closeEditor();
+                state.focusReadTarget = { kind: "heading" };
+            } else if (preserve && state.notice !== null) {
+                state.focusNotice = true;
             }
 
             render();
@@ -1040,6 +1135,12 @@ export function createPrivateNotesController({
             if (preserve) {
                 state.loading = false;
                 state.refreshWarning = true;
+
+                if (state.notice !== null) {
+                    state.focusNotice = true;
+                } else if (state.editor !== null) {
+                    state.focusEditor = true;
+                }
             } else {
                 state.loading = false;
                 state.error = errorRecovery(error);
@@ -1065,6 +1166,7 @@ export function createPrivateNotesController({
         paginationPending = true;
         state.paginationLoading = true;
         state.paginationError = null;
+        state.focusPagination = "more";
         render();
 
         try {
@@ -1081,6 +1183,7 @@ export function createPrivateNotesController({
             ));
             state.nextCursor = page.nextCursor;
             state.paginationLoading = false;
+            state.focusPagination = page.nextCursor === null ? "heading" : "more";
             render();
             return true;
         } catch (error) {
@@ -1090,6 +1193,7 @@ export function createPrivateNotesController({
 
             state.paginationLoading = false;
             state.paginationError = errorRecovery(error);
+            state.focusPagination = "error";
             render();
             return false;
         } finally {
@@ -1188,13 +1292,13 @@ export function createPrivateNotesController({
                 state.editor.recovery = { ...recovery, action: () => {} };
             } else if (isHttp(error, 409)) {
                 state.editor.recovery = {
-                    kind: "retry",
+                    kind: "refresh",
                     message: "Deze notitie is intussen gewijzigd. Vernieuw de notities voordat je opnieuw bewerkt.",
                     action: () => loadFirstPage({ preserve: true, discardEditor: true }),
                 };
             } else if (isHttp(error, 404)) {
                 state.editor.recovery = {
-                    kind: "retry",
+                    kind: "refresh",
                     message: "Deze notitie is niet meer beschikbaar. Vernieuw de notities.",
                     action: () => loadFirstPage({ preserve: true, discardEditor: true }),
                 };
@@ -1204,7 +1308,7 @@ export function createPrivateNotesController({
                 state.editor.error = "Biblio is tijdelijk niet beschikbaar. Probeer het later opnieuw.";
             } else {
                 state.editor.recovery = {
-                    kind: "retry",
+                    kind: "refresh",
                     message: "De uitkomst is onzeker. Vernieuw alleen de notitielijst voordat je opnieuw opslaat.",
                     action: () => loadFirstPage({ preserve: true, discardEditor: true }),
                 };

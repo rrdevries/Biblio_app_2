@@ -86,16 +86,252 @@ function paragraph(value) {
     return element("p", [text(value)]);
 }
 
+class ViewTextNode {
+    constructor(value) {
+        this.nodeType = 3;
+        this.nodeValue = value;
+        this.textContent = value;
+        this.parentNode = null;
+    }
+}
+
+class ViewElement {
+    constructor(tagName, nodeType = 1) {
+        this.nodeType = nodeType;
+        this.tagName = tagName.toUpperCase();
+        this.attributes = new Map();
+        this.children = [];
+        this.className = "";
+        this.disabled = false;
+        this.focused = false;
+        this.focusCount = 0;
+        this.listeners = new Map();
+        this.parentNode = null;
+        this.rootConnected = false;
+        this.open = false;
+        this._textContent = "";
+    }
+
+    get childNodes() {
+        return this.children;
+    }
+
+    get textContent() {
+        return this._textContent
+            + this.children.map((child) => child.textContent ?? "").join("");
+    }
+
+    set textContent(value) {
+        this._textContent = String(value);
+        this.children = [];
+    }
+
+    get isConnected() {
+        return this.rootConnected || this.parentNode?.isConnected === true;
+    }
+
+    setAttribute(name, value) {
+        this.attributes.set(name, String(value));
+    }
+
+    getAttribute(name) {
+        return this.attributes.get(name) ?? null;
+    }
+
+    append(...nodes) {
+        for (const node of nodes) {
+            const additions = node?.nodeType === 11 ? [...node.children] : [node];
+
+            for (const addition of additions) {
+                addition.parentNode = this;
+                this.children.push(addition);
+            }
+        }
+    }
+
+    replaceChildren(...nodes) {
+        for (const child of this.children) {
+            child.parentNode = null;
+        }
+
+        this.children = [];
+        this._textContent = "";
+        this.append(...nodes);
+    }
+
+    addEventListener(type, listener) {
+        this.listeners.set(type, listener);
+    }
+
+    click() {
+        if (!this.disabled) {
+            return this.listeners.get("click")?.({ preventDefault() {} });
+        }
+    }
+
+    focus() {
+        assert.equal(this.isConnected, true, "focus target must be connected");
+        this.focused = true;
+        this.focusCount += 1;
+    }
+
+    querySelector(selector) {
+        return viewDescendants(this).find((node) => viewMatches(node, selector)) ?? null;
+    }
+
+    querySelectorAll(selector) {
+        return viewDescendants(this).filter((node) => viewMatches(node, selector));
+    }
+
+    showModal() {
+        this.open = true;
+    }
+
+    close() {
+        this.open = false;
+    }
+
+    remove() {
+        if (this.parentNode === null) {
+            return;
+        }
+
+        this.parentNode.children = this.parentNode.children.filter(
+            (child) => child !== this
+        );
+        this.parentNode = null;
+    }
+}
+
+function viewDescendants(root) {
+    return root.children.flatMap((child) => [
+        child,
+        ...(child.children ? viewDescendants(child) : []),
+    ]);
+}
+
+function viewMatches(node, selector) {
+    const attribute = selector.match(/^\[([^=\]]+)(?:="([^"]*)")?\]$/u);
+
+    if (attribute !== null) {
+        const actual = node.getAttribute?.(attribute[1]);
+        return attribute[2] === undefined ? actual !== null : actual === attribute[2];
+    }
+
+    return node.tagName === selector.toUpperCase();
+}
+
+function viewDocument() {
+    return {
+        createElement(tagName) {
+            const node = new ViewElement(tagName);
+
+            if (tagName === "template") {
+                node.content = new ViewElement("fragment", 11);
+                Object.defineProperty(node, "innerHTML", {
+                    set(value) {
+                        const rendered = new ViewElement("p");
+                        rendered.append(new ViewTextNode(
+                            String(value).replace(/<[^>]*>/gu, "")
+                        ));
+                        node.content.replaceChildren(rendered);
+                    },
+                });
+            }
+
+            return node;
+        },
+        createTextNode(value) {
+            return new ViewTextNode(value);
+        },
+        createDocumentFragment() {
+            return new ViewElement("fragment", 11);
+        },
+        execCommand() {},
+        queryCommandState() { return false; },
+        queryCommandValue() { return ""; },
+    };
+}
+
+function viewSetup() {
+    const root = new ViewElement("div");
+    root.rootConnected = true;
+    const region = new ViewElement("div");
+    region.setAttribute("data-biblio-private-notes", "true");
+    root.append(region);
+
+    return {
+        root,
+        region,
+        view: createPrivateNotesView(root, { documentImpl: viewDocument() }),
+    };
+}
+
+function viewNodes(root, tagName) {
+    return viewDescendants(root).filter(
+        (node) => node.tagName === tagName.toUpperCase()
+    );
+}
+
+function viewBase(overrides = {}) {
+    return {
+        items: [],
+        nextCursor: null,
+        loading: false,
+        error: null,
+        paginationLoading: false,
+        paginationError: null,
+        editor: null,
+        mutationPending: false,
+        refreshWarning: false,
+        notice: null,
+        focusEditor: false,
+        focusNotice: false,
+        focusReadTarget: null,
+        focusPagination: null,
+        ...overrides,
+    };
+}
+
+function viewActions(overrides = {}) {
+    return {
+        add() {},
+        edit() {},
+        remove() {},
+        changed() { return false; },
+        format() { return false; },
+        paste() {},
+        save() {},
+        cancel() {},
+        loadMore() {},
+        refresh() {},
+        retry() {},
+        reload() {},
+        loginUrl: "https://example.test/login",
+        ...overrides,
+    };
+}
+
 function viewRecorder() {
     const renders = [];
     const discards = [];
     const deletes = [];
+    const focusRequests = [];
 
     return {
         renders,
         discards,
         deletes,
+        focusRequests,
         render(model, actions) {
+            focusRequests.push({
+                editor: model.focusEditor,
+                notice: model.focusNotice,
+                read: model.focusReadTarget === null
+                    ? null
+                    : { ...model.focusReadTarget },
+                pagination: model.focusPagination,
+            });
             renders.push({ model, actions });
         },
         validateHtml() {
@@ -112,7 +348,7 @@ function viewRecorder() {
             deletes.push(options);
             return true;
         },
-        execFormat() {},
+        execFormat() { return false; },
         pastePlainText() {},
         destroy() {},
     };
@@ -339,6 +575,29 @@ test("plain-text paste prevents rich HTML and inserts only clipboard text", () =
     assert.deepEqual(commands, [["insertText", false, "Alleen tekst <script>"]]);
 });
 
+test("formatting commands expose toggle state for toolbar aria-pressed", () => {
+    const commands = [];
+    const root = { querySelector() { return null; }, append() {} };
+    const documentImpl = {
+        createElement() { return {}; },
+        execCommand(...args) { commands.push(args); },
+        queryCommandState(command) { return command === "bold"; },
+        queryCommandValue(command) {
+            return command === "formatBlock" ? "blockquote" : "";
+        },
+    };
+    const view = createPrivateNotesView(root, { documentImpl });
+
+    assert.equal(view.execFormat("bold"), true);
+    assert.equal(view.execFormat("italic"), false);
+    assert.equal(view.execFormat("blockquote"), true);
+    assert.deepEqual(commands, [
+        ["bold", false, null],
+        ["italic", false, null],
+        ["formatBlock", false, "blockquote"],
+    ]);
+});
+
 test("initial load uses only the validated detail Work and preserves zero state", async () => {
     const f = fixture();
     await f.controller.load();
@@ -401,12 +660,165 @@ test("locked discard/delete copy and accessibility semantics are explicit", () =
         "Definitief verwijderen",
         'role: "toolbar"',
         'role: "textbox"',
+        'button.setAttribute("aria-pressed", "false")',
+        "Niet-opgeslagen wijzigingen.",
+        "Notities vernieuwen",
+        "editor.dirtyId",
         'documentImpl, "ul"',
     ]) {
         assert.match(source, new RegExp(copy.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     }
 
     assert.doesNotMatch(source, /Opslaan en doorgaan|autosave|aria-list/iu);
+});
+
+test("view exposes zero/list/editor semantics and programmatic editor status", () => {
+    const { region, view } = viewSetup();
+    view.render(viewBase(), viewActions());
+    assert.deepEqual(viewNodes(region, "h2").map((node) => node.textContent), [
+        "Privénotities",
+    ]);
+    assert.equal(viewNodes(region, "ul").length, 0);
+    assert.equal(viewNodes(region, "li").length, 0);
+    assert.equal(viewNodes(region, "button")[0].textContent, "Notitie toevoegen");
+
+    const editorModel = {
+        mode: "create",
+        privateNoteId: null,
+        version: null,
+        baselineHtml: "",
+        contentHtml: "",
+        pending: false,
+        dirty: true,
+        error: null,
+        recovery: null,
+        labelId: "editor-label",
+        helpId: "editor-help",
+        dirtyId: "editor-dirty",
+        errorId: "editor-error",
+    };
+    view.render(viewBase({ editor: editorModel, focusEditor: true }), viewActions({
+        changed() { return true; },
+        format() { return true; },
+    }));
+    const textbox = region.querySelector('[role="textbox"]');
+    const toolbar = region.querySelector('[role="toolbar"]');
+    const formatButtons = toolbar.querySelectorAll('[aria-pressed="false"]');
+    assert.equal(textbox.getAttribute("contenteditable"), "true");
+    assert.equal(textbox.getAttribute("aria-multiline"), "true");
+    assert.equal(textbox.getAttribute("aria-labelledby"), "editor-label");
+    assert.equal(
+        textbox.getAttribute("aria-describedby"),
+        "editor-help editor-dirty"
+    );
+    assert.equal(textbox.getAttribute("aria-invalid"), "false");
+    assert.equal(textbox.focused, true);
+    assert.equal(formatButtons.length, 5);
+    assert.match(region.textContent, /Niet-opgeslagen wijzigingen/);
+    formatButtons[0].click();
+    assert.equal(formatButtons[0].getAttribute("aria-pressed"), "true");
+});
+
+test("replacement controls receive deliberate Cancel and pagination focus", () => {
+    const { region, view } = viewSetup();
+    const existing = note("focus-note", "<p>Inhoud</p>");
+
+    view.render(viewBase({
+        items: [existing],
+        focusReadTarget: { kind: "edit", privateNoteId: "focus-note" },
+    }), viewActions());
+    assert.equal(viewNodes(region, "ul").length, 1);
+    assert.equal(viewNodes(region, "li").length, 1);
+    assert.equal(viewNodes(region, "button").find(
+        (button) => button.textContent === "Bewerken"
+    ).focused, true);
+
+    view.render(viewBase({
+        items: [existing],
+        nextCursor: "next",
+        focusPagination: "more",
+    }), viewActions());
+    const more = viewNodes(region, "button").find(
+        (button) => button.textContent === "Meer laden"
+    );
+    assert.equal(more.getAttribute("aria-disabled"), "false");
+    assert.equal(more.focused, true);
+
+    view.render(viewBase({ items: [existing], focusPagination: "heading" }), viewActions());
+    const heading = viewNodes(region, "h2")[0];
+    assert.equal(heading.getAttribute("tabindex"), "-1");
+    assert.equal(heading.focused, true);
+
+    view.render(viewBase({
+        items: [existing],
+        paginationError: "retry",
+        focusPagination: "error",
+    }), viewActions());
+    const retry = viewNodes(region, "button").find(
+        (button) => button.textContent === "Opnieuw proberen"
+    );
+    assert.equal(retry.focused, true);
+});
+
+test("native dialogs are labelled, described and keep deliberate focus", async () => {
+    const { root, region, view } = viewSetup();
+    let retained = 0;
+    assert.equal(view.confirmDiscard({
+        opener: new ViewElement("button"),
+        discard() {},
+        retain() { retained += 1; },
+    }), true);
+    let dialog = viewNodes(root, "dialog")[0];
+    assert.ok(dialog.getAttribute("aria-labelledby"));
+    assert.ok(dialog.getAttribute("aria-describedby"));
+    assert.equal(dialog.open, true);
+    const back = viewNodes(dialog, "button").find(
+        (button) => button.textContent === "Terug naar notitie"
+    );
+    assert.equal(back.focused, true);
+    back.click();
+    assert.equal(retained, 1);
+
+    const opener = new ViewElement("button");
+    opener.rootConnected = true;
+    view.render(viewBase({ notice: "Privénotitie verwijderd." }), viewActions());
+    assert.equal(view.confirmDelete({
+        note: note(),
+        opener,
+        async submit() { return { state: "deleted" }; },
+        async refresh() { return false; },
+        reload() {},
+        loginUrl: "https://example.test/login",
+    }), true);
+    dialog = viewNodes(root, "dialog")[0];
+    assert.ok(dialog.getAttribute("aria-labelledby"));
+    assert.ok(dialog.getAttribute("aria-describedby"));
+    assert.equal(viewNodes(dialog, "button").find(
+        (button) => button.textContent === "Annuleren"
+    ).focused, true);
+    await viewNodes(dialog, "button").find(
+        (button) => button.textContent === "Definitief verwijderen"
+    ).click();
+    assert.equal(region.querySelector('[role="status"]').focused, true);
+    assert.equal(viewNodes(root, "dialog").length, 0);
+
+    assert.equal(view.confirmDelete({
+        note: note(),
+        opener,
+        async submit() { return { state: "stale" }; },
+        async refresh() { return true; },
+        reload() {},
+        loginUrl: "https://example.test/login",
+    }), true);
+    dialog = viewNodes(root, "dialog")[0];
+    await viewNodes(dialog, "button").find(
+        (button) => button.textContent === "Definitief verwijderen"
+    ).click();
+    await viewNodes(dialog, "button").find(
+        (button) => button.textContent === "Vernieuwen"
+    ).click();
+    assert.equal(viewNodes(region, "h2")[0].focused, true);
+    assert.equal(viewNodes(root, "dialog").length, 0);
 });
 
 test("initial error exposes session/auth/local retry without affecting other app state", async () => {
@@ -451,6 +863,7 @@ test("pagination appends in server order, replaces cursor and prevents duplicate
     ]);
     assert.equal(f.latest().model.nextCursor, "cursor-2");
     assert.equal(requests, 2);
+    assert.equal(f.view.focusRequests.at(-1).pagination, "more");
 });
 
 test("pagination error preserves Notes and retries the exact same cursor", async () => {
@@ -478,8 +891,10 @@ test("pagination error preserves Notes and retries the exact same cursor", async
     await f.latest().actions.loadMore();
     assert.deepEqual(f.latest().model.items.map((item) => item.private_note_id), ["one"]);
     assert.equal(f.latest().model.paginationError, "retry");
+    assert.equal(f.view.focusRequests.at(-1).pagination, "error");
     await f.latest().actions.loadMore();
     assert.equal(paths[1], paths[2]);
+    assert.equal(f.view.focusRequests.at(-1).pagination, "heading");
 });
 
 test("create remains local until Save, sends one exact POST and reconciles page 1", async () => {
@@ -508,6 +923,11 @@ test("create remains local until Save, sends one exact POST and reconciles page 
     assert.equal(f.calls.filter(([method]) => method === "POST").length, 1);
     assert.equal(f.calls.filter(([method]) => method === "GET").length, 2);
     assert.equal(f.latest().model.editor, null);
+    assert.equal(f.view.focusRequests.at(-1).notice, true);
+    assert.equal(
+        f.view.focusRequests.slice(-2).every((request) => request.notice === true),
+        true
+    );
 });
 
 test("pending Save locks duplicate POST and authoritative response, never raw input, becomes read state", async () => {
@@ -609,14 +1029,14 @@ test("dirty state is semantic, clears after exact revert and owns beforeunload l
     await f.controller.load();
     f.latest().actions.edit(existing, { focus() {} });
     assert.equal(f.controller.isDirty(), false);
-    f.latest().actions.changed(editor(paragraph("Anders")));
+    assert.equal(f.latest().actions.changed(editor(paragraph("Anders"))), true);
     assert.equal(f.controller.isDirty(), true);
     assert.equal(f.events.listeners.has("beforeunload"), true);
     const unload = { prevented: false, preventDefault() { this.prevented = true; } };
     f.events.listeners.get("beforeunload")(unload);
     assert.equal(unload.prevented, true);
     assert.equal(unload.returnValue, "");
-    f.latest().actions.changed(editor(paragraph("Basis")));
+    assert.equal(f.latest().actions.changed(editor(paragraph("Basis"))), false);
     assert.equal(f.controller.isDirty(), false);
     assert.equal(f.events.listeners.has("beforeunload"), false);
 });
@@ -628,6 +1048,7 @@ test("clean Cancel is immediate while dirty Cancel has only retain/discard behav
     f.latest().actions.cancel({ focus() {} });
     assert.equal(f.latest().model.editor, null);
     assert.equal(f.view.discards.length, 0);
+    assert.deepEqual(f.view.focusRequests.at(-1).read, { kind: "add" });
 
     f.latest().actions.add({ focus() {} });
     f.latest().actions.changed(editor(paragraph("Onopgeslagen")));
@@ -635,10 +1056,25 @@ test("clean Cancel is immediate while dirty Cancel has only retain/discard behav
     assert.equal(f.view.discards.length, 1);
     f.view.discards[0].retain();
     assert.notEqual(f.latest().model.editor, null);
+    assert.equal(f.view.focusRequests.at(-1).editor, true);
     f.latest().actions.cancel({ focus() {} });
     f.view.discards[1].discard();
     assert.equal(f.latest().model.editor, null);
+    assert.deepEqual(f.view.focusRequests.at(-1).read, { kind: "add" });
     assert.equal(f.calls.filter(([method]) => method !== "GET").length, 0);
+});
+
+test("edit Cancel restores the replacement Edit control instead of a stale DOM opener", async () => {
+    const existing = note("edit-focus", "<p>Basis</p>", 2);
+    const f = fixture({ api: { get: async () => page([existing]) } });
+    await f.controller.load();
+    f.latest().actions.edit(existing, { focus() {} });
+    f.latest().actions.cancel({ focus() {} });
+
+    assert.deepEqual(f.view.focusRequests.at(-1).read, {
+        kind: "edit",
+        privateNoteId: "edit-focus",
+    });
 });
 
 test("dirty internal navigation waits, discards without mutation, and runs exactly once", async () => {
@@ -674,12 +1110,14 @@ test("update 409 preserves local intent, performs no retry and refreshes only ex
     f.latest().actions.edit(existing, { focus() {} });
     await f.latest().actions.save(editor(paragraph("Lokaal")));
     assert.equal(f.latest().model.editor.contentHtml, "<p>Lokaal</p>");
+    assert.equal(f.latest().model.editor.recovery.kind, "refresh");
     assert.equal(f.calls.filter(([method]) => method === "PATCH").length, 1);
     assert.equal(getCount, 1);
     await f.latest().model.editor.recovery.action();
     assert.equal(getCount, 2);
     assert.equal(f.latest().model.editor, null);
     assert.equal(f.latest().model.items[0].content_html, "<p>Server</p>");
+    assert.deepEqual(f.view.focusRequests.at(-1).read, { kind: "heading" });
 });
 
 test("validation errors retain editor content and session errors expose existing recovery", async () => {

@@ -1,9 +1,9 @@
 # Elementor Vertical Slice 1D — Private Notes Readiness
 
-Date: 2026-08-31
-Readiness verdict: **GO for 1D.5**
+Date: 2026-09-01
+Readiness verdict: **GO WITH CONDITIONS for 1D.6**
 
-Current implementation status: **1D.4 PRIVATE NOTES UI COMPLETE — GO**
+Current implementation status: **1D.5 RESPONSIVE/ACCESSIBILITY POLISH COMPLETE — GO WITH CONDITIONS**
 
 ## 1. Authority, baseline and scope
 
@@ -807,7 +807,7 @@ No E2E or fixture work is part of 1D.1.
 | 1D.2 | **Complete.** Minimal adapter-facing Work Note page DTO/cursor/wiring; no domain/schema change. | Locked multi-Note UI/read contract and response fields. | Owner-scoped bounded render-validated views; focused tests; schema unchanged. | Core/application. | Aggregate leakage or invented uniqueness. |
 | 1D.3 | **Complete.** Four thin REST routes, parser/cursor/serializer/error mappings and integration tests. | 1D.2 boundary fixed. | Cookie/nonce, exact bodies/allowlists, empty/non-enumerating reads, 404/409/422, no rule duplication. | WordPress REST adapter. | XSS, IDOR, unsafe retry or ambiguous member semantics. |
 | 1D.4 | **Complete.** Work-wide multi-Note list, zero/add/read/edit/manual-save/delete and reconciliation state on existing Item detail. | Approved UX plus 1D.3. | Multiple Notes preserved; no autosave; dirty/pending/stale/error flows tested. | Biblio UI. | Treating one Note as singleton or losing unsaved text. |
-| 1D.5 | Complete responsive/accessibility pass without semantic changes. | 1D.4 stable. | Breakpoints, 320 CSS px/zoom, keyboard, labels, dialogs, focus, busy/error and 44 px controls pass. | Biblio UI QA. | Dialog/editor accessibility drift. |
+| 1D.5 | **Complete.** Responsive/accessibility polish without semantic changes. | 1D.4 stable. | Breakpoints, 320 CSS px/effective zoom, keyboard, labels, dialogs, focus, busy/error and 44 px controls pass structurally. | Biblio UI QA. | Dialog/editor accessibility drift. |
 | 1D.6 | Add guarded deterministic fixture/API/browser evidence. | 1D.2–1D.5 complete. | Matrix §22, double cleanup, zero residue/fingerprint, 1A–1C regression green. | Fixture/E2E. | Private data leakage or unsafe cleanup. |
 | 1D.7 | Formal exit audit only. | All gates/evidence green. | Criterion matrix, exact commits, clean scope/status, GO/NO-GO, no new behavior. | Exit/documentation. | Calling partial evidence complete. |
 
@@ -828,9 +828,9 @@ All are **LOCKED**:
 ### 24.2 Remaining engineering work
 
 The deterministic constrained editor serializer and authoritative page-1
-reconciliation are complete in 1D.4. Remaining engineering work is the
-dedicated responsive/accessibility polish and acceptance pass in 1D.5,
-followed by guarded 1D.6 browser evidence.
+reconciliation are complete in 1D.4. The structural responsive/accessibility
+polish and acceptance contracts are complete in 1D.5. Remaining work is the
+guarded deterministic fixture/API/real-browser evidence in 1D.6.
 
 The former REST items—cursor codec, strict parsing/serialization and Note error
 mapping—are complete in 1D.3. The remaining items are UI/E2E scope. Neither
@@ -847,9 +847,9 @@ read/create/update/delete services already provide the required owner, Work,
 semantic no-op, stale and conditional-delete behavior. Schema 1004 remains
 ready and current schema 1007 is unchanged.
 
-There is no remaining CRUD/state/security uncertainty. **1D.5 is READY** to
-polish and formally verify the implemented multi-Note UI without changing its
-product semantics. A
+There is no remaining CRUD/state/security or known structural responsive/
+accessibility uncertainty. **1D.6 is READY** to add guarded fixtures and real
+Notes browser acceptance without changing product semantics. A
 singular Work-note, raw aggregate/content serialization, last-write-wins,
 Library-role bypass or direct Elementor/Crocoblock mutation remains a contract
 violation.
@@ -1079,3 +1079,85 @@ unchanged. The existing Biblio UI `0.2.0` asset version is retained under the
 repository convention established by the earlier ReadingRound end and Reading
 History feature commits. **1D.5 is READY** for responsive/accessibility polish
 without CRUD, state, security or product-semantic changes.
+
+## 30. 1D.5 responsive/accessibility polish evidence
+
+Status: **GO WITH CONDITIONS — 1D.6 READY**
+
+The locked 1D product contract and hierarchy are unchanged. Private Notes stay
+Work-wide and multi-Note with one manual-save constrained editor, page size 10,
+server order, optimistic versions and authoritative page-1 reconciliation.
+There is no new field, format, mutation, retry, autosave, Core/REST/schema,
+Elementor/Crocoblock or Playwright behavior.
+
+Responsive CSS remains inside the existing readable detail column and is now
+explicitly root-scoped. The region, list/editor and safe Note body use zero
+minimum inline size, full available width, bounded maximum width and safe word
+wrapping. Toolbar and action rows wrap; mobile actions remain usable at one
+column; no nowrap, ellipsis, fixed-height truncation, hidden content overflow
+or fixed Note/editor width is introduced. The existing breakpoints remain
+mobile `<768px`, tablet `768–1023px` and desktop `>=1024px`. Dialogs keep the
+compact 32rem tablet/desktop contract and the mobile bottom sheet with bounded
+dynamic-viewport height, internal scrolling and safe-area-aware bottom
+padding. No motion or new palette was added.
+
+The semantic contract now has direct DOM-level evidence: one Notes H2; no empty
+list in zero state; native `ul`/`li` for records; actions inside their member;
+one visible labelled multiline textbox; help, dirty and validation/error IDs
+through `aria-describedby`; `aria-invalid`; a named native toolbar; native
+buttons; and labelled/described native dialogs. Every formatting toggle
+publishes `aria-pressed` and updates it from the browser command state. The
+safe HTML/paste/serializer/render boundaries are unchanged.
+
+Dirty state is visibly and programmatically described as
+`Niet-opgeslagen wijzigingen.` while the permanent `beforeunload` prohibition
+remains enforced. Loading and errors remain short, local polite messages;
+the complete Notes list is never live. Initial, pagination, validation,
+session, stale and unavailable recovery stays textual rather than color-only;
+GET reconciliation actions are now named `Notities vernieuwen` where that is
+the actual operation.
+
+Focus is always requested only after replacement DOM is connected. Create and
+edit focus the editor; clean or discarded Cancel returns to the replacement
+Add/Edit control; dirty retain returns to the editor; successful save keeps the
+scoped confirmation focused across asynchronous page-1 reconciliation.
+Pagination focuses the continuing `Meer laden` button, the local retry on
+failure or the Notes H2 with `tabindex=-1` after the final page. Delete Cancel
+returns to its opener; successful delete focuses the scoped confirmation; a
+stale/unavailable refresh closes the modal before focusing the connected Notes
+H2. Native modal behavior retains keyboard containment, idle Escape and
+pending dismissal locks.
+
+The existing `--biblio-control-min: 44px` and 2px focus token apply to Add,
+Edit, Delete, formatting, Save/Cancel, pagination, recovery and dialog
+controls. Token checks prove ordinary text/controls at least 4.5:1 and the
+focus indicator at least 3:1 against white; status/error meaning is never
+color-only. This is structural slice evidence, not a full WCAG certification.
+
+Fresh automated verification:
+
+- Private Notes frontend: 34/34 PASS, including five new focus/semantics/
+  toolbar/dialog contracts;
+- complete Biblio UI JavaScript: 172/172 PASS;
+- app/runtime/detail/router/design selection: 84/84 PASS;
+- Start/End Reading views: 25/25 PASS;
+- Reading History: 8/8 PASS;
+- JavaScript syntax, Biblio UI PHP syntax, PHPStan and isolated UI smoke: PASS;
+- Private Notes REST: 11 tests/311 assertions, PASS;
+- complete `RestApiTest`: 39 tests/747 assertions, PASS;
+- Core/WordPress smoke, manifest JSON and Git whitespace: PASS.
+
+Safe existing-runtime browser smoke used no fixture and performed no mutation.
+The unauthenticated local shell measured no horizontal overflow at 320, 390,
+640 effective-width, 900 and 1280 CSS px; root scroll width equalled client
+width and its retry target measured at least 45 CSS px. Because this browser
+had no authenticated Biblio session, it did not expose real Private Notes data.
+The complete zero/create/edit/dirty/delete/pagination/dialog browser matrix,
+actual 200% browser zoom on real Notes content and fixture cleanup/fingerprint
+proof therefore remain explicitly 1D.6 scope.
+
+There is no known structural responsive/accessibility blocker. The verdict is
+**GO WITH CONDITIONS** only because real authenticated Notes browser/fixture
+evidence is deliberately deferred to 1D.6. **1D.6 is READY** and may add only
+guarded deterministic fixture/API/browser acceptance without reopening the UI
+contract.

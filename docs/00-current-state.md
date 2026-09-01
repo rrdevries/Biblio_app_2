@@ -1348,3 +1348,44 @@ Private Notes REST 11/311, complete `RestApiTest` 39/747, manifest JSON and Git
 whitespace are green. No Core, REST route/contract, schema/migration,
 Elementor/Crocoblock or Playwright change was made. 1D.5 is READY for the
 dedicated responsive/accessibility polish and acceptance pass only.
+
+### Vertical Slice 1D.5 — Private Notes responsive/accessibility polish
+
+Status: **Implemented — GO WITH CONDITIONS**
+
+The 1D.4 product, CRUD, serializer and information-hierarchy contracts are
+unchanged. Private Notes remain in the existing readable detail column with
+mobile `<768px`, tablet `768–1023px` and desktop `>=1024px`. Root-scoped CSS
+now makes region/editor width and long-content wrapping explicit, preserves a
+wrapping toolbar/actions at 320 CSS px and effective 200% reflow, and keeps the
+mobile bottom sheet within dynamic viewport height with safe-area-aware
+padding. No fixed Note/editor width, nowrap, ellipsis, hidden content overflow,
+new palette or motion was introduced.
+
+The existing H2, zero state and native list remain exact. The visible
+multiline textbox is programmatically tied to its label, help, dirty and field-
+error descriptions. Toolbar toggles are native buttons with accessible names
+and updated `aria-pressed`. Short local polite messages remain subordinate;
+the list is never live. The 44px pointer target, 2px focus and tested contrast
+tokens remain authoritative.
+
+Focus now targets connected replacement DOM: create/edit editor; Add/Edit after
+clean or discarded Cancel; editor after dirty retain; scoped confirmation
+across save/delete reconciliation; continuing load-more, pagination retry or
+the Notes H2 after the final page; and the Notes H2 only after a stale delete
+refresh closes its modal. Native dialog naming, description, safe initial
+focus, keyboard containment, idle Escape, pending locks and return focus are
+preserved. `beforeunload` still exists only while canonically dirty.
+
+Private Notes frontend passes 34 tests, the complete UI 172, runtime/detail/
+router/design 84, Start/End 25 and Reading History 8. UI JS/PHP syntax,
+PHPStan, isolated smoke, Private Notes REST 11/311, complete REST 39/747 and
+Core/WordPress smoke are green.
+
+A safe fixture-free browser smoke measured no shell overflow and at least 45px
+retry controls at 320, 390, 640 effective-width, 900 and 1280 CSS px. The
+available browser was not authenticated, so real Notes content, actual 200%
+zoom, mutation/dialog flows and guarded cleanup/fingerprint evidence are not
+claimed; they remain 1D.6. There is no known structural blocker. **1D.6 is
+READY**, with that real browser/fixture evidence as the sole explicit
+condition.
