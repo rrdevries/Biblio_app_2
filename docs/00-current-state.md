@@ -2,6 +2,10 @@
 
 Status: canonical working state for Biblio V2 / v2.001.
 
+Explicit decisions, directions and open design questions for versions after
+the active v2.001 scope are maintained in
+`docs/26-future-roadmap-decisions.md`.
+
 ## Product model
 
 Biblio is one application. Every platform user has one private, platform-wide environment: `Mijn Biblio`.
