@@ -32,6 +32,7 @@
     "docs/23-elementor-vertical-slice-1c-reading-history-readiness.md",
     "docs/24-elementor-vertical-slice-1c-exit-evidence.md",
     "docs/25-elementor-vertical-slice-1d-private-notes-readiness.md",
+    "docs/26-future-roadmap-decisions.md",
     "docs/decisions/ADR-001-single-site-tenancy.md",
     "docs/decisions/ADR-002-modular-monolith.md",
     "docs/decisions/ADR-003-biblio-core-owns-domain-logic.md",
