@@ -13,6 +13,7 @@ for (const [moduleId, file] of [
     ["biblio-ui/end-reading-view", "end-reading-view.js"],
     ["biblio-ui/library-state", "library-state.js"],
     ["biblio-ui/overview-view", "overview-view.js"],
+    ["biblio-ui/private-notes", "private-notes.js"],
     ["biblio-ui/reading-history", "reading-history.js"],
     ["biblio-ui/route-state", "route-state.js"],
     ["biblio-ui/start-reading-view", "start-reading-view.js"],
@@ -307,6 +308,40 @@ function endReadingRecorder() {
     return startReadingRecorder();
 }
 
+function privateNotesRecorder() {
+    const creations = [];
+
+    return {
+        creations,
+        factory(options) {
+            const controller = {
+                dirty: false,
+                destroyed: false,
+                loads: 0,
+                renders: 0,
+                load() {
+                    this.loads += 1;
+                    return Promise.resolve(true);
+                },
+                render() {
+                    this.renders += 1;
+                },
+                isDirty() {
+                    return this.dirty;
+                },
+                guardNavigation(action) {
+                    return Promise.resolve(action());
+                },
+                destroy() {
+                    this.destroyed = true;
+                },
+            };
+            creations.push({ options, controller });
+            return controller;
+        },
+    };
+}
+
 function createApp({
     url,
     get,
@@ -318,6 +353,7 @@ function createApp({
     detailRenders = recorder(),
     endReadingRenders = endReadingRecorder(),
     historyRenders = historyRecorder(),
+    privateNotes = privateNotesRecorder(),
     startReadingRenders = startReadingRecorder(),
 }) {
     const browser = browserDouble(url);
@@ -339,6 +375,7 @@ function createApp({
         detailViewFactory: detailRenders.factory,
         endReadingViewFactory: endReadingRenders.factory,
         readingHistoryViewFactory: historyRenders.factory,
+        privateNotesControllerFactory: privateNotes.factory,
         startReadingViewFactory: startReadingRenders.factory,
     });
 
@@ -348,6 +385,7 @@ function createApp({
         detailRenders,
         endReadingRenders,
         historyRenders,
+        privateNotes,
         startReadingRenders,
         submitEndReading(intent) {
             detailRenders.renders.at(-1).actions.endReading({ focus() {} });
@@ -518,7 +556,7 @@ test("a direct Item URL dispatches only the encoded detail contract", async () =
     const requests = [];
     const renders = recorder();
     const detailRenders = recorder();
-    const { app } = createApp({
+    const { app, privateNotes } = createApp({
         url: "https://example.test/mijn-bibliotheek/"
             + "?library_id=library%2Fone&item_id=item%2Fone",
         renders,
@@ -548,10 +586,63 @@ test("a direct Item URL dispatches only the encoded detail contract", async () =
         ["detail-loading", "detail"]
     );
     assert.equal(detailRenders.renders.at(-1).model.detail.item_id, "item/one");
+    assert.equal(privateNotes.creations.length, 1);
+    assert.equal(
+        privateNotes.creations[0].options.workId,
+        "work-item/one"
+    );
+    assert.equal(privateNotes.creations[0].controller.loads, 1);
     assert.equal(
         detailRenders.renders.at(-1).model.backUrl,
         "https://example.test/mijn-bibliotheek/?library_id=library%2Fone"
     );
+});
+
+test("dirty popstate restores the rendered route and applies the target once after discard", async () => {
+    const selected = library("library-1", { designated: true });
+    const renders = recorder();
+    const privateNotes = privateNotesRecorder();
+    const { app, browser } = createApp({
+        url: "https://example.test/mijn-bibliotheek/"
+            + "?library_id=library-1&item_id=item-1",
+        renders,
+        privateNotes,
+        async get(path) {
+            return path === "me/libraries"
+                ? { libraries: [selected] }
+                : path === "libraries/library-1/items/item-1"
+                    ? detail(selected, "item-1")
+                    : overview(selected, [item("item-1")]);
+        },
+    });
+    await app.start();
+    const notesController = privateNotes.creations[0].controller;
+    let discardAction = null;
+    notesController.dirty = true;
+    notesController.guardNavigation = (action) => {
+        discardAction = action;
+        return Promise.resolve(false);
+    };
+    browser.location.href = "https://example.test/mijn-bibliotheek/"
+        + "?library_id=library-1";
+    browser.listeners.get("popstate")();
+    await app.whenIdle();
+
+    assert.equal(
+        browser.location.href,
+        "https://example.test/mijn-bibliotheek/"
+            + "?library_id=library-1&item_id=item-1"
+    );
+    assert.equal(typeof discardAction, "function");
+    assert.equal(browser.historyCalls.filter(([kind]) => kind === "push").length, 0);
+
+    await discardAction();
+    assert.equal(
+        browser.location.href,
+        "https://example.test/mijn-bibliotheek/?library_id=library-1"
+    );
+    assert.equal(browser.historyCalls.filter(([kind]) => kind === "push").length, 0);
+    assert.equal(renders.renders.at(-1).model.state, "overview");
 });
 
 test("overview and detail actions push canonical routes and rebuild fresh", async () => {
@@ -2139,7 +2230,12 @@ test("Start Reading preserves history without a duplicate history GET", async ()
     const historyRenders = historyRecorder();
     let detailReads = 0;
     let historyReads = 0;
-    const { app, detailRenders, startReadingRenders } = createApp({
+    const {
+        app,
+        detailRenders,
+        privateNotes,
+        startReadingRenders,
+    } = createApp({
         url: "https://example.test/mijn-bibliotheek/"
             + "?library_id=library-start-history&item_id=item-start-history",
         renders,
@@ -2164,6 +2260,7 @@ test("Start Reading preserves history without a duplicate history GET", async ()
     });
 
     await app.start();
+    const noteRendersBeforeMutation = privateNotes.creations[0].controller.renders;
     detailRenders.renders.at(-1).actions.startReading({ focus() {} });
     const result = await startReadingRenders.opens.at(-1).submit(
         "2026-08-28",
@@ -2173,6 +2270,11 @@ test("Start Reading preserves history without a duplicate history GET", async ()
     assert.deepEqual(result, { state: "reconciled" });
     assert.equal(historyReads, 1);
     assert.equal(historyRenders.renders.at(-1).model.items.length, 1);
+    assert.equal(
+        privateNotes.creations[0].controller.renders,
+        noteRendersBeforeMutation + 1
+    );
+    assert.equal(privateNotes.creations[0].controller.loads, 1);
 });
 
 test("End Reading rereads detail then replaces history from page one only", async () => {

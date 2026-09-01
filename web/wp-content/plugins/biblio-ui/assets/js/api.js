@@ -159,8 +159,8 @@ export function createBiblioApi({ restRoot, restNonce, fetchImpl = fetch }) {
     async function request(path, { method = "GET", body, signal } = {}) {
         const normalizedMethod = method.toUpperCase();
 
-        if (normalizedMethod !== "GET" && normalizedMethod !== "POST") {
-            throw new TypeError("Biblio UI supports only GET and POST transport.");
+        if (!["GET", "POST", "PATCH", "DELETE"].includes(normalizedMethod)) {
+            throw new TypeError("The Biblio UI transport method is unsupported.");
         }
 
         if (normalizedMethod === "GET" && body !== undefined) {
@@ -185,7 +185,7 @@ export function createBiblioApi({ restRoot, restNonce, fetchImpl = fetch }) {
             options.signal = signal;
         }
 
-        if (normalizedMethod === "POST") {
+        if (["POST", "PATCH", "DELETE"].includes(normalizedMethod)) {
             headers["Content-Type"] = "application/json";
 
             if (body !== undefined) {
@@ -212,6 +212,12 @@ export function createBiblioApi({ restRoot, restNonce, fetchImpl = fetch }) {
         },
         post(path, body, options = {}) {
             return request(path, { ...options, method: "POST", body });
+        },
+        patch(path, body, options = {}) {
+            return request(path, { ...options, method: "PATCH", body });
+        },
+        delete(path, body, options = {}) {
+            return request(path, { ...options, method: "DELETE", body });
         },
     });
 }

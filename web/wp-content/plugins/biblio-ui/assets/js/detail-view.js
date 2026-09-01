@@ -310,6 +310,14 @@ function renderDetail(documentImpl, model, actions) {
         },
     }));
 
+    content.append(element(documentImpl, "div", {
+        className: "biblio-ui__private-notes-region",
+        attributes: {
+            "aria-busy": "false",
+            "data-biblio-private-notes": "true",
+        },
+    }));
+
     append(
         content,
         metadataSection(documentImpl, "Uitgave", [

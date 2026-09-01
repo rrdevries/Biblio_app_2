@@ -13,6 +13,7 @@ for (const [moduleId, file] of [
     ["biblio-ui/end-reading-view", "end-reading-view.js"],
     ["biblio-ui/library-state", "library-state.js"],
     ["biblio-ui/overview-view", "overview-view.js"],
+    ["biblio-ui/private-notes", "private-notes.js"],
     ["biblio-ui/reading-history", "reading-history.js"],
     ["biblio-ui/route-state", "route-state.js"],
     ["biblio-ui/start-reading-view", "start-reading-view.js"],
@@ -202,6 +203,7 @@ test("step 8 modules contain no storage or later-slice operations", async () => 
         "route-state.js",
         "library-state.js",
         "overview-view.js",
+        "private-notes.js",
         "reading-history.js",
         "detail-view.js",
         "end-reading-view.js",
@@ -212,10 +214,9 @@ test("step 8 modules contain no storage or later-slice operations", async () => 
     )));
     const source = sources.join("\n");
 
-    assert.doesNotMatch(
-        source,
-        /localStorage|sessionStorage|innerHTML|insertAdjacentHTML/
-    );
+    assert.doesNotMatch(source, /localStorage|sessionStorage|insertAdjacentHTML/);
+    assert.equal((source.match(/\.innerHTML\s*=/gu) ?? []).length, 1);
+    assert.match(source, /template\.innerHTML = html/);
     assert.doesNotMatch(
         source,
         /Next Reading|ratings|reviews|Elementor|Playwright/

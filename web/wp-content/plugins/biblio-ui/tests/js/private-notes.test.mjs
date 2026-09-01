@@ -1,0 +1,818 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import { BiblioApiError } from "../../assets/js/api.js";
+
+const sourceUrl = new URL("../../assets/js/private-notes.js", import.meta.url);
+let source = await (await import("node:fs/promises")).readFile(sourceUrl, "utf8");
+source = source.replaceAll(
+    '"biblio-ui/api"',
+    JSON.stringify(new URL("../../assets/js/api.js", import.meta.url).href)
+);
+const {
+    createPrivateNotesController,
+    createPrivateNotesView,
+    privateNotePath,
+    privateNotesPath,
+    readPrivateNote,
+    readPrivateNotesPage,
+    safePrivateNoteFragment,
+    serializePrivateNoteEditor,
+} = await import(
+    `data:text/javascript;base64,${Buffer.from(source).toString("base64")}`
+);
+
+function note(id = "note-1", html = "<p>Een notitie</p>", version = 1) {
+    return { private_note_id: id, content_html: html, version };
+}
+
+function page(items = [], nextCursor = null) {
+    return { items, next_cursor: nextCursor };
+}
+
+function deferred() {
+    let resolve;
+    let reject;
+    const promise = new Promise((resolvePromise, rejectPromise) => {
+        resolve = resolvePromise;
+        reject = rejectPromise;
+    });
+
+    return { promise, resolve, reject };
+}
+
+function httpError(status, code) {
+    return new BiblioApiError({
+        kind: "http",
+        status,
+        code,
+        message: "Unsafe transport detail.",
+    });
+}
+
+function text(value) {
+    return {
+        nodeType: 3,
+        nodeValue: value,
+        textContent: value,
+    };
+}
+
+function element(tagName, children = [], attributes = 0) {
+    const node = {
+        nodeType: 1,
+        tagName: tagName.toUpperCase(),
+        childNodes: children,
+        attributes: { length: attributes },
+    };
+    Object.defineProperty(node, "textContent", {
+        get() {
+            return children.map((child) => child.textContent ?? "").join("");
+        },
+    });
+    return node;
+}
+
+function editor(...children) {
+    return {
+        childNodes: children,
+        get textContent() {
+            return children.map((child) => child.textContent ?? "").join("");
+        },
+    };
+}
+
+function paragraph(value) {
+    return element("p", [text(value)]);
+}
+
+function viewRecorder() {
+    const renders = [];
+    const discards = [];
+    const deletes = [];
+
+    return {
+        renders,
+        discards,
+        deletes,
+        render(model, actions) {
+            renders.push({ model, actions });
+        },
+        validateHtml() {
+            return true;
+        },
+        canonicalizeHtml(html) {
+            return html;
+        },
+        confirmDiscard(options) {
+            discards.push(options);
+            return true;
+        },
+        confirmDelete(options) {
+            deletes.push(options);
+            return true;
+        },
+        execFormat() {},
+        pastePlainText() {},
+        destroy() {},
+    };
+}
+
+function eventTargetRecorder() {
+    const listeners = new Map();
+    const calls = [];
+
+    return {
+        listeners,
+        calls,
+        addEventListener(type, listener) {
+            calls.push(["add", type]);
+            listeners.set(type, listener);
+        },
+        removeEventListener(type, listener) {
+            calls.push(["remove", type]);
+
+            if (listeners.get(type) === listener) {
+                listeners.delete(type);
+            }
+        },
+    };
+}
+
+function fixture({ api = {}, active = () => true } = {}) {
+    const view = viewRecorder();
+    const events = eventTargetRecorder();
+    const calls = [];
+    const client = {
+        async get(path, options) {
+            calls.push(["GET", path, options]);
+            return api.get ? api.get(path, options) : page();
+        },
+        async post(path, body, options) {
+            calls.push(["POST", path, body, options]);
+            return api.post ? api.post(path, body, options) : note();
+        },
+        async patch(path, body, options) {
+            calls.push(["PATCH", path, body, options]);
+            return api.patch ? api.patch(path, body, options) : note();
+        },
+        async delete(path, body, options) {
+            calls.push(["DELETE", path, body, options]);
+            return api.delete ? api.delete(path, body, options) : null;
+        },
+    };
+    const abort = new AbortController();
+    const controller = createPrivateNotesController({
+        root: {},
+        api: client,
+        workId: "work/authoritative",
+        signal: abort.signal,
+        isCurrent: active,
+        view,
+        eventTarget: events,
+        loginUrl: "https://example.test/login",
+        reload() {},
+    });
+
+    return {
+        controller,
+        view,
+        events,
+        calls,
+        abort,
+        latest() {
+            return view.renders.at(-1);
+        },
+    };
+}
+
+test("Private Notes paths require typed authoritative IDs and opaque cursors", () => {
+    assert.equal(
+        privateNotesPath("work/a"),
+        "me/works/work%2Fa/private-notes?limit=10"
+    );
+    assert.equal(
+        privateNotesPath("work/a", "cursor/+"),
+        "me/works/work%2Fa/private-notes?limit=10&cursor=cursor%2F%2B"
+    );
+    assert.equal(privateNotePath("note/a"), "me/private-notes/note%2Fa");
+    assert.throws(() => privateNotesPath(""), /validated Work ID/);
+    assert.throws(() => privateNotesPath("work", 4), /validated Private Notes cursor/);
+    assert.throws(() => privateNotePath(""), /validated Private Note ID/);
+});
+
+test("strict Note and page readers accept only the exact public allowlist", () => {
+    assert.deepEqual(readPrivateNote(note()), note());
+    assert.deepEqual(readPrivateNotesPage(page([note()], "next")), {
+        items: [note()],
+        nextCursor: "next",
+    });
+
+    for (const invalid of [
+        { ...note(), work_id: "leak" },
+        { ...note(), private_note_id: "" },
+        { ...note(), content_html: 4 },
+        { ...note(), version: 0 },
+    ]) {
+        assert.throws(() => readPrivateNote(invalid), /invalid/);
+    }
+
+    for (const invalid of [
+        { items: [], next_cursor: null, total: 0 },
+        { items: {}, next_cursor: null },
+        { items: [], next_cursor: "" },
+    ]) {
+        assert.throws(() => readPrivateNotesPage(invalid), /invalid/);
+    }
+});
+
+test("serializer emits the exact safe subset, normalizes browser aliases and strips attributes", () => {
+    const root = editor(
+        element("div", [text("Alinea "), element("b", [text("vet")], 2)]),
+        element("p", [element("i", [text("cursief")], 1), element("br")]),
+        element("ul", [element("li", [text("Een")])]),
+        element("ol", [element("li", [text("Twee")])]),
+        element("blockquote", [text("Citaat")])
+    );
+
+    assert.equal(
+        serializePrivateNoteEditor(root),
+        "<p>Alinea <strong>vet</strong></p>"
+            + "<p><em>cursief</em><br></p>"
+            + "<ul><li>Een</li></ul>"
+            + "<ol><li>Twee</li></ol>"
+            + "<blockquote>Citaat</blockquote>"
+    );
+});
+
+test("serializer escapes text, supports nested formatting and fails closed", () => {
+    assert.equal(
+        serializePrivateNoteEditor(editor(
+            element("p", [
+                element("strong", [text("<&")]),
+                element("em", [text(" samen")]),
+            ]),
+            element("ul", [
+                element("li", [text("boven"), element("ul", [
+                    element("li", [text("onder")]),
+                ])]),
+            ])
+        )),
+        "<p><strong>&lt;&amp;</strong><em> samen</em></p>"
+            + "<ul><li>boven<ul><li>onder</li></ul></li></ul>"
+    );
+    assert.equal(serializePrivateNoteEditor(editor(paragraph("   "))), "");
+    assert.throws(
+        () => serializePrivateNoteEditor(editor(element("script", [text("x")]))),
+        /unsupported markup/
+    );
+    assert.throws(
+        () => serializePrivateNoteEditor(editor({ nodeType: 8 })),
+        /unsupported node/
+    );
+});
+
+test("safe saved rendering reconstructs only validated nodes without attributes", () => {
+    const sourceTree = element("p", [element("strong", [text("Veilig")])]);
+    const created = [];
+    const documentImpl = {
+        createElement(tagName) {
+            if (tagName === "template") {
+                return {
+                    content: { childNodes: [sourceTree] },
+                    set innerHTML(value) {
+                        this.received = value;
+                    },
+                };
+            }
+
+            const node = element(tagName);
+            node.append = (...children) => node.childNodes.push(...children);
+            created.push(node);
+            return node;
+        },
+        createTextNode(value) {
+            return text(value);
+        },
+        createDocumentFragment() {
+            return {
+                childNodes: [],
+                append(...children) {
+                    this.childNodes.push(...children);
+                },
+            };
+        },
+    };
+    const fragment = safePrivateNoteFragment(documentImpl, "<p><strong>Veilig</strong></p>");
+
+    assert.equal(fragment.childNodes[0].tagName, "P");
+    assert.equal(fragment.childNodes[0].childNodes[0].tagName, "STRONG");
+    assert.equal(created.every((node) => node.attributes.length === 0), true);
+
+    sourceTree.attributes.length = 1;
+    assert.throws(
+        () => safePrivateNoteFragment(documentImpl, "<p onclick=x>onveilig</p>"),
+        /unsupported attributes/
+    );
+});
+
+test("plain-text paste prevents rich HTML and inserts only clipboard text", () => {
+    const commands = [];
+    const root = { querySelector() { return null; }, append() {} };
+    const documentImpl = {
+        createElement() { return {}; },
+        execCommand(...args) { commands.push(args); },
+    };
+    const view = createPrivateNotesView(root, { documentImpl });
+    let prevented = false;
+    view.pastePlainText({
+        preventDefault() { prevented = true; },
+        clipboardData: {
+            getData(type) {
+                assert.equal(type, "text/plain");
+                return "Alleen tekst <script>";
+            },
+        },
+    });
+
+    assert.equal(prevented, true);
+    assert.deepEqual(commands, [["insertText", false, "Alleen tekst <script>"]]);
+});
+
+test("initial load uses only the validated detail Work and preserves zero state", async () => {
+    const f = fixture();
+    await f.controller.load();
+
+    assert.equal(f.calls[0][0], "GET");
+    assert.equal(
+        f.calls[0][1],
+        "me/works/work%2Fauthoritative/private-notes?limit=10"
+    );
+    assert.deepEqual(f.latest().model.items, []);
+    assert.equal(f.latest().model.loading, false);
+    assert.equal(f.latest().model.error, null);
+});
+
+test("initial one/multiple load preserves server order and malformed payload is local", async () => {
+    const notes = [note("new"), note("old")];
+    const good = fixture({ api: { get: async () => page(notes, "next") } });
+    await good.controller.load();
+    assert.deepEqual(good.latest().model.items.map((item) => item.private_note_id), [
+        "new",
+        "old",
+    ]);
+    assert.equal(good.latest().model.nextCursor, "next");
+
+    const bad = fixture({ api: { get: async () => ({ items: [], next_cursor: null, leak: 1 }) } });
+    await bad.controller.load();
+    assert.equal(bad.latest().model.error, "retry");
+});
+
+test("unsafe saved HTML fails before state commit and leaves the detail-owned controller recoverable", async () => {
+    const f = fixture({ api: { get: async () => page([note("unsafe", "<script>x</script>")]) } });
+    f.view.validateHtml = () => {
+        throw new TypeError("unsafe html");
+    };
+    await f.controller.load();
+    assert.deepEqual(f.latest().model.items, []);
+    assert.equal(f.latest().model.error, "retry");
+});
+
+test("editor baseline uses the same canonicalizer as dirty serialization", async () => {
+    const existing = note("canonical", "<p>Een &amp; twee</p>");
+    const f = fixture({ api: { get: async () => page([existing]) } });
+    f.view.canonicalizeHtml = () => "<p>Een &amp; twee</p>";
+    await f.controller.load();
+    f.latest().actions.edit(existing, { focus() {} });
+    f.latest().actions.changed(editor(paragraph("Een & twee")));
+    assert.equal(f.controller.isDirty(), false);
+});
+
+test("locked discard/delete copy and accessibility semantics are explicit", () => {
+    for (const copy of [
+        "Privénotities",
+        "Notitie toevoegen",
+        "Wijzigingen niet opslaan?",
+        "Je hebt wijzigingen die nog niet zijn opgeslagen.",
+        "Terug naar notitie",
+        "Doorgaan zonder opslaan",
+        "Privénotitie verwijderen?",
+        "Deze notitie wordt definitief verwijderd. Dit kan niet ongedaan worden gemaakt.",
+        "Definitief verwijderen",
+        'role: "toolbar"',
+        'role: "textbox"',
+        'documentImpl, "ul"',
+    ]) {
+        assert.match(source, new RegExp(copy.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    }
+
+    assert.doesNotMatch(source, /Opslaan en doorgaan|autosave|aria-list/iu);
+});
+
+test("initial error exposes session/auth/local retry without affecting other app state", async () => {
+    for (const [error, recovery] of [
+        [httpError(401, "biblio_authentication_required"), "authentication"],
+        [httpError(403, "rest_cookie_invalid_nonce"), "session"],
+        [httpError(503, "biblio_core_unavailable"), "retry"],
+    ]) {
+        const f = fixture({ api: { get: async () => { throw error; } } });
+        await f.controller.load();
+        assert.equal(f.latest().model.error, recovery);
+        assert.deepEqual(f.latest().model.items, []);
+    }
+});
+
+test("pagination appends in server order, replaces cursor and prevents duplicates/click races", async () => {
+    const continuation = deferred();
+    let requests = 0;
+    const f = fixture({
+        api: {
+            async get(path) {
+                requests += 1;
+
+                if (requests === 1) {
+                    return page([note("one")], "cursor-1");
+                }
+
+                return continuation.promise;
+            },
+        },
+    });
+    await f.controller.load();
+    const first = f.latest().actions.loadMore();
+    const duplicate = await f.latest().actions.loadMore();
+    assert.equal(duplicate, false);
+    continuation.resolve(page([note("one"), note("two")], "cursor-2"));
+    await first;
+
+    assert.deepEqual(f.latest().model.items.map((item) => item.private_note_id), [
+        "one",
+        "two",
+    ]);
+    assert.equal(f.latest().model.nextCursor, "cursor-2");
+    assert.equal(requests, 2);
+});
+
+test("pagination error preserves Notes and retries the exact same cursor", async () => {
+    const paths = [];
+    let attempt = 0;
+    const f = fixture({
+        api: {
+            async get(path) {
+                paths.push(path);
+                attempt += 1;
+
+                if (attempt === 1) {
+                    return page([note("one")], "cursor-fixed");
+                }
+
+                if (attempt === 2) {
+                    throw httpError(503, "biblio_core_unavailable");
+                }
+
+                return page([note("two")], null);
+            },
+        },
+    });
+    await f.controller.load();
+    await f.latest().actions.loadMore();
+    assert.deepEqual(f.latest().model.items.map((item) => item.private_note_id), ["one"]);
+    assert.equal(f.latest().model.paginationError, "retry");
+    await f.latest().actions.loadMore();
+    assert.equal(paths[1], paths[2]);
+});
+
+test("create remains local until Save, sends one exact POST and reconciles page 1", async () => {
+    let getCount = 0;
+    const f = fixture({
+        api: {
+            async get() {
+                getCount += 1;
+                return getCount === 1 ? page() : page([note("created", "<p>Nieuw</p>")]);
+            },
+            async post() {
+                return note("created", "<p>Nieuw</p>");
+            },
+        },
+    });
+    await f.controller.load();
+    f.latest().actions.add({ focus() {} });
+    assert.equal(f.calls.filter(([method]) => method === "POST").length, 0);
+    await f.latest().actions.save(editor(paragraph("Nieuw")));
+
+    assert.deepEqual(f.calls.filter(([method]) => method === "POST")[0].slice(0, 3), [
+        "POST",
+        "me/works/work%2Fauthoritative/private-notes",
+        { content: "<p>Nieuw</p>" },
+    ]);
+    assert.equal(f.calls.filter(([method]) => method === "POST").length, 1);
+    assert.equal(f.calls.filter(([method]) => method === "GET").length, 2);
+    assert.equal(f.latest().model.editor, null);
+});
+
+test("pending Save locks duplicate POST and authoritative response, never raw input, becomes read state", async () => {
+    const pending = deferred();
+    let getCount = 0;
+    const f = fixture({
+        api: {
+            get: async () => {
+                getCount += 1;
+                return getCount === 1
+                    ? page()
+                    : page([note("server", "<p>Server</p>", 3)]);
+            },
+            post: async () => pending.promise,
+        },
+    });
+    await f.controller.load();
+    f.latest().actions.add({ focus() {} });
+    const save = f.latest().actions.save(editor(paragraph("Rauw")));
+    assert.equal(f.latest().model.mutationPending, true);
+    const duplicate = await f.latest().actions.save(editor(paragraph("Dubbel")));
+    assert.equal(duplicate, false);
+    pending.resolve(note("server", "<p>Server</p>", 3));
+    await save;
+    assert.equal(f.calls.filter(([method]) => method === "POST").length, 1);
+    assert.equal(f.latest().model.items[0]?.content_html, "<p>Server</p>");
+});
+
+test("successful create plus failed refresh never repeats POST and keeps reliable response", async () => {
+    let getCount = 0;
+    const f = fixture({
+        api: {
+            async get() {
+                getCount += 1;
+
+                if (getCount === 1) {
+                    return page();
+                }
+
+                throw httpError(503, "biblio_core_unavailable");
+            },
+            post: async () => note("server", "<p>Server</p>", 1),
+        },
+    });
+    await f.controller.load();
+    f.latest().actions.add({ focus() {} });
+    await f.latest().actions.save(editor(paragraph("Server")));
+    assert.equal(f.calls.filter(([method]) => method === "POST").length, 1);
+    assert.equal(f.latest().model.refreshWarning, true);
+    assert.equal(f.latest().model.items[0].private_note_id, "server");
+});
+
+test("edit preserves formatting and sends exact PATCH with authoritative version", async () => {
+    let getCount = 0;
+    const existing = note("note/edit", "<p><strong>Oud</strong></p>", 7);
+    const f = fixture({
+        api: {
+            async get() {
+                getCount += 1;
+                return page([getCount === 1 ? existing : note("note/edit", "<p><em>Nieuw</em></p>", 8)]);
+            },
+            patch: async () => note("note/edit", "<p><em>Nieuw</em></p>", 8),
+        },
+    });
+    await f.controller.load();
+    f.latest().actions.edit(existing, { focus() {} });
+    assert.equal(f.latest().model.editor.contentHtml, "<p><strong>Oud</strong></p>");
+    await f.latest().actions.save(editor(element("p", [element("em", [text("Nieuw")])])));
+    assert.deepEqual(f.calls.find(([method]) => method === "PATCH").slice(0, 3), [
+        "PATCH",
+        "me/private-notes/note%2Fedit",
+        { content: "<p><em>Nieuw</em></p>", expected_version: 7 },
+    ]);
+    assert.equal(f.latest().model.items[0].version, 8);
+});
+
+test("semantic no-op 200 closes editor without local version arithmetic", async () => {
+    const existing = note("same", "<p>Zelfde</p>", 4);
+    let getCount = 0;
+    const f = fixture({
+        api: {
+            async get() {
+                getCount += 1;
+                return page([existing]);
+            },
+            patch: async () => existing,
+        },
+    });
+    await f.controller.load();
+    f.latest().actions.edit(existing, { focus() {} });
+    await f.latest().actions.save(editor(paragraph("Zelfde")));
+    assert.equal(f.latest().model.editor, null);
+    assert.equal(f.latest().model.items[0].version, 4);
+});
+
+test("dirty state is semantic, clears after exact revert and owns beforeunload lifecycle", async () => {
+    const existing = note("edit", "<p>Basis</p>", 2);
+    const f = fixture({ api: { get: async () => page([existing]) } });
+    await f.controller.load();
+    f.latest().actions.edit(existing, { focus() {} });
+    assert.equal(f.controller.isDirty(), false);
+    f.latest().actions.changed(editor(paragraph("Anders")));
+    assert.equal(f.controller.isDirty(), true);
+    assert.equal(f.events.listeners.has("beforeunload"), true);
+    const unload = { prevented: false, preventDefault() { this.prevented = true; } };
+    f.events.listeners.get("beforeunload")(unload);
+    assert.equal(unload.prevented, true);
+    assert.equal(unload.returnValue, "");
+    f.latest().actions.changed(editor(paragraph("Basis")));
+    assert.equal(f.controller.isDirty(), false);
+    assert.equal(f.events.listeners.has("beforeunload"), false);
+});
+
+test("clean Cancel is immediate while dirty Cancel has only retain/discard behavior", async () => {
+    const f = fixture();
+    await f.controller.load();
+    f.latest().actions.add({ focus() {} });
+    f.latest().actions.cancel({ focus() {} });
+    assert.equal(f.latest().model.editor, null);
+    assert.equal(f.view.discards.length, 0);
+
+    f.latest().actions.add({ focus() {} });
+    f.latest().actions.changed(editor(paragraph("Onopgeslagen")));
+    f.latest().actions.cancel({ focus() {} });
+    assert.equal(f.view.discards.length, 1);
+    f.view.discards[0].retain();
+    assert.notEqual(f.latest().model.editor, null);
+    f.latest().actions.cancel({ focus() {} });
+    f.view.discards[1].discard();
+    assert.equal(f.latest().model.editor, null);
+    assert.equal(f.calls.filter(([method]) => method !== "GET").length, 0);
+});
+
+test("dirty internal navigation waits, discards without mutation, and runs exactly once", async () => {
+    const f = fixture();
+    await f.controller.load();
+    f.latest().actions.add({ focus() {} });
+    f.latest().actions.changed(editor(paragraph("Onopgeslagen")));
+    let navigations = 0;
+    const guarded = f.controller.guardNavigation(() => {
+        navigations += 1;
+        return "done";
+    });
+    assert.equal(navigations, 0);
+    f.view.discards[0].discard();
+    assert.equal(await guarded, "done");
+    assert.equal(navigations, 1);
+    assert.equal(f.calls.filter(([method]) => method !== "GET").length, 0);
+});
+
+test("update 409 preserves local intent, performs no retry and refreshes only explicitly", async () => {
+    const existing = note("edit", "<p>Basis</p>", 2);
+    let getCount = 0;
+    const f = fixture({
+        api: {
+            async get() {
+                getCount += 1;
+                return page([getCount === 1 ? existing : note("edit", "<p>Server</p>", 3)]);
+            },
+            patch: async () => { throw httpError(409, "biblio_private_note_stale"); },
+        },
+    });
+    await f.controller.load();
+    f.latest().actions.edit(existing, { focus() {} });
+    await f.latest().actions.save(editor(paragraph("Lokaal")));
+    assert.equal(f.latest().model.editor.contentHtml, "<p>Lokaal</p>");
+    assert.equal(f.calls.filter(([method]) => method === "PATCH").length, 1);
+    assert.equal(getCount, 1);
+    await f.latest().model.editor.recovery.action();
+    assert.equal(getCount, 2);
+    assert.equal(f.latest().model.editor, null);
+    assert.equal(f.latest().model.items[0].content_html, "<p>Server</p>");
+});
+
+test("validation errors retain editor content and session errors expose existing recovery", async () => {
+    for (const [error, expectation] of [
+        [httpError(422, "biblio_validation_failed"), "error"],
+        [httpError(403, "rest_cookie_invalid_nonce"), "session"],
+        [httpError(401, "biblio_authentication_required"), "authentication"],
+    ]) {
+        const f = fixture({
+            api: {
+                get: async () => page(),
+                post: async () => { throw error; },
+            },
+        });
+        await f.controller.load();
+        f.latest().actions.add({ focus() {} });
+        await f.latest().actions.save(editor(paragraph("Bewaren")));
+        assert.equal(f.latest().model.editor.contentHtml, "<p>Bewaren</p>");
+
+        if (expectation === "error") {
+            assert.match(f.latest().model.editor.error, /Controleer/);
+        } else {
+            assert.equal(f.latest().model.editor.recovery.kind, expectation);
+        }
+    }
+});
+
+test("delete uses exact ID/version once, pending-locks, then reconciles page 1", async () => {
+    const existing = note("delete/me", "<p>Weg</p>", 5);
+    const pending = deferred();
+    let getCount = 0;
+    const f = fixture({
+        api: {
+            async get() {
+                getCount += 1;
+                return getCount === 1 ? page([existing]) : page();
+            },
+            delete: async () => pending.promise,
+        },
+    });
+    await f.controller.load();
+    f.latest().actions.remove(existing, { focus() {} });
+    const deleting = f.view.deletes[0].submit(existing);
+    assert.deepEqual(await f.view.deletes[0].submit(existing), { state: "pending" });
+    pending.resolve(null);
+    assert.deepEqual(await deleting, { state: "deleted" });
+    assert.deepEqual(f.calls.find(([method]) => method === "DELETE").slice(0, 3), [
+        "DELETE",
+        "me/private-notes/delete%2Fme",
+        { expected_version: 5 },
+    ]);
+    assert.equal(f.calls.filter(([method]) => method === "DELETE").length, 1);
+    assert.equal(getCount, 2);
+});
+
+test("delete stale and unavailable never disappear silently or retry mutation", async () => {
+    for (const [error, expected] of [
+        [httpError(409, "biblio_private_note_stale"), "stale"],
+        [httpError(404, "biblio_resource_not_available"), "unavailable"],
+    ]) {
+        const existing = note("keep");
+        const f = fixture({
+            api: {
+                get: async () => page([existing]),
+                delete: async () => { throw error; },
+            },
+        });
+        await f.controller.load();
+        f.latest().actions.remove(existing, { focus() {} });
+        assert.deepEqual(await f.view.deletes[0].submit(existing), { state: expected });
+        assert.equal(f.latest().model.items.length, 1);
+        assert.equal(f.calls.filter(([method]) => method === "DELETE").length, 1);
+    }
+});
+
+test("delete session and authentication failures use locked existing recovery", async () => {
+    for (const [error, expected] of [
+        [httpError(403, "rest_cookie_invalid_nonce"), "session"],
+        [httpError(401, "biblio_authentication_required"), "authentication"],
+    ]) {
+        const existing = note("keep");
+        const f = fixture({
+            api: {
+                get: async () => page([existing]),
+                delete: async () => { throw error; },
+            },
+        });
+        await f.controller.load();
+        f.latest().actions.remove(existing, { focus() {} });
+        assert.deepEqual(await f.view.deletes[0].submit(existing), { state: expected });
+        assert.equal(f.latest().model.items.length, 1);
+        assert.equal(f.calls.filter(([method]) => method === "DELETE").length, 1);
+    }
+});
+
+test("successful delete plus refresh failure removes only target and never retries DELETE", async () => {
+    const one = note("one");
+    const two = note("two");
+    let getCount = 0;
+    const f = fixture({
+        api: {
+            async get() {
+                getCount += 1;
+
+                if (getCount === 1) {
+                    return page([one, two]);
+                }
+
+                throw httpError(503, "biblio_core_unavailable");
+            },
+            delete: async () => null,
+        },
+    });
+    await f.controller.load();
+    f.latest().actions.remove(one, { focus() {} });
+    assert.deepEqual(await f.view.deletes[0].submit(one), { state: "deleted" });
+    assert.deepEqual(f.latest().model.items.map((item) => item.private_note_id), ["two"]);
+    assert.equal(f.latest().model.refreshWarning, true);
+    assert.equal(f.calls.filter(([method]) => method === "DELETE").length, 1);
+});
+
+test("late Work response is ignored after generation invalidation or abort", async () => {
+    const pending = deferred();
+    let current = true;
+    const f = fixture({
+        active: () => current,
+        api: { get: async () => pending.promise },
+    });
+    const load = f.controller.load();
+    current = false;
+    pending.resolve(page([note("late")]));
+    assert.equal(await load, false);
+    assert.deepEqual(f.latest().model.items, []);
+    f.controller.destroy();
+    assert.equal(f.events.listeners.has("beforeunload"), false);
+});
