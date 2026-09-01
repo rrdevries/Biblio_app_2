@@ -13,6 +13,8 @@ use Biblio\Core\Application\Catalog\Read\CatalogReadingSummary;
 use Biblio\Core\Application\Catalog\Read\CatalogTextListValue;
 use Biblio\Core\Application\Catalog\Read\CatalogTextValue;
 use Biblio\Core\Application\Library\LibraryContextView;
+use Biblio\Core\Application\Notes\Read\PrivateNoteView;
+use Biblio\Core\Application\Notes\Read\PrivateNoteViewPage;
 use Biblio\Core\Application\Reading\History\ReadingHistoryEntry;
 use Biblio\Core\Application\Reading\History\ReadingHistoryPage;
 use Biblio\Core\Reading\ReadingDate;
@@ -23,7 +25,8 @@ final readonly class RestResponseSerializer
 {
     public function __construct(
         private CatalogCursorCodec $cursors,
-        private ReadingHistoryCursorCodec $historyCursors
+        private ReadingHistoryCursorCodec $historyCursors,
+        private PrivateNoteCursorCodec $privateNoteCursors
     ) {
     }
 
@@ -128,6 +131,27 @@ final readonly class RestResponseSerializer
             "next_cursor" => $page->nextCursor() === null
                 ? null
                 : $this->historyCursors->encode($page->nextCursor()),
+        ];
+    }
+
+    /** @return array{items: list<array<string, int|string>>, next_cursor: ?string} */
+    public function privateNotes(PrivateNoteViewPage $page): array
+    {
+        return [
+            "items" => array_map($this->privateNote(...), $page->notes()),
+            "next_cursor" => $page->nextCursor() === null
+                ? null
+                : $this->privateNoteCursors->encode($page->nextCursor()),
+        ];
+    }
+
+    /** @return array{private_note_id: string, content_html: string, version: int} */
+    public function privateNote(PrivateNoteView $note): array
+    {
+        return [
+            "private_note_id" => $note->id()->value(),
+            "content_html" => $note->contentHtml(),
+            "version" => $note->version()->value(),
         ];
     }
 

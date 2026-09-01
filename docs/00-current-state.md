@@ -1281,3 +1281,31 @@ Existing create-without-Round, member read, update/no-op/stale and conditional
 hard-delete services are reused unchanged. Schema remains 1007. No REST route,
 controller, HTTP/JSON contract, UI, Elementor, Crocoblock, Playwright,
 ActivityEvent, private audit, schema or migration is added. 1D.3 is READY.
+
+### Vertical Slice 1D.3 — Private Notes REST API
+
+Status: **Implemented — GO**
+
+The `biblio/v1` adapter now exposes four owner-scoped Private Note operations:
+GET and POST on `/me/works/{work_id}/private-notes`, and PATCH and DELETE on
+`/me/private-notes/{private_note_id}`. They reuse the standard cookie plus
+`X-WP-Nonce` authentication convention and call only named `CoreApplication`
+services; no repository or wpdb access crosses the REST boundary.
+
+GET returns the exact `items`/`next_cursor` page allowlist with Core default 50,
+maximum 100 and a dedicated version-1 URL-safe opaque cursor. Each item contains
+only `private_note_id`, render-validated `content_html` and `version`. POST
+accepts only `content` and returns 201; PATCH accepts only `content` plus
+`expected_version` and returns 200 authoritative state; DELETE accepts only
+`expected_version` and returns 204 without content.
+
+Strict parsing rejects malformed IDs, query/body types, unsupported fields and
+invalid cursors. Foreign-only collections remain 200 empty; unknown, foreign
+and deleted members share one generic 404; stale update/delete maps to 409;
+Core content validation maps to 422; unavailable Core maps to 503; unexpected
+failures remain privacy-safe 500. Cursors never authorize and actor+Work scope
+is reapplied on every page.
+
+Schema remains 1007. No Core application/domain, persistence query,
+schema/migration, Biblio UI, Elementor, Crocoblock, Playwright, ActivityEvent,
+private audit or ReadingRound product behavior changed. 1D.4 is READY.

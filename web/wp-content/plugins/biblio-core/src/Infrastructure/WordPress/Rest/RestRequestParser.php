@@ -11,10 +11,15 @@ use Biblio\Core\Application\Reading\History\ReadingHistoryPageSize;
 use Biblio\Core\Catalog\ItemId;
 use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Library\LibraryId;
+use Biblio\Core\Notes\PrivateNoteId;
+use Biblio\Core\Notes\PrivateNotePageRequest;
+use Biblio\Core\Notes\PrivateNoteVersion;
 use Biblio\Core\Reading\ReadingDate;
 use Biblio\Core\Reading\ReadingRoundId;
 use Biblio\Core\Reading\ReadingRoundOutcome;
 use Biblio\Core\Reading\ReadingRoundVersion;
+use JsonException;
+use stdClass;
 use Throwable;
 use WP_REST_Request;
 
@@ -22,7 +27,8 @@ final readonly class RestRequestParser
 {
     public function __construct(
         private CatalogCursorCodec $cursors,
-        private ReadingHistoryCursorCodec $historyCursors
+        private ReadingHistoryCursorCodec $historyCursors,
+        private PrivateNoteCursorCodec $privateNoteCursors
     ) {
     }
 
@@ -50,6 +56,98 @@ final readonly class RestRequestParser
             $request->get_url_params()["work_id"] ?? null,
             "work_id",
             static fn (string $value): WorkId => new WorkId($value)
+        );
+    }
+
+    public function privateNoteId(WP_REST_Request $request): PrivateNoteId
+    {
+        return $this->identifier(
+            $request->get_url_params()["private_note_id"] ?? null,
+            "private_note_id",
+            static fn (string $value): PrivateNoteId => new PrivateNoteId($value)
+        );
+    }
+
+    public function privateNotePage(
+        WP_REST_Request $request
+    ): PrivateNotePageRequest {
+        $this->validateQueryFields($request, ["limit", "cursor"]);
+        $query = $request->get_query_params();
+        $limit = $this->positiveQueryInteger(
+            $query["limit"] ?? null,
+            "limit",
+            50
+        );
+        $cursorValue = $query["cursor"] ?? null;
+
+        try {
+            $firstPage = new PrivateNotePageRequest($limit);
+        } catch (Throwable) {
+            throw RestRequestException::invalid("limit");
+        }
+
+        if ($cursorValue === null) {
+            return $firstPage;
+        }
+
+        if (!is_string($cursorValue)) {
+            throw RestRequestException::wrongType("cursor", "a string");
+        }
+
+        $cursor = $this->privateNoteCursors->decode($cursorValue);
+
+        try {
+            return new PrivateNotePageRequest(
+                $limit,
+                $cursor->beforeUpdatedAt(),
+                $cursor->beforeId()
+            );
+        } catch (Throwable) {
+            throw RestRequestException::invalid("cursor");
+        }
+    }
+
+    public function privateNoteContent(WP_REST_Request $request): string
+    {
+        $this->validateQueryFields($request, []);
+        $body = $this->jsonObject($request, "content");
+        $this->validateBodyFields($body, ["content"]);
+
+        if (!is_string($body["content"])) {
+            throw RestRequestException::wrongType("content", "a string");
+        }
+
+        return $body["content"];
+    }
+
+    public function privateNoteUpdate(
+        WP_REST_Request $request
+    ): RestPrivateNoteUpdateRequest {
+        $this->validateQueryFields($request, []);
+        $body = $this->jsonObject($request, "content");
+        $this->validateBodyFields($body, ["content", "expected_version"]);
+
+        if (!is_string($body["content"])) {
+            throw RestRequestException::wrongType("content", "a string");
+        }
+
+        return new RestPrivateNoteUpdateRequest(
+            $this->privateNoteId($request),
+            $body["content"],
+            $this->privateNoteVersion($body["expected_version"])
+        );
+    }
+
+    public function privateNoteDelete(
+        WP_REST_Request $request
+    ): RestPrivateNoteDeleteRequest {
+        $this->validateQueryFields($request, []);
+        $body = $this->jsonObject($request, "expected_version");
+        $this->validateBodyFields($body, ["expected_version"]);
+
+        return new RestPrivateNoteDeleteRequest(
+            $this->privateNoteId($request),
+            $this->privateNoteVersion($body["expected_version"])
         );
     }
 
@@ -107,14 +205,7 @@ final readonly class RestRequestParser
 
     public function validateReadingHistoryQuery(WP_REST_Request $request): void
     {
-        if (
-            array_diff(
-                array_keys($request->get_query_params()),
-                ["limit", "cursor"]
-            ) !== []
-        ) {
-            throw RestRequestException::unknownFields();
-        }
+        $this->validateQueryFields($request, ["limit", "cursor"]);
     }
 
     public function readingHistoryLimit(
@@ -256,6 +347,103 @@ final readonly class RestRequestParser
             (int) $parts["month"],
             (int) $parts["day"]
         );
+    }
+
+    /**
+     * @param list<string> $fields
+     */
+    private function validateQueryFields(
+        WP_REST_Request $request,
+        array $fields
+    ): void {
+        if (array_diff(array_keys($request->get_query_params()), $fields) !== []) {
+            throw RestRequestException::unknownFields();
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     * @param list<string> $fields
+     */
+    private function validateBodyFields(array $body, array $fields): void
+    {
+        if (array_diff(array_keys($body), $fields) !== []) {
+            throw RestRequestException::unknownFields();
+        }
+
+        foreach ($fields as $field) {
+            if (!array_key_exists($field, $body)) {
+                throw RestRequestException::missing($field);
+            }
+        }
+    }
+
+    /** @return array<string, mixed> */
+    private function jsonObject(
+        WP_REST_Request $request,
+        string $firstRequiredField
+    ): array {
+        $raw = $request->get_body();
+
+        if (trim($raw) === "") {
+            throw RestRequestException::missing($firstRequiredField);
+        }
+
+        try {
+            $shape = json_decode($raw, false, 512, JSON_THROW_ON_ERROR);
+
+            if (!$shape instanceof stdClass) {
+                throw RestRequestException::wrongType("body", "a JSON object");
+            }
+
+            $body = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+        } catch (RestRequestException $exception) {
+            throw $exception;
+        } catch (JsonException) {
+            throw RestRequestException::invalid("body");
+        }
+
+        if (!is_array($body)) {
+            throw RestRequestException::wrongType("body", "a JSON object");
+        }
+
+        return $body;
+    }
+
+    private function privateNoteVersion(mixed $value): PrivateNoteVersion
+    {
+        if (!is_int($value)) {
+            throw RestRequestException::wrongType(
+                "expected_version",
+                "an integer"
+            );
+        }
+
+        try {
+            return new PrivateNoteVersion($value);
+        } catch (Throwable) {
+            throw RestRequestException::invalid("expected_version");
+        }
+    }
+
+    private function positiveQueryInteger(
+        mixed $value,
+        string $field,
+        int $default
+    ): int {
+        if ($value === null) {
+            return $default;
+        }
+
+        if (
+            !(is_int($value)
+                || (is_string($value)
+                    && preg_match('/^[0-9]+$/D', $value) === 1))
+        ) {
+            throw RestRequestException::wrongType($field, "an integer");
+        }
+
+        return (int) $value;
     }
 
     /**

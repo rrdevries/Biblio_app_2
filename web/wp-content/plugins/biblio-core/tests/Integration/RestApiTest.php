@@ -4,16 +4,20 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Tests\Integration;
 
+use Biblio\Core\Application\Notes\Read\PrivateNoteViewCursor;
 use Biblio\Core\Exception\AuthorizationException;
 use Biblio\Core\Exception\ValidationException;
 use Biblio\Core\Infrastructure\WordPress\ProductionComposition;
 use Biblio\Core\Infrastructure\WordPress\Rest\CatalogCursorCodec;
+use Biblio\Core\Infrastructure\WordPress\Rest\PrivateNoteCursorCodec;
 use Biblio\Core\Infrastructure\WordPress\Rest\ReadingHistoryCursorCodec;
 use Biblio\Core\Infrastructure\WordPress\Rest\RestApi;
 use Biblio\Core\Infrastructure\WordPress\Rest\RestErrorMapper;
 use Biblio\Core\Infrastructure\WordPress\Rest\RestController;
 use Biblio\Core\Infrastructure\WordPress\Rest\RestRequestParser;
 use Biblio\Core\Infrastructure\WordPress\Rest\RestResponseSerializer;
+use Biblio\Core\Notes\PrivateNoteId;
+use DateTimeImmutable;
 use RuntimeException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use WP_Error;
@@ -78,6 +82,8 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             "/biblio/v1/me/libraries",
             "/biblio/v1/me/reading-rounds/(?P<reading_round_id>[^/]+)/end",
             "/biblio/v1/me/works/(?P<work_id>[^/]+)/reading-history",
+            "/biblio/v1/me/works/(?P<work_id>[^/]+)/private-notes",
+            "/biblio/v1/me/private-notes/(?P<private_note_id>[^/]+)",
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/items",
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/items/(?P<item_id>[^/]+)",
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/items/"
@@ -93,7 +99,7 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             }
         }
 
-        self::assertCount(6, array_filter(
+        self::assertCount(8, array_filter(
             array_keys($routes),
             static fn (string $route): bool => str_starts_with(
                 $route,
@@ -128,6 +134,19 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         self::assertArrayHasKey("GET", $historyMethods);
         self::assertArrayNotHasKey("POST", $historyMethods);
 
+        $noteCollectionMethods = $this->routeMethods(
+            $routes[
+                "/biblio/v1/me/works/(?P<work_id>[^/]+)/private-notes"
+            ]
+        );
+        self::assertSame(["GET", "POST"], $noteCollectionMethods);
+        $noteMemberMethods = $this->routeMethods(
+            $routes[
+                "/biblio/v1/me/private-notes/(?P<private_note_id>[^/]+)"
+            ]
+        );
+        self::assertSame(["DELETE", "PATCH"], $noteMemberMethods);
+
         $routeCount = count($this->server->get_routes());
         $this->api->registerRoutes();
         self::assertCount($routeCount, $this->server->get_routes());
@@ -145,10 +164,19 @@ final class RestApiTest extends PersistenceIntegrationTestCase
 
         $cursors = new CatalogCursorCodec();
         $historyCursors = new ReadingHistoryCursorCodec();
+        $privateNoteCursors = new PrivateNoteCursorCodec();
         $unavailable = (new RestController(
             static fn () => null,
-            new RestRequestParser($cursors, $historyCursors),
-            new RestResponseSerializer($cursors, $historyCursors),
+            new RestRequestParser(
+                $cursors,
+                $historyCursors,
+                $privateNoteCursors
+            ),
+            new RestResponseSerializer(
+                $cursors,
+                $historyCursors,
+                $privateNoteCursors
+            ),
             new RestErrorMapper()
         ))->libraries($request);
         self::assertInstanceOf(WP_Error::class, $unavailable);
@@ -157,8 +185,16 @@ final class RestApiTest extends PersistenceIntegrationTestCase
 
         $endUnavailable = (new RestController(
             static fn () => null,
-            new RestRequestParser($cursors, $historyCursors),
-            new RestResponseSerializer($cursors, $historyCursors),
+            new RestRequestParser(
+                $cursors,
+                $historyCursors,
+                $privateNoteCursors
+            ),
+            new RestResponseSerializer(
+                $cursors,
+                $historyCursors,
+                $privateNoteCursors
+            ),
             new RestErrorMapper()
         ))->endReading($this->endRequest("round-unavailable", [
             "outcome" => "completed",
@@ -174,8 +210,16 @@ final class RestApiTest extends PersistenceIntegrationTestCase
 
         $historyUnavailable = (new RestController(
             static fn () => null,
-            new RestRequestParser($cursors, $historyCursors),
-            new RestResponseSerializer($cursors, $historyCursors),
+            new RestRequestParser(
+                $cursors,
+                $historyCursors,
+                $privateNoteCursors
+            ),
+            new RestResponseSerializer(
+                $cursors,
+                $historyCursors,
+                $privateNoteCursors
+            ),
             new RestErrorMapper()
         ))->readingHistory($this->historyRequest("work-unavailable"));
         self::assertInstanceOf(WP_Error::class, $historyUnavailable);
@@ -184,6 +228,30 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             $historyUnavailable->get_error_code()
         );
         self::assertSame(503, $historyUnavailable->get_error_data()["status"]);
+
+        $privateNotesUnavailable = (new RestController(
+            static fn () => null,
+            new RestRequestParser(
+                $cursors,
+                $historyCursors,
+                $privateNoteCursors
+            ),
+            new RestResponseSerializer(
+                $cursors,
+                $historyCursors,
+                $privateNoteCursors
+            ),
+            new RestErrorMapper()
+        ))->privateNotes($this->privateNotesRequest("work-unavailable"));
+        self::assertInstanceOf(WP_Error::class, $privateNotesUnavailable);
+        self::assertSame(
+            "biblio_core_unavailable",
+            $privateNotesUnavailable->get_error_code()
+        );
+        self::assertSame(
+            503,
+            $privateNotesUnavailable->get_error_data()["status"]
+        );
     }
 
     public function testAuthenticatedActorGetsOnlyServerResolvedLibraries(): void
@@ -1286,6 +1354,701 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         self::assertSame("1", $foreignTruth["round_version"]);
     }
 
+    public function testPrivateNotesRequireCookieNonceAndHideForeignCollections(): void
+    {
+        $this->seedWork("notes-private-work", "Privénotities");
+        $this->seedPrivateNote(
+            "notes-foreign",
+            $this->otherId,
+            "notes-private-work",
+            "<p>Niet voor actor</p>"
+        );
+        $this->seedLibrary(
+            "notes-private-library",
+            "Privé",
+            $this->otherId,
+            "owner"
+        );
+        self::assertSame(1, $this->database->insert(
+            $this->tableNames->memberships(),
+            [
+                "library_id" => "notes-private-library",
+                "user_id" => (string) $this->actorId,
+                "membership_status" => "active",
+                "management_role" => "manager",
+                "use_access" => "direct",
+                "additional_permissions" => "[]",
+            ]
+        ));
+
+        $anonymous = $this->server->dispatch(
+            $this->privateNotesRequest("notes-private-work")
+        );
+        self::assertSame(401, $anonymous->get_status());
+        self::assertSame(
+            "biblio_authentication_required",
+            $anonymous->get_data()["code"]
+        );
+
+        $missingNonce = $this->dispatchAsActor(
+            $this->privateNotesRequest("notes-private-work"),
+            null
+        );
+        self::assertSame(401, $missingNonce->get_status());
+
+        $invalidNonce = $this->dispatchAsActor(
+            $this->privateNotesRequest("notes-private-work"),
+            "invalid"
+        );
+        self::assertSame(403, $invalidNonce->get_status());
+        self::assertSame(
+            "rest_cookie_invalid_nonce",
+            $invalidNonce->get_data()["code"]
+        );
+
+        $foreignOnly = $this->dispatchAsActor(
+            $this->privateNotesRequest("notes-private-work")
+        );
+        self::assertSame(200, $foreignOnly->get_status());
+        self::assertSame(
+            ["items" => [], "next_cursor" => null],
+            $this->successData($foreignOnly)
+        );
+
+        $unknownWork = $this->dispatchAsActor(
+            $this->privateNotesRequest("notes-unknown-work")
+        );
+        self::assertSame(200, $unknownWork->get_status());
+        self::assertSame(
+            $this->successData($foreignOnly),
+            $this->successData($unknownWork)
+        );
+    }
+
+    public function testPrivateNotesCollectionIsAllowlistedOrderedAndPaginated(): void
+    {
+        $this->seedWork("notes-work", "Notities");
+        $this->seedWork("notes-other-work", "Andere Work");
+        $this->seedPrivateNote(
+            "notes-z",
+            $this->actorId,
+            "notes-work",
+            "<p><strong>Z</strong></p>",
+            "2026-08-31 12:00:00.200000"
+        );
+        $this->seedPrivateNote(
+            "notes-m",
+            $this->actorId,
+            "notes-work",
+            "<p><em>M</em></p>",
+            "2026-08-31 12:00:00.200000"
+        );
+        $this->seedPrivateNote(
+            "notes-a",
+            $this->actorId,
+            "notes-work",
+            "<blockquote>A</blockquote>",
+            "2026-08-31 12:00:00.100000"
+        );
+        $this->seedPrivateNote(
+            "notes-other-work",
+            $this->actorId,
+            "notes-other-work",
+            "<p>Andere Work</p>",
+            "2026-08-31 13:00:00.000000"
+        );
+        $this->seedPrivateNote(
+            "notes-other-user",
+            $this->otherId,
+            "notes-work",
+            "<p>Andere actor</p>",
+            "2026-08-31 14:00:00.000000"
+        );
+
+        $first = $this->dispatchAsActor($this->privateNotesRequest(
+            "notes-work",
+            ["limit" => "2"]
+        ));
+        $firstData = $this->successData($first);
+
+        self::assertSame(200, $first->get_status());
+        self::assertSame(
+            ["items", "next_cursor"],
+            array_keys($firstData)
+        );
+        self::assertSame(
+            ["notes-z", "notes-m"],
+            array_column($firstData["items"], "private_note_id")
+        );
+        self::assertSame(
+            ["private_note_id", "content_html", "version"],
+            array_keys($firstData["items"][0])
+        );
+        self::assertSame(
+            "<p><strong>Z</strong></p>",
+            $firstData["items"][0]["content_html"]
+        );
+        self::assertSame(1, $firstData["items"][0]["version"]);
+        self::assertIsString($firstData["next_cursor"]);
+
+        $second = $this->dispatchAsActor($this->privateNotesRequest(
+            "notes-work",
+            [
+                "limit" => "2",
+                "cursor" => $firstData["next_cursor"],
+            ]
+        ));
+        $secondData = $this->successData($second);
+        self::assertSame(
+            ["notes-a"],
+            array_column($secondData["items"], "private_note_id")
+        );
+        self::assertNull($secondData["next_cursor"]);
+        self::assertSame(3, count(array_unique(array_merge(
+            array_column($firstData["items"], "private_note_id"),
+            array_column($secondData["items"], "private_note_id")
+        ))));
+        self::assertNotContains(
+            "notes-other-user",
+            array_column($firstData["items"], "private_note_id")
+        );
+        self::assertNotContains(
+            "notes-other-work",
+            array_column($firstData["items"], "private_note_id")
+        );
+    }
+
+    public function testPrivateNotesDefaultMaximumAndInvalidLimits(): void
+    {
+        $this->seedWork("notes-limit-work", "Limieten");
+
+        for ($index = 1; $index <= 101; $index++) {
+            $this->seedPrivateNote(
+                sprintf("notes-limit-%03d", $index),
+                $this->actorId,
+                "notes-limit-work",
+                "<p>Notitie {$index}</p>",
+                sprintf("2026-08-31 12:00:%02d.%06d", $index % 60, $index)
+            );
+        }
+
+        $default = $this->successData($this->dispatchAsActor(
+            $this->privateNotesRequest("notes-limit-work")
+        ));
+        self::assertCount(50, $default["items"]);
+        self::assertIsString($default["next_cursor"]);
+
+        $maximum = $this->successData($this->dispatchAsActor(
+            $this->privateNotesRequest(
+                "notes-limit-work",
+                ["limit" => "100"]
+            )
+        ));
+        self::assertCount(100, $maximum["items"]);
+        self::assertIsString($maximum["next_cursor"]);
+
+        foreach (["0", "101", "1.5"] as $invalidLimit) {
+            $response = $this->dispatchAsActor($this->privateNotesRequest(
+                "notes-limit-work",
+                ["limit" => $invalidLimit]
+            ));
+            self::assertSame(400, $response->get_status());
+        }
+
+        $wrongType = $this->dispatchAsActor($this->privateNotesRequest(
+            "notes-limit-work",
+            ["limit" => true]
+        ));
+        self::assertSame(400, $wrongType->get_status());
+        self::assertSame(
+            "biblio_invalid_field_type",
+            $wrongType->get_data()["code"]
+        );
+    }
+
+    public function testPrivateNotesCursorIsOpaqueVersionedAndNeverAuthorizes(): void
+    {
+        $this->seedWork("notes-cursor-work-a", "Cursor A");
+        $this->seedWork("notes-cursor-work-b", "Cursor B");
+        $this->seedPrivateNote(
+            "notes-cursor-a-top",
+            $this->actorId,
+            "notes-cursor-work-a",
+            "<p>A boven</p>",
+            "2026-08-31 12:00:00.000000"
+        );
+        $this->seedPrivateNote(
+            "notes-cursor-a-next",
+            $this->actorId,
+            "notes-cursor-work-a",
+            "<p>A vervolg</p>",
+            "2026-08-31 11:00:00.000000"
+        );
+        $this->seedPrivateNote(
+            "notes-cursor-b",
+            $this->actorId,
+            "notes-cursor-work-b",
+            "<p>Work B</p>",
+            "2026-08-31 11:00:00.000000"
+        );
+        $this->seedPrivateNote(
+            "notes-cursor-other",
+            $this->otherId,
+            "notes-cursor-work-a",
+            "<p>Andere actor</p>",
+            "2026-08-31 11:00:00.000000"
+        );
+
+        $first = $this->successData($this->dispatchAsActor(
+            $this->privateNotesRequest(
+                "notes-cursor-work-a",
+                ["limit" => "1"]
+            )
+        ));
+        $cursor = $first["next_cursor"];
+        self::assertIsString($cursor);
+        self::assertMatchesRegularExpression('/^[A-Za-z0-9_-]+$/D', $cursor);
+        self::assertStringNotContainsString("notes-cursor-a-top", $cursor);
+        self::assertStringNotContainsString("2026-08-31", $cursor);
+
+        $otherActor = $this->successData($this->dispatchAsUser(
+            $this->privateNotesRequest(
+                "notes-cursor-work-a",
+                ["limit" => "10", "cursor" => $cursor]
+            ),
+            $this->otherId
+        ));
+        self::assertSame(
+            ["notes-cursor-other"],
+            array_column($otherActor["items"], "private_note_id")
+        );
+
+        $otherWork = $this->successData($this->dispatchAsActor(
+            $this->privateNotesRequest(
+                "notes-cursor-work-b",
+                ["limit" => "10", "cursor" => $cursor]
+            )
+        ));
+        self::assertSame(
+            ["notes-cursor-b"],
+            array_column($otherWork["items"], "private_note_id")
+        );
+
+        $codec = new PrivateNoteCursorCodec();
+        $typed = new PrivateNoteViewCursor(
+            new DateTimeImmutable("2026-08-31T12:00:00.123456+00:00"),
+            new PrivateNoteId("notes-cursor-roundtrip")
+        );
+        $decoded = $codec->decode($codec->encode($typed));
+        self::assertSame(
+            "2026-08-31 12:00:00.123456",
+            $decoded->beforeUpdatedAt()->format("Y-m-d H:i:s.u")
+        );
+        self::assertSame(
+            "notes-cursor-roundtrip",
+            $decoded->beforeId()->value()
+        );
+
+        foreach (["not-valid!", $cursor . "A", $this->encodedJson([
+            "v" => 2,
+            "u" => "2026-08-31T12:00:00.000000Z",
+            "i" => "notes-cursor-a-top",
+        ])] as $invalidCursor) {
+            $invalid = $this->dispatchAsActor($this->privateNotesRequest(
+                "notes-cursor-work-a",
+                ["cursor" => $invalidCursor]
+            ));
+            self::assertSame(400, $invalid->get_status());
+            self::assertSame(
+                "biblio_invalid_field_syntax",
+                $invalid->get_data()["code"]
+            );
+        }
+    }
+
+    public function testPrivateNotesPostCreatesOwnerWorkNoteWithSafeAllowlist(): void
+    {
+        $this->seedWork("notes-create-work", "Nieuwe notitie");
+        $content = "<p><strong>Sterk</strong><br><em>Nadruk</em></p>"
+            . "<ul><li>Eén</li></ul><ol><li>Twee</li></ol>"
+            . "<blockquote>Citaat</blockquote>";
+        $response = $this->dispatchAsActor($this->privateNoteRequest(
+            "POST",
+            "/biblio/v1/me/works/notes-create-work/private-notes",
+            ["content" => $content]
+        ));
+        $note = $this->successData($response);
+
+        self::assertSame(201, $response->get_status());
+        self::assertSame(
+            ["private_note_id", "content_html", "version"],
+            array_keys($note)
+        );
+        self::assertSame($content, $note["content_html"]);
+        self::assertSame(1, $note["version"]);
+        self::assertIsString($note["private_note_id"]);
+
+        $stored = $this->storedPrivateNote($note["private_note_id"]);
+        self::assertSame((string) $this->actorId, $stored["user_id"]);
+        self::assertSame("notes-create-work", $stored["work_id"]);
+        self::assertNull($stored["reading_round_id"]);
+        self::assertSame($content, $stored["note_content"]);
+        self::assertSame("1", $stored["note_version"]);
+    }
+
+    public function testPrivateNotesPostRejectsMalformedInjectedAndUnsafeBodies(): void
+    {
+        $this->seedWork("notes-invalid-work", "Ongeldig");
+        $path = "/biblio/v1/me/works/notes-invalid-work/private-notes";
+        $transportCases = [
+            ["{", "rest_invalid_json"],
+            ["[]", "biblio_invalid_field_type"],
+            ["{}", "biblio_missing_required_field"],
+            [(string) wp_json_encode(["content" => true]), "biblio_invalid_field_type"],
+            [(string) wp_json_encode([
+                "content" => "<p>Injectie</p>",
+                "user_id" => (string) $this->otherId,
+            ]), "biblio_unknown_request_fields"],
+            [(string) wp_json_encode([
+                "content" => "<p>Injectie</p>",
+                "library_id" => "library-other",
+            ]), "biblio_unknown_request_fields"],
+            [(string) wp_json_encode([
+                "content" => "<p>Injectie</p>",
+                "reading_round_id" => "round-other",
+            ]), "biblio_unknown_request_fields"],
+        ];
+
+        foreach ($transportCases as [$body, $code]) {
+            $response = $this->dispatchAsActor(
+                $this->privateNoteRawRequest("POST", $path, $body)
+            );
+            self::assertSame(400, $response->get_status());
+            self::assertSame($code, $response->get_data()["code"]);
+        }
+
+        $unknownQuery = $this->privateNoteRequest(
+            "POST",
+            $path,
+            ["content" => "<p>Query</p>"]
+        );
+        $unknownQuery->set_query_params(["user_id" => (string) $this->otherId]);
+        self::assertSame(
+            400,
+            $this->dispatchAsActor($unknownQuery)->get_status()
+        );
+
+        $validationCases = [
+            "",
+            '<p onclick="alert(1)">Attribuut</p>',
+            "<script>alert(1)</script>",
+            "<p>NUL\0byte</p>",
+            "<p>" . str_repeat("x", 65536) . "</p>",
+        ];
+
+        foreach ($validationCases as $content) {
+            $response = $this->dispatchAsActor($this->privateNoteRequest(
+                "POST",
+                $path,
+                ["content" => $content]
+            ));
+            self::assertSame(422, $response->get_status());
+            self::assertSame(
+                "biblio_validation_failed",
+                $response->get_data()["code"]
+            );
+            self::assertStringNotContainsString(
+                "onclick",
+                (string) wp_json_encode($response->get_data())
+            );
+        }
+
+        $unknownWork = $this->dispatchAsActor($this->privateNoteRequest(
+            "POST",
+            "/biblio/v1/me/works/notes-missing-work/private-notes",
+            ["content" => "<p>Geldige inhoud</p>"]
+        ));
+        self::assertSame(422, $unknownWork->get_status());
+        self::assertSame(
+            "biblio_validation_failed",
+            $unknownWork->get_data()["code"]
+        );
+
+        self::assertSame(0, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->privateNotes()}`"
+        ));
+    }
+
+    public function testPrivateNotesPatchPreservesNoOpAndConflictSemantics(): void
+    {
+        $this->seedWork("notes-update-work", "Wijzigen");
+        $created = $this->successData($this->dispatchAsActor(
+            $this->privateNoteRequest(
+                "POST",
+                "/biblio/v1/me/works/notes-update-work/private-notes",
+                ["content" => "<p>Begin</p>"]
+            )
+        ));
+        $id = $created["private_note_id"];
+        self::assertIsString($id);
+
+        $written = $this->dispatchAsActor($this->privateNoteRequest(
+            "PATCH",
+            "/biblio/v1/me/private-notes/{$id}",
+            ["content" => "<p>Gewijzigd</p>", "expected_version" => 1]
+        ));
+        self::assertSame(200, $written->get_status());
+        self::assertSame([
+            "private_note_id" => $id,
+            "content_html" => "<p>Gewijzigd</p>",
+            "version" => 2,
+        ], $this->successData($written));
+
+        foreach ([2, 1] as $expectedVersion) {
+            $noOp = $this->dispatchAsActor($this->privateNoteRequest(
+                "PATCH",
+                "/biblio/v1/me/private-notes/{$id}",
+                [
+                    "content" => "<p>Gewijzigd</p>",
+                    "expected_version" => $expectedVersion,
+                ]
+            ));
+            self::assertSame(200, $noOp->get_status());
+            self::assertSame(2, $this->successData($noOp)["version"]);
+        }
+
+        $conflict = $this->dispatchAsActor($this->privateNoteRequest(
+            "PATCH",
+            "/biblio/v1/me/private-notes/{$id}",
+            ["content" => "<p>Andere intentie</p>", "expected_version" => 1]
+        ));
+        self::assertSame(409, $conflict->get_status());
+        self::assertSame(
+            "biblio_private_note_stale",
+            $conflict->get_data()["code"]
+        );
+        $stored = $this->storedPrivateNote($id);
+        self::assertSame("<p>Gewijzigd</p>", $stored["note_content"]);
+        self::assertSame("2", $stored["note_version"]);
+    }
+
+    public function testPrivateNotesPatchIsStrictValidatedAndNonEnumerating(): void
+    {
+        $this->seedWork("notes-member-work", "Member");
+        $this->seedPrivateNote(
+            "notes-member-foreign",
+            $this->otherId,
+            "notes-member-work",
+            "<p>Vreemd</p>"
+        );
+        $this->seedPrivateNote(
+            "notes-member-deleted",
+            $this->actorId,
+            "notes-member-work",
+            "<p>Verwijderd</p>"
+        );
+        self::assertSame(204, $this->dispatchAsActor($this->privateNoteRequest(
+            "DELETE",
+            "/biblio/v1/me/private-notes/notes-member-deleted",
+            ["expected_version" => 1]
+        ))->get_status());
+        $body = ["content" => "<p>Poging</p>", "expected_version" => 1];
+        $unknown = $this->dispatchAsActor($this->privateNoteRequest(
+            "PATCH",
+            "/biblio/v1/me/private-notes/notes-member-unknown",
+            $body
+        ));
+        $foreign = $this->dispatchAsActor($this->privateNoteRequest(
+            "PATCH",
+            "/biblio/v1/me/private-notes/notes-member-foreign",
+            $body
+        ));
+        $deleted = $this->dispatchAsActor($this->privateNoteRequest(
+            "PATCH",
+            "/biblio/v1/me/private-notes/notes-member-deleted",
+            $body
+        ));
+        $this->assertEquivalentNotAvailable($unknown, $foreign);
+        $this->assertEquivalentNotAvailable($unknown, $deleted);
+
+        $this->seedPrivateNote(
+            "notes-member-own",
+            $this->actorId,
+            "notes-member-work",
+            "<p>Eigen</p>"
+        );
+        $invalidContent = $this->dispatchAsActor($this->privateNoteRequest(
+            "PATCH",
+            "/biblio/v1/me/private-notes/notes-member-own",
+            [
+                "content" => '<p style="color:red">Onveilig</p>',
+                "expected_version" => 1,
+            ]
+        ));
+        self::assertSame(422, $invalidContent->get_status());
+
+        foreach ([
+            [
+                "content" => "<p>Extra</p>",
+                "expected_version" => 1,
+                "user_id" => (string) $this->otherId,
+            ],
+            ["content" => "<p>String</p>", "expected_version" => "1"],
+        ] as $invalidBody) {
+            $invalid = $this->dispatchAsActor($this->privateNoteRequest(
+                "PATCH",
+                "/biblio/v1/me/private-notes/notes-member-own",
+                $invalidBody
+            ));
+            self::assertSame(400, $invalid->get_status());
+        }
+
+        $invalidId = $this->dispatchAsActor($this->privateNoteRequest(
+            "PATCH",
+            "/biblio/v1/me/private-notes/" . str_repeat("x", 192),
+            $body
+        ));
+        self::assertSame(400, $invalidId->get_status());
+    }
+
+    public function testPrivateNotesDeleteIsConditionalNoContentAndNonEnumerating(): void
+    {
+        $this->seedWork("notes-delete-work", "Verwijderen");
+        $this->seedPrivateNote(
+            "notes-delete-own",
+            $this->actorId,
+            "notes-delete-work",
+            "<p>Eigen</p>"
+        );
+        $this->seedPrivateNote(
+            "notes-delete-foreign",
+            $this->otherId,
+            "notes-delete-work",
+            "<p>Vreemd</p>"
+        );
+        $updated = $this->dispatchAsActor($this->privateNoteRequest(
+            "PATCH",
+            "/biblio/v1/me/private-notes/notes-delete-own",
+            ["content" => "<p>Versie twee</p>", "expected_version" => 1]
+        ));
+        self::assertSame(2, $this->successData($updated)["version"]);
+
+        $stale = $this->dispatchAsActor($this->privateNoteRequest(
+            "DELETE",
+            "/biblio/v1/me/private-notes/notes-delete-own",
+            ["expected_version" => 1]
+        ));
+        self::assertSame(409, $stale->get_status());
+        self::assertSame(
+            "biblio_private_note_stale",
+            $stale->get_data()["code"]
+        );
+        self::assertSame("2", $this->storedPrivateNote(
+            "notes-delete-own"
+        )["note_version"]);
+
+        $deleted = $this->dispatchAsActor($this->privateNoteRequest(
+            "DELETE",
+            "/biblio/v1/me/private-notes/notes-delete-own",
+            ["expected_version" => 2]
+        ));
+        self::assertSame(204, $deleted->get_status());
+        self::assertNull($deleted->get_data());
+        self::assertNull($this->storedPrivateNoteOrNull("notes-delete-own"));
+
+        $body = ["expected_version" => 2];
+        $repeated = $this->dispatchAsActor($this->privateNoteRequest(
+            "DELETE",
+            "/biblio/v1/me/private-notes/notes-delete-own",
+            $body
+        ));
+        $unknown = $this->dispatchAsActor($this->privateNoteRequest(
+            "DELETE",
+            "/biblio/v1/me/private-notes/notes-delete-unknown",
+            $body
+        ));
+        $foreign = $this->dispatchAsActor($this->privateNoteRequest(
+            "DELETE",
+            "/biblio/v1/me/private-notes/notes-delete-foreign",
+            $body
+        ));
+        $this->assertEquivalentNotAvailable($repeated, $unknown);
+        $this->assertEquivalentNotAvailable($repeated, $foreign);
+
+        $wrongType = $this->dispatchAsActor($this->privateNoteRequest(
+            "DELETE",
+            "/biblio/v1/me/private-notes/notes-delete-foreign",
+            ["expected_version" => "1"]
+        ));
+        self::assertSame(400, $wrongType->get_status());
+
+        $unknownField = $this->dispatchAsActor($this->privateNoteRequest(
+            "DELETE",
+            "/biblio/v1/me/private-notes/notes-delete-foreign",
+            ["expected_version" => 1, "library_id" => "library-other"]
+        ));
+        self::assertSame(400, $unknownField->get_status());
+        self::assertSame(
+            "biblio_unknown_request_fields",
+            $unknownField->get_data()["code"]
+        );
+    }
+
+    public function testPrivateNotesInvalidStoredContentFailsClosed(): void
+    {
+        $this->seedWork("notes-corrupt-work", "Corrupt");
+        $this->seedPrivateNote(
+            "notes-corrupt",
+            $this->actorId,
+            "notes-corrupt-work",
+            "<p>Veilig</p>"
+        );
+        self::assertSame(1, $this->database->update(
+            $this->tableNames->privateNotes(),
+            ["note_content" => '<p onclick="alert(1)">Onveilig</p>'],
+            ["private_note_id" => "notes-corrupt"],
+            ["%s"],
+            ["%s"]
+        ));
+
+        $response = $this->dispatchAsActor(
+            $this->privateNotesRequest("notes-corrupt-work")
+        );
+        self::assertSame(500, $response->get_status());
+        self::assertSame("biblio_internal_error", $response->get_data()["code"]);
+        $public = (string) wp_json_encode($response->get_data());
+        self::assertStringNotContainsString("onclick", $public);
+        self::assertStringNotContainsString("notes-corrupt", $public);
+    }
+
+    public function testPrivateNotesCollectionStrictlyRejectsMalformedInputs(): void
+    {
+        $unknownQuery = $this->dispatchAsActor($this->privateNotesRequest(
+            "notes-work",
+            ["user_id" => (string) $this->otherId]
+        ));
+        self::assertSame(400, $unknownQuery->get_status());
+        self::assertSame(
+            "biblio_unknown_request_fields",
+            $unknownQuery->get_data()["code"]
+        );
+
+        $invalidWork = $this->dispatchAsActor($this->privateNotesRequest(
+            str_repeat("x", 192)
+        ));
+        self::assertSame(400, $invalidWork->get_status());
+
+        $invalidCursorType = $this->dispatchAsActor($this->privateNotesRequest(
+            "notes-work",
+            ["cursor" => true]
+        ));
+        self::assertSame(400, $invalidCursorType->get_status());
+        self::assertSame(
+            "biblio_invalid_field_type",
+            $invalidCursorType->get_data()["code"]
+        );
+    }
+
     /** @return iterable<string, array{string, array<string, mixed>, string}> */
     public static function invalidEndRequests(): iterable
     {
@@ -1324,6 +2087,73 @@ final class RestApiTest extends PersistenceIntegrationTestCase
 
         self::assertSame(400, $response->get_status());
         self::assertSame($code, $response->get_data()["code"]);
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $endpoints
+     * @return list<string>
+     */
+    private function routeMethods(array $endpoints): array
+    {
+        $methods = [];
+
+        foreach ($endpoints as $endpoint) {
+            if (!isset($endpoint["callback"]) || !is_array($endpoint["methods"])) {
+                continue;
+            }
+
+            $methods = array_merge($methods, array_keys($endpoint["methods"]));
+        }
+
+        $methods = array_values(array_unique($methods));
+        sort($methods);
+
+        return $methods;
+    }
+
+    /** @param array<string, mixed> $query */
+    private function privateNotesRequest(
+        string $workId,
+        array $query = []
+    ): WP_REST_Request {
+        $request = new WP_REST_Request(
+            "GET",
+            "/biblio/v1/me/works/{$workId}/private-notes"
+        );
+        $request->set_query_params($query);
+
+        return $request;
+    }
+
+    /** @param array<string, mixed> $body */
+    private function privateNoteRequest(
+        string $method,
+        string $path,
+        array $body
+    ): WP_REST_Request {
+        return $this->privateNoteRawRequest(
+            $method,
+            $path,
+            (string) wp_json_encode($body)
+        );
+    }
+
+    private function privateNoteRawRequest(
+        string $method,
+        string $path,
+        string $body
+    ): WP_REST_Request {
+        $request = new WP_REST_Request($method, $path);
+        $request->set_header("content-type", "application/json");
+        $request->set_body($body);
+
+        return $request;
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function encodedJson(array $payload): string
+    {
+        return rtrim(strtr(base64_encode((string) wp_json_encode($payload)), "+/", "-_"), "=");
     }
 
     private function dispatchAsActor(
@@ -1542,6 +2372,73 @@ final class RestApiTest extends PersistenceIntegrationTestCase
                 "work_title" => $title,
             ]);
         }
+    }
+
+    private function seedPrivateNote(
+        string $noteId,
+        int $userId,
+        string $workId,
+        string $content,
+        string $updatedAt = "2026-08-31 12:00:00.000000",
+        int $version = 1
+    ): void {
+        self::assertSame(1, $this->database->insert(
+            $this->tableNames->privateNotes(),
+            [
+                "private_note_id" => $noteId,
+                "user_id" => (string) $userId,
+                "work_id" => $workId,
+                "reading_round_id" => null,
+                "note_content" => $content,
+                "created_at" => "2026-08-01 10:00:00.000000",
+                "updated_at" => $updatedAt,
+                "note_version" => $version,
+            ]
+        ), $this->database->last_error);
+    }
+
+    /**
+     * @return array{
+     *     user_id: string,
+     *     work_id: string,
+     *     reading_round_id: ?string,
+     *     note_content: string,
+     *     note_version: string
+     * }
+     */
+    private function storedPrivateNote(string $noteId): array
+    {
+        $row = $this->storedPrivateNoteOrNull($noteId);
+        self::assertIsArray($row);
+
+        return $row;
+    }
+
+    /**
+     * @return null|array{
+     *     user_id: string,
+     *     work_id: string,
+     *     reading_round_id: ?string,
+     *     note_content: string,
+     *     note_version: string
+     * }
+     */
+    private function storedPrivateNoteOrNull(string $noteId): ?array
+    {
+        $row = $this->database->get_row($this->database->prepare(
+            "SELECT user_id, work_id, reading_round_id, note_content, "
+                . "note_version FROM `{$this->tableNames->privateNotes()}` "
+                . "WHERE private_note_id = %s",
+            $noteId
+        ), ARRAY_A);
+
+        if ($row === null) {
+            return null;
+        }
+
+        self::assertIsArray($row);
+
+        return $row;
     }
 
     /**

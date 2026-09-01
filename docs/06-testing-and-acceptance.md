@@ -1280,3 +1280,51 @@ No-go:
 - accepting client actor/Library authority or changing Work-wide multiplicity;
 - adding a REST codec/controller, UI, schema, migration, ActivityEvent or audit
   feature in 1D.2.
+
+## 48. Vertical Slice 1D.3 Private Notes REST API
+
+Status: **GO**
+
+Acceptance evidence:
+
+- exactly four Note operations register once under `biblio/v1`: Work-wide GET
+  and POST collection plus PATCH and DELETE member operations;
+- all operations use the standard cookie/`X-WP-Nonce` boundary and server-side
+  actor; no client owner, Library Context or Library role can authorize;
+- collection output is exactly `items` plus `next_cursor`; each item is exactly
+  `private_note_id`, render-validated `content_html` and `version`;
+- GET proves zero, one/multiple, foreign isolation, Work isolation, existing
+  ordering, equal-timestamp ties, default 50, maximum 100, continuation and no
+  duplicates/skips;
+- the dedicated version-1 cursor is canonical URL-safe and strictly decoded;
+  cross-actor and cross-Work use never grants source data because every page
+  reapplies actor+Work scope;
+- POST accepts only content, creates without ReadingRound and returns 201 from
+  authoritative rendered Core state;
+- PATCH accepts only content plus positive integer expected version, returns
+  200 for write/semantic no-op/stale-identical and 409 for stale divergence;
+- DELETE accepts only positive integer expected version, returns empty 204 on
+  success, 409 when stale and generic 404 when foreign/unknown/deleted;
+- malformed path/query/body, wrong types, unsupported fields and invalid
+  cursors are 400; malformed JSON remains WordPress `rest_invalid_json`/400;
+  authentication is 401 and invalid cookie nonce remains WordPress 403;
+- invalid/empty/attributed/scripted/oversized content is safe generic 422;
+  raw request content is never echoed and corrupt stored HTML fails closed as
+  privacy-safe 500;
+- Core unavailable remains 503 and unexpected failures disclose no exception,
+  SQL, identity or object data;
+- focused Private Notes REST passes 11 tests/311 assertions; complete REST
+  passes 39/747; relevant unit/readmodel passes 16/314; focused PrivateNote
+  persistence/concurrency/schema/migration passes 26/237; PHP syntax and
+  PHPStan level 6 are green;
+- complete Core unit passes 247 tests/939 assertions and complete real-MariaDB
+  integration passes 232 tests/2,371 assertions in the final canonical gate;
+- Composer metadata/platform, complete PHP syntax, PHPStan level 6,
+  schema/migrations, WordPress smoke, manifest and Git whitespace are green.
+
+No-go:
+
+- REST access to repositories/wpdb, aggregate/reflection serialization, raw
+  content echo, cursor authorization or client actor/Library authority;
+- Core/domain/persistence/schema changes, UI/Elementor/Crocoblock/Playwright,
+  ActivityEvent/private audit or ReadingRound product changes in 1D.3.

@@ -1,9 +1,9 @@
 # Elementor Vertical Slice 1D — Private Notes Readiness
 
 Date: 2026-08-31
-Readiness verdict: **GO for 1D.3**
+Readiness verdict: **GO for 1D.4**
 
-Current implementation status: **1D.2 CORE READ BOUNDARY COMPLETE — GO**
+Current implementation status: **1D.3 PRIVATE NOTES REST COMPLETE — GO**
 
 ## 1. Authority, baseline and scope
 
@@ -28,6 +28,14 @@ Item detail. It introduces no product behavior.
   `4985b55065f7fe180965f4f4974243aceee4c497`;
 - start worktree: clean;
 - baseline subject: `Analyze Private Notes vertical slice`.
+
+1D.3 started from a third clean pushed baseline:
+
+- branch: `main`;
+- start HEAD and `origin/main`:
+  `169d51d5ba8cd84b344fd00f29361e10ddbf94de`;
+- start worktree: clean;
+- baseline subject: `Prepare Private Notes read boundary`.
 
 The current checkout is the technical source of truth. Binding sources are
 `docs/00-current-state.md`, the relevant parts of
@@ -111,10 +119,11 @@ ActivityEvent writes.
 
 ### 2.4 REST, Biblio UI and Elementor audit
 
-There are no Private Note REST routes, Note request parsers, Note response
-serializers or Note-specific REST error mappings. The current REST namespace
-is `biblio/v1`; it has cookie authentication, WordPress `wp_rest` nonce use,
-typed request parsing, explicit response allowlists and safe error mapping.
+At the 1D.1/1D.2 audit there were no Private Note REST routes, request parsers,
+response serializers or Note-specific REST error mappings. 1D.3 has now added
+the exact transport boundary recorded in §§13 and 28. The namespace remains
+`biblio/v1` with cookie authentication, WordPress `wp_rest` nonce use, typed
+request parsing, explicit response allowlists and safe error mapping.
 
 There is no Private Note code in Biblio UI. Item detail currently renders, in
 order, the Work heading, `Lezen`, Start/End controls, `Leesgeschiedenis`,
@@ -384,17 +393,17 @@ locked reads and CAS. No Library scope or schema change is needed.
 
 | Capability | Existing? | Current signature/output | Complete for 1D? | Delta/reason |
 |---|---:|---|---:|---|
-| Read one | Yes | `get(PrivateNoteId): ?PrivateNote` | Yes internally | REST adapter/allowlist absent. |
+| Read one | Yes | `get(PrivateNoteId): ?PrivateNote` | Yes internally | No separate member GET required for minimal 1D. |
 | Read Work collection | Yes | `forWork(WorkId, ?PrivateNotePageRequest): PrivateNoteViewPage` | Yes | New minimal adapter-facing safe view boundary. |
-| Create | Yes | `createForWork(WorkId, string): PrivateNote` | Yes | REST POST absent. |
+| Create | Yes | `createForWork(WorkId, string): PrivateNote` | Yes | REST POST implemented in 1D.3. |
 | Create for Round | Yes | `createForReadingRound(ReadingRoundId, string): PrivateNote` | Not needed | Keep outside minimal Item-detail 1D. |
-| Update content | Yes | `update(PrivateNoteId, PrivateNoteVersion, string): PrivateNote` | Yes | REST PATCH absent. |
+| Update content | Yes | `update(PrivateNoteId, PrivateNoteVersion, string): PrivateNote` | Yes | REST PATCH implemented in 1D.3. |
 | Correct Round | Yes | `correct(PrivateNoteId, PrivateNoteVersion, ?ReadingRoundId): PrivateNote` | Not needed | No 1D UI requirement; do not expose accidentally. |
-| Delete | Yes | `delete(PrivateNoteId, PrivateNoteVersion): void` | Yes | REST DELETE absent. |
+| Delete | Yes | `delete(PrivateNoteId, PrivateNoteVersion): void` | Yes | REST DELETE implemented in 1D.3. |
 | Safe render | Yes | `render(PrivateNote): string` | Yes | New projector calls it for every returned Note. |
-| Pagination | Yes | Existing request plus `PrivateNoteViewCursor` result | Yes for Core | REST opaque encoding remains adapter scope. |
-| Owner authorization | Yes | Server actor + owner predicates | Yes | REST auth/nonce still required. |
-| Stale conflict | Yes | `PrivateNoteStale(current)` | Yes | REST 409 mapping + reread behavior absent. |
+| Pagination | Yes | Existing request plus `PrivateNoteViewCursor` result | Yes | Versioned opaque REST encoding implemented in 1D.3. |
+| Owner authorization | Yes | Server actor + owner predicates | Yes | REST cookie/nonce boundary implemented in 1D.3. |
+| Stale conflict | Yes | `PrivateNoteStale(current)` | Yes | REST 409 implemented; UI reread remains 1D.4. |
 
 No domain, repository, migration or schema implementation was needed in 1D.2.
 The existing list service remained valid F2.7 behavior, but it returned full
@@ -433,7 +442,7 @@ The Work is supplied once to the application call. Owner/User, Work per item,
 Library, Item, Edition,
 ReadingRound context, technical timestamps and internal cursor keys are not
 present in a Note view. The internal next cursor contains the existing ordering
-keys only so 1D.3 can encode them into a versioned opaque transport token.
+keys only; 1D.3 encodes them into a versioned opaque transport token.
 
 Note ID is necessary and safe as opaque domain identity for later PATCH/DELETE.
 It grants no authority: existing member mutations independently resolve the
@@ -461,14 +470,14 @@ skips. 1D.2 adds no snapshot-isolation promise across concurrent edits.
 The Work-list remains one bounded SQL query per page. Projection and rendering
 are in-memory and issue no per-Note query; therefore there is no N+1.
 
-## 13. REST delta and contract recommendation
+## 13. Implemented REST contract
 
-### 13.1 Existing routes
+### 13.1 Adapter baseline
 
-No Private Note REST route exists. The current repository convention supports
-owner-scoped `/me/...` resources, strict JSON parsing, explicit allowlists,
-cookie authentication plus `X-WP-Nonce`, and safe 400/401/403/404/409/422/
-500/503 behavior.
+The existing owner-scoped `/me/...` convention, strict JSON parsing, explicit
+allowlists, cookie authentication plus `X-WP-Nonce` and central safe error
+mapping are reused unchanged. 1D.3 adds no alternative authentication or
+authorization layer.
 
 ### 13.2 Rejected singular variant
 
@@ -480,15 +489,15 @@ is incompatible with the locked multiple-Notes contract. `PUT` could not
 identify which Note to update and would incorrectly imply User + Work
 uniqueness or upsert semantics.
 
-### 13.3 Minimal consistent routes
+### 13.3 Exact routes
 
-Recommended minimal 1D routes:
+Implemented minimal 1D routes:
 
 ```text
-GET    /biblio/v1/me/works/{work_id}/notes
-POST   /biblio/v1/me/works/{work_id}/notes
-PATCH  /biblio/v1/me/notes/{private_note_id}
-DELETE /biblio/v1/me/notes/{private_note_id}
+GET    /biblio/v1/me/works/{work_id}/private-notes
+POST   /biblio/v1/me/works/{work_id}/private-notes
+PATCH  /biblio/v1/me/private-notes/{private_note_id}
+DELETE /biblio/v1/me/private-notes/{private_note_id}
 ```
 
 `GET` is the read/zero-state collection; `POST` creates another aggregate;
@@ -498,8 +507,7 @@ Note. Round-context correction is outside minimal 1D and gets no route.
 GET query:
 
 - optional `cursor`, versioned and opaque;
-- optional `limit`, recommended UI default 10, maximum no higher than the
-  existing Core maximum 100;
+- optional `limit`, Core default 50 and maximum 100;
 - unknown query fields fail 400.
 
 Requests:
@@ -514,12 +522,12 @@ All bodies reject unknown/missing/wrongly typed fields. No request accepts
 `user_id`, owner, `library_id`, Item/Edition ID, Note ID on create,
 `reading_round_id`, visibility or audit data.
 
-Recommended success allowlists:
+Collection success allowlist:
 
 ```json
 {
   "data": {
-    "notes": [
+    "items": [
       {
         "private_note_id": "private-note-opaque",
         "content_html": "<p>Mijn notitie</p>",
@@ -531,16 +539,29 @@ Recommended success allowlists:
 }
 ```
 
-POST returns 201 with one Note object. PATCH returns 200 with one Note object.
-DELETE returns 204 with no body, or the repository's established 200 envelope
-if consistency review forbids 204; choose once in 1D.3 and test exactly. The
-response never returns User/owner, Library, Item, Edition, ReadingRound,
-technical timestamps or raw unvalidated content.
+POST returns 201 with one Note object. PATCH returns 200 with the authoritative
+Core result. DELETE requires the exact JSON body `{ "expected_version": N }`
+and returns 204 with no body. The response never returns User/owner, Library,
+Item, Edition, ReadingRound, technical timestamps or raw unvalidated content.
+
+POST/PATCH success envelope:
+
+```json
+{
+  "data": {
+    "private_note_id": "private-note-opaque",
+    "content_html": "<p>Mijn notitie</p>",
+    "version": 1
+  }
+}
+```
+
+DELETE success has status 204 and no JSON envelope or deleted content.
 
 ## 14. Missing, non-enumeration and error model
 
-For a valid or unknown well-formed Work with no matching own Notes, GET should
-return 200 with `notes: []` and `next_cursor: null`. This matches the existing
+For a valid or unknown well-formed Work with no matching own Notes, GET returns
+200 with `items: []` and `next_cursor: null`. This matches the existing
 Core Work-list behavior and reveals neither whether another user has Notes nor
 their IDs. Item detail already supplies a validated accessible Work ID.
 
@@ -548,12 +569,13 @@ Individual PATCH/DELETE of unknown, foreign or already-deleted Notes returns
 the same generic 404. Library membership and Item/source details are never
 consulted or disclosed by the Note route.
 
-| Condition | Existing/future source | HTTP recommendation |
+| Condition | Source | HTTP contract |
 |---|---|---:|
 | Unauthenticated | WordPress/Core authentication | 401 existing safe error. |
 | Invalid/missing nonce | WordPress REST cookie auth | 403 standard WordPress response. |
 | Malformed Work/Note ID | strict request parser | 400. |
 | Unknown fields/wrong body types | strict request parser | 400. |
+| Malformed/non-UTF-8 JSON document | WordPress JSON transport | 400 standard `rest_invalid_json`. |
 | Invalid/empty/forbidden/too-long content | `ValidationFailed` | 422 generic validation. |
 | Unknown/foreign/already-deleted Note | `PrivateNoteNotAvailable` | 404 generic resource unavailable. |
 | Round unavailable | existing typed failure, not exposed by minimal 1D | 404 if ever mapped. |
@@ -562,14 +584,14 @@ consulted or disclosed by the Note route.
 | Core unavailable | application provider | 503. |
 | Persistence/transaction/unexpected | generic safe mapper + server log | 500. |
 
-The current `RestErrorMapper` does not map the Note-specific unavailable or
-stale reasons; adding these mappings is a required 1D.3 engineering delta.
-Following the proven 1B pattern, a 409 body need not embed current state. UI
-must perform an authoritative GET reread and show the conflict without
-automatically retrying the mutation.
+`RestErrorMapper` maps `PrivateNoteNotAvailable` to the existing generic 404
+and `PrivateNoteStale` to `biblio_private_note_stale`/409. A 409 body does not
+embed current Note state. UI must perform an authoritative GET reread and show
+the conflict without automatically retrying the mutation.
 
-**Non-enumeration verdict: READY**, provided all list and member operations
-retain owner predicates and the response/error allowlists above.
+**Non-enumeration verdict: PROVEN.** Collection reads reapply actor+Work scope
+on every page; a cursor from another actor or Work grants no data. Unknown,
+foreign and deleted member IDs have byte-for-byte equivalent public 404 data.
 
 ## 15. Item-detail integration and zero state
 
@@ -670,7 +692,7 @@ For tabs A and B reading version N:
 - update/delete races have one consistent winner;
 - delete with stale version conflicts before deletion.
 
-1D.3 must expose Note version and map stale to 409. 1D.4 must reconcile by GET,
+1D.3 exposes Note version and maps stale to 409. 1D.4 must reconcile by GET,
 retain unsaved local intent and require an explicit user action. This is a
 normal adapter/UI delta, not a Core blocker.
 
@@ -678,8 +700,8 @@ normal adapter/UI delta, not a Core blocker.
 
 **CORE SECURITY READINESS: READY.**
 
-Core and schema are ready. The conditions are transport/editor implementation
-conditions:
+Core, schema and REST transport are ready. Remaining conditions are editor/UI
+implementation conditions:
 
 | Risk | Required control |
 |---|---|
@@ -783,7 +805,7 @@ No E2E or fixture work is part of 1D.1.
 |---|---|---|---|---|---|
 | 1D.1 | **Complete.** Audit and formalize existing contract/delta only. | Clean pushed 1C baseline. | This document, explicit verdict/conditions, docs gates. | Analysis/documentation. | Reopening F2.7 decisions. |
 | 1D.2 | **Complete.** Minimal adapter-facing Work Note page DTO/cursor/wiring; no domain/schema change. | Locked multi-Note UI/read contract and response fields. | Owner-scoped bounded render-validated views; focused tests; schema unchanged. | Core/application. | Aggregate leakage or invented uniqueness. |
-| 1D.3 | Add the four thin REST routes, parser/cursor/serializer/error mappings and integration tests. | 1D.2 boundary fixed. | Cookie/nonce, exact bodies/allowlists, empty/non-enumerating reads, 404/409/422, no rule duplication. | WordPress REST adapter. | XSS, IDOR, unsafe retry or ambiguous member semantics. |
+| 1D.3 | **Complete.** Four thin REST routes, parser/cursor/serializer/error mappings and integration tests. | 1D.2 boundary fixed. | Cookie/nonce, exact bodies/allowlists, empty/non-enumerating reads, 404/409/422, no rule duplication. | WordPress REST adapter. | XSS, IDOR, unsafe retry or ambiguous member semantics. |
 | 1D.4 | Add Work-wide multi-Note list, zero/add/read/edit/manual-save/delete and reconciliation state to existing Item detail. | Approved UX plus 1D.3. | Multiple Notes preserved; no autosave; dirty/pending/stale/error flows tested. | Biblio UI. | Treating one Note as singleton or losing unsaved text. |
 | 1D.5 | Complete responsive/accessibility pass without semantic changes. | 1D.4 stable. | Breakpoints, 320 CSS px/zoom, keyboard, labels, dialogs, focus, busy/error and 44 px controls pass. | Biblio UI QA. | Dialog/editor accessibility drift. |
 | 1D.6 | Add guarded deterministic fixture/API/browser evidence. | 1D.2–1D.5 complete. | Matrix §22, double cleanup, zero residue/fingerprint, 1A–1C regression green. | Fixture/E2E. | Private data leakage or unsafe cleanup. |
@@ -805,19 +827,14 @@ All are **LOCKED**:
 
 ### 24.2 Remaining engineering work
 
-1. Add the 1D.3 versioned opaque transport cursor codec around the implemented
-   internal cursor.
-2. Add strict Note request parsing and exact Note response serialization around
-   the implemented allowlist.
-3. Map `PrivateNoteNotAvailable` to generic 404 and `PrivateNoteStale` to 409;
-   retain generic safe 500 behavior. Blocks 1D.3.
-4. Implement/test a deterministic editor serializer for the exact safe HTML
+1. Implement/test a deterministic editor serializer for the exact safe HTML
    subset. Blocks 1D.4/1D.6.
-5. Add authoritative collection reread and no-auto-retry behavior for stale,
+2. Add authoritative collection reread and no-auto-retry behavior for stale,
    nonce and ambiguous mutation outcomes. Blocks 1D.4/1D.6.
 
-Items 1–3 are normal 1D.3 REST-adapter scope, not Core conditions or blockers.
-Items 4–5 are later UI/E2E scope. None requires schema, migration, new domain
+The former REST items—cursor codec, strict parsing/serialization and Note error
+mapping—are complete in 1D.3. The remaining items are UI/E2E scope. Neither
+requires schema, migration, new domain
 rules, Library authorization, ActivityEvent or Crocoblock.
 
 ## 25. Final readiness verdict
@@ -830,11 +847,11 @@ read/create/update/delete services already provide the required owner, Work,
 semantic no-op, stale and conditional-delete behavior. Schema 1004 remains
 ready and current schema 1007 is unchanged.
 
-There is no remaining Core/domain/schema uncertainty. **1D.3 is READY** to add
-only the thin REST adapter, cursor codec, strict parser/serializer and safe
-error mappings. A singular Work-note, raw aggregate/content serialization,
-last-write-wins, Library-role bypass or direct Elementor/Crocoblock mutation
-remains a contract violation.
+There is no remaining Core/domain/schema/REST uncertainty. **1D.4 is READY** to
+build the multi-Note UI against the implemented collection/member contract. A
+singular Work-note, raw aggregate/content serialization, last-write-wins,
+Library-role bypass or direct Elementor/Crocoblock mutation remains a contract
+violation.
 
 ## 26. 1D.1 documentation and gate record
 
@@ -905,3 +922,69 @@ final explicit own/unknown member-read and repeated/unknown delete assertions,
 the complete real-MariaDB integration suite was rerun: 221 tests/2,049
 assertions, PASS. No Playwright or Biblio UI suite is required because those
 layers are unchanged.
+
+## 28. 1D.3 Private Notes REST evidence
+
+Status: **GO — 1D.4 READY**
+
+1D.3 adds only WordPress REST transport code and integration evidence. The
+four exact operations are:
+
+```text
+GET    /biblio/v1/me/works/{work_id}/private-notes
+POST   /biblio/v1/me/works/{work_id}/private-notes
+PATCH  /biblio/v1/me/private-notes/{private_note_id}
+DELETE /biblio/v1/me/private-notes/{private_note_id}
+```
+
+All four require the existing cookie-authenticated actor and `X-WP-Nonce` /
+`wp_rest` convention. No request accepts actor, Library, Item, Edition or
+ReadingRound authority. GET accepts only optional `limit` and `cursor`; POST
+accepts only `content`; PATCH accepts only `content` and `expected_version`;
+DELETE accepts only `expected_version` and returns 204 without content.
+
+`PrivateNoteCursorCodec` encodes the internal timestamp+Note-ID keyset as a
+version-1 canonical URL-safe token. Decoding strictly verifies alphabet,
+length, canonical base64, exact payload keys/version, exact UTC-microsecond
+timestamp and typed Note ID. The cursor grants no authority: actor and Work are
+resolved/reapplied for every request, including continuation requests.
+
+Responses use an exact allowlist. A Note has only `private_note_id`,
+`content_html` and `version`; a page has only `items` and `next_cursor`.
+Create/update responses are projected from the authoritative Core aggregate
+through `PrivateNoteView::fromPrivateNote` and the existing render service;
+raw request or persistence content has no serializer path.
+
+Malformed path/query/body, unknown fields and invalid cursors map to 400;
+WordPress rejects malformed/non-UTF-8 JSON documents as standard
+`rest_invalid_json`/400 before dispatch. Authentication is 401 and invalid
+cookie nonce remains WordPress 403. Unknown/foreign/deleted Notes collapse to
+one generic 404; stale divergent update/delete is 409; Core content validation
+is safe generic 422; unavailable Core is 503; unexpected/persistence failures
+are privacy-safe 500.
+
+REST evidence proves zero/one/multiple behavior, foreign-only empty state,
+Library-role non-bypass, exact tie ordering, default 50/maximum 100, keyset
+continuation without duplicates/skips, cross-actor/cross-Work cursor safety,
+strict injection rejection, the exact safe-HTML subset, XSS rejection,
+fail-closed corrupt storage, create without Round, authoritative update,
+semantic/stale-identical no-op, divergent stale 409, conditional delete and
+equivalent foreign/unknown/deleted 404.
+
+Focused verification:
+
+- Private Notes REST selection: 11 tests/311 assertions, PASS;
+- complete `RestApiTest`: 39 tests/747 assertions, PASS;
+- relevant PrivateNote/readmodel unit: 16 tests/314 assertions, PASS;
+- PrivateNote persistence/concurrency/schema/migration: 26 tests/237
+  assertions, PASS;
+- production PHP syntax and PHPStan level 6: PASS.
+
+Complete canonical gate: PASS in 77 seconds. Composer metadata/platform,
+complete PHP syntax, PHPStan level 6, 247 Core unit tests/939 assertions, 232
+real-MariaDB integration tests/2,371 assertions, schema/migrations, WordPress
+smoke, manifest and Git whitespace are green.
+
+Schema remains 1007. No Core application/domain, repository, wpdb query,
+schema/migration, Biblio UI, Elementor, Crocoblock, Playwright, ActivityEvent,
+private audit or ReadingRound product behavior changed.
