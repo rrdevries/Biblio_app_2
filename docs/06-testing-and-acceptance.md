@@ -1241,3 +1241,42 @@ performance, responsive or browser blockers.
 The complete matrix, architecture evidence, exact fingerprint and known
 limitations are recorded in
 `docs/24-elementor-vertical-slice-1c-exit-evidence.md`.
+
+## 47. Vertical Slice 1D.2 Private Notes read boundary
+
+Status: **GO**
+
+Acceptance evidence:
+
+- the application boundary resolves the actor internally and performs one
+  existing owner+Work bounded repository query;
+- zero, one and multiple Notes remain valid; other-Work and foreign-owner Notes
+  are excluded even for the same Work identity;
+- each adapter view exposes only opaque Note ID, render-validated safe HTML and
+  version; page state exposes only a nullable internal continuation cursor;
+- user, Work per item, Library, Item, Edition, ReadingRound, source content,
+  provenance and technical timestamps are absent from the view;
+- the existing exact safe-HTML policy is reused at hydration and render; no
+  second sanitizer or expanded allowlist exists;
+- corrupt stored content fails closed before projection;
+- ordering remains `updated_at DESC, private_note_id DESC`; equal timestamps
+  use descending Note ID; pagination uses the existing default 50, maximum 100,
+  keyset cursor and `limit + 1`;
+- two fixed pages have no duplicate or skipped Note and each page costs one SQL
+  query with no N+1;
+- existing owner-scoped member read, create without ReadingRound, semantic and
+  stale update, conditional hard-delete, schema 1004/1007 and zero ActivityEvent
+  contracts remain green;
+- `CoreApplication` exposes the named view service, never a repository.
+
+Canonical Core verification passes Composer/platform, syntax, PHPStan level 6,
+247 unit tests/939 assertions, 221 real-MariaDB integration tests/2,048
+assertions in the canonical gate; the final complete integration rerun with
+explicit member/delete evidence passes 221 tests/2,049 assertions.
+
+No-go:
+
+- serializing `PrivateNote` aggregates or raw content directly;
+- accepting client actor/Library authority or changing Work-wide multiplicity;
+- adding a REST codec/controller, UI, schema, migration, ActivityEvent or audit
+  feature in 1D.2.

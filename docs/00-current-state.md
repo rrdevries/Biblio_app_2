@@ -1255,3 +1255,29 @@ security, REST, UI, E2E and 1D.2–1D.7 contracts are recorded in
 
 1D.1 changes documentation only. It adds no product code, Core/REST/UI,
 Elementor/Crocoblock, E2E/Playwright, schema, migration or functionality.
+
+### Vertical Slice 1D.2 — Private Notes application read boundary
+
+Status: **Implemented — GO**
+
+All 1D.1 product conditions are now locked: Work-wide multiple separate Notes,
+the visible multi-Note presentation and zero state, dirty-state choices and the
+accessible hard-delete dialog contract. 1D.2 does not implement UI behavior.
+
+Core now exposes `GetMyPrivateNotesForWorkService` through `CoreApplication`.
+It resolves the actor server-side, performs the existing bounded owner+Work
+query once and returns `PrivateNoteViewPage`: each `PrivateNoteView` contains
+only opaque Note identity, render-validated safe HTML and optimistic version.
+The nullable internal cursor contains only the existing `updated_at` and Note-
+ID ordering keys for later opaque REST encoding.
+
+Ordering remains `updated_at DESC, private_note_id DESC`; default page size is
+50 and maximum 100; the repository keeps keyset pagination and `limit + 1`.
+Projection/rendering is in-memory, so one page is one SQL query with no N+1.
+Unsafe stored or compromised content fails the existing validation/render
+boundary and cannot become an adapter view.
+
+Existing create-without-Round, member read, update/no-op/stale and conditional
+hard-delete services are reused unchanged. Schema remains 1007. No REST route,
+controller, HTTP/JSON contract, UI, Elementor, Crocoblock, Playwright,
+ActivityEvent, private audit, schema or migration is added. 1D.3 is READY.

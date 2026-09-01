@@ -22,6 +22,7 @@ use Biblio\Core\Application\Notes\GetPrivateNoteService;
 use Biblio\Core\Application\Notes\ListMyPrivateNotesService;
 use Biblio\Core\Application\Notes\ListPrivateNotesForReadingRoundService;
 use Biblio\Core\Application\Notes\ListPrivateNotesForWorkService;
+use Biblio\Core\Application\Notes\Read\GetMyPrivateNotesForWorkService;
 use Biblio\Core\Application\Notes\UpdatePrivateNoteContentService;
 use Biblio\Core\Application\Reading\GetOwnedReadingRoundService;
 use Biblio\Core\Application\Reading\CreateActiveReadingRoundService;
@@ -64,6 +65,7 @@ final class ProductionApplicationBoundaryTest extends TestCase
             [DeletePrivateNoteService::class, "delete"],
             [GetPrivateNoteService::class, "get"],
             [ListPrivateNotesForWorkService::class, "list"],
+            [GetMyPrivateNotesForWorkService::class, "forWork"],
             [ListPrivateNotesForReadingRoundService::class, "list"],
             [ListMyPrivateNotesService::class, "list"],
             [
@@ -144,6 +146,7 @@ final class ProductionApplicationBoundaryTest extends TestCase
             "privateNoteCreation",
             "privateNoteDeletion",
             "privateNoteRendering",
+            "privateNoteViewsForWork",
             "privateNotes",
             "privateNotesForReadingRound",
             "privateNotesForWork",

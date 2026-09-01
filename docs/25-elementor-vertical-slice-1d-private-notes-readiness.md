@@ -1,9 +1,9 @@
 # Elementor Vertical Slice 1D — Private Notes Readiness
 
 Date: 2026-08-31
-Readiness verdict: **READY WITH CONDITIONS**
+Readiness verdict: **GO for 1D.3**
 
-Current implementation status: **1D.1 ANALYSIS/DOCUMENTATION COMPLETE**
+Current implementation status: **1D.2 CORE READ BOUNDARY COMPLETE — GO**
 
 ## 1. Authority, baseline and scope
 
@@ -20,6 +20,14 @@ Item detail. It introduces no product behavior.
 - baseline subject: `Close Reading history vertical slice`;
 - Vertical Slices 1A, 1B and 1C: formal GO;
 - documentation number 25 was free.
+
+1D.2 started from a second clean pushed baseline:
+
+- branch: `main`;
+- start HEAD and `origin/main`:
+  `4985b55065f7fe180965f4f4974243aceee4c497`;
+- start worktree: clean;
+- baseline subject: `Analyze Private Notes vertical slice`.
 
 The current checkout is the technical source of truth. Binding sources are
 `docs/00-current-state.md`, the relevant parts of
@@ -161,6 +169,12 @@ deferred, not omitted accidentally:
 - import/export, account erasure and private mutation history.
 
 ## 4. Binding product-contract comparison
+
+The 1D.1 recommendations for multi-Note presentation, discoverable zero state,
+dirty-state behavior and accessible hard-delete confirmation are now explicitly
+**LOCKED**. They are no longer implementation conditions or open design
+questions. Dirty-state and delete-dialog behavior remain later UI scope and are
+not implemented by 1D.2.
 
 | Requested starting point | Repository verdict |
 |---|---|
@@ -371,26 +385,24 @@ locked reads and CAS. No Library scope or schema change is needed.
 | Capability | Existing? | Current signature/output | Complete for 1D? | Delta/reason |
 |---|---:|---|---:|---|
 | Read one | Yes | `get(PrivateNoteId): ?PrivateNote` | Yes internally | REST adapter/allowlist absent. |
-| Read Work collection | Yes | `list(WorkId, ?PrivateNotePageRequest): PrivateNotePage` | Yes internally | REST cursor/DTO serialization absent. |
+| Read Work collection | Yes | `forWork(WorkId, ?PrivateNotePageRequest): PrivateNoteViewPage` | Yes | New minimal adapter-facing safe view boundary. |
 | Create | Yes | `createForWork(WorkId, string): PrivateNote` | Yes | REST POST absent. |
 | Create for Round | Yes | `createForReadingRound(ReadingRoundId, string): PrivateNote` | Not needed | Keep outside minimal Item-detail 1D. |
 | Update content | Yes | `update(PrivateNoteId, PrivateNoteVersion, string): PrivateNote` | Yes | REST PATCH absent. |
 | Correct Round | Yes | `correct(PrivateNoteId, PrivateNoteVersion, ?ReadingRoundId): PrivateNote` | Not needed | No 1D UI requirement; do not expose accidentally. |
 | Delete | Yes | `delete(PrivateNoteId, PrivateNoteVersion): void` | Yes | REST DELETE absent. |
-| Safe render | Yes | `render(PrivateNote): string` | Yes | Must be used by serializer/read DTO. |
-| Pagination | Yes | `PrivateNotePageRequest`, page + `hasMore` | Partly | Opaque transport cursor/next cursor absent. |
+| Safe render | Yes | `render(PrivateNote): string` | Yes | New projector calls it for every returned Note. |
+| Pagination | Yes | Existing request plus `PrivateNoteViewCursor` result | Yes for Core | REST opaque encoding remains adapter scope. |
 | Owner authorization | Yes | Server actor + owner predicates | Yes | REST auth/nonce still required. |
 | Stale conflict | Yes | `PrivateNoteStale(current)` | Yes | REST 409 mapping + reread behavior absent. |
 
-No domain, repository, migration or schema implementation belongs in 1D.2.
-The smallest acceptable 1D.2 is an adapter-facing read projection/wiring that
-turns the existing Work page into immutable allowlisted Note views with
-render-validated `content_html` and a typed continuation cursor. If review can
-prove the existing page plus renderer is already a sufficiently named
-application boundary without aggregate leakage, 1D.2 may be wiring/tests only;
-do not manufacture new domain behavior.
+No domain, repository, migration or schema implementation was needed in 1D.2.
+The existing list service remained valid F2.7 behavior, but it returned full
+aggregates with source content and only `hasMore`. That was not a direct safe
+adapter projection. 1D.2 therefore adds only the minimal view/page/cursor
+projection and composition wiring described below.
 
-## 12. Current and recommended read boundary
+## 12. Implemented adapter-facing read boundary
 
 Current Core has a bounded owner-scoped Work page, but no REST-ready immutable
 Note DTO and no transport cursor. The catalog Item-detail projection contains
@@ -399,21 +411,55 @@ Library-scoped detail response would couple private owner data to catalog
 caching, make independent failure/pagination awkward and blur Library versus
 owner boundaries.
 
-Recommended boundary:
+`GetMyPrivateNotesForWorkService::forWork(WorkId,
+?PrivateNotePageRequest): PrivateNoteViewPage` resolves the actor through
+`AuthenticatedUser`, executes the existing owner+Work repository page and
+projects every aggregate through `RenderPrivateNoteContentService`.
 
-`GetMyPrivateNotesForWorkService` (or a narrowly named projection wrapper)
-resolves the actor and returns a page of immutable Note views sourced from the
-existing repository/service contract. Each view needed by 1D contains only:
+New application/read types:
+
+- `PrivateNoteView`: Note ID, render-validated HTML and version only;
+- `PrivateNoteViewPage`: list of views plus nullable next cursor;
+- `PrivateNoteViewCursor`: internal `beforeUpdatedAt` + `beforeId` continuation;
+- `GetMyPrivateNotesForWorkService`: the single named adapter boundary.
+
+Each view contains only:
 
 - Note ID, because update/delete address an individual aggregate;
 - render-validated `content_html`;
 - version, because update/delete require optimistic concurrency.
 
-The Work is already in the URL. Owner/User, Library, Item, Edition,
+The Work is supplied once to the application call. Owner/User, Work per item,
+Library, Item, Edition,
 ReadingRound context, technical timestamps and internal cursor keys are not
-needed by the minimal UI response. If product approval later requires visible
-created/updated dates or Round context, that is an explicit response-contract
-expansion, not an assumed leak.
+present in a Note view. The internal next cursor contains the existing ordering
+keys only so 1D.3 can encode them into a versioned opaque transport token.
+
+Note ID is necessary and safe as opaque domain identity for later PATCH/DELETE.
+It grants no authority: existing member mutations independently resolve the
+current actor and use owner-scoped locked reads.
+
+Safe-render proof:
+
+- repository hydration first applies the existing strict content policy;
+- the projector then calls the existing render boundary for every Note;
+- the view constructor is private and its only factory requires the existing
+  render service, so raw repository or request content has no construction path;
+- unsafe hydrated content fails closed as `persistence_read_failed`;
+- a compromised in-memory aggregate also fails the render policy and produces
+  no view;
+- no second sanitizer or expanded allowlist exists.
+
+Ordering and pagination are unchanged: `updated_at DESC`, then
+`private_note_id DESC`; default page size 50, maximum 100; keyset predicate
+`updated_at < cursor_time OR (updated_at = cursor_time AND private_note_id <
+cursor_id)`; repository fetches `limit + 1`. The next cursor is derived from
+the last returned aggregate only when another row exists. With a fixed dataset,
+ties, continuation and multiple pages are deterministic without duplicates or
+skips. 1D.2 adds no snapshot-isolation promise across concurrent edits.
+
+The Work-list remains one bounded SQL query per page. Projection and rendering
+are in-memory and issue no per-Note query; therefore there is no N+1.
 
 ## 13. REST delta and contract recommendation
 
@@ -548,8 +594,8 @@ Zero state recommendation: always render the discoverable section with concise
 private copy and `Notitie toevoegen`. Do not hide the entire capability until
 a Note exists.
 
-Status: **RECOMMENDATION REQUIRES APPROVAL** for wording, hierarchy and visible
-multi-Note presentation. The multiplicity itself is **LOCKED EXISTING**.
+Status: **LOCKED**. The wording, hierarchy, visible multi-Note presentation and
+discoverable zero state are approved; implementation remains 1D.4 scope.
 
 ## 16. Edit UX contract
 
@@ -630,7 +676,7 @@ normal adapter/UI delta, not a Core blocker.
 
 ## 19. Security verdict
 
-**SECURITY VERDICT: READY WITH CONDITIONS.**
+**CORE SECURITY READINESS: READY.**
 
 Core and schema are ready. The conditions are transport/editor implementation
 conditions:
@@ -735,38 +781,34 @@ No E2E or fixture work is part of 1D.1.
 
 | Step | Exact goal/scope | Dependencies | Exit criteria | Expected executor | Main risk |
 |---|---|---|---|---|---|
-| 1D.1 | Audit and formalize existing contract/delta only. | Clean pushed 1C baseline. | This document, explicit verdict/conditions, docs gates. | Analysis/documentation. | Reopening F2.7 decisions. |
-| 1D.2 | Add only the minimal adapter-facing Work Note page DTO/cursor/wiring, or prove no code is required; no domain/schema change. | Approve multi-Note UI/read contract and response fields. | Owner-scoped bounded render-validated views; focused tests; schema unchanged. | Core/application. | Aggregate leakage or invented uniqueness. |
+| 1D.1 | **Complete.** Audit and formalize existing contract/delta only. | Clean pushed 1C baseline. | This document, explicit verdict/conditions, docs gates. | Analysis/documentation. | Reopening F2.7 decisions. |
+| 1D.2 | **Complete.** Minimal adapter-facing Work Note page DTO/cursor/wiring; no domain/schema change. | Locked multi-Note UI/read contract and response fields. | Owner-scoped bounded render-validated views; focused tests; schema unchanged. | Core/application. | Aggregate leakage or invented uniqueness. |
 | 1D.3 | Add the four thin REST routes, parser/cursor/serializer/error mappings and integration tests. | 1D.2 boundary fixed. | Cookie/nonce, exact bodies/allowlists, empty/non-enumerating reads, 404/409/422, no rule duplication. | WordPress REST adapter. | XSS, IDOR, unsafe retry or ambiguous member semantics. |
 | 1D.4 | Add Work-wide multi-Note list, zero/add/read/edit/manual-save/delete and reconciliation state to existing Item detail. | Approved UX plus 1D.3. | Multiple Notes preserved; no autosave; dirty/pending/stale/error flows tested. | Biblio UI. | Treating one Note as singleton or losing unsaved text. |
 | 1D.5 | Complete responsive/accessibility pass without semantic changes. | 1D.4 stable. | Breakpoints, 320 CSS px/zoom, keyboard, labels, dialogs, focus, busy/error and 44 px controls pass. | Biblio UI QA. | Dialog/editor accessibility drift. |
 | 1D.6 | Add guarded deterministic fixture/API/browser evidence. | 1D.2–1D.5 complete. | Matrix §22, double cleanup, zero residue/fingerprint, 1A–1C regression green. | Fixture/E2E. | Private data leakage or unsafe cleanup. |
 | 1D.7 | Formal exit audit only. | All gates/evidence green. | Criterion matrix, exact commits, clean scope/status, GO/NO-GO, no new behavior. | Exit/documentation. | Calling partial evidence complete. |
 
-## 24. Conditions, approvals and blockers
+## 24. Locked decisions and remaining engineering work
 
-### 24.1 Product decisions requiring explicit approval
+### 24.1 Product decisions
 
-1. **Multi-Note Item-detail presentation:** approve the recommended Work-wide
-   collection/list with per-Note controls and persistent `Notitie toevoegen`.
-   Multiplicity is not optional; only its presentation/copy is open. Blocks
-   final 1D.2 DTO shape, 1D.3 resource contract and 1D.4.
-2. **Information hierarchy and zero state:** approve `Privénotities` after
-   `Leesgeschiedenis`, always visible with CTA. Blocks 1D.4.
-3. **Dirty-state UX:** approve accessible confirmation for Cancel/navigation
-   with unsaved changes and the stale-conflict recovery direction. Blocks
-   1D.4/1D.5.
-4. **Delete success contract:** approve 204 versus the established JSON
-   envelope and the user-facing confirmation/success copy. Blocks exact 1D.3
-   and 1D.4 acceptance, not Core.
+All are **LOCKED**:
 
-### 24.2 Engineering issues to resolve before implementation exit
+1. Work-wide multi-Note collection with separately identified Notes, full
+   content and per-Note edit/delete; no title or speculative context labels.
+2. Always-visible `Privénotities` zero state with `Notitie toevoegen`, no empty
+   row/draft.
+3. Dirty-state warning with only discard or return; no implicit save/mutation.
+4. Accessible native Biblio delete dialog with the approved exact copy,
+   conditional hard-delete behavior and no silent stale/unavailable success.
 
-1. Create an exact adapter-facing Note view/serializer boundary using the
-   render service; no raw aggregate/database content may cross REST. Blocks
-   1D.3.
-2. Add opaque Note page cursor encoding/decoding and exact pagination tests.
-   Blocks 1D.3.
+### 24.2 Remaining engineering work
+
+1. Add the 1D.3 versioned opaque transport cursor codec around the implemented
+   internal cursor.
+2. Add strict Note request parsing and exact Note response serialization around
+   the implemented allowlist.
 3. Map `PrivateNoteNotAvailable` to generic 404 and `PrivateNoteStale` to 409;
    retain generic safe 500 behavior. Blocks 1D.3.
 4. Implement/test a deterministic editor serializer for the exact safe HTML
@@ -774,24 +816,25 @@ No E2E or fixture work is part of 1D.1.
 5. Add authoritative collection reread and no-auto-retry behavior for stale,
    nonce and ambiguous mutation outcomes. Blocks 1D.4/1D.6.
 
-These are concrete planned deltas. None requires schema, migration, new domain
+Items 1–3 are normal 1D.3 REST-adapter scope, not Core conditions or blockers.
+Items 4–5 are later UI/E2E scope. None requires schema, migration, new domain
 rules, Library authorization, ActivityEvent or Crocoblock.
 
 ## 25. Final readiness verdict
 
-**READY WITH CONDITIONS**
+**GO**
 
-The repository is ready to begin a tightly scoped 1D.2 after the product
-approvals in §24.1. F2.7 Core, owner/privacy rules, Work-wide multiplicity,
-safe content, schema 1004 persistence, pagination, hard delete and optimistic
-concurrency are implemented and formally GO. Schema is ready.
+The four product conditions are locked and the minimal owner-scoped,
+render-validated, bounded adapter projection is implemented. Existing member
+read/create/update/delete services already provide the required owner, Work,
+semantic no-op, stale and conditional-delete behavior. Schema 1004 remains
+ready and current schema 1007 is unchanged.
 
-The conditions are precise: preserve the existing multi-Note contract, approve
-its Item-detail presentation/zero/dirty/delete UX, and implement the thin safe
-read/REST/editor boundaries in §24.2. A singular User + Work `PUT` resource,
-one-Note UI, raw rich-text output, last-write-wins, Library role bypass or
-direct Elementor/Crocoblock mutation would be a contract violation and a
-NO-GO implementation.
+There is no remaining Core/domain/schema uncertainty. **1D.3 is READY** to add
+only the thin REST adapter, cursor codec, strict parser/serializer and safe
+error mappings. A singular Work-note, raw aggregate/content serialization,
+last-write-wins, Library-role bypass or direct Elementor/Crocoblock mutation
+remains a contract violation.
 
 ## 26. 1D.1 documentation and gate record
 
@@ -820,3 +863,45 @@ Fresh 1D.1 verification:
 - scope audit: only this document, `docs/00-current-state.md` and
   `manifest.json` are changed;
 - Playwright: deliberately not run because no product/UI/E2E code changed.
+
+## 27. 1D.2 Core read-boundary evidence
+
+1D.2 adds only four application/read types, their production composition and
+focused tests. It changes no `PrivateNote` domain type, repository interface,
+wpdb query, mutation service, content policy, schema or migration.
+
+The implemented projection exposes exactly Note ID, render-validated safe HTML
+and version per Note, plus an internal nullable next cursor at page level.
+User, Work per item, Library, Item, Edition, ReadingRound, raw content,
+created/updated timestamps and provenance are absent.
+
+Existing boundaries remain authoritative:
+
+- `GetPrivateNoteService` owner-scopes a member read and returns own or null;
+- `createForWork` supports a Note without ReadingRound context;
+- content update requires Note ID, desired content and expected version and
+  preserves semantic/stale-identical no-op versus divergent typed stale;
+- delete requires Note ID and expected version and preserves unavailable and
+  stale semantics;
+- neither Library Context nor ActivityEvent participates.
+
+Focused fresh verification before the complete gate:
+
+- changed-file PHP syntax: PASS;
+- new readmodel + existing PrivateNote + composition unit selection: 16 tests,
+  314 assertions, PASS;
+- PrivateNote persistence/concurrency/schema/migration selection: 26 tests,
+  236 assertions, PASS;
+- PHPStan level 6 over production `src`: PASS, no errors;
+- one SQL query per Work page, zero N+1, deterministic tie/order/cursor and
+  two-page no-duplicate/no-skip behavior: PASS;
+- corrupted stored HTML fails as typed `persistence_read_failed` before a view
+  can be returned: PASS.
+
+Complete canonical gate: PASS in 70 seconds — Composer metadata/platform,
+complete PHP syntax, PHPStan level 6, 247 unit tests/939 assertions,
+schema/migrations, WordPress smoke, manifest and whitespace. After adding the
+final explicit own/unknown member-read and repeated/unknown delete assertions,
+the complete real-MariaDB integration suite was rerun: 221 tests/2,049
+assertions, PASS. No Playwright or Biblio UI suite is required because those
+layers are unchanged.

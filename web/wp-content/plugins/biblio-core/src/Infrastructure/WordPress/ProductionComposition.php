@@ -32,6 +32,7 @@ use Biblio\Core\Application\Notes\ListMyPrivateNotesService;
 use Biblio\Core\Application\Notes\ListPrivateNotesForReadingRoundService;
 use Biblio\Core\Application\Notes\ListPrivateNotesForWorkService;
 use Biblio\Core\Application\Notes\PrivateNoteCreation;
+use Biblio\Core\Application\Notes\Read\GetMyPrivateNotesForWorkService;
 use Biblio\Core\Application\Notes\RenderPrivateNoteContentService;
 use Biblio\Core\Application\Notes\UpdatePrivateNoteContentService;
 use Biblio\Core\Application\NextReading\{AddExternalLoanToNextReadingService,AddLibraryItemToNextReadingService,AddWorkToNextReadingService,GetMyNextReadingListService,GetNextReadingHomeProjectionService,NextReadingMutation,NextReadingProjector,RemoveNextReadingEntryService,ReorderNextReadingListService};
@@ -438,6 +439,11 @@ final class ProductionComposition
         $privateNoteRendering = new RenderPrivateNoteContentService(
             $privateNoteContentPolicy
         );
+        $privateNoteViewsForWork = new GetMyPrivateNotesForWorkService(
+            $authenticatedUser,
+            $privateNoteRepository,
+            $privateNoteRendering
+        );
         $assessmentQueries = new AssessmentQueryService(
             $authenticatedUser,
             $libraryAccess,
@@ -525,6 +531,7 @@ final class ProductionComposition
             $privateNotesForReadingRound,
             $myPrivateNotes,
             $privateNoteRendering,
+            $privateNoteViewsForWork,
             $catalogContextCreation,
             $catalogContextManagement,
             $bookTypeManagement,
