@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Biblio\Core\Infrastructure\WordPress\Rest;
 
 use Biblio\Core\Application\CoreApplication;
+use Biblio\Core\Application\Notes\Read\PrivateNoteView;
 use Biblio\Core\Reading\ReadingRoundOutcome;
 use Closure;
 use Throwable;
@@ -87,6 +88,38 @@ final class RestController
                 "methods" => WP_REST_Server::READABLE,
                 "callback" => [$this, "readingHistory"],
                 "permission_callback" => [$this, "authenticated"],
+            ]
+        );
+        register_rest_route(
+            self::NAMESPACE,
+            "/me/works/(?P<work_id>[^/]+)/private-notes",
+            [
+                [
+                    "methods" => WP_REST_Server::READABLE,
+                    "callback" => [$this, "privateNotes"],
+                    "permission_callback" => [$this, "authenticated"],
+                ],
+                [
+                    "methods" => WP_REST_Server::CREATABLE,
+                    "callback" => [$this, "createPrivateNote"],
+                    "permission_callback" => [$this, "authenticated"],
+                ],
+            ]
+        );
+        register_rest_route(
+            self::NAMESPACE,
+            "/me/private-notes/(?P<private_note_id>[^/]+)",
+            [
+                [
+                    "methods" => "PATCH",
+                    "callback" => [$this, "updatePrivateNote"],
+                    "permission_callback" => [$this, "authenticated"],
+                ],
+                [
+                    "methods" => WP_REST_Server::DELETABLE,
+                    "callback" => [$this, "deletePrivateNote"],
+                    "permission_callback" => [$this, "authenticated"],
+                ],
             ]
         );
 
@@ -200,6 +233,77 @@ final class RestController
             return $this->success(
                 $this->responses->readingHistory($history)
             );
+        });
+    }
+
+    public function privateNotes(
+        WP_REST_Request $request
+    ): WP_REST_Response|WP_Error {
+        return $this->execute(function (
+            CoreApplication $application
+        ) use ($request): WP_REST_Response {
+            $page = $application->privateNoteViewsForWork()->forWork(
+                $this->requests->workId($request),
+                $this->requests->privateNotePage($request)
+            );
+
+            return $this->success($this->responses->privateNotes($page));
+        });
+    }
+
+    public function createPrivateNote(
+        WP_REST_Request $request
+    ): WP_REST_Response|WP_Error {
+        return $this->execute(function (
+            CoreApplication $application
+        ) use ($request): WP_REST_Response {
+            $note = $application->privateNoteCreation()->createForWork(
+                $this->requests->workId($request),
+                $this->requests->privateNoteContent($request)
+            );
+            $view = PrivateNoteView::fromPrivateNote(
+                $note,
+                $application->privateNoteRendering()
+            );
+
+            return $this->success($this->responses->privateNote($view), 201);
+        });
+    }
+
+    public function updatePrivateNote(
+        WP_REST_Request $request
+    ): WP_REST_Response|WP_Error {
+        return $this->execute(function (
+            CoreApplication $application
+        ) use ($request): WP_REST_Response {
+            $input = $this->requests->privateNoteUpdate($request);
+            $note = $application->privateNoteContentUpdate()->update(
+                $input->privateNoteId(),
+                $input->expectedVersion(),
+                $input->content()
+            );
+            $view = PrivateNoteView::fromPrivateNote(
+                $note,
+                $application->privateNoteRendering()
+            );
+
+            return $this->success($this->responses->privateNote($view));
+        });
+    }
+
+    public function deletePrivateNote(
+        WP_REST_Request $request
+    ): WP_REST_Response|WP_Error {
+        return $this->execute(function (
+            CoreApplication $application
+        ) use ($request): WP_REST_Response {
+            $input = $this->requests->privateNoteDelete($request);
+            $application->privateNoteDeletion()->delete(
+                $input->privateNoteId(),
+                $input->expectedVersion()
+            );
+
+            return new WP_REST_Response(null, 204);
         });
     }
 

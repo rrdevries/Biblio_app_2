@@ -17,10 +17,19 @@ final class RestApi
     {
         $catalogCursors = new CatalogCursorCodec();
         $historyCursors = new ReadingHistoryCursorCodec();
+        $privateNoteCursors = new PrivateNoteCursorCodec();
         $this->controller = new RestController(
             $applicationProvider,
-            new RestRequestParser($catalogCursors, $historyCursors),
-            new RestResponseSerializer($catalogCursors, $historyCursors),
+            new RestRequestParser(
+                $catalogCursors,
+                $historyCursors,
+                $privateNoteCursors
+            ),
+            new RestResponseSerializer(
+                $catalogCursors,
+                $historyCursors,
+                $privateNoteCursors
+            ),
             new RestErrorMapper()
         );
     }

@@ -62,6 +62,7 @@ final readonly class RestErrorMapper
         if (in_array($reason, [
             FailureReason::AuthorizationDenied,
             FailureReason::CatalogItemNotAvailable,
+            FailureReason::PrivateNoteNotAvailable,
             FailureReason::ReadingSourceUnavailable,
             FailureReason::ReadingRoundNotAvailable,
         ], true)) {
@@ -76,6 +77,7 @@ final readonly class RestErrorMapper
             FailureReason::ReadingRoundAlreadyActiveForSource,
             FailureReason::ReadingRoundStale,
             FailureReason::CatalogRecordAlreadyExists,
+            FailureReason::PrivateNoteStale,
         ], true)) {
             return $this->error(
                 "biblio_{$reason->value}",
