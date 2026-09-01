@@ -1429,3 +1429,27 @@ Exact 200% browser zoom is not claimed: headless Chromium stayed at
 smoke remains. Consequently 1D.6 is **GO WITH CONDITIONS**. **1D.7 is READY
 WITH CONDITION** for only that headed zoom smoke plus formal exit/audit work;
 no exit document exists yet and Vertical Slice 1D remains open.
+
+### Vertical Slice 1D.7 — formal Private Notes exit
+
+Status: **GO — Vertical Slice 1D CLOSED**
+
+The sole 1D.6 condition is closed by the user's manual local authenticated
+headed-browser acceptance at actual 200% browser page zoom with real Private
+Notes content. Notes remained readable and usable without problematic
+horizontal overflow; create/edit controls, dialogs and keyboard/focus behavior
+remained usable. This is manual browser evidence, not Playwright proof.
+
+The formal exit reconfirms the user-owned Work-wide multi-Note contract,
+Core/REST/UI boundaries, privacy/non-enumeration, safe-format allowlist,
+optimistic concurrency, semantic no-op, no mutation retry, authoritative
+pagination, dirty state, dialogs, keyboard/focus and responsive behavior.
+Fresh gates pass: frontend 35/35 and 174/174, REST 15/328 and 39/747,
+Playwright 16/16 for 1D and 40/40 total on one worker, syntax, PHPStan, UI/Core
+smokes, five fixture guards, double cleanup, zero residue and identical
+non-E2E fingerprint.
+
+There are no 1D blockers. Non-blocking presentation polish is registered in
+`docs/26-future-roadmap-decisions.md`; no CSS or product behavior changes in
+1D.7. The authoritative exit record is
+`docs/27-elementor-vertical-slice-1d-private-notes-exit-evidence.md`.

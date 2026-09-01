@@ -1,9 +1,9 @@
 # Elementor Vertical Slice 1D — Private Notes Readiness
 
 Date: 2026-09-01
-Readiness verdict: **GO WITH CONDITIONS for 1D.6**
+Readiness verdict: **GO — Vertical Slice 1D CLOSED**
 
-Current implementation status: **1D.5 RESPONSIVE/ACCESSIBILITY POLISH COMPLETE — GO WITH CONDITIONS**
+Current implementation status: **1D.1–1D.7 COMPLETE — GO**
 
 ## 1. Authority, baseline and scope
 
@@ -1251,3 +1251,27 @@ product, privacy, security, accessibility, cleanup or regression blocker.
 1D.7 may perform only the remaining headed exact-200%-zoom smoke and formal
 exit/audit documentation. No 1D exit document is created here and 1D remains
 open.
+
+## 32. 1D.7 formal exit
+
+Status: **GO — Vertical Slice 1D CLOSED**
+
+The user subsequently completed the sole open 1D.6 condition in a local
+authenticated headed browser at actual 200% browser page zoom with real Private
+Notes content. Notes remained usable and readable without problematic
+horizontal overflow; create/edit controls, dialogs and keyboard/focus behavior
+remained usable. Result: **PASS**. This is manual headed browser acceptance,
+not Playwright evidence.
+
+Fresh 1D.7 verification reconfirmed Private Notes frontend 35/35, complete UI
+174/174, Start Reading 6/6, End Reading 19/19, Reading History 8/8, Private
+Notes REST 15 tests/328 assertions, complete `RestApiTest` 39/747, Playwright
+1D 16/16 and complete 1A–1D 40/40 on one worker. Syntax, focused UI PHPStan,
+UI smoke, Core/WordPress smoke, five fixture guards, double cleanup, zero E2E
+residue and the unchanged non-E2E fingerprint all pass.
+
+The formal matrix, scope audit, traceability, non-blocking future polish and
+definitive verdict are recorded in
+`docs/27-elementor-vertical-slice-1d-private-notes-exit-evidence.md`. There are
+no open 1D blockers. The 200% condition is closed and Vertical Slice 1D is
+formally **GO / CLOSED**.

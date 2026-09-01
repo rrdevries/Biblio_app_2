@@ -1553,3 +1553,29 @@ headless Chromium at 1280 CSS px, DPR 1 and visual scale 1; they are not claimed
 as zoom. Authenticated 640px reflow-equivalent plus 320px acceptance is green,
 but no headed manual 200% smoke was performed. 1D.7 is ready only to complete
 that smoke and the formal exit/audit. No full WCAG claim or 1D exit is made.
+
+## 52. Vertical Slice 1D.7 formal exit
+
+Status: **GO — Vertical Slice 1D CLOSED**
+
+The exact-200%-zoom condition is closed by explicit manual acceptance: the
+user tested real Private Notes in a local authenticated headed browser at
+actual 200% page zoom and reported PASS for readability, horizontal reflow,
+reachable create/edit controls, dialogs and keyboard/focus behavior. This is
+manual evidence and is not attributed to Playwright.
+
+Fresh formal-exit verification passes:
+
+- Private Notes frontend 35/35 and complete Biblio UI frontend 174/174;
+- Start Reading 6/6, End Reading 19/19 and Reading History 8/8;
+- Private Notes REST 15 tests/328 assertions and complete `RestApiTest` 39/747;
+- Playwright 1D 16/16, previous 1A–1C 24/24 and total 40/40 in Chromium on one
+  worker;
+- JavaScript/PHP syntax, focused UI PHPStan, isolated UI smoke and Core smoke;
+- five fixture guards, cleanup twice, zero residue, `verify-clean` and equal
+  non-E2E before/after fingerprint.
+
+Complete traceability, security/privacy, concurrency, final criteria and
+non-blocking polish are recorded in
+`docs/27-elementor-vertical-slice-1d-private-notes-exit-evidence.md`. No full
+WCAG claim is added. There are no open 1D acceptance blockers.

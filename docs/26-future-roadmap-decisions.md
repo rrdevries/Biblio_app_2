@@ -72,8 +72,9 @@ productgedrag.
 | B-23 | Leesgeschiedenis | Een volledige Reading History-beheerpagina met filters en export. | [`24-elementor-vertical-slice-1c-exit-evidence.md` §12](24-elementor-vertical-slice-1c-exit-evidence.md#12-known-non-blocking-limitations) |
 | B-24 | Kwaliteitsborging | Een volledige WCAG-audit buiten de reeds bewezen slice-specifieke accessibility acceptance. | [`24-elementor-vertical-slice-1c-exit-evidence.md` §12](24-elementor-vertical-slice-1c-exit-evidence.md#12-known-non-blocking-limitations) |
 | B-25 | Zoekinfrastructuur | Geavanceerde zoekinfrastructuur kan later worden onderzocht wanneer profiling of productbehoefte aantoont dat de huidige aanpak tekortschiet. | [`03-scope-and-deferred.md`](03-scope-and-deferred.md#technical) |
+| B-26 | Private Notes / detail-UI | Toekomstige niet-blokkerende polish mag meer verticale scheiding geven tussen Leesgeschiedenis, Privénotities, Uitgave en Exemplaar en de focusstijl van de H2 `Privénotities` minder invoerveldachtig maken, met behoud van duidelijke keyboardfocus en exact de volgorde Lezen → Leesgeschiedenis → Privénotities → Uitgave → Exemplaar. | Goedgekeurde 1D-exitpolish 2026-09-01; [`27-elementor-vertical-slice-1d-private-notes-exit-evidence.md` §11](27-elementor-vertical-slice-1d-private-notes-exit-evidence.md#11-known-non-blocking-future-polish) |
 
-**Totaal B: 25 items.**
+**Totaal B: 26 items.**
 
 ## 4. C — Open ontwerpvragen
 
@@ -108,9 +109,9 @@ productgedrag.
 ## 6. Huidige reconciliatie-uitkomst
 
 - A: **9**
-- B: **25**
+- B: **26**
 - C: **6**
-- Totaal actuele items: **40**
+- Totaal actuele items: **41**
 
 Er is geen bindend bronconflict gevonden. De echte ambiguïteiten staan onder C.
 Oudere handoverbronnen die alleen in het source register worden genoemd maar
