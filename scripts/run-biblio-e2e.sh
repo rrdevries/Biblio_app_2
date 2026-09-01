@@ -13,12 +13,14 @@ trap cleanup EXIT
 cleanup
 ./scripts/e2e-fixture.sh verify-clean
 BEFORE_FINGERPRINT="$(./scripts/e2e-fixture.sh fingerprint)"
+echo "Biblio E2E non-fixture fingerprint before: $BEFORE_FINGERPRINT"
 ./scripts/e2e-fixture.sh setup
 npx playwright test
 cleanup
 trap - EXIT
 ./scripts/e2e-fixture.sh verify-clean
 AFTER_FINGERPRINT="$(./scripts/e2e-fixture.sh fingerprint)"
+echo "Biblio E2E non-fixture fingerprint after: $AFTER_FINGERPRINT"
 
 if [[ "$BEFORE_FINGERPRINT" != "$AFTER_FINGERPRINT" ]]; then
   echo "Biblio E2E non-fixture fingerprint changed." >&2

@@ -533,6 +533,21 @@ function renderNotes(documentImpl, model, actions) {
     };
 }
 
+function focusAfterKeyboardActivation(target) {
+    target.focus();
+    const ownerDocument = target.ownerDocument ?? globalThis.document ?? null;
+
+    globalThis.setTimeout(() => {
+        const browserDroppedFocus = ownerDocument === null
+            || ownerDocument.activeElement === null
+            || ownerDocument.activeElement === ownerDocument.body;
+
+        if (target.isConnected !== false && browserDroppedFocus) {
+            target.focus();
+        }
+    }, 0);
+}
+
 function dialogShell(documentImpl, className, titleText, bodyText) {
     dialogSequence += 1;
     const id = `biblio-private-note-dialog-${dialogSequence}`;
@@ -577,7 +592,7 @@ export function createPrivateNotesView(root, {
         target.replaceChildren(rendered.section);
 
         if (model.focusEditor && rendered.editorElement !== null) {
-            rendered.editorElement.focus();
+            focusAfterKeyboardActivation(rendered.editorElement);
         }
 
         if (model.focusNotice) {
