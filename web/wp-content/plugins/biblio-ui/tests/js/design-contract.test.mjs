@@ -126,17 +126,50 @@ test("Reading history CSS preserves reflow, native lists and scoped token use", 
 });
 
 test("Private Notes CSS keeps native list semantics, wrapping editor controls and mobile dialogs", () => {
+    const privateRules = [...css.matchAll(
+        /([^{}]*\.biblio-ui__(?:private-notes|note|editor|format|dialog|reading-dialog)[^{}]*)\{([^{}]*)\}/gu
+    )];
+
+    assert.ok(privateRules.length >= 18);
+
+    for (const [, selector] of privateRules) {
+        assert.match(selector, /\[data-biblio-ui-root\]/);
+    }
+
     assert.match(css, /\.biblio-ui__note-list[\s\S]*display: grid/);
     assert.match(css, /\.biblio-ui__note-list[\s\S]*list-style: none/);
     assert.match(css, /\.biblio-ui__note-card[\s\S]*min-inline-size: 0/);
     assert.match(css, /\.biblio-ui__editor-toolbar[\s\S]*flex-wrap: wrap/);
-    assert.match(css, /\.biblio-ui__editor-surface[\s\S]*inline-size: 100%/);
+    assert.match(
+        css,
+        /\.biblio-ui__note-body,\s*\n\[data-biblio-ui-root\] \.biblio-ui__editor-surface \{[^}]*inline-size: 100%[^}]*overflow-wrap: anywhere[^}]*word-break: break-word/
+    );
     assert.match(css, /\.biblio-ui__format-control[\s\S]*--biblio-control-min/);
     assert.match(
         css,
         /@media \(max-width: 767px\)[\s\S]*\.biblio-ui__note-actions \.biblio-ui__control[\s\S]*flex: 1 1 10rem/
     );
+    assert.match(
+        css,
+        /@media \(max-width: 767px\)[\s\S]*\.biblio-ui__private-notes > \.biblio-ui__control,[\s\S]*inline-size: 100%/
+    );
+    assert.match(
+        css,
+        /\.biblio-ui__reading-dialog \{[^}]*max-block-size: calc\(100dvb - 2rem\)[^}]*overflow: auto/
+    );
+    assert.match(
+        css,
+        /@media \(max-width: 767px\)[\s\S]*padding-block-end: max\([^;]*env\(safe-area-inset-bottom\)\)/
+    );
     assert.doesNotMatch(css, /\.biblio-ui__(?:note|editor)[^\{]*\{[^}]*overflow-x:/);
+    assert.doesNotMatch(
+        css,
+        /\.biblio-ui__(?:private-notes|note|editor)[^\{]*\{[^}]*(?:white-space:\s*nowrap|text-overflow|overflow:\s*hidden)/
+    );
+    assert.deepEqual(
+        css.split("\n").filter((line) => /^\s*\.biblio-ui__/u.test(line)),
+        []
+    );
 });
 
 test("existing Biblio text, control and focus colors retain readable contrast", () => {
@@ -144,4 +177,5 @@ test("existing Biblio text, control and focus colors retain readable contrast", 
     assert.ok(contrast("1f2933", "f5f7fa") >= 4.5);
     assert.ok(contrast("243b53", "ffffff") >= 4.5);
     assert.ok(contrast("005fcc", "ffffff") >= 3);
+    assert.ok(contrast("9b1c1c", "ffffff") >= 4.5);
 });
