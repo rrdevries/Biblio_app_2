@@ -24,6 +24,8 @@ use Biblio\Core\Library\LibraryName;
 use Biblio\Core\Library\ManagementRole;
 use Biblio\Core\Library\MembershipStatus;
 use Biblio\Core\Library\UseAccess;
+use Biblio\Core\Notes\PrivateNoteId;
+use Biblio\Core\Notes\PrivateNoteVersion;
 use Biblio\Core\Reading\ReadingDate;
 use Biblio\Core\Reading\ReadingRoundId;
 use Biblio\Core\Reading\ReadingRoundVersion;
@@ -55,6 +57,14 @@ const BIBLIO_E2E_HISTORY_END_ITEM = "e2e-item-history-end";
 const BIBLIO_E2E_HISTORY_REFRESH_ITEM = "e2e-item-history-refresh";
 const BIBLIO_E2E_HISTORY_RAPID_ITEM = "e2e-item-history-rapid";
 const BIBLIO_E2E_HISTORY_EXTERNAL_LOAN = "e2e-external-loan-history";
+const BIBLIO_E2E_NOTE_EDIT = "e2e-private-note-edit";
+const BIBLIO_E2E_NOTE_DELETE = "e2e-private-note-delete";
+const BIBLIO_E2E_NOTE_STALE_UPDATE = "e2e-private-note-stale-update";
+const BIBLIO_E2E_NOTE_STALE_DELETE = "e2e-private-note-stale-delete";
+const BIBLIO_E2E_NOTE_UNAVAILABLE = "e2e-private-note-unavailable";
+const BIBLIO_E2E_NOTE_REFRESH = "e2e-private-note-refresh";
+const BIBLIO_E2E_NOTE_REFLOW = "e2e-private-note-reflow";
+const BIBLIO_E2E_NOTE_FOREIGN = "e2e-private-note-foreign";
 
 /** @return never */
 function biblioE2eFail(string $message): void
@@ -193,6 +203,27 @@ function biblioE2eItems(): array
 }
 
 /** @return list<string> */
+function biblioE2ePrivateNoteIds(): array
+{
+    $ids = [
+        BIBLIO_E2E_NOTE_EDIT,
+        BIBLIO_E2E_NOTE_DELETE,
+        BIBLIO_E2E_NOTE_STALE_UPDATE,
+        BIBLIO_E2E_NOTE_STALE_DELETE,
+        BIBLIO_E2E_NOTE_UNAVAILABLE,
+        BIBLIO_E2E_NOTE_REFRESH,
+        BIBLIO_E2E_NOTE_REFLOW,
+        BIBLIO_E2E_NOTE_FOREIGN,
+    ];
+
+    for ($number = 1; $number <= 13; $number++) {
+        $ids[] = sprintf("e2e-private-note-page-%02d", $number);
+    }
+
+    return $ids;
+}
+
+/** @return list<string> */
 function biblioE2eUsernames(): array
 {
     $actor = (string) getenv("BIBLIO_E2E_ACTOR_USERNAME");
@@ -283,15 +314,26 @@ function biblioE2eCleanupUsers(): void
             continue;
         }
 
+        if (!wp_delete_user($user->ID)) {
+            throw new RuntimeException("Could not delete exact fixture user.");
+        }
+    }
+}
+
+function biblioE2eValidateCleanupUsers(): void
+{
+    foreach (biblioE2eUsernames() as $username) {
+        $user = get_user_by("login", $username);
+
+        if (!$user instanceof WP_User) {
+            continue;
+        }
+
         if (
             get_user_meta($user->ID, BIBLIO_E2E_MARKER_KEY, true)
             !== BIBLIO_E2E_MARKER_VALUE
         ) {
             biblioE2eFail("refusing to delete an unmarked username collision.");
-        }
-
-        if (!wp_delete_user($user->ID)) {
-            throw new RuntimeException("Could not delete exact fixture user.");
         }
     }
 }
@@ -299,6 +341,7 @@ function biblioE2eCleanupUsers(): void
 function biblioE2eCleanup(): void
 {
     global $wpdb;
+    biblioE2eValidateCleanupUsers();
     biblioE2eCleanupCore($wpdb);
     biblioE2eCleanupUsers();
     wp_set_current_user(0);
@@ -672,6 +715,10 @@ function biblioE2eCounts(wpdb $database): array
             "SELECT COUNT(*) FROM `{$tables->readingRounds()}` WHERE work_id IN ({$workSql})",
             ...$workValues
         )),
+        "private_notes" => (int) $database->get_var($database->prepare(
+            "SELECT COUNT(*) FROM `{$tables->privateNotes()}` WHERE work_id IN ({$workSql})",
+            ...$workValues
+        )),
         "memberships" => (int) $database->get_var($database->prepare(
             "SELECT COUNT(*) FROM `{$tables->memberships()}` WHERE library_id IN ({$librarySql})",
             ...$libraries
@@ -707,6 +754,180 @@ function biblioE2eCounts(wpdb $database): array
                 get_user_by("login", $username) instanceof WP_User
         )),
     ];
+}
+
+/** @return array<string, array{work_id: string, owner: string, version: int}> */
+function biblioE2ePrivateNoteState(wpdb $database): array
+{
+    $noteIds = biblioE2ePrivateNoteIds();
+    $noteSql = implode(",", array_fill(0, count($noteIds), "%s"));
+    $table = (new CoreTableNames($database->prefix))->privateNotes();
+    $rows = $database->get_results($database->prepare(
+        "SELECT private_note_id, user_id, work_id, note_version "
+        . "FROM `{$table}` WHERE private_note_id IN ({$noteSql}) "
+        . "ORDER BY private_note_id",
+        ...$noteIds
+    ), ARRAY_A);
+    [$actorName, $otherName] = biblioE2eUsernames();
+    $actor = get_user_by("login", $actorName);
+    $other = get_user_by("login", $otherName);
+    $state = [];
+
+    foreach ($rows as $row) {
+        $owner = "unexpected";
+
+        if ($actor instanceof WP_User && (string) $row["user_id"] === (string) $actor->ID) {
+            $owner = "actor";
+        } elseif ($other instanceof WP_User && (string) $row["user_id"] === (string) $other->ID) {
+            $owner = "other";
+        }
+
+        $state[(string) $row["private_note_id"]] = [
+            "work_id" => (string) $row["work_id"],
+            "owner" => $owner,
+            "version" => (int) $row["note_version"],
+        ];
+    }
+
+    return $state;
+}
+
+function biblioE2eSeedPrivateNote(
+    wpdb $database,
+    string $privateNoteId,
+    string $userId,
+    string $workId,
+    string $content,
+    string $instant
+): void {
+    if (!in_array($privateNoteId, biblioE2ePrivateNoteIds(), true)) {
+        biblioE2eFail("Private Note seed ID is outside the exact allowlist.");
+    }
+
+    $inserted = $database->insert(
+        (new CoreTableNames($database->prefix))->privateNotes(),
+        [
+            "private_note_id" => $privateNoteId,
+            "user_id" => $userId,
+            "work_id" => $workId,
+            "reading_round_id" => null,
+            "note_content" => $content,
+            "created_at" => $instant,
+            "updated_at" => $instant,
+            "note_version" => 1,
+        ],
+        ["%s", "%s", "%s", "%s", "%s", "%s", "%s", "%d"]
+    );
+
+    if ($inserted !== 1) {
+        throw new RuntimeException("Could not create exact Private Note fixture.");
+    }
+}
+
+function biblioE2eSeedPrivateNotes(
+    wpdb $database,
+    string $actorId,
+    string $otherId
+): void {
+    $rich = "<p>E2E bewerkbare notitie met <strong>vet</strong> en "
+        . "<em>cursief</em>.</p><ul><li>E2E lijstpunt</li></ul>"
+        . "<blockquote>E2E citaat</blockquote>";
+    biblioE2eSeedPrivateNote($database, BIBLIO_E2E_NOTE_EDIT, $actorId, "e2e-work-missing-metadata", $rich, "2026-08-30 10:01:00.000000");
+    biblioE2eSeedPrivateNote($database, BIBLIO_E2E_NOTE_DELETE, $actorId, "e2e-work-active-conflict", "<p>E2E notitie voor verwijderen.</p>", "2026-08-30 10:02:00.000000");
+    biblioE2eSeedPrivateNote($database, BIBLIO_E2E_NOTE_STALE_UPDATE, $actorId, "e2e-work-end-completed", "<p>E2E notitie voor stale update.</p>", "2026-08-30 10:03:00.000000");
+    biblioE2eSeedPrivateNote($database, BIBLIO_E2E_NOTE_STALE_DELETE, $actorId, "e2e-work-end-stopped", "<p>E2E notitie voor stale delete.</p>", "2026-08-30 10:04:00.000000");
+    biblioE2eSeedPrivateNote($database, BIBLIO_E2E_NOTE_UNAVAILABLE, $actorId, "e2e-work-end-stale", "<p>E2E notitie die extern verdwijnt.</p>", "2026-08-30 10:05:00.000000");
+    biblioE2eSeedPrivateNote($database, BIBLIO_E2E_NOTE_REFRESH, $actorId, "e2e-work-end-nonce", "<p>E2E notitie voor refresh failure.</p>", "2026-08-30 10:06:00.000000");
+    biblioE2eSeedPrivateNote(
+        $database,
+        BIBLIO_E2E_NOTE_REFLOW,
+        $actorId,
+        "e2e-work-end-idempotent",
+        "<p>E2E reflow met <strong>vet</strong>, <em>cursief</em> en een zeerlangonafgebrokene2etestwoorddatveiligmoetafbrekenzonderhorizontaleoverflow.</p><ol><li>E2E eerste punt</li><li>E2E tweede punt</li></ol><blockquote>E2E responsive citaat.</blockquote>",
+        "2026-08-30 10:07:00.000000"
+    );
+
+    for ($number = 1; $number <= 13; $number++) {
+        $suffix = sprintf("%02d", $number);
+        $content = $number === 13
+            ? "<p>E2E paginanotitie 13 met <strong>opmaak</strong> en een zeerlangonafgebrokenpaginatokenvoorreflowacceptance.</p>"
+            : "<p>E2E paginanotitie {$suffix}.</p>";
+        biblioE2eSeedPrivateNote(
+            $database,
+            "e2e-private-note-page-{$suffix}",
+            $actorId,
+            "e2e-work-history",
+            $content,
+            sprintf("2026-08-31 %02d:00:00.000000", $number)
+        );
+    }
+
+    biblioE2eSeedPrivateNote(
+        $database,
+        BIBLIO_E2E_NOTE_FOREIGN,
+        $otherId,
+        "e2e-work-history",
+        "<p>E2E FOREIGN PRIVATE NOTE MUST NEVER LEAK.</p>",
+        "2026-08-31 23:00:00.000000"
+    );
+}
+
+function biblioE2eActorApplication(wpdb $database): \Biblio\Core\Application\CoreApplication
+{
+    [$actorName] = biblioE2eUsernames();
+    $actor = get_user_by("login", $actorName);
+
+    if (!$actor instanceof WP_User) {
+        biblioE2eFail("actor fixture user does not exist.");
+    }
+
+    wp_set_current_user($actor->ID);
+    return (new ProductionComposition($database))->application();
+}
+
+function biblioE2eAdvancePrivateNote(
+    wpdb $database,
+    string $privateNoteId,
+    string $content
+): void {
+    $application = biblioE2eActorApplication($database);
+    $id = new PrivateNoteId($privateNoteId);
+    $note = $application->privateNotes()->get($id);
+
+    if ($note === null) {
+        throw new RuntimeException("Exact Private Note fixture is missing.");
+    }
+
+    if ($note->version()->value() === 2 && $note->content()->value() === $content) {
+        return;
+    }
+
+    if ($note->version()->value() !== 1) {
+        throw new RuntimeException("Exact Private Note fixture has drifted.");
+    }
+
+    $application->privateNoteContentUpdate()->update(
+        $id,
+        PrivateNoteVersion::initial(),
+        $content
+    );
+}
+
+function biblioE2eDeleteUnavailablePrivateNote(wpdb $database): void
+{
+    $application = biblioE2eActorApplication($database);
+    $id = new PrivateNoteId(BIBLIO_E2E_NOTE_UNAVAILABLE);
+    $note = $application->privateNotes()->get($id);
+
+    if ($note === null) {
+        return;
+    }
+
+    if ($note->version()->value() !== 1) {
+        throw new RuntimeException("Exact unavailable Private Note fixture has drifted.");
+    }
+
+    $application->privateNoteDeletion()->delete($id, PrivateNoteVersion::initial());
 }
 
 /** @return array<string, mixed> */
@@ -955,6 +1176,11 @@ function biblioE2eSetup(wpdb $database): void
         (string) $actor,
         (string) $other
     );
+    biblioE2eSeedPrivateNotes(
+        $database,
+        (string) $actor,
+        (string) $other
+    );
 }
 
 biblioE2eGuard();
@@ -984,6 +1210,23 @@ try {
         case "stale-end":
             biblioE2eAdvanceStaleRound($wpdb);
             break;
+        case "note-stale-update":
+            biblioE2eAdvancePrivateNote(
+                $wpdb,
+                BIBLIO_E2E_NOTE_STALE_UPDATE,
+                "<p>E2E serverstate na stale update.</p>"
+            );
+            break;
+        case "note-stale-delete":
+            biblioE2eAdvancePrivateNote(
+                $wpdb,
+                BIBLIO_E2E_NOTE_STALE_DELETE,
+                "<p>E2E serverstate na stale delete.</p>"
+            );
+            break;
+        case "note-unavailable-delete":
+            biblioE2eDeleteUnavailablePrivateNote($wpdb);
+            break;
         case "state":
         case "fingerprint":
             break;
@@ -998,8 +1241,16 @@ try {
         "counts" => biblioE2eCounts($wpdb),
     ];
 
-    if (in_array($action, ["setup", "state", "stale-end"], true)) {
+    if (in_array($action, [
+        "setup",
+        "state",
+        "stale-end",
+        "note-stale-update",
+        "note-stale-delete",
+        "note-unavailable-delete",
+    ], true)) {
         $response["state"] = biblioE2eRoundState($wpdb);
+        $response["state"]["private_notes"] = biblioE2ePrivateNoteState($wpdb);
     }
 
     if ($action === "fingerprint") {

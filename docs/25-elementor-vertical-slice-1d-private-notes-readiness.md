@@ -1161,3 +1161,93 @@ There is no known structural responsive/accessibility blocker. The verdict is
 evidence is deliberately deferred to 1D.6. **1D.6 is READY** and may add only
 guarded deterministic fixture/API/browser acceptance without reopening the UI
 contract.
+
+## 31. 1D.6 guarded authenticated browser evidence
+
+Status: **GO WITH CONDITIONS — 1D remains OPEN; 1D.7 READY WITH CONDITION**
+
+The existing Playwright framework, one authenticated storage-state login, one
+worker, local `.local/e2e.env` secret boundary and WP-CLI fixture were reused.
+There is no second fixture or login mechanism and no credential is tracked.
+Five negative guard tests prove fail-closed refusal for missing opt-in,
+non-local WordPress, wrong DDEV project, wrong host and cleanup with a non-E2E
+username. Setup and cleanup continue to require the exact local
+`biblio-v2.ddev.site` runtime and exact marker-owned accounts/identifiers.
+
+The fixture reuses the existing two users, two Libraries, 18 Items, 16 Works,
+17 Editions, one ExternalLoan and 29 ReadingRounds. It adds no Work or Item and
+adds exactly 21 synthetic Notes: seven isolated mutation/refresh/reflow Notes,
+thirteen actor-owned ordered pagination Notes on one shared Work and one
+foreign-owned Note on that same Work. Setup uses existing application services
+for Note writes; stale update, stale delete and unavailable deletion are
+performed outside the browser through authenticated owner-scoped
+`CoreApplication` services. Cleanup preflights the formal usernames and removes
+only the exact allowlisted fixture graph; browser-created random Note IDs are
+contained by their exact allowlisted Work ownership.
+
+Sixteen new serial Chromium scenarios prove: persistent zero/create/edit/
+delete behavior; real semantic no-op; clean and dirty Cancel; overview,
+other-Item and browser-Back navigation; actual `beforeunload` listener
+lifecycle; versioned stale update/delete and unavailable 404 without mutation
+retry; actor privacy, known-foreign versus unknown generic 404 and Library
+manager non-override; Work-wide page size 10 plus 13-note continuation without
+duplicates/skips; continuation failure with identical-cursor retry; successful
+PATCH followed by failed reconciliation without a second PATCH; supported
+formatting, safe saved DOM, XSS rejection and plain-text paste; keyboard-only
+controls/dialogs; deliberate focus; semantic/list/textbox/toolbar/dialog/status
+contracts; and real Notes at 320×800, 390×844, 640×900 reflow-equivalent,
+900×900 and 1280×900 without horizontal overflow. Critical flows count exactly
+one POST, PATCH or DELETE and only GET recovery/reconciliation thereafter.
+
+Two 1D.6-found UI defects were reproduced and minimally corrected:
+
+- dirty popstate retention previously replaced the pending Back destination;
+  retaining now pushes the active route back only after the user chooses to
+  remain, so a later Back/discard reaches the original destination once;
+- native keyboard activation could leave focus on the removed Add/Edit control
+  after the editor render; focus is restored after that browser default only
+  when focus fell to `body`/nothing, and never steals a later deliberate focus.
+
+Both fixes have focused frontend regressions and authenticated browser
+coverage. No product rule, field, format, REST contract, Core behavior,
+authorization, schema, migration, Elementor or Crocoblock behavior changed.
+The existing 1C page-wide `Meer laden` test selector was also scoped to its
+Reading History region because Notes now legitimately supplies a second
+control with that name; this is test isolation only.
+
+Fresh verification:
+
+- new 1D browser scenarios: 16/16 PASS;
+- existing 1A–1C browser scenarios: 24/24 PASS;
+- complete Playwright: 40/40 PASS, one worker;
+- fixture guards: 5/5 PASS;
+- Private Notes frontend: 35/35 PASS;
+- complete Biblio UI JavaScript: 174/174 PASS;
+- app runtime: 65/65 PASS;
+- Private Notes REST filter: 15 tests/328 assertions, PASS;
+- complete `RestApiTest`: 39 tests/747 assertions, PASS; the deliberately
+  logged privacy-safe unexpected-failure diagnostic remains expected;
+- UI JavaScript/PHP syntax, focused UI PHPStan, isolated UI smoke and
+  Core/WordPress smoke: PASS.
+
+The canonical runner performs cleanup twice before setup and twice after the
+browser suite. Both final cleanups returned every fixture count, including
+`private_notes`, to zero and `verify-clean` passed. The non-E2E fingerprint
+sorts canonical JSON for every Core table and hashes it with SHA-256, plus an
+ordered non-E2E `ID,user_login` projection. Before and after were exactly:
+`core_rows=0`,
+`core_sha256=0ce27bbce14013bfb222a2eb124a0bd8647df81294cbf8b874dd395580b6eb9b`,
+`non_e2e_users=2`,
+`non_e2e_users_sha256=b6d2e8b80642d96611fc23d42ea98a0105b6634ee81e34721850d3ad8ae0395d`
+and `biblio_dev_present=true`.
+
+Exact 200% browser zoom is the sole condition. Headless Chromium accepted the
+zoom keystrokes but measured the same `innerWidth=1280`,
+`devicePixelRatio=1` and `visualViewport.scale=1` before and after; this is not
+claimed as zoom. The authenticated 640×900 effective-width/reflow-equivalent
+and 320px evidence is green, but no separate headed manual 200% smoke was
+performed. Therefore 1D.6 is **GO WITH CONDITIONS**, not GO. There is no known
+product, privacy, security, accessibility, cleanup or regression blocker.
+1D.7 may perform only the remaining headed exact-200%-zoom smoke and formal
+exit/audit documentation. No 1D exit document is created here and 1D remains
+open.

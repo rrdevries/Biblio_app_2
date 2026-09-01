@@ -598,7 +598,7 @@ test("a direct Item URL dispatches only the encoded detail contract", async () =
     );
 });
 
-test("dirty popstate restores the rendered route and applies the target once after discard", async () => {
+test("dirty popstate applies the target once after immediate discard", async () => {
     const selected = library("library-1", { designated: true });
     const renders = recorder();
     const privateNotes = privateNotesRecorder();
@@ -617,12 +617,42 @@ test("dirty popstate restores the rendered route and applies the target once aft
     });
     await app.start();
     const notesController = privateNotes.creations[0].controller;
-    let discardAction = null;
     notesController.dirty = true;
-    notesController.guardNavigation = (action) => {
-        discardAction = action;
-        return Promise.resolve(false);
-    };
+    notesController.guardNavigation = (action) => Promise.resolve(action());
+    browser.location.href = "https://example.test/mijn-bibliotheek/"
+        + "?library_id=library-1";
+    browser.listeners.get("popstate")();
+    await app.whenIdle();
+
+    assert.equal(
+        browser.location.href,
+        "https://example.test/mijn-bibliotheek/?library_id=library-1"
+    );
+    assert.equal(browser.historyCalls.filter(([kind]) => kind === "push").length, 0);
+    assert.equal(renders.renders.at(-1).model.state, "overview");
+});
+
+test("dirty popstate retain preserves the Back target for one later discard", async () => {
+    const selected = library("library-1", { designated: true });
+    const renders = recorder();
+    const privateNotes = privateNotesRecorder();
+    const { app, browser } = createApp({
+        url: "https://example.test/mijn-bibliotheek/"
+            + "?library_id=library-1&item_id=item-1",
+        renders,
+        privateNotes,
+        async get(path) {
+            return path === "me/libraries"
+                ? { libraries: [selected] }
+                : path === "libraries/library-1/items/item-1"
+                    ? detail(selected, "item-1")
+                    : overview(selected, [item("item-1")]);
+        },
+    });
+    await app.start();
+    const notesController = privateNotes.creations[0].controller;
+    notesController.dirty = true;
+    notesController.guardNavigation = () => Promise.resolve(false);
     browser.location.href = "https://example.test/mijn-bibliotheek/"
         + "?library_id=library-1";
     browser.listeners.get("popstate")();
@@ -633,15 +663,19 @@ test("dirty popstate restores the rendered route and applies the target once aft
         "https://example.test/mijn-bibliotheek/"
             + "?library_id=library-1&item_id=item-1"
     );
-    assert.equal(typeof discardAction, "function");
-    assert.equal(browser.historyCalls.filter(([kind]) => kind === "push").length, 0);
+    assert.equal(browser.historyCalls.filter(([kind]) => kind === "push").length, 1);
 
-    await discardAction();
+    notesController.guardNavigation = (action) => Promise.resolve(action());
+    browser.location.href = "https://example.test/mijn-bibliotheek/"
+        + "?library_id=library-1";
+    browser.listeners.get("popstate")();
+    await app.whenIdle();
+
     assert.equal(
         browser.location.href,
         "https://example.test/mijn-bibliotheek/?library_id=library-1"
     );
-    assert.equal(browser.historyCalls.filter(([kind]) => kind === "push").length, 0);
+    assert.equal(browser.historyCalls.filter(([kind]) => kind === "push").length, 1);
     assert.equal(renders.renders.at(-1).model.state, "overview");
 });
 

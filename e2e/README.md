@@ -1,8 +1,9 @@
-# Vertical Slices 1A, 1B and 1C E2E
+# Vertical Slices 1A, 1B, 1C and 1D E2E
 
 This directory contains the shared local-only Playwright acceptance layer for
-Vertical Slice 1A, the ReadingRound end evidence in Vertical Slice 1B and the
-Reading History browser evidence in Vertical Slice 1C.
+Vertical Slice 1A, the ReadingRound end evidence in Vertical Slice 1B, the
+Reading History browser evidence in Vertical Slice 1C and the authenticated
+Private Notes browser evidence in Vertical Slice 1D.
 
 ## Safety boundary
 
@@ -17,6 +18,8 @@ The fixture refuses to run unless all of these conditions hold:
 Setup and cleanup touch only the two marker-owned formal accounts and the
 allowlisted `e2e-*` Core identifiers. Cleanup uses no truncate, schema reset or
 prefix wildcard. An unmarked account collision makes the fixture stop.
+The formal fixture usernames are exact; even cleanup refuses when either is
+overridden to a non-E2E account.
 
 Credentials are generated once in ignored file `.local/e2e.env`, mode `0600`,
 and become process environment only inside the DDEV wrapper. No password is
@@ -42,6 +45,15 @@ failed End refresh and rapid-navigation behavior. Setup contains 18 Items, 16
 Works, 17 Editions, one ExternalLoan and 29 ReadingRounds in total. The 1C
 browser spec never depends on a mutation from an earlier test.
 
+The 1D layer reuses those exact Works and Items and adds 21 allowlisted Private
+Notes: dedicated edit, delete, stale-update, stale-delete, unavailable,
+refresh-failure and responsive records; thirteen actor-owned pagination Notes
+on one shared Work; and one foreign-owned Note on that Work. No additional Work
+or Item is created. Owner-scoped stale/unavailable fixture actions invoke the
+existing authenticated Core application services rather than repositories or
+direct SQL. The 1D browser spec resets the complete fixture before every full
+run and executes serially on one worker.
+
 Cleanup removes ReadingRounds by the exact allowlisted Work set, including
 source-free, ExternalLoan and legacy rows, then removes the one exact
 ExternalLoan and the existing exact entity allowlists. Counts report every
@@ -62,10 +74,11 @@ current Core read model exposes titles but intentionally returns authors,
 covers and edition metadata as `unknown`; the E2E suite verifies that omission
 instead of expanding production scope.
 
-The `stale-end` fixture action invokes the authenticated owner's existing Core
-finish service. State and fingerprint actions are read-only and emit only
-allowlisted lifecycle fields, aggregate counts and hashes; they do not expose
-private non-E2E row content.
+The `stale-end`, `note-stale-update`, `note-stale-delete` and
+`note-unavailable-delete` fixture actions invoke the authenticated owner's
+existing Core application services. State and fingerprint actions are
+read-only and emit only allowlisted lifecycle/ownership fields, aggregate
+counts and hashes; they do not expose private non-E2E row content.
 
 ## Commands
 
@@ -78,4 +91,5 @@ npm run e2e:verify-clean
 
 `npm run test:e2e` runs the negative guard checks, establishes a clean
 before-fingerprint, wraps setup and all browser tests, performs cleanup twice,
-verifies zero residue and requires the after-fingerprint to match.
+verifies zero residue and requires the printed after-fingerprint to match the
+printed before-fingerprint exactly.

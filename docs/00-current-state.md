@@ -1389,3 +1389,43 @@ zoom, mutation/dialog flows and guarded cleanup/fingerprint evidence are not
 claimed; they remain 1D.6. There is no known structural blocker. **1D.6 is
 READY**, with that real browser/fixture evidence as the sole explicit
 condition.
+
+### Vertical Slice 1D.6 — guarded authenticated Private Notes browser evidence
+
+Status: **Implemented — GO WITH CONDITIONS; 1D remains OPEN**
+
+The existing guarded WP-CLI fixture and authenticated Playwright storage state
+now cover Private Notes without a second framework or tracked credentials. The
+shared 1A–1C graph is reused unchanged and setup adds exactly 21 synthetic
+Notes: seven isolated scenario Notes, thirteen actor-owned pagination Notes and
+one foreign-owned same-Work Note. No new Work or Item is required. Five guard
+tests fail closed for missing opt-in, non-local WordPress, wrong project, wrong
+host and cleanup with a non-E2E username.
+
+Sixteen new one-worker Chromium tests prove zero/create/edit/no-op/dirty/delete,
+overview/Item/Back navigation, `beforeunload` registration, stale 409 and
+unavailable 404 behavior, owner privacy and Library-role non-override,
+pagination/error retry, mutation-refresh failure, safe rich content/XSS/paste,
+keyboard/focus/semantics and authenticated responsive behavior at 320, 390,
+640 reflow-equivalent, 900 and 1280 CSS px. Every critical mutation occurs
+exactly once and reload/reconciliation uses public UI/REST truth.
+
+Two browser-found UI defects received minimal fixes and regressions: retaining
+a dirty popstate no longer destroys its pending Back destination, and editor
+focus lost after native keyboard activation is restored only when the browser
+drops focus to the document body. The existing 1C `Meer laden` test is scoped
+to Reading History so it coexists with the Notes pagination control. No Core,
+REST contract, schema/migration, Elementor or Crocoblock delta exists.
+
+Private Notes browser tests pass 16/16; existing 1A–1C pass 24/24; total
+Playwright passes 40/40 on one worker. Private Notes frontend is 35/35, full UI
+174/174, focused REST 15/328 and complete REST 39/747. Syntax, UI PHPStan,
+isolated UI smoke and Core/WordPress smoke pass. Cleanup is idempotent, leaves
+all fixture counts at zero and preserves the exact non-E2E SHA-256 fingerprint.
+
+Exact 200% browser zoom is not claimed: headless Chromium stayed at
+`innerWidth=1280`, DPR 1 and visual scale 1 after zoom shortcuts. Authenticated
+640px reflow-equivalent and 320px evidence is green, but a headed manual 200%
+smoke remains. Consequently 1D.6 is **GO WITH CONDITIONS**. **1D.7 is READY
+WITH CONDITION** for only that headed zoom smoke plus formal exit/audit work;
+no exit document exists yet and Vertical Slice 1D remains open.

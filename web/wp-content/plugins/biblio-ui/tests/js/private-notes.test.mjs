@@ -171,6 +171,12 @@ class ViewElement {
 
     focus() {
         assert.equal(this.isConnected, true, "focus target must be connected");
+        if (this.ownerDocument?.activeElement) {
+            this.ownerDocument.activeElement.focused = false;
+        }
+        if (this.ownerDocument) {
+            this.ownerDocument.activeElement = this;
+        }
         this.focused = true;
         this.focusCount += 1;
     }
@@ -222,9 +228,12 @@ function viewMatches(node, selector) {
 }
 
 function viewDocument() {
-    return {
+    const documentImpl = {
+        body: new ViewElement("body"),
+        activeElement: null,
         createElement(tagName) {
             const node = new ViewElement(tagName);
+            node.ownerDocument = documentImpl;
 
             if (tagName === "template") {
                 node.content = new ViewElement("fragment", 11);
@@ -251,6 +260,8 @@ function viewDocument() {
         queryCommandState() { return false; },
         queryCommandValue() { return ""; },
     };
+
+    return documentImpl;
 }
 
 function viewSetup() {
@@ -717,6 +728,46 @@ test("view exposes zero/list/editor semantics and programmatic editor status", (
     assert.match(region.textContent, /Niet-opgeslagen wijzigingen/);
     formatButtons[0].click();
     assert.equal(formatButtons[0].getAttribute("aria-pressed"), "true");
+});
+
+test("editor focus is restored after a native keyboard click default action without stealing later focus", async () => {
+    const { region, view } = viewSetup();
+    const editorModel = {
+        mode: "create",
+        privateNoteId: null,
+        version: null,
+        baselineHtml: "",
+        contentHtml: "",
+        pending: false,
+        dirty: false,
+        error: null,
+        recovery: null,
+        labelId: "keyboard-editor-label",
+        helpId: "keyboard-editor-help",
+        dirtyId: "keyboard-editor-dirty",
+        errorId: "keyboard-editor-error",
+    };
+    view.render(viewBase({ editor: editorModel, focusEditor: true }), viewActions());
+    const textbox = region.querySelector('[role="textbox"]');
+    const quote = viewNodes(region, "button").find((button) => button.textContent === "Citaat");
+    const documentImpl = textbox.ownerDocument;
+    documentImpl.activeElement = documentImpl.body;
+    textbox.focused = false;
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    assert.equal(textbox.focused, true);
+
+    view.render(viewBase({ editor: editorModel, focusEditor: true }), viewActions());
+    const rerenderedTextbox = region.querySelector('[role="textbox"]');
+    const rerenderedQuote = viewNodes(region, "button")
+        .find((button) => button.textContent === quote.textContent);
+    rerenderedQuote.focus();
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    assert.equal(rerenderedQuote.focused, true);
+    assert.equal(rerenderedTextbox.focused, false);
 });
 
 test("replacement controls receive deliberate Cancel and pagination focus", () => {

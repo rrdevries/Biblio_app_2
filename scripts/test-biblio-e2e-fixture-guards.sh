@@ -11,11 +11,12 @@ run_refusal() {
   local label="$1"
   local expected="$2"
   local override="$3"
+  local action="${4:-verify-clean}"
   local output
   local status
 
   set +e
-  output="$(ddev exec --raw -- bash -lc "cd /var/www/html; set -a; source .local/e2e.env; set +a; ${override}; cd web; wp eval-file /var/www/html/e2e/fixture.php verify-clean" 2>&1)"
+  output="$(ddev exec --raw -- bash -lc "cd /var/www/html; set -a; source .local/e2e.env; set +a; ${override}; cd web; wp eval-file /var/www/html/e2e/fixture.php ${action}" 2>&1)"
   status=$?
   set -e
 
@@ -44,3 +45,8 @@ run_refusal \
   "wrong local host" \
   "runtime URL is not the exact local DDEV host" \
   "export BIBLIO_E2E_ALLOW_FIXTURES=1; export DDEV_PRIMARY_URL=https://not-biblio-v2.ddev.site"
+run_refusal \
+  "cleanup against a non-E2E username" \
+  "formal fixture usernames must remain exact" \
+  "export BIBLIO_E2E_ALLOW_FIXTURES=1; export BIBLIO_E2E_ACTOR_USERNAME=biblio_dev" \
+  "cleanup"

@@ -652,13 +652,18 @@ export function createLibraryApp(mount, {
 
     function beginHistoryNavigation(targetRoute) {
         if (privateNotesController?.isDirty()) {
-            if (activeRouteState !== null) {
-                routes.replace(activeRouteState);
-            }
-
-            return setIdle(privateNotesController.guardNavigation(() => {
+            const activeRoute = activeRouteState;
+            const guarded = privateNotesController.guardNavigation(() => {
                 routes.replace(targetRoute);
                 return navigate({ focusHeading: true });
+            });
+
+            return setIdle(Promise.resolve(guarded).then((result) => {
+                if (result === false && activeRoute !== null) {
+                    routes.push(activeRoute);
+                }
+
+                return result;
             }));
         }
 

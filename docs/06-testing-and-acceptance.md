@@ -1482,3 +1482,74 @@ dialog browser evidence, actual 200% zoom on real safe/long Note content,
 double cleanup and unchanged non-fixture fingerprint remain 1D.6 scope. There
 is no known structural responsive/accessibility defect. 1D.6 may proceed
 without changing product, CRUD, state, security or UI semantics.
+
+## 51. Vertical Slice 1D.6 guarded authenticated browser acceptance
+
+Status: **GO WITH CONDITIONS — 1D remains OPEN**
+
+Acceptance evidence:
+
+- the existing local-only fixture, generated ignored credentials, authenticated
+  storage state and one-worker Playwright contract are reused unchanged in
+  architecture;
+- five negative guards refuse missing opt-in, non-local WordPress, wrong DDEV
+  project, wrong host and cleanup aimed through a non-E2E username;
+- setup reuses the exact existing graph and adds only 21 synthetic Notes, with
+  thirteen actor-owned pagination members and one foreign same-Work member;
+- stale/unavailable changes run through owner-scoped application services;
+- zero state keeps its H2/Add action and creates no list/card or mutation;
+- create, update and delete each send one mutation, reconcile through one
+  page-1 GET and remain correct after reload;
+- semantic no-op uses the current server contract once and creates no duplicate
+  mutation;
+- clean/dirty Cancel, overview, other Item and browser-Back routes preserve or
+  discard intent without implicit save and with the intended route once;
+- dirty state alone owns the observed `beforeunload` listener lifecycle;
+- delete copy, initial/cancel/success focus, hard-delete/no-undo and persistence
+  match the locked contract;
+- stale update/delete use old versions, return one 409, never retry mutation,
+  preserve intent/state and refresh through GET only;
+- externally deleted membership returns one generic 404 and GET-only
+  reconciliation;
+- foreign content/ID/count never reaches actor DOM or collection data; known
+  foreign and unknown member requests are equivalent generic 404 and Library
+  management does not transfer ownership;
+- page size 10 plus one continuation GET yields all thirteen actor Notes in
+  server order without duplicates/skips; final-page focus and identical-cursor
+  retry are proven;
+- forced post-PATCH page-1 failure leaves PATCH count one and recovers via GET;
+- supported markup remains semantic, raw markup is not shown, unsupported
+  script/event/style/attributes never become executable DOM and paste uses the
+  real plain-text event path;
+- keyboard-only Add, toolbar, editor, Save/Cancel, Edit/Delete and native dialog
+  flows are operable with deliberate connected focus and no observed trap;
+- real authenticated Notes pass 320×800, 390×844, 640×900 reflow-equivalent,
+  900×900 and 1280×900 without document, region, body or editor overflow;
+- DOM/accessible semantics prove H2, native outer list/members, labelled
+  multiline textbox, named toolbar/buttons/dialogs, status and busy state;
+- 16/16 new 1D and 24/24 existing 1A–1C scenarios pass: 40/40 total, one worker;
+- Private Notes frontend 35/35, complete UI 174/174, app runtime 65/65,
+  Private Notes REST 15/328 and complete REST 39/747 pass;
+- JavaScript/PHP syntax, UI PHPStan, isolated UI smoke, Core/WordPress smoke,
+  manifest JSON and Git whitespace pass;
+- final cleanup runs twice, all fixture counts including Notes are zero and
+  `verify-clean` passes;
+- canonical sorted-JSON/SHA-256 fingerprint before and after is identical:
+  Core 0 rows/hash
+  `0ce27bbce14013bfb222a2eb124a0bd8647df81294cbf8b874dd395580b6eb9b`;
+  non-E2E users 2/hash
+  `b6d2e8b80642d96611fc23d42ea98a0105b6634ee81e34721850d3ad8ae0395d`;
+  `biblio_dev_present=true`.
+
+Two real browser defects were minimally fixed and regressed: retained dirty
+popstate no longer overwrites its Back destination, and keyboard-triggered
+editor render restores dropped document-body focus without stealing a later
+deliberate target. Neither changes product semantics. The 1C pagination
+selector was scoped to Reading History to avoid the legitimate second Notes
+`Meer laden` button.
+
+Exact 200% zoom is the only remaining condition. Automated zoom shortcuts left
+headless Chromium at 1280 CSS px, DPR 1 and visual scale 1; they are not claimed
+as zoom. Authenticated 640px reflow-equivalent plus 320px acceptance is green,
+but no headed manual 200% smoke was performed. 1D.7 is ready only to complete
+that smoke and the formal exit/audit. No full WCAG claim or 1D exit is made.

@@ -132,7 +132,7 @@ test("zero and active-only Works render no history section or controls", async (
         await expect(historyRegion(page)).toHaveAttribute("aria-busy", "false");
         await expect(page.getByRole("heading", { level: 2, name: "Leesgeschiedenis" })).toHaveCount(0);
         await expect(historyEntries(page)).toHaveCount(0);
-        await expect(page.getByRole("button", { name: "Meer laden" })).toHaveCount(0);
+        await expect(historyRegion(page).getByRole("button", { name: "Meer laden" })).toHaveCount(0);
     }
 });
 
@@ -146,11 +146,11 @@ test("pagination appends one cursor page without duplicates and preserves precis
 
     await page.goto(libraryUrl(IDS.historyItem));
     await expect(historyEntries(page)).toHaveCount(10);
-    const button = page.getByRole("button", { name: "Meer laden" });
+    const button = historyRegion(page).getByRole("button", { name: "Meer laden" });
     await expect(button).toBeVisible();
     await button.click();
     await expect(historyEntries(page)).toHaveCount(13);
-    await expect(page.getByRole("button", { name: "Meer laden" })).toHaveCount(0);
+    await expect(historyRegion(page).getByRole("button", { name: "Meer laden" })).toHaveCount(0);
     await expect(page.getByRole("heading", { level: 2, name: "Leesgeschiedenis" })).toBeFocused();
     expect(historyUrls).toHaveLength(2);
     expect(new URL(historyUrls[0]).searchParams.get("cursor")).toBeNull();
@@ -223,7 +223,7 @@ test("pagination failure retains page one and retries the identical cursor once"
 
     await page.goto(libraryUrl(IDS.historyItem));
     await expect(historyEntries(page)).toHaveCount(10);
-    await page.getByRole("button", { name: "Meer laden" }).click();
+    await historyRegion(page).getByRole("button", { name: "Meer laden" }).click();
     const retry = historyRegion(page).getByRole("button", { name: "Opnieuw proberen" });
     await expect(historyEntries(page)).toHaveCount(10);
     await expect(historyRegion(page).getByText("Meer leesgeschiedenis kon niet worden geladen.")).toBeVisible();
@@ -418,7 +418,7 @@ test("live DOM remains semantic, keyboard-safe and overflow-free at all breakpoi
         await expect(historyRegion(page).getByRole("list")).toHaveCount(1);
         await expect(historyRegion(page).locator("ul > li")).toHaveCount(10);
         await expect(historyRegion(page).locator("button button, button a, a button")).toHaveCount(0);
-        const more = page.getByRole("button", { name: "Meer laden" });
+        const more = historyRegion(page).getByRole("button", { name: "Meer laden" });
         await expect(more).toHaveAttribute("type", "button");
         const target = await more.boundingBox();
         expect(target?.height ?? 0).toBeGreaterThanOrEqual(44);
