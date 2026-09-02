@@ -11,6 +11,7 @@ interface WritableNextReadingRepository
 {
     public function findForUser(UserId $userId, ?int $limit = null): NextReadingList;
     public function lockForUser(UserId $userId, DateTimeImmutable $now): NextReadingList;
+    public function discardProvisionedEmptyState(UserId $userId): void;
     public function append(
         UserId $userId,
         NextReadingEntry $entry,
@@ -26,4 +27,18 @@ interface WritableNextReadingRepository
         NextReadingListVersion $nextVersion,
         DateTimeImmutable $updatedAt
     ): void;
+    public function storeUndo(
+        UserId $userId,
+        string $tokenHash,
+        NextReadingEntry $entry,
+        ?NextReadingEntryId $previousEntryId,
+        ?NextReadingEntryId $nextEntryId,
+        DateTimeImmutable $createdAt,
+        DateTimeImmutable $expiresAt
+    ): void;
+    public function takeUndo(
+        UserId $userId,
+        string $tokenHash,
+        DateTimeImmutable $now
+    ): ?NextReadingUndoRecord;
 }

@@ -113,7 +113,12 @@ Supersedes old generic `Wishlist` terminology.
 Shared Library-owned list of books/editions the Library wants to acquire.
 
 ## Hierna lezen
-Private platform-wide manual list of Work entries and/or specific source entries.
+Private platform-wide user-owned ordered list of separate future reading
+intentions. Every entry has its own stable identity and one Work, optionally
+with a mutable preferred Library Item or ExternalLoan source. Content duplicates
+are allowed. A successful active ReadingRound start transactionally consumes at
+most one deterministic matching entry; manual removal supports short-lived
+owner-scoped Undo.
 
 Supersedes `Next to read`.
 

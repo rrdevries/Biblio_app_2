@@ -1,5 +1,12 @@
 # 15 — F2.9b Hierna lezen exit evidence
 
+> **SUPERSEDED FOR CURRENT NEXT READING CONTRACT.** Dit document blijft het
+> historische, destijds geldige exitbewijs voor de toenmalige F2.9b-scope. Het
+> oude immutable targetmodel, duplicateverbod en ontbreken van automatische
+> ReadingRound-consumptie zijn niet langer actueel. De huidige canonieke
+> waarheid en het correctiebewijs staan in
+> `docs/28-next-reading-contract-correction.md`.
+
 Date: 2026-08-23
 Baseline: `ef08f88fd835df47bf4cdf771908801d32964dc8`
 Verdict: **GO**

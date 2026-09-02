@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Biblio\Core\NextReading;
 
 use Biblio\Core\Exception\ValidationException;
+use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Identity\UserId;
+use Biblio\Core\Reading\ReadingSource;
 
 final readonly class NextReadingList
 {
@@ -19,7 +21,6 @@ final readonly class NextReadingList
         array $entries
     ) {
         $ids = [];
-        $targets = [];
         foreach ($entries as $offset => $entry) {
             if (!$entry->userId()->equals($userId)) {
                 throw new ValidationException("Next Reading Entry owner must match list owner.");
@@ -30,11 +31,7 @@ final readonly class NextReadingList
             if (isset($ids[$entry->id()->value()])) {
                 throw new ValidationException("Next Reading Entry IDs must be unique.");
             }
-            if (isset($targets[$entry->target()->uniquenessKey()])) {
-                throw new NextReadingTargetDuplicate();
-            }
             $ids[$entry->id()->value()] = true;
-            $targets[$entry->target()->uniquenessKey()] = true;
         }
         $this->entries = $entries;
     }
@@ -49,16 +46,6 @@ final readonly class NextReadingList
     /** @return list<NextReadingEntry> */
     public function entries(): array { return $this->entries; }
 
-    public function containsTarget(NextReadingTarget $target): bool
-    {
-        foreach ($this->entries as $entry) {
-            if ($entry->target()->uniquenessKey() === $target->uniquenessKey()) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     public function find(NextReadingEntryId $id): ?NextReadingEntry
     {
         foreach ($this->entries as $entry) {
@@ -71,9 +58,6 @@ final readonly class NextReadingList
 
     public function append(NextReadingEntry $entry): self
     {
-        if ($this->containsTarget($entry->target())) {
-            throw new NextReadingTargetDuplicate();
-        }
         $positioned = $entry->atPosition(new NextReadingPosition(count($this->entries) + 1));
         return new self($this->userId, $this->version->next(), [...$this->entries, $positioned]);
     }
@@ -117,6 +101,96 @@ final readonly class NextReadingList
             return $this;
         }
         return new self($this->userId, $this->version->next(), $ordered);
+    }
+
+    public function withPreferredSource(
+        NextReadingEntryId $id,
+        ?PreferredReadingSource $source
+    ): self {
+        $updated = [];
+        $found = false;
+        foreach ($this->entries as $entry) {
+            if ($entry->id()->equals($id)) {
+                $current = $entry->preferredSource();
+                if (($current === null && $source === null)
+                    || ($current !== null && $source !== null && $current->equals($source))) {
+                    return $this;
+                }
+                $updated[] = $entry->withPreferredSource($source);
+                $found = true;
+                continue;
+            }
+            $updated[] = $entry;
+        }
+        if (!$found) {
+            throw new NextReadingEntryNotAvailable();
+        }
+        return new self($this->userId, $this->version->next(), $updated);
+    }
+
+    public function matchingEntryId(
+        WorkId $workId,
+        ReadingSource $actualSource
+    ): ?NextReadingEntryId {
+        foreach ($this->entries as $entry) {
+            if ($entry->workId()->equals($workId)
+                && $entry->preferredSource()?->matchesLiveSource($actualSource) === true) {
+                return $entry->id();
+            }
+        }
+        foreach ($this->entries as $entry) {
+            if ($entry->workId()->equals($workId) && $entry->preferredSource() === null) {
+                return $entry->id();
+            }
+        }
+        return null;
+    }
+
+    public function restored(
+        NextReadingEntry $entry,
+        ?NextReadingEntryId $previous,
+        ?NextReadingEntryId $next,
+        int $originalPosition
+    ): self {
+        if (!$entry->userId()->equals($this->userId) || $this->find($entry->id()) !== null) {
+            throw new NextReadingUndoUnavailable();
+        }
+
+        $insertAt = null;
+        $previousIndex = $this->indexOf($previous);
+        $nextIndex = $this->indexOf($next);
+        if ($previous !== null && $next !== null
+            && $previousIndex !== null && $nextIndex === $previousIndex + 1) {
+            $insertAt = $nextIndex;
+        } elseif ($previous === null && $nextIndex === 0) {
+            $insertAt = 0;
+        } elseif ($next === null && $previousIndex === count($this->entries) - 1) {
+            $insertAt = count($this->entries);
+        }
+        $insertAt ??= max(0, min($originalPosition - 1, count($this->entries)));
+
+        $restored = $this->entries;
+        array_splice($restored, $insertAt, 0, [$entry]);
+        $restored = array_map(
+            static fn (NextReadingEntry $candidate, int $offset): NextReadingEntry =>
+                $candidate->atPosition(new NextReadingPosition($offset + 1)),
+            $restored,
+            array_keys($restored)
+        );
+        return new self($this->userId, $this->version->next(), $restored);
+    }
+
+    private function indexOf(?NextReadingEntryId $id): ?int
+    {
+        if ($id === null) {
+            return null;
+        }
+        foreach ($this->entries as $index => $entry) {
+            if ($entry->id()->equals($id)) {
+                return $index;
+            }
+        }
+        return null;
     }
 
     /** @param list<NextReadingEntry> $entries */

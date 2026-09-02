@@ -88,13 +88,18 @@ Acceptance:
 ## 7. Hierna lezen
 
 Acceptance:
-- Work and specific-source entries supported;
-- identical Work entry cannot duplicate;
-- identical source entry cannot duplicate;
-- Work + multiple different source entries may coexist;
-- starting reading never auto-removes;
+- every entry has stable server identity, exactly one Work and optional typed preferred source;
+- identical Work, source and complete entries may duplicate;
+- preferred Item validates view access and same Work; preferred ExternalLoan validates owner and same Work;
+- preferred source can change/clear without changing entry identity;
+- source loss preserves entry, Work, order and version and projects generically;
+- successful active ReadingRound start consumes at most one deterministic matching entry atomically;
+- explicit start-from-entry consumes exact entry ID and leaves duplicates;
+- failed start/consume rolls back Round and list; historical registration consumes nothing;
+- manual remove returns short-lived owner-scoped one-use Undo restoring the same entry snapshot;
 - source becoming unavailable never auto-removes;
-- manual order persists.
+- manual order persists with one owner list version and semantic no-op behavior;
+- Library roles do not override ownership and no mutation emits Library ActivityEvent.
 
 ## 8. Internal lending
 
@@ -732,8 +737,10 @@ The formal case-family mapping and exact gate results are recorded in
 
 ## 35. F2.9 Hierna lezen acceptance evidence
 
-The 73 numbered cases in `docs/14-f2-9a-next-reading-analysis.md` are the
-binding contract. F2.9b proves closed immutable Work/Item/ExternalLoan targets,
+Status: **historical evidence — superseded for the current contract**
+
+The 73 numbered cases in `docs/14-f2-9a-next-reading-analysis.md` were the
+binding F2.9 contract at closure time. F2.9b proved closed immutable Work/Item/ExternalLoan targets,
 server-derived ownership and Work, concrete-source snapshots, source-delete
 retention, target and position uniqueness, one owner listversion, contiguous
 append/compaction, complete reorder, semantic no-op and typed stale state.
@@ -748,6 +755,9 @@ regressions remain part of the canonical gate.
 
 The formal case-family mapping and exact gate results are recorded in
 `docs/15-f2-9b-exit-evidence.md`.
+
+The later current contract and replacement acceptance evidence are canonical
+in `docs/28-next-reading-contract-correction.md` and §53 below.
 
 ## 36. F2.10 Library Identity & Context acceptance evidence
 
@@ -854,8 +864,8 @@ Acceptance:
   tenant isolation, pagination, detail, mutation, conflicts, spoofing,
   unknown fields and error privacy;
 - unhealthy Core fails closed with 503, WordPress smoke stays available and no
-  schema 1008, Ability, Elementor, Notes, Ratings/Reviews or Next Reading route
-  is introduced;
+  that historical F2.12 slice introduced no schema 1008, Ability, Elementor,
+  Notes, Ratings/Reviews or Next Reading route;
 - the complete canonical gate stays green.
 
 No-go:
@@ -1579,3 +1589,51 @@ Complete traceability, security/privacy, concurrency, final criteria and
 non-blocking polish are recorded in
 `docs/27-elementor-vertical-slice-1d-private-notes-exit-evidence.md`. No full
 WCAG claim is added. There are no open 1D acceptance blockers.
+
+## 53. Next Reading current-contract correction evidence
+
+Status: **GO**
+
+Acceptance requires and the current Core proves:
+
+- stable server-side entry identity with mandatory Work and optional typed
+  preferred Item/ExternalLoan source;
+- unrestricted content duplicates, contiguous order, one owner list version,
+  exact-once mutation increments and semantic no-op behavior;
+- current collection-view/same-Work validation for Item preferences and strict
+  owner/same-Work validation for ExternalLoan preferences;
+- preferred-source change/clear and source loss without entry, Work, order or
+  version loss, with generic unavailable projection;
+- schema 1007→1008 maps old Work, Item and ExternalLoan targets without reset,
+  preserves entry IDs, owner, Work, positions, created-at and list version,
+  removes content uniqueness and adds match indexes, shape defenses and
+  owner-scoped hashed Undo persistence;
+- add, remove plus Undo, reorder, preference set/change/clear and automatic
+  consumption all serialize on the same owner list-state lock;
+- manual removal returns a 30-second technical-default opaque owner-scoped
+  one-time token and Undo restores the same entry snapshot using valid neighbor
+  anchors or a bounded ordinal fallback;
+- Library Item and ExternalLoan active starts share one transaction for source
+  validation, ReadingRound creation and at-most-one deterministic consumption;
+  explicit entry start consumes exact identity, matching elsewhere prefers the
+  first exact live source then the first general Work entry;
+- snapshot-only source IDs never match, failed start/required consume rolls
+  back both records, no-match is valid, historical registration consumes none
+  and automatic consumption creates no Undo;
+- owner privacy is non-enumerating for entries, preferences and Undo; Library
+  roles confer no override; no mutation or consumption emits a Library
+  ActivityEvent; public projections expose no protected foreign source IDs;
+- independent-process races cover remove/start-from-entry, reorder/external
+  start, add/start, preference/start, Undo/reorder, Undo/consumption and
+  duplicate add, plus stale manual mutation after automatic consumption;
+- unit 252/252 (963 assertions) and real-MariaDB integration 239/239 (2,458
+  assertions) pass, including schema/migration, lifecycle, privacy, rollback
+  and concurrency families.
+
+Docs 14 and 15 remain historical evidence but are explicitly superseded. The
+formal current contract, implementation mapping and gate record are in
+`docs/28-next-reading-contract-correction.md`. This correction adds no Next
+Reading REST route, C7 UI, Elementor/Crocoblock change, Home module or C7
+Playwright. C7 is not implemented and is **READY FOR BUILD SCOPE** with only
+capability-specific discovery, REST/serialization/security, UI and E2E work
+remaining; no Next Reading domain product blocker remains.

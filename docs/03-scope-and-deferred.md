@@ -73,7 +73,6 @@
 - `Wil ik lezen` broad someday marker;
 - smart Hierna-lezen availability rules;
 - automatic source preference;
-- automatic removal from Hierna lezen.
 
 ### Metadata/catalog
 - full institutional cataloguing workflow;

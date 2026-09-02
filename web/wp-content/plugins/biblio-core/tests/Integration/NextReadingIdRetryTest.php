@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Tests\Integration;
 
-use Biblio\Core\Application\NextReading\{AddWorkToNextReadingService,NextReadingMutation};
+use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
+use Biblio\Core\Application\Library\{GetAccessibleLibraryItemService,LibraryAccessService};
+use Biblio\Core\Application\NextReading\{AddNextReadingEntryService,NextReadingMutation};
+use Biblio\Core\Authorization\LibraryAuthorizationPolicy;
 use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Identity\UserId;
-use Biblio\Core\Infrastructure\Persistence\WordPress\{WpdbNextReadingRepository,WpdbTransactionManager,WpdbWorkRepository};
+use Biblio\Core\Infrastructure\Persistence\WordPress\{WpdbEditionRepository,WpdbExternalLoanRepository,WpdbItemRepository,WpdbLibraryMembershipRepository,WpdbNextReadingRepository,WpdbTransactionManager,WpdbWorkRepository};
 use Biblio\Core\Infrastructure\WordPress\SystemNextReadingClock;
-use Biblio\Core\NextReading\{NextReadingEntryId,NextReadingEntryIdCollisionExhausted,NextReadingEntryIdGenerator,NextReadingTargetDuplicate};
+use Biblio\Core\NextReading\{NextReadingEntryId,NextReadingEntryIdCollisionExhausted,NextReadingEntryIdGenerator};
 use Biblio\Core\Tests\Support\ControllableAuthenticatedUser;
 
 final class RepeatingNextReadingIdGenerator implements NextReadingEntryIdGenerator
@@ -36,9 +39,22 @@ final class NextReadingIdRetryTest extends PersistenceIntegrationTestCase
         $actor = new ControllableAuthenticatedUser(new UserId("retry-user"));
         $repository = new WpdbNextReadingRepository($this->database, $this->tableNames);
         $ids = new RepeatingNextReadingIdGenerator();
-        $service = new AddWorkToNextReadingService(
+        $service = new AddNextReadingEntryService(
             $actor,
             new WpdbWorkRepository($this->database, $this->tableNames),
+            new GetAccessibleLibraryItemService(
+                $actor,
+                new WpdbItemRepository($this->database, $this->tableNames),
+                new LibraryAccessService(
+                    new WpdbLibraryMembershipRepository($this->database, $this->tableNames),
+                    new LibraryAuthorizationPolicy()
+                )
+            ),
+            new WpdbEditionRepository($this->database, $this->tableNames),
+            new GetOwnedExternalLoanService(
+                $actor,
+                new WpdbExternalLoanRepository($this->database, $this->tableNames)
+            ),
             new NextReadingMutation(
                 $repository,
                 $ids,
@@ -56,13 +72,6 @@ final class NextReadingIdRetryTest extends PersistenceIntegrationTestCase
             self::fail("Four colliding server IDs did not exhaust retry.");
         } catch (NextReadingEntryIdCollisionExhausted) {
             self::assertSame(5, $ids->calls());
-        }
-
-        try {
-            $service->add(new WorkId("retry-work-1"));
-            self::fail("Duplicate target was accepted.");
-        } catch (NextReadingTargetDuplicate) {
-            self::assertSame(5, $ids->calls(), "Target duplicate must not consume an ID retry.");
         }
 
         $stored = $repository->findForUser(new UserId("retry-user"));

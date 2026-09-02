@@ -18,6 +18,16 @@ metadata availability and server-derived presentation capabilities. Original
 open-work statements about A2 below are superseded by this update. F2.12 (A3)
 is the sole remaining pre-Elementor gate slice.
 
+Next Reading contract-correction update (2026-09-02): the historical F2.9
+targetmodel is superseded by `docs/28-next-reading-contract-correction.md`.
+Schema 1008 now proves stable entry identity, unrestricted duplicates, mutable
+preferred source, server-side Undo and transactionally coupled ReadingRound
+match/consume. C7 itself remains unimplemented. Its domain boundary has no
+remaining product blocker and is **READY FOR BUILD SCOPE**; capability-specific
+Work/source discovery, REST/serialization/security tests and UI/E2E remain.
+Original schema-1006 and F2.9 statements below are retained as historical
+baseline unless this update or doc 28 explicitly replaces them.
+
 ## 1. Baseline
 
 ### Repository
@@ -173,10 +183,12 @@ zo'n route worden vastgelegd.
 
 ### Hierna lezen
 
-Bewezen zijn Work-/Item-/ExternalLoan-add, remove, complete reorder, full-list-
-readmodel, first-three Home-projectie, snapshots, ownerprivacy, listversion en
-concurrency. Dit is het meest UI-vormige bestaande readmodel, maar Work/source-
-discovery en transport ontbreken.
+Bewezen zijn generic Work-entry-add met optionele Item/ExternalLoan-voorkeur,
+onbeperkte duplicates, preference set/change/clear, remove plus server-side
+Undo, complete reorder, safe full-list/Home-projectie, ownerprivacy,
+listversion, source-loss, transactionele ReadingRound-consumptie en concurrency.
+Dit is een complete Core-domainboundary. Work/source-discovery, transport en UI
+ontbreken nog.
 
 ### ActivityEvent
 
@@ -202,7 +214,7 @@ auditfunctie.
 | Metadata-taxonomieën | Lokale Boeksoort/Genre/Onderwerp-writes bestaan. | UI-readlijsten en overige Edition/Item-metadata, mappings, Locations en Conditions. |
 | Ratings/Reviews public read | Query bestaat. | Bevestigde audiencegrens, collection-view authorization, HTTP DTO/cursors en contracttests. |
 | Private Notes read | Complete Core-reads bestaan. | Adapter, serializer en Work-detailcompositie. |
-| Hierna lezen | Complete Core-list/mutations bestaan. | Adapter en veilige Work/source-pickerquery; eventuele grote-lijstprofiling. |
+| Hierna lezen | Gecorrigeerde Core-list/mutations/Undo/consumption bestaan. | Adapter en veilige Work/source-pickerquery; eventuele grote-lijstprofiling. |
 | ReadingRounds | Lifecycle is compleet. | Current/history/Work-detail UI-projecties en bronkeuzedata. |
 | Leesvoorraad | Geen projectie. | Afleiding over direct Items, InternalLoans, ExternalLoans en active rounds. |
 | ActivityEvent | Alleen append. | Owner/Manager-scoped reader, paging en eventserialization. |
@@ -219,7 +231,7 @@ auditfunctie.
 | REST/Abilities/adapters | Geen Biblio-transportadapter. | Routes, auth/nonce, validation, serialization, error mapping en registration lifecycle. |
 | UI-facing read models | Alleen enkele private/projectionservices. | Library/capability/catalog/current-reading/composite DTOs. |
 | UI-facing mutation contracts | F2.6–F2.9 grotendeels benoemd; andere domeinen ontbreken. | Transportcommands; catalog/lending/item/membership lifecycle waar nog niet in Core aanwezig. |
-| Migration/health/integrity | Sterk t/m 1006. | Alleen gerichte nieuwe migrations per nieuw domein en operationele healthpresentatie. |
+| Migration/health/integrity | Sterk t/m 1008; 1008 corrigeert Next Reading zonder reset en voegt Undo-opslag toe. | Alleen gerichte nieuwe migrations per nieuw domein en operationele healthpresentatie. |
 | Security/privacy | Core-servicegrenzen sterk. | Transportauth, CSRF, routepermission, input/output allowlists en non-enumerating HTTP mapping. |
 | Performancekritische queries | Note-paging en gerichte sourcequeries bestaan. | Bounded Library overview/search, join-/sortindexbewijs, audit/timeline/home-querybudget. |
 | Acceptance coverage | Core en MariaDB sterk. | Adapter/API securitytests en eerste UI-E2E-pad; geen Playwrightsetup aanwezig. |
@@ -261,7 +273,7 @@ de praktijk alsnog A betekenen.
 | C4 | InternalLoan | Groot en risicovol, maar de eerste slice beperkt zich tot Owner/Directe toegang. Een typed source-DTO houdt latere source-uitbreiding achter Core. |
 | C5 | ExternalLoan lifecycle | Bestaande read/startfundering blijft bruikbaar; create/return UI is geen voorwaarde voor Item-start. |
 | C6 | Private Notes adapter/scherm | Core CRUD/read/render is compleet; kan na de gedeelde adapterbasis als dunne uitbreiding volgen. |
-| C7 | Hierna-lezen adapter/scherm | Core list/mutations/Home-readmodel is compleet; alleen discovery/transport/UI resteert. |
+| C7 | Hierna-lezen adapter/scherm | **READY FOR BUILD SCOPE**: gecorrigeerde Core list/mutations/Undo/consumption/readmodel zijn compleet; alleen discovery/transport/UI en capability-E2E resteren. |
 | C8 | ActivityEvent read / Library audit | Append-only waarheid bestaat; audit is niet nodig om de eerste private reading action uit te voeren. |
 | C9 | Timeline | Afgeleid en persoonlijk; blokkeert geen bronmutatie of authorization. |
 | C10 | Statistieken | Afgeleid van brondata; geen tweede schrijfwaarheid nodig. |
@@ -350,7 +362,7 @@ applicationlaag bestaan.
 | Private Notes | Single en drie gepagineerde owner-lijsten plus safe renderer bestaan. | Kleine C6-adapter nodig, geen nieuw domeinmodel. |
 | Ratings/Reviews private | Own detail/Work/Round/My/average bestaan. | Adapter en betere paging nodig bij het scherm. |
 | Ratings/Reviews public | Minimal public DTO en aggregate bestaan. | B7 authorization-/audiencewrapper vóór exposen. |
-| Hierna lezen | Full list en Home first-three DTO bestaan inclusief status. | Kleine C7-adapter; Work/source discovery is apart nodig. |
+| Hierna lezen | Safe full list en Home first-three DTO bestaan inclusief preferred-source state; Core mutation/Undo/start-consumption is compleet. | C7-adapter/serializers plus Work/source discovery zijn apart nodig. |
 | Classificatie options | Repositories lezen losse IDs maar bieden geen UI-lijsten. | Nieuwe B4 optionsprojecties. |
 | ActivityEvent | Alleen appender. | Nieuwe C8 reader/projectie/paging/authorization. |
 | Timeline/stats/year/goals/actions | Ontbreken. | Nieuwe C-projecties of domaincapability zoals in §5. |
@@ -373,7 +385,7 @@ die dat scherm nodig heeft, inclusief server-berekende capabilities.
 | Note create/update/context/delete | Ja. | Ja. | C6 route/serializer/editorintegration. |
 | Rating/Review create/update/context/delete | Ja. | Ja. | Routes/paging; geen direct repositorygebruik. |
 | Publish/move/withdraw/moderate/restore | Ja. | Pas na B7. | Audience/read-auth en adaptercontract. |
-| Hierna lezen add/remove/reorder | Ja. | Ja. | C7 routes en pickerquery. |
+| Hierna lezen add/remove/Undo/reorder/preference/start-from-entry | Ja. | Ja. | C7 routes, allowlisted serializers/error mapping, pickerquery en E2E. |
 | Classificatieterm/context mutations | Ja. | Pas na B4. | Options/readmodel en formuliercontract. |
 | ExternalLoan create/return | Nee. | Nee. | C5. |
 | InternalLoan create/return/settle | Nee. | Nee. | C4. |
@@ -389,9 +401,10 @@ transactionele semantiek, versioning en veilige foutmapping samen bewezen zijn.
 
 ### Wat 1006 al stabiel afschermt
 
-Schema 1006 is gezond en stabiel voor de geïmplementeerde Library/
+Schema 1008 is gezond en stabiel voor de geïmplementeerde Library/
 membershipbasis, minimal catalog, classificatie, ActivityEvent-writes,
-ReadingRounds, Private Notes, Ratings/Reviews/Publications en Hierna lezen.
+ReadingRounds, Private Notes, Ratings/Reviews/Publications en het gecorrigeerde
+Hierna-lezen-contract inclusief Undo.
 De application boundary voorkomt dat UI aan tabelnamen of joins hoeft te
 koppelen.
 

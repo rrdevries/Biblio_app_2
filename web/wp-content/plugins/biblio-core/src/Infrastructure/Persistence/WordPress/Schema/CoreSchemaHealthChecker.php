@@ -37,6 +37,7 @@ final readonly class CoreSchemaHealthChecker
             1005 => $this->inspectTables($this->tableNames->schema1005(), true, 1005),
             1006 => $this->inspectTables($this->tableNames->schema1006(), true, 1006),
             1007 => $this->inspectTables($this->tableNames->schema1006(), true, 1007),
+            1008 => $this->inspectTables($this->tableNames->schema1008(), true, 1008),
             default => throw new CoreSchemaMigrationException(
                 "No explicit Biblio Core schema-health contract exists for "
                 . "schema version {$expectedVersion}."
@@ -131,7 +132,7 @@ final readonly class CoreSchemaHealthChecker
             && $this->tableExists($this->tableNames->nextReadingEntries())
             && $this->nextReadingDataColumnsExist()) {
             $this->inspectNextReadingData($issues);
-            $this->inspectNextReadingTriggers($issues);
+            $this->inspectNextReadingTriggers($issues, $schemaVersion);
         }
 
         if ($schemaVersion >= 1007 && $this->tableExists($this->tableNames->libraries())) {
@@ -383,12 +384,29 @@ final readonly class CoreSchemaHealthChecker
     }
 
     /** @param list<string> $issues */
-    private function inspectNextReadingTriggers(array &$issues): void
+    private function inspectNextReadingTriggers(array &$issues, int $schemaVersion): void
     {
-        foreach ([
+        $triggers = [
             $this->tableNames->nextReadingInsertTrigger() => "INSERT",
             $this->tableNames->nextReadingUpdateTrigger() => "UPDATE",
-        ] as $trigger => $event) {
+        ];
+        if ($schemaVersion >= 1008) {
+            $triggers += [
+                $this->tableNames->nextReadingUndoInsertTrigger() => "INSERT",
+                $this->tableNames->nextReadingUndoUpdateTrigger() => "UPDATE",
+            ];
+        }
+        foreach ($triggers as $trigger => $event) {
+            $undoTrigger = in_array($trigger, [
+                $this->tableNames->nextReadingUndoInsertTrigger(),
+                $this->tableNames->nextReadingUndoUpdateTrigger(),
+            ], true);
+            $expectedTable = $undoTrigger
+                ? $this->tableNames->nextReadingUndo()
+                : $this->tableNames->nextReadingEntries();
+            $expectedMessage = $schemaVersion >= 1008
+                ? "Invalid Next Reading preferred source shape"
+                : "Invalid Next Reading live source shape";
             $row = $this->database->get_row($this->database->prepare(
                 "SELECT EVENT_MANIPULATION AS event_name,ACTION_TIMING AS timing,EVENT_OBJECT_TABLE AS table_name,ACTION_STATEMENT AS statement "
                 . "FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA=%s AND TRIGGER_NAME=%s",
@@ -400,8 +418,8 @@ final readonly class CoreSchemaHealthChecker
                 continue;
             }
             if ($row["event_name"] !== $event || $row["timing"] !== "BEFORE"
-                || $row["table_name"] !== $this->tableNames->nextReadingEntries()
-                || !str_contains((string) $row["statement"], "Invalid Next Reading live source shape")) {
+                || $row["table_name"] !== $expectedTable
+                || !str_contains((string) $row["statement"], $expectedMessage)) {
                 $issues[] = "Trigger {$trigger} has an unexpected definition";
             }
         }
@@ -597,7 +615,7 @@ final readonly class CoreSchemaHealthChecker
                 "created_at" => ["type" => "datetime(6)", "nullable" => "NO"],
                 "updated_at" => ["type" => "datetime(6)", "nullable" => "NO"],
             ],
-            $this->tableNames->nextReadingEntries() => [
+            $this->tableNames->nextReadingEntries() => $schemaVersion < 1008 ? [
                 "entry_id" => $id,
                 "user_id" => $id,
                 "work_id" => $id,
@@ -617,6 +635,34 @@ final readonly class CoreSchemaHealthChecker
                 "external_target_id" => $generatedId + [
                     "expression" => "CASE WHEN target_type = 'external_loan' THEN source_id_snapshot ELSE NULL END",
                 ],
+            ] : [
+                "entry_id" => $id,
+                "user_id" => $id,
+                "work_id" => $id,
+                "preferred_source_type" => ["type" => "varchar(32)", "nullable" => "YES"],
+                "preferred_source_id_snapshot" => $nullableId,
+                "preferred_source_library_id_snapshot" => $nullableId,
+                "item_id" => $nullableId,
+                "external_loan_id" => $nullableId,
+                "position" => ["type" => "bigint(20) unsigned", "nullable" => "NO"],
+                "created_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+            ],
+            $this->tableNames->nextReadingUndo() => [
+                "undo_token_hash" => ["type" => "char(64)", "nullable" => "NO", "collation" => "ascii_bin"],
+                "user_id" => $id,
+                "entry_id" => $id,
+                "work_id" => $id,
+                "preferred_source_type" => ["type" => "varchar(32)", "nullable" => "YES"],
+                "preferred_source_id_snapshot" => $nullableId,
+                "preferred_source_library_id_snapshot" => $nullableId,
+                "item_id" => $nullableId,
+                "external_loan_id" => $nullableId,
+                "original_position" => ["type" => "bigint(20) unsigned", "nullable" => "NO"],
+                "previous_entry_id" => $nullableId,
+                "next_entry_id" => $nullableId,
+                "entry_created_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "created_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "expires_at" => ["type" => "datetime(6)", "nullable" => "NO"],
             ],
             $this->tableNames->libraryBookTypes() => [
                 "library_id" => $id,
@@ -814,13 +860,24 @@ final readonly class CoreSchemaHealthChecker
             $this->tableNames->nextReadingLists() => [
                 "PRIMARY" => ["unique" => true, "columns" => ["user_id"]],
             ],
-            $this->tableNames->nextReadingEntries() => [
+            $this->tableNames->nextReadingEntries() => $schemaVersion < 1008 ? [
                 "PRIMARY" => ["unique" => true, "columns" => ["entry_id"]],
                 "next_reading_user_position" => ["unique" => true, "columns" => ["user_id", "position"]],
                 "one_next_reading_work_target" => ["unique" => true, "columns" => ["user_id", "work_target_id"]],
                 "one_next_reading_item_target" => ["unique" => true, "columns" => ["user_id", "item_target_id"]],
                 "one_next_reading_external_target" => ["unique" => true, "columns" => ["user_id", "external_target_id"]],
                 "next_reading_by_user_order" => ["unique" => false, "columns" => ["user_id", "position", "entry_id"]],
+            ] : [
+                "PRIMARY" => ["unique" => true, "columns" => ["entry_id"]],
+                "next_reading_user_position" => ["unique" => true, "columns" => ["user_id", "position"]],
+                "next_reading_by_user_order" => ["unique" => false, "columns" => ["user_id", "position", "entry_id"]],
+                "next_reading_by_user_work_order" => ["unique" => false, "columns" => ["user_id", "work_id", "position", "entry_id"]],
+                "next_reading_by_user_work_item" => ["unique" => false, "columns" => ["user_id", "work_id", "item_id", "position", "entry_id"]],
+                "next_reading_by_user_work_external" => ["unique" => false, "columns" => ["user_id", "work_id", "external_loan_id", "position", "entry_id"]],
+            ],
+            $this->tableNames->nextReadingUndo() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["undo_token_hash"]],
+                "next_reading_undo_by_user_expiry" => ["unique" => false, "columns" => ["user_id", "expires_at"]],
             ],
             $this->tableNames->libraryBookTypes() => [
                 "PRIMARY" => [
@@ -1003,6 +1060,12 @@ final readonly class CoreSchemaHealthChecker
                 $setNull(["item_id"], $this->tableNames->items(), ["item_id"]),
                 $setNull(["external_loan_id"], $this->tableNames->externalLoans(), ["external_loan_id"]),
             ],
+            $this->tableNames->nextReadingUndo() => [
+                $cascade(["user_id"], $this->tableNames->nextReadingLists(), ["user_id"]),
+                $restrict(["work_id"], $this->tableNames->works(), ["work_id"]),
+                $setNull(["item_id"], $this->tableNames->items(), ["item_id"]),
+                $setNull(["external_loan_id"], $this->tableNames->externalLoans(), ["external_loan_id"]),
+            ],
             $this->tableNames->libraryBookTypes() => [
                 $restrict(
                     ["library_id"],
@@ -1137,10 +1200,21 @@ final readonly class CoreSchemaHealthChecker
                 "list_version >= 1",
                 "updated_at >= created_at",
             ],
-            $this->tableNames->nextReadingEntries() => [
+            $this->tableNames->nextReadingEntries() => $schemaVersion < 1008 ? [
                 "target_type IN ('work', 'library_item', 'external_loan')",
                 "target_type = 'work' AND source_id_snapshot IS NULL AND source_library_id_snapshot IS NULL OR target_type = 'library_item' AND source_id_snapshot IS NOT NULL AND source_library_id_snapshot IS NOT NULL OR target_type = 'external_loan' AND source_id_snapshot IS NOT NULL AND source_library_id_snapshot IS NULL",
                 "position >= 1",
+            ] : [
+                "preferred_source_type IS NULL OR preferred_source_type IN ('library_item', 'external_loan')",
+                "preferred_source_type IS NULL AND preferred_source_id_snapshot IS NULL AND preferred_source_library_id_snapshot IS NULL OR preferred_source_type = 'library_item' AND preferred_source_id_snapshot IS NOT NULL AND preferred_source_library_id_snapshot IS NOT NULL OR preferred_source_type = 'external_loan' AND preferred_source_id_snapshot IS NOT NULL AND preferred_source_library_id_snapshot IS NULL",
+                "position >= 1",
+            ],
+            $this->tableNames->nextReadingUndo() => [
+                "CHAR_LENGTH(undo_token_hash) = 64",
+                "preferred_source_type IS NULL OR preferred_source_type IN ('library_item', 'external_loan')",
+                "preferred_source_type IS NULL AND preferred_source_id_snapshot IS NULL AND preferred_source_library_id_snapshot IS NULL OR preferred_source_type = 'library_item' AND preferred_source_id_snapshot IS NOT NULL AND preferred_source_library_id_snapshot IS NOT NULL OR preferred_source_type = 'external_loan' AND preferred_source_id_snapshot IS NOT NULL AND preferred_source_library_id_snapshot IS NULL",
+                "original_position >= 1",
+                "expires_at > created_at",
             ],
             $this->tableNames->libraryBookTypes() => [
                 "CHAR_LENGTH(TRIM(display_name)) > 0",

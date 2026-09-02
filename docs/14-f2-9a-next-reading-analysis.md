@@ -1,5 +1,11 @@
 # 14 — F2.9a analyse: Hierna lezen
 
+> **SUPERSEDED FOR CURRENT NEXT READING CONTRACT.** Dit document blijft het
+> historische, destijds geldige analyse- en beslisbewijs voor F2.9. Het daarin
+> beschreven targetmodel, de inhoudelijke uniqueness en het volledig handmatige
+> niet-consumerende gedrag zijn later bewust vervangen. De actuele canonieke
+> waarheid staat in `docs/28-next-reading-contract-correction.md`.
+
 Status: **GO voor F2.9b**
 
 Scope: Biblio V2 v2.001, repository- en bronnenanalyse zonder productiecode,

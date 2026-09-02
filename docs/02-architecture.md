@@ -175,6 +175,36 @@ InternalLoan is not implemented yet. Its addition requires a renewed choice betw
 
 Historical closed rounds may retain an unknown source.
 
+## 6A. Next Reading planning and ReadingRound consumption
+
+`NextReadingList` is one private user-owned collection aggregate with one
+owner-state lock and optimistic list version. Each `NextReadingEntry` has a
+server-issued identity, mandatory Work, position, creation time and optional
+closed preferred-source value (`library_item` or `external_loan`). Work/source
+content is deliberately non-unique. Preferred source carries minimal immutable
+snapshot context plus a nullable live FK and can be changed or cleared.
+
+Add, manual remove plus Undo, reorder, preference mutation and automatic
+consumption serialize through the same owner list-state lock. Manual remove
+atomically persists a hash of an opaque short-lived owner-scoped one-time Undo
+token and a complete restoration snapshot. The 30-second TTL is a central
+technical default, not a product setting. Automatic consumption creates no
+Undo record.
+
+Active ReadingRound creation is the transaction owner for optional Next
+Reading consumption. Both Library Item and ExternalLoan start paths validate
+their concrete source, create the round and consume at most one current match
+inside one database transaction. Explicit start-from-entry validates owner and
+Work and consumes that ID. Other starts match the lowest-position exact live
+source, then the lowest-position general Work entry. Snapshots never count as
+live matches. A failed creation or required consume rolls back the complete
+operation; no match is a valid no-op. Historical registration stays outside
+this orchestration.
+
+This private planning domain emits no Library `ActivityEvent`. Library roles
+never override entry, preference or Undo ownership, and public read projections
+do not expose protected foreign source IDs.
+
 ## 7. Authorization
 
 Rules:

@@ -20,6 +20,7 @@ final class CoreTableNamesTest extends TestCase
         self::assertCount(16, $tableNames->schema1004());
         self::assertCount(19, $tableNames->schema1005());
         self::assertCount(21, $tableNames->schema1006());
+        self::assertCount(22, $tableNames->schema1008());
         self::assertSame("wp_biblio_libraries", $tableNames->libraries());
         self::assertSame(
             "wp_biblio_reading_rounds",
@@ -31,6 +32,10 @@ final class CoreTableNamesTest extends TestCase
         self::assertSame(
             "wp_biblio_contribution_publications",
             $tableNames->contributionPublications()
+        );
+        self::assertSame(
+            "wp_biblio_next_reading_undo",
+            $tableNames->nextReadingUndo()
         );
         self::assertSame(
             "wp_biblio_library_catalog_contexts",

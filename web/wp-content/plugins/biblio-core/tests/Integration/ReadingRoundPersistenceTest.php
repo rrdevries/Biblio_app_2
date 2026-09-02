@@ -8,6 +8,7 @@ use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
 use Biblio\Core\Application\Library\CreateLibraryService;
 use Biblio\Core\Application\Library\GetAccessibleLibraryItemService;
 use Biblio\Core\Application\Library\LibraryAccessService;
+use Biblio\Core\Application\NextReading\ConsumeNextReadingAfterStartService;
 use Biblio\Core\Application\Reading\CreateActiveReadingRoundService;
 use Biblio\Core\Application\Reading\CorrectEndedReadingRoundService;
 use Biblio\Core\Application\Reading\CorrectReadingRoundSourceService;
@@ -42,8 +43,10 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbExternalLoanWriter;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbItemRepository;
 use Biblio\Core\Infrastructure\WordPress\OpaqueReadingRoundIdGenerator;
 use Biblio\Core\Infrastructure\WordPress\SystemReadingRoundClock;
+use Biblio\Core\Infrastructure\WordPress\SystemNextReadingClock;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMembershipRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbNextReadingRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbReadingRoundRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionManager;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbWorkRepository;
@@ -136,12 +139,7 @@ final class ReadingRoundPersistenceTest extends PersistenceIntegrationTestCase
         ]);
         $clock = new IntegrationFixedReadingRoundClock();
         $repository = $this->roundRepository();
-        $creator = new CreateActiveReadingRoundService(
-            $actor,
-            $repository,
-            $ids,
-            $clock
-        );
+        $creator = $this->activeCreator($actor, $repository, $ids, $clock);
         $itemStart = new StartReadingFromLibraryItemService(
             new GetAccessibleLibraryItemService(
                 $actor,
@@ -373,12 +371,7 @@ final class ReadingRoundPersistenceTest extends PersistenceIntegrationTestCase
             "round-correction",
             "round-historical-delete",
         ]);
-        $creator = new CreateActiveReadingRoundService(
-            $actor,
-            $repository,
-            $ids,
-            $clock
-        );
+        $creator = $this->activeCreator($actor, $repository, $ids, $clock);
         $round = (new StartReadingFromLibraryItemService(
             $accessible,
             new WpdbEditionRepository($this->database, $this->tableNames),
@@ -530,7 +523,7 @@ final class ReadingRoundPersistenceTest extends PersistenceIntegrationTestCase
                 )
             ),
             new WpdbEditionRepository($this->database, $this->tableNames),
-            new CreateActiveReadingRoundService($actor, $repository, $ids, $clock)
+            $this->activeCreator($actor, $repository, $ids, $clock)
         ))->start($library, $item->id(), ReadingDate::exact(2026, 3, 1));
         $finish = new FinishReadingRoundService(new ReadingRoundEnd(
             $actor,
@@ -1051,7 +1044,7 @@ final class ReadingRoundPersistenceTest extends PersistenceIntegrationTestCase
                 )
             ),
             new WpdbEditionRepository($this->database, $this->tableNames),
-            new CreateActiveReadingRoundService(
+            $this->activeCreator(
                 $authenticatedUser,
                 $this->roundRepository(),
                 new OpaqueReadingRoundIdGenerator(),
@@ -1070,11 +1063,30 @@ final class ReadingRoundPersistenceTest extends PersistenceIntegrationTestCase
 
         return new StartReadingFromExternalLoanService(
             new GetOwnedExternalLoanService($authenticatedUser, $loans),
-            new CreateActiveReadingRoundService(
+            $this->activeCreator(
                 $authenticatedUser,
                 $this->roundRepository(),
                 new OpaqueReadingRoundIdGenerator(),
                 new SystemReadingRoundClock()
+            )
+        );
+    }
+
+    private function activeCreator(
+        ControllableAuthenticatedUser $actor,
+        WpdbReadingRoundRepository $rounds,
+        ReadingRoundIdGenerator $ids,
+        ReadingRoundClock $clock
+    ): CreateActiveReadingRoundService {
+        return new CreateActiveReadingRoundService(
+            $actor,
+            $rounds,
+            $ids,
+            $clock,
+            new WpdbTransactionManager($this->database),
+            new ConsumeNextReadingAfterStartService(
+                new WpdbNextReadingRepository($this->database, $this->tableNames),
+                new SystemNextReadingClock()
             )
         );
     }

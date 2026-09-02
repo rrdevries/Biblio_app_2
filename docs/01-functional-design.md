@@ -756,34 +756,33 @@ A matching Item added to the same Library may prompt fulfilment. Execution misma
 
 ## Hierna lezen
 
-Private, platform-wide, completely manual in v2.001.
+Private, platform-wide and user-owned in v2.001. It is one manually ordered
+list of separate planned future reading moments.
 
-Entry types:
-- Work entry;
-- specific concrete Item/source entry.
+Every entry has a stable server-side entry ID, owner, exactly one Work,
+position, created-at and optionally one preferred reading source. Entry ID is
+the only planning identity. Same-Work, different-preference and completely
+identical entries are all allowed.
 
-Duplicate rules:
-- max one identical Work entry per Work;
-- max one entry for the same concrete source;
-- Work entry and multiple different source entries of the same Work may coexist.
+Preferred source is either `library_item` or `external_loan`. It is optional,
+mutable and removable, and is never a reservation, claim, authorization proof
+or historical provenance. Item preference requires current collection-view
+access and same-Work resolution; direct-use access is rechecked only when
+reading starts. ExternalLoan preference requires actor ownership and same Work.
+Loss or inaccessibility of the source never removes, retargets or reorders the
+entry and does not by itself change list version.
 
-User manually manages:
-- add;
-- remove;
-- order.
+User manually manages add, remove, Undo, preferred-source change/clear and full
+order. New entries append. Real mutations increment the owner list version
+exactly once; semantic no-ops do not.
 
-No automatic:
-- availability filtering;
-- use-access filtering;
-- loan-state mutation;
-- removal when reading starts;
-- reordering.
-
-Current source state may be displayed as information only.
-
-`Lezen starten` from a Work entry still requires selecting a valid source at action time.
-
-From a specific-source entry, use that source if valid; otherwise user may choose another valid source. The list entry itself remains unchanged.
+After successful active ReadingRound start Core consumes at most one entry in
+the same transaction. Start from a specific entry consumes that entry ID.
+Other starts choose the first exact live-source match in saved order, otherwise
+the first entry for the Work without preference; no match is a successful
+no-op. Failed starts consume nothing. Historical/source-free registration never
+consumes. Manual remove offers a short-lived, one-use, owner-scoped Undo of the
+same entry identity and snapshot; automatic consumption offers no Undo.
 
 # 8. Borrowed and lent
 
@@ -1279,7 +1278,8 @@ No personal setting for this threshold.
 
 Shows first max three manual entries in saved order.
 
-No automatic availability filter/removal/reordering.
+No availability filter or automatic reorder. Successful active ReadingRound
+start may already have transactionally consumed at most one matching entry.
 
 ## Leesdoelen
 

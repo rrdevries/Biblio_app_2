@@ -32,7 +32,7 @@ final readonly class CoreSchema1007Migration implements CoreSchemaMigration
     {
         $base = $this->healthChecker->inspectForVersion(1006);
 
-        if (!$base->isHealthy()) {
+        if (!$base->isHealthy() && !$this->onlyCurrentNextReadingDiffers($base)) {
             throw new CoreSchemaHealthException($base);
         }
 
@@ -124,6 +124,9 @@ final readonly class CoreSchema1007Migration implements CoreSchemaMigration
 
     public function assertPostcondition(): void
     {
+        if ($this->healthChecker->inspectForVersion(1008)->isHealthy()) {
+            return;
+        }
         $health = $this->healthChecker->inspectForVersion(1007);
 
         if (!$health->isHealthy()) {
@@ -176,6 +179,41 @@ final readonly class CoreSchema1007Migration implements CoreSchemaMigration
                 self::ACTOR_INDEX
             ))
         );
+    }
+
+    private function onlyCurrentNextReadingDiffers(CoreSchemaHealth $base): bool
+    {
+        if (!$this->tableExists($this->tableNames->nextReadingUndo())) {
+            return false;
+        }
+        foreach ($base->errors() as $error) {
+            if (!$this->isNextReadingError($error)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private function isNextReadingError(string $error): bool
+    {
+        return str_contains($error, $this->tableNames->nextReadingLists())
+            || str_contains($error, $this->tableNames->nextReadingEntries())
+            || str_contains($error, $this->tableNames->nextReadingUndo())
+            || str_contains($error, $this->tableNames->nextReadingInsertTrigger())
+            || str_contains($error, $this->tableNames->nextReadingUpdateTrigger())
+            || str_contains($error, $this->tableNames->nextReadingUndoInsertTrigger())
+            || str_contains($error, $this->tableNames->nextReadingUndoUpdateTrigger())
+            || str_contains($error, "Next Reading");
+    }
+
+    private function tableExists(string $table): bool
+    {
+        return (int) $this->database->get_var($this->database->prepare(
+            "SELECT COUNT(*) FROM information_schema.TABLES "
+                . "WHERE TABLE_SCHEMA=%s AND TABLE_NAME=%s",
+            DB_NAME,
+            $table
+        )) === 1;
     }
 
     private function execute(string $sql, string $operation): void

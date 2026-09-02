@@ -8,6 +8,7 @@ use Biblio\Core\Application\Library\GetAccessibleLibraryItemService;
 use Biblio\Core\Catalog\EditionRepository;
 use Biblio\Core\Catalog\ItemId;
 use Biblio\Core\Library\LibraryId;
+use Biblio\Core\NextReading\NextReadingEntryId;
 use Biblio\Core\Reading\ReadingRound;
 use Biblio\Core\Reading\ReadingDate;
 use Biblio\Core\Reading\ReadingSourceUnavailable;
@@ -23,6 +24,24 @@ final readonly class StartReadingFromLibraryItemService
     }
 
     public function start(
+        LibraryId $libraryId,
+        ItemId $itemId,
+        ReadingDate|DateTimeImmutable $startedOn
+    ): ReadingRound {
+        return $this->startWithEntry(null, $libraryId, $itemId, $startedOn);
+    }
+
+    public function startForNextReadingEntry(
+        NextReadingEntryId $entryId,
+        LibraryId $libraryId,
+        ItemId $itemId,
+        ReadingDate|DateTimeImmutable $startedOn
+    ): ReadingRound {
+        return $this->startWithEntry($entryId, $libraryId, $itemId, $startedOn);
+    }
+
+    private function startWithEntry(
+        ?NextReadingEntryId $entryId,
         LibraryId $libraryId,
         ItemId $itemId,
         ReadingDate|DateTimeImmutable $startedOn
@@ -49,7 +68,8 @@ final readonly class StartReadingFromLibraryItemService
         return $this->createReadingRound->createFromLibraryItem(
             $item,
             $edition,
-            $startedOn
+            $startedOn,
+            $entryId
         );
     }
 }

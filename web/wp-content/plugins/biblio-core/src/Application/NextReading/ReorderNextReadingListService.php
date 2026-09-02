@@ -24,8 +24,7 @@ final readonly class ReorderNextReadingListService
     {
         $actorId = $this->authenticatedUser->requireUserId();
         return $this->transactions->run(function () use ($actorId, $expected, $orderedEntryIds): NextReadingList {
-            $now = $this->clock->now();
-            $current = $this->repository->lockForUser($actorId, $now);
+            $current = $this->repository->lockForUser($actorId, $this->clock->now());
             try {
                 $next = $current->reordered($orderedEntryIds);
             } catch (ValidationException $exception) {
@@ -35,11 +34,13 @@ final readonly class ReorderNextReadingListService
                 throw $exception;
             }
             if ($next === $current) {
+                $this->repository->discardProvisionedEmptyState($actorId);
                 return $current;
             }
             if (!$current->version()->equals($expected)) {
                 throw new NextReadingListStale($current);
             }
+            $now = $this->clock->now();
             $this->repository->replaceEntries(
                 $actorId,
                 $next->entries(),

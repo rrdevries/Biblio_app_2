@@ -7,7 +7,9 @@ namespace Biblio\Core\Tests\Unit\Application;
 use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
 use Biblio\Core\Application\Library\GetAccessibleLibraryItemService;
 use Biblio\Core\Application\Library\LibraryAccessService;
+use Biblio\Core\Application\NextReading\ConsumeNextReadingAfterStartService;
 use Biblio\Core\Application\Reading\CreateActiveReadingRoundService;
+use Biblio\Core\Application\TransactionManager;
 use Biblio\Core\Application\Reading\GetOwnedReadingRoundService;
 use Biblio\Core\Application\Reading\StartReadingFromExternalLoanService;
 use Biblio\Core\Application\Reading\StartReadingFromLibraryItemService;
@@ -31,6 +33,7 @@ use Biblio\Core\Library\LibraryMembershipRepository;
 use Biblio\Core\Library\ManagementRole;
 use Biblio\Core\Library\MembershipStatus;
 use Biblio\Core\Library\UseAccess;
+use Biblio\Core\NextReading\{NextReadingList,WritableNextReadingRepository};
 use Biblio\Core\Reading\ReadingRound;
 use Biblio\Core\Reading\ReadingDate;
 use Biblio\Core\Reading\ReadingRoundId;
@@ -44,6 +47,7 @@ use Biblio\Core\Tests\Support\ControllableAuthenticatedUser;
 use DateTimeImmutable;
 use Biblio\Core\Infrastructure\WordPress\OpaqueReadingRoundIdGenerator;
 use Biblio\Core\Infrastructure\WordPress\SystemReadingRoundClock;
+use Biblio\Core\Infrastructure\WordPress\SystemNextReadingClock;
 use PHPUnit\Framework\TestCase;
 
 final class ReadingInMemoryItemRepository implements ItemRepository
@@ -307,11 +311,9 @@ final class StartReadingServicesTest extends TestCase
     {
         $user = new UserId("user-x");
         $rounds = new ReadingInMemoryRoundRepository();
-        $service = new CreateActiveReadingRoundService(
+        $service = $this->creator(
             new ControllableAuthenticatedUser($user),
-            $rounds,
-            new OpaqueReadingRoundIdGenerator(),
-            new SystemReadingRoundClock()
+            $rounds
         );
         $item = Item::active(
             new ItemId("item-a"),
@@ -393,11 +395,9 @@ final class StartReadingServicesTest extends TestCase
     {
         $owner = new UserId("user-x");
         $rounds = new ReadingInMemoryRoundRepository();
-        $service = new CreateActiveReadingRoundService(
+        $service = $this->creator(
             new ControllableAuthenticatedUser(new UserId("user-y")),
-            $rounds,
-            new OpaqueReadingRoundIdGenerator(),
-            new SystemReadingRoundClock()
+            $rounds
         );
 
         try {
@@ -481,12 +481,7 @@ final class StartReadingServicesTest extends TestCase
             new StartReadingFromLibraryItemService(
                 $access,
                 $editions,
-                new CreateActiveReadingRoundService(
-                    $actor,
-                    $rounds,
-                    new OpaqueReadingRoundIdGenerator(),
-                    new SystemReadingRoundClock()
-                )
+                $this->creator($actor, $rounds)
             ),
             $rounds,
             $items,
@@ -504,12 +499,7 @@ final class StartReadingServicesTest extends TestCase
         return [
             new StartReadingFromExternalLoanService(
                 new GetOwnedExternalLoanService($actor, $loans),
-                new CreateActiveReadingRoundService(
-                    $actor,
-                    $rounds,
-                    new OpaqueReadingRoundIdGenerator(),
-                    new SystemReadingRoundClock()
-                )
+                $this->creator($actor, $rounds)
             ),
             $rounds,
             $loans,
@@ -529,6 +519,32 @@ final class StartReadingServicesTest extends TestCase
                 ManagementRole::Member,
                 $useAccess,
                 MembershipStatus::Active
+            )
+        );
+    }
+
+    private function creator(
+        ControllableAuthenticatedUser $actor,
+        ReadingInMemoryRoundRepository $rounds
+    ): CreateActiveReadingRoundService {
+        $nextReading = $this->createStub(WritableNextReadingRepository::class);
+        $nextReading->method("lockForUser")->willReturnCallback(
+            static fn (UserId $userId): NextReadingList => NextReadingList::empty($userId)
+        );
+        $transactions = new class implements TransactionManager {
+            public function run(callable $operation): mixed { return $operation(); }
+        };
+        $clock = new SystemReadingRoundClock();
+
+        return new CreateActiveReadingRoundService(
+            $actor,
+            $rounds,
+            new OpaqueReadingRoundIdGenerator(),
+            $clock,
+            $transactions,
+            new ConsumeNextReadingAfterStartService(
+                $nextReading,
+                new SystemNextReadingClock()
             )
         );
     }

@@ -8,7 +8,7 @@ use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
 use Biblio\Core\Application\Library\GetAccessibleLibraryItemService;
 use Biblio\Core\Catalog\WorkRepository;
 use Biblio\Core\Infrastructure\Persistence\PersistenceException;
-use Biblio\Core\NextReading\{NextReadingEntry,NextReadingList,NextReadingTargetType};
+use Biblio\Core\NextReading\{NextReadingEntry,NextReadingList,PreferredReadingSourceType};
 
 final readonly class NextReadingProjector
 {
@@ -29,55 +29,68 @@ final readonly class NextReadingProjector
 
     private function entry(NextReadingEntry $entry): NextReadingEntryView
     {
-        $target = $entry->target();
-        $work = $this->works->find($target->workId());
+        $work = $this->works->find($entry->workId());
         if ($work === null) {
             throw new PersistenceException("Stored Next Reading Work is unavailable.");
         }
-        $sourceId = $target->itemIdSnapshot()?->value()
-            ?? $target->externalLoanIdSnapshot()?->value();
-
         return new NextReadingEntryView(
             $entry->id(),
             $work->id()->value(),
             $work->title(),
-            $target->type(),
-            $sourceId,
-            $target->libraryIdSnapshot()?->value(),
-            $this->status($entry),
+            $this->preferredSource($entry),
             $entry->position()->value(),
             $entry->createdAt()
         );
     }
 
-    private function status(NextReadingEntry $entry): NextReadingSourceStatus
+    private function preferredSource(NextReadingEntry $entry): PreferredReadingSourceView
     {
-        $target = $entry->target();
-        if ($target->type() === NextReadingTargetType::Work) {
-            return NextReadingSourceStatus::Live;
+        $source = $entry->preferredSource();
+        if ($source === null) {
+            return new PreferredReadingSourceView(
+                null,
+                PreferredReadingSourceState::None,
+                "Geen voorkeursbron"
+            );
         }
-        if ($target->type() === NextReadingTargetType::LibraryItem) {
-            if ($target->liveItemId() === null) {
-                return NextReadingSourceStatus::Missing;
+        if ($source->type() === PreferredReadingSourceType::LibraryItem) {
+            if ($source->liveItemId() === null) {
+                return $this->unavailable($source->type());
             }
             $accessible = $this->items->get(
-                $target->libraryIdSnapshot(),
-                $target->liveItemId()
+                $source->libraryIdSnapshot(),
+                $source->liveItemId()
             );
-            if ($accessible === null) {
-                return NextReadingSourceStatus::Inaccessible;
+            if ($accessible === null || !$accessible->canUseAsDirectSource()) {
+                return $this->unavailable($source->type());
             }
-            return $accessible->canUseAsDirectSource()
-                ? NextReadingSourceStatus::Live
-                : NextReadingSourceStatus::Unavailable;
+            return new PreferredReadingSourceView(
+                $source->type(),
+                PreferredReadingSourceState::Available,
+                "Bibliotheekexemplaar"
+            );
         }
-        if ($target->liveExternalLoanId() === null) {
-            return NextReadingSourceStatus::Missing;
+        if ($source->liveExternalLoanId() === null) {
+            return $this->unavailable($source->type());
         }
-        $loan = $this->loans->get($target->liveExternalLoanId());
+        $loan = $this->loans->get($source->liveExternalLoanId());
         if ($loan === null) {
-            return NextReadingSourceStatus::Missing;
+            return $this->unavailable($source->type());
         }
-        return NextReadingSourceStatus::Live;
+        return new PreferredReadingSourceView(
+            $source->type(),
+            PreferredReadingSourceState::Available,
+            "Externe lening"
+        );
+    }
+
+    private function unavailable(
+        PreferredReadingSourceType $type
+    ): PreferredReadingSourceView {
+        return new PreferredReadingSourceView(
+            $type,
+            PreferredReadingSourceState::Unavailable,
+            "Voorkeursbron niet beschikbaar"
+        );
     }
 }

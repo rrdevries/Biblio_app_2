@@ -159,13 +159,23 @@ An administratively available Item may simultaneously appear in multiple direct-
 
 ## Hierna lezen
 
-A fully manual private list in v2.001.
+One private, platform-wide, user-owned and manually ordered list of future
+reading intentions. Every entry has its own stable planning identity, exactly
+one Work and optionally one preferred source (`library_item` or
+`external_loan`). The same Work and even the same complete preference may occur
+multiple times; there is no content uniqueness.
 
-Entries can be:
-- a Work;
-- a specific concrete Item/source.
+Preferred source is mutable context, not authorization, reservation or
+ReadingRound provenance. Source loss preserves entry, Work, position and list
+version and is projected generically when protected live context is no longer
+available.
 
-No automatic removal, availability rule, lending rule or ReadingRound rule modifies the list.
+After a successful active ReadingRound start, Core transactionally consumes at
+most one matching entry: the explicit entry when starting from an entry,
+otherwise the first exact live-source match in current order, then the first
+general Work entry. Historical/source-free registration consumes nothing.
+Manual remove creates one short-lived owner-scoped one-time Undo token; automatic
+consumption does not. The technical default Undo TTL is 30 seconds.
 
 ## Lending
 
@@ -801,33 +811,24 @@ The complete implementation and verification record is maintained in
 
 ### F2.9 — Hierna lezen / Next Reading
 
-Status: **Implemented — GO**
+Status: **historical implementation superseded; current contract correction — GO**
 
-Hierna lezen is one private, platform-wide, user-owned manual ordered list per
-authenticated User. Entries target exactly a Work, visible Library Item or
-owned ExternalLoan. Core derives concrete-source Work server-side; availability
-and direct-use access are not add eligibility and never automatically filter,
-remove or reorder an entry.
+The former F2.9 targetmodel and exit remain historical evidence in docs 14–15
+but are explicitly superseded. Current Core models stable entry identity,
+mandatory Work, optional typed mutable preferred source and unrestricted
+duplicates. Schema 1008 migrates every old Work/Item/ExternalLoan target
+without resetting data and adds server-side owner-scoped Undo storage.
 
-Targets are immutable. Concrete entries retain minimal Work/source/Library
-snapshot context while nullable live source FKs use `ON DELETE SET NULL`.
-Legitimate Item or ExternalLoan deletion therefore preserves entry, snapshot,
-position and list version without Work conversion or relinking.
+All list mutations use the same owner-state lock. Active Library Item and
+ExternalLoan ReadingRound creation and match/consume share one transaction;
+failed creation or required consume rolls back both. Automatic consumption
+removes at most one deterministic match and creates no Undo or ActivityEvent.
+Read projection exposes safe human context or a generic unavailable state, not
+protected foreign source IDs.
 
-Schema 1006 adds `wp_biblio_next_reading_lists` and
-`wp_biblio_next_reading_entries`. One owner listversion, a persistent empty-list
-mutex, contiguous positions, full reorder and transactional compaction prevent
-lost collection updates. Independent-process races cover add/add, duplicate
-add, add/reorder, delete/reorder, divergent/equal reorder and source-delete
-interleavings.
-
-Named owner-scoped services expose three add commands, hard remove, full
-reorder, the complete own list and Home's exact first three. Home has no status
-filter. No Library ActivityEvent, Timeline, UI, global/Library query, count
-limit or retarget service was added.
-
-The complete implementation and 73-case verification record is maintained in
-`docs/15-f2-9b-exit-evidence.md`.
+The current contract and verification record are maintained in
+`docs/28-next-reading-contract-correction.md`. C7 REST, discovery and UI are not
+implemented.
 
 ### F2.10 — Library Identity & Context Readiness
 
