@@ -4,7 +4,8 @@
 > historische, destijds geldige analyse- en beslisbewijs voor F2.9. Het daarin
 > beschreven targetmodel, de inhoudelijke uniqueness en het volledig handmatige
 > niet-consumerende gedrag zijn later bewust vervangen. De actuele canonieke
-> waarheid staat in `docs/28-next-reading-contract-correction.md`.
+> waarheid staat in `docs/28-next-reading-contract-correction.md` en
+> `docs/decisions/ADR-008-next-reading-intent-model-and-transactional-consumption.md`.
 
 Status: **GO voor F2.9b**
 

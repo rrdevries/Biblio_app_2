@@ -826,9 +826,10 @@ removes at most one deterministic match and creates no Undo or ActivityEvent.
 Read projection exposes safe human context or a generic unavailable state, not
 protected foreign source IDs.
 
-The current contract and verification record are maintained in
-`docs/28-next-reading-contract-correction.md`. C7 REST, discovery and UI are not
-implemented.
+The current normative architecture and verification record are maintained in
+`docs/decisions/ADR-008-next-reading-intent-model-and-transactional-consumption.md`
+and `docs/28-next-reading-contract-correction.md`. C7 REST, discovery and UI are
+not implemented.
 
 ### F2.10 — Library Identity & Context Readiness
 

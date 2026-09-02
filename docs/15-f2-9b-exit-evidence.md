@@ -5,7 +5,8 @@
 > oude immutable targetmodel, duplicateverbod en ontbreken van automatische
 > ReadingRound-consumptie zijn niet langer actueel. De huidige canonieke
 > waarheid en het correctiebewijs staan in
-> `docs/28-next-reading-contract-correction.md`.
+> `docs/28-next-reading-contract-correction.md` en
+> `docs/decisions/ADR-008-next-reading-intent-model-and-transactional-consumption.md`.
 
 Date: 2026-08-23
 Baseline: `ef08f88fd835df47bf4cdf771908801d32964dc8`

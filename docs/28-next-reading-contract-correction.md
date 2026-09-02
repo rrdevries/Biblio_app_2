@@ -6,6 +6,10 @@ Scope: formal pre-C7 Core/domain correction; no C7 REST or UI
 
 Status: **GO**
 
+Normative architecture decision:
+[`ADR-008 — Next Reading intent model and transactional consumption`](decisions/ADR-008-next-reading-intent-model-and-transactional-consumption.md).
+This document and ADR-008 together form the current contract basis.
+
 ## 1. Why this correction exists
 
 F2.9a/F2.9b correctly recorded and proved the product contract accepted on
