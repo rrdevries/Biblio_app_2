@@ -7,6 +7,7 @@ namespace Biblio\Core\Infrastructure\WordPress\Rest;
 use Biblio\Core\Application\CoreApplication;
 use Biblio\Core\Application\Notes\Read\PrivateNoteView;
 use Biblio\Core\Reading\ReadingRoundOutcome;
+use Biblio\Core\NextReading\PreferredReadingSourceType;
 use Closure;
 use Throwable;
 use WP_Error;
@@ -120,6 +121,67 @@ final class RestController
                     "callback" => [$this, "deletePrivateNote"],
                     "permission_callback" => [$this, "authenticated"],
                 ],
+            ]
+        );
+        register_rest_route(self::NAMESPACE, "/me/next-reading", [
+            [
+                "methods" => WP_REST_Server::READABLE,
+                "callback" => [$this, "nextReadingList"],
+                "permission_callback" => [$this, "authenticated"],
+            ],
+            [
+                "methods" => WP_REST_Server::CREATABLE,
+                "callback" => [$this, "addNextReading"],
+                "permission_callback" => [$this, "authenticated"],
+            ],
+        ]);
+        register_rest_route(
+            self::NAMESPACE,
+            "/me/next-reading/(?P<entry_id>[^/]+)",
+            [
+                "methods" => WP_REST_Server::DELETABLE,
+                "callback" => [$this, "removeNextReading"],
+                "permission_callback" => [$this, "authenticated"],
+            ]
+        );
+        register_rest_route(self::NAMESPACE, "/me/next-reading/undo", [
+            "methods" => WP_REST_Server::CREATABLE,
+            "callback" => [$this, "undoNextReading"],
+            "permission_callback" => [$this, "authenticated"],
+        ]);
+        register_rest_route(self::NAMESPACE, "/me/next-reading/reorder", [
+            "methods" => WP_REST_Server::CREATABLE,
+            "callback" => [$this, "reorderNextReading"],
+            "permission_callback" => [$this, "authenticated"],
+        ]);
+        register_rest_route(
+            self::NAMESPACE,
+            "/me/next-reading/(?P<entry_id>[^/]+)/preferred-source",
+            [
+                [
+                    "methods" => "PATCH",
+                    "callback" => [$this, "setNextReadingPreferredSource"],
+                    "permission_callback" => [$this, "authenticated"],
+                ],
+                [
+                    "methods" => WP_REST_Server::DELETABLE,
+                    "callback" => [$this, "clearNextReadingPreferredSource"],
+                    "permission_callback" => [$this, "authenticated"],
+                ],
+            ]
+        );
+        register_rest_route(self::NAMESPACE, "/me/works", [
+            "methods" => WP_REST_Server::READABLE,
+            "callback" => [$this, "discoverWorks"],
+            "permission_callback" => [$this, "authenticated"],
+        ]);
+        register_rest_route(
+            self::NAMESPACE,
+            "/me/works/(?P<work_id>[^/]+)/preferred-source-options",
+            [
+                "methods" => WP_REST_Server::READABLE,
+                "callback" => [$this, "preferredSourceOptions"],
+                "permission_callback" => [$this, "authenticated"],
             ]
         );
 
@@ -304,6 +366,208 @@ final class RestController
             );
 
             return new WP_REST_Response(null, 204);
+        });
+    }
+
+    public function nextReadingList(
+        WP_REST_Request $request
+    ): WP_REST_Response|WP_Error {
+        return $this->execute(function (
+            CoreApplication $application
+        ): WP_REST_Response {
+            return $this->success($this->responses->nextReadingList(
+                $application->myNextReadingList()->get()
+            ));
+        });
+    }
+
+    public function addNextReading(
+        WP_REST_Request $request
+    ): WP_REST_Response|WP_Error {
+        return $this->execute(function (
+            CoreApplication $application
+        ) use ($request): WP_REST_Response {
+            $input = $this->requests->nextReadingAdd($request);
+            $source = $input["preferred_source"];
+
+            if ($source === null) {
+                $application->nextReadingAdd()->add($input["work_id"]);
+            } elseif ($source->type() === PreferredReadingSourceType::LibraryItem) {
+                $libraryId = $source->libraryId();
+                $itemId = $source->itemId();
+
+                if ($libraryId === null || $itemId === null) {
+                    throw RestRequestException::invalid("preferred_source");
+                }
+
+                $application->nextReadingAdd()->addWithLibraryItem(
+                    $input["work_id"],
+                    $libraryId,
+                    $itemId
+                );
+            } else {
+                $externalLoanId = $source->externalLoanId();
+
+                if ($externalLoanId === null) {
+                    throw RestRequestException::invalid("preferred_source");
+                }
+
+                $application->nextReadingAdd()->addWithExternalLoan(
+                    $input["work_id"],
+                    $externalLoanId
+                );
+            }
+
+            return $this->success($this->responses->nextReadingList(
+                $application->myNextReadingList()->get()
+            ), 201);
+        });
+    }
+
+    public function removeNextReading(
+        WP_REST_Request $request
+    ): WP_REST_Response|WP_Error {
+        return $this->execute(function (
+            CoreApplication $application
+        ) use ($request): WP_REST_Response {
+            $input = $this->requests->nextReadingRemove($request);
+            $removal = $application->nextReadingRemove()->remove(
+                $input["entry_id"],
+                $input["expected_version"]
+            );
+
+            return $this->success($this->responses->nextReadingRemoval(
+                $application->myNextReadingList()->get(),
+                $removal
+            ));
+        });
+    }
+
+    public function undoNextReading(
+        WP_REST_Request $request
+    ): WP_REST_Response|WP_Error {
+        return $this->execute(function (
+            CoreApplication $application
+        ) use ($request): WP_REST_Response {
+            $application->nextReadingUndo()->undo(
+                $this->requests->nextReadingUndoToken($request)
+            );
+
+            return $this->success($this->responses->nextReadingList(
+                $application->myNextReadingList()->get()
+            ));
+        });
+    }
+
+    public function reorderNextReading(
+        WP_REST_Request $request
+    ): WP_REST_Response|WP_Error {
+        return $this->execute(function (
+            CoreApplication $application
+        ) use ($request): WP_REST_Response {
+            $input = $this->requests->nextReadingReorder($request);
+            $application->nextReadingReorder()->reorder(
+                $input["expected_version"],
+                $input["ordered_entry_ids"]
+            );
+
+            return $this->success($this->responses->nextReadingList(
+                $application->myNextReadingList()->get()
+            ));
+        });
+    }
+
+    public function setNextReadingPreferredSource(
+        WP_REST_Request $request
+    ): WP_REST_Response|WP_Error {
+        return $this->execute(function (
+            CoreApplication $application
+        ) use ($request): WP_REST_Response {
+            $input = $this->requests->nextReadingPreferredSourceMutation($request);
+            $source = $input["preferred_source"];
+
+            if ($source->type() === PreferredReadingSourceType::LibraryItem) {
+                $libraryId = $source->libraryId();
+                $itemId = $source->itemId();
+
+                if ($libraryId === null || $itemId === null) {
+                    throw RestRequestException::invalid("preferred_source");
+                }
+
+                $application->nextReadingPreferredSource()->setLibraryItem(
+                    $input["entry_id"],
+                    $input["expected_version"],
+                    $libraryId,
+                    $itemId
+                );
+            } else {
+                $externalLoanId = $source->externalLoanId();
+
+                if ($externalLoanId === null) {
+                    throw RestRequestException::invalid("preferred_source");
+                }
+
+                $application->nextReadingPreferredSource()->setExternalLoan(
+                    $input["entry_id"],
+                    $input["expected_version"],
+                    $externalLoanId
+                );
+            }
+
+            return $this->success($this->responses->nextReadingList(
+                $application->myNextReadingList()->get()
+            ));
+        });
+    }
+
+    public function clearNextReadingPreferredSource(
+        WP_REST_Request $request
+    ): WP_REST_Response|WP_Error {
+        return $this->execute(function (
+            CoreApplication $application
+        ) use ($request): WP_REST_Response {
+            $input = $this->requests->nextReadingPreferredSourceClear($request);
+            $application->nextReadingPreferredSource()->clear(
+                $input["entry_id"],
+                $input["expected_version"]
+            );
+
+            return $this->success($this->responses->nextReadingList(
+                $application->myNextReadingList()->get()
+            ));
+        });
+    }
+
+    public function discoverWorks(
+        WP_REST_Request $request
+    ): WP_REST_Response|WP_Error {
+        return $this->execute(function (
+            CoreApplication $application
+        ) use ($request): WP_REST_Response {
+            $input = $this->requests->nextReadingWorkSearch($request);
+            $page = $application->nextReadingDiscovery()->searchWorks(
+                $input["search"],
+                $input["limit"],
+                $input["cursor"]
+            );
+
+            return $this->success($this->responses->nextReadingWorks($page));
+        });
+    }
+
+    public function preferredSourceOptions(
+        WP_REST_Request $request
+    ): WP_REST_Response|WP_Error {
+        return $this->execute(function (
+            CoreApplication $application
+        ) use ($request): WP_REST_Response {
+            $options = $application->nextReadingDiscovery()->sourceOptions(
+                $this->requests->workId($request)
+            );
+
+            return $this->success(
+                $this->responses->nextReadingSourceOptions($options)
+            );
         });
     }
 

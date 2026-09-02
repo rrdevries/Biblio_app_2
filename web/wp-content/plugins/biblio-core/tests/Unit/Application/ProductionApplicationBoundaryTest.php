@@ -24,6 +24,7 @@ use Biblio\Core\Application\Notes\ListPrivateNotesForReadingRoundService;
 use Biblio\Core\Application\Notes\ListPrivateNotesForWorkService;
 use Biblio\Core\Application\Notes\Read\GetMyPrivateNotesForWorkService;
 use Biblio\Core\Application\Notes\UpdatePrivateNoteContentService;
+use Biblio\Core\Application\NextReading\Read\NextReadingDiscoveryService;
 use Biblio\Core\Application\Reading\GetOwnedReadingRoundService;
 use Biblio\Core\Application\Reading\CreateActiveReadingRoundService;
 use Biblio\Core\Application\Reading\StartReadingFromExternalLoanService;
@@ -68,6 +69,8 @@ final class ProductionApplicationBoundaryTest extends TestCase
             [GetMyPrivateNotesForWorkService::class, "forWork"],
             [ListPrivateNotesForReadingRoundService::class, "list"],
             [ListMyPrivateNotesService::class, "list"],
+            [NextReadingDiscoveryService::class, "searchWorks"],
+            [NextReadingDiscoveryService::class, "sourceOptions"],
             [
                 CreateLibraryCatalogContextService::class,
                 "createForRepresentedWork",
@@ -132,6 +135,7 @@ final class ProductionApplicationBoundaryTest extends TestCase
             "myNextReadingList",
             "myPrivateNotes",
             "nextReadingAdd",
+            "nextReadingDiscovery",
             "nextReadingEntryReading",
             "nextReadingHome",
             "nextReadingPreferredSource",

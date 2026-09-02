@@ -65,6 +65,10 @@ const BIBLIO_E2E_NOTE_UNAVAILABLE = "e2e-private-note-unavailable";
 const BIBLIO_E2E_NOTE_REFRESH = "e2e-private-note-refresh";
 const BIBLIO_E2E_NOTE_REFLOW = "e2e-private-note-reflow";
 const BIBLIO_E2E_NOTE_FOREIGN = "e2e-private-note-foreign";
+const BIBLIO_E2E_C7_PAGE_SLUG = "hierna-lezen";
+const BIBLIO_E2E_C7_UNAVAILABLE_ITEM = "e2e-item-c7-unavailable";
+const BIBLIO_E2E_C7_LOAN = "e2e-external-loan-c7";
+const BIBLIO_E2E_C7_FOREIGN_LOAN = "e2e-external-loan-c7-foreign";
 
 /** @return never */
 function biblioE2eFail(string $message): void
@@ -163,6 +167,15 @@ function biblioE2eIds(): array
         "history_refresh_item" => BIBLIO_E2E_HISTORY_REFRESH_ITEM,
         "history_rapid_item" => BIBLIO_E2E_HISTORY_RAPID_ITEM,
         "history_external_loan" => BIBLIO_E2E_HISTORY_EXTERNAL_LOAN,
+        "c7_alpha_work" => "e2e-work-primary",
+        "c7_unavailable_work" => "e2e-work-c7-unavailable",
+        "c7_alpha_edition" => "e2e-edition-primary",
+        "c7_unavailable_edition" => "e2e-edition-c7-unavailable",
+        "c7_alpha_item" => BIBLIO_E2E_PRIMARY_ITEM,
+        "c7_unavailable_item" => BIBLIO_E2E_C7_UNAVAILABLE_ITEM,
+        "c7_loan" => BIBLIO_E2E_C7_LOAN,
+        "c7_foreign_loan" => BIBLIO_E2E_C7_FOREIGN_LOAN,
+        "c7_page_slug" => BIBLIO_E2E_C7_PAGE_SLUG,
     ];
 }
 
@@ -262,12 +275,24 @@ function biblioE2eCleanupCore(wpdb $database): void
     $works = biblioE2eWorks();
     $editions = biblioE2eEditions();
     $items = biblioE2eItems();
+    $userIds = [];
+    foreach (biblioE2eUsernames() as $username) {
+        $user = get_user_by("login", $username);
+        if ($user instanceof WP_User) {
+            $userIds[] = (string) $user->ID;
+        }
+    }
 
     if ($database->query("START TRANSACTION") === false) {
         throw new RuntimeException("Could not start exact fixture cleanup.");
     }
 
     try {
+        if ($userIds !== []) {
+            biblioE2eDeleteIn($database, $tables->nextReadingUndo(), "user_id", $userIds);
+            biblioE2eDeleteIn($database, $tables->nextReadingEntries(), "user_id", $userIds);
+            biblioE2eDeleteIn($database, $tables->nextReadingLists(), "user_id", $userIds);
+        }
         biblioE2eDeleteIn($database, $tables->contributionPublications(), "library_id", $libraries);
         biblioE2eDeleteIn($database, $tables->libraryActivityEvents(), "library_id", $libraries);
         biblioE2eDeleteIn($database, $tables->nextReadingEntries(), "item_id", $items);
@@ -276,7 +301,11 @@ function biblioE2eCleanupCore(wpdb $database): void
             $database,
             $tables->externalLoans(),
             "external_loan_id",
-            [BIBLIO_E2E_HISTORY_EXTERNAL_LOAN]
+            [
+                BIBLIO_E2E_HISTORY_EXTERNAL_LOAN,
+                BIBLIO_E2E_C7_LOAN,
+                BIBLIO_E2E_C7_FOREIGN_LOAN,
+            ]
         );
         biblioE2eDeleteIn($database, $tables->privateNotes(), "work_id", $works);
         biblioE2eDeleteIn($database, $tables->ratings(), "work_id", $works);
@@ -300,6 +329,24 @@ function biblioE2eCleanupCore(wpdb $database): void
     } catch (Throwable $exception) {
         $database->query("ROLLBACK");
         throw $exception;
+    }
+}
+
+function biblioE2eCleanupPages(): void
+{
+    $pages = get_posts([
+        "post_type" => "page",
+        "post_status" => "any",
+        "meta_key" => BIBLIO_E2E_MARKER_KEY,
+        "meta_value" => BIBLIO_E2E_MARKER_VALUE,
+        "posts_per_page" => -1,
+        "fields" => "ids",
+    ]);
+
+    foreach ($pages as $pageId) {
+        if (!wp_delete_post((int) $pageId, true)) {
+            throw new RuntimeException("Could not delete exact fixture Page.");
+        }
     }
 }
 
@@ -343,6 +390,7 @@ function biblioE2eCleanup(): void
     global $wpdb;
     biblioE2eValidateCleanupUsers();
     biblioE2eCleanupCore($wpdb);
+    biblioE2eCleanupPages();
     biblioE2eCleanupUsers();
     wp_set_current_user(0);
 }
@@ -466,9 +514,23 @@ function biblioE2eSeedExternalLoan(
     string $userId,
     string $workId
 ): void {
+    biblioE2eInsertExternalLoan(
+        $database,
+        BIBLIO_E2E_HISTORY_EXTERNAL_LOAN,
+        $userId,
+        $workId
+    );
+}
+
+function biblioE2eInsertExternalLoan(
+    wpdb $database,
+    string $externalLoanId,
+    string $userId,
+    string $workId
+): void {
     $tables = new CoreTableNames($database->prefix);
     $inserted = $database->insert($tables->externalLoans(), [
-        "external_loan_id" => BIBLIO_E2E_HISTORY_EXTERNAL_LOAN,
+        "external_loan_id" => $externalLoanId,
         "user_id" => $userId,
         "work_id" => $workId,
         "loan_status" => "active",
@@ -481,6 +543,87 @@ function biblioE2eSeedExternalLoan(
             "Could not create exact history ExternalLoan fixture."
         );
     }
+}
+
+function biblioE2eCreateNextReadingPage(): void
+{
+    if (get_page_by_path(BIBLIO_E2E_C7_PAGE_SLUG, OBJECT, "page") !== null) {
+        biblioE2eFail("the isolated C7 Page slug is already occupied.");
+    }
+    $result = wp_insert_post([
+        "post_title" => "E2E Hierna lezen",
+        "post_name" => BIBLIO_E2E_C7_PAGE_SLUG,
+        "post_type" => "page",
+        "post_status" => "publish",
+        "post_content" => "[biblio_next_reading_app]",
+        "meta_input" => [
+            BIBLIO_E2E_MARKER_KEY => BIBLIO_E2E_MARKER_VALUE,
+        ],
+    ], true);
+
+    if (is_wp_error($result)) {
+        throw new RuntimeException("Could not create exact C7 fixture Page.");
+    }
+}
+
+function biblioE2eSeedNextReading(
+    wpdb $database,
+    string $actorId,
+    string $otherId
+): void {
+    biblioE2eInsertExternalLoan(
+        $database,
+        BIBLIO_E2E_C7_LOAN,
+        $actorId,
+        "e2e-work-primary"
+    );
+    biblioE2eInsertExternalLoan(
+        $database,
+        BIBLIO_E2E_C7_FOREIGN_LOAN,
+        $otherId,
+        "e2e-work-primary"
+    );
+
+    $application = biblioE2eActorApplication($database);
+    $application->nextReadingAdd()->add(new WorkId("e2e-work-primary"));
+    $application->nextReadingAdd()->add(new WorkId("e2e-work-primary"));
+    $application->nextReadingAdd()->addWithLibraryItem(
+        new WorkId("e2e-work-primary"),
+        new LibraryId(BIBLIO_E2E_ACTOR_LIBRARY),
+        new ItemId(BIBLIO_E2E_PRIMARY_ITEM)
+    );
+    $application->nextReadingAdd()->addWithExternalLoan(
+        new WorkId("e2e-work-primary"),
+        new \Biblio\Core\Borrowing\ExternalLoanId(BIBLIO_E2E_C7_LOAN)
+    );
+    $application->nextReadingAdd()->addWithLibraryItem(
+        new WorkId("e2e-work-c7-unavailable"),
+        new LibraryId(BIBLIO_E2E_ACTOR_LIBRARY),
+        new ItemId(BIBLIO_E2E_C7_UNAVAILABLE_ITEM)
+    );
+
+    $deleted = $database->delete(
+        (new CoreTableNames($database->prefix))->items(),
+        ["item_id" => BIBLIO_E2E_C7_UNAVAILABLE_ITEM],
+        ["%s"]
+    );
+    if ($deleted !== 1) {
+        throw new RuntimeException("Could not make exact C7 source unavailable.");
+    }
+}
+
+function biblioE2eResetNextReading(wpdb $database): void
+{
+    [$actorName] = biblioE2eUsernames();
+    $actor = get_user_by("login", $actorName);
+    if (!$actor instanceof WP_User) {
+        biblioE2eFail("actor fixture user does not exist.");
+    }
+    $tables = new CoreTableNames($database->prefix);
+    $actorId = [(string) $actor->ID];
+    biblioE2eDeleteIn($database, $tables->nextReadingUndo(), "user_id", $actorId);
+    biblioE2eDeleteIn($database, $tables->nextReadingEntries(), "user_id", $actorId);
+    biblioE2eDeleteIn($database, $tables->nextReadingLists(), "user_id", $actorId);
 }
 
 function biblioE2eSeedRound(
@@ -689,6 +832,26 @@ function biblioE2eCounts(wpdb $database): array
     $editionValues = biblioE2eEditions();
     $workSql = implode(",", array_fill(0, count($workValues), "%s"));
     $editionSql = implode(",", array_fill(0, count($editionValues), "%s"));
+    $fixtureUserIds = [];
+    foreach (biblioE2eUsernames() as $username) {
+        $user = get_user_by("login", $username);
+        if ($user instanceof WP_User) {
+            $fixtureUserIds[] = (string) $user->ID;
+        }
+    }
+    $countForUsers = static function (string $table) use (
+        $database,
+        $fixtureUserIds
+    ): int {
+        if ($fixtureUserIds === []) {
+            return 0;
+        }
+        $sql = implode(",", array_fill(0, count($fixtureUserIds), "%s"));
+        return (int) $database->get_var($database->prepare(
+            "SELECT COUNT(*) FROM `{$table}` WHERE user_id IN ({$sql})",
+            ...$fixtureUserIds
+        ));
+    };
 
     return [
         "libraries" => (int) $database->get_var($database->prepare(
@@ -708,9 +871,15 @@ function biblioE2eCounts(wpdb $database): array
             ...$editionValues
         )),
         "external_loans" => (int) $database->get_var($database->prepare(
-            "SELECT COUNT(*) FROM `{$tables->externalLoans()}` WHERE external_loan_id = %s",
-            BIBLIO_E2E_HISTORY_EXTERNAL_LOAN
+            "SELECT COUNT(*) FROM `{$tables->externalLoans()}` "
+                . "WHERE external_loan_id IN (%s, %s, %s)",
+            BIBLIO_E2E_HISTORY_EXTERNAL_LOAN,
+            BIBLIO_E2E_C7_LOAN,
+            BIBLIO_E2E_C7_FOREIGN_LOAN
         )),
+        "next_reading_lists" => $countForUsers($tables->nextReadingLists()),
+        "next_reading_entries" => $countForUsers($tables->nextReadingEntries()),
+        "next_reading_undo" => $countForUsers($tables->nextReadingUndo()),
         "rounds" => (int) $database->get_var($database->prepare(
             "SELECT COUNT(*) FROM `{$tables->readingRounds()}` WHERE work_id IN ({$workSql})",
             ...$workValues
@@ -753,6 +922,14 @@ function biblioE2eCounts(wpdb $database): array
             static fn (string $username): bool =>
                 get_user_by("login", $username) instanceof WP_User
         )),
+        "pages" => count(get_posts([
+            "post_type" => "page",
+            "post_status" => "any",
+            "meta_key" => BIBLIO_E2E_MARKER_KEY,
+            "meta_value" => BIBLIO_E2E_MARKER_VALUE,
+            "posts_per_page" => -1,
+            "fields" => "ids",
+        ])),
     ];
 }
 
@@ -1008,7 +1185,7 @@ function biblioE2eFingerprint(wpdb $database): array
     $payload = [];
     $rowCount = 0;
 
-    foreach ((new CoreTableNames($database->prefix))->schema1006() as $table) {
+    foreach ((new CoreTableNames($database->prefix))->schema1008() as $table) {
         $rows = $database->get_results("SELECT * FROM `{$table}`", ARRAY_A);
         $serialized = [];
 
@@ -1138,6 +1315,7 @@ function biblioE2eSetup(wpdb $database): void
     biblioE2eAddItem($database, $composition, BIBLIO_E2E_ACTOR_LIBRARY, BIBLIO_E2E_END_NONCE_ITEM, "e2e-work-end-nonce", "E2E Nonce Flow", "e2e-edition-end-nonce");
     biblioE2eAddItem($database, $composition, BIBLIO_E2E_ACTOR_LIBRARY, BIBLIO_E2E_END_IDEMPOTENT_ITEM, "e2e-work-end-idempotent", "E2E Idempotent Flow", "e2e-edition-end-idempotent");
     biblioE2eAddItem($database, $composition, BIBLIO_E2E_ACTOR_LIBRARY, BIBLIO_E2E_END_LIFECYCLE_ITEM, "e2e-work-end-lifecycle", "E2E Lifecycle Flow", "e2e-edition-end-lifecycle");
+    biblioE2eAddItem($database, $composition, BIBLIO_E2E_ACTOR_LIBRARY, BIBLIO_E2E_C7_UNAVAILABLE_ITEM, "e2e-work-c7-unavailable", "C7 Verdwenen bron", "e2e-edition-c7-unavailable");
 
     wp_set_current_user($other);
     biblioE2eAddItem($database, $composition, BIBLIO_E2E_OTHER_LIBRARY, BIBLIO_E2E_HISTORY_ITEM, "e2e-work-history", "E2E Leesgeschiedenis", "e2e-edition-history");
@@ -1181,6 +1359,8 @@ function biblioE2eSetup(wpdb $database): void
         (string) $actor,
         (string) $other
     );
+    biblioE2eSeedNextReading($database, (string) $actor, (string) $other);
+    biblioE2eCreateNextReadingPage();
 }
 
 biblioE2eGuard();
@@ -1226,6 +1406,9 @@ try {
             break;
         case "note-unavailable-delete":
             biblioE2eDeleteUnavailablePrivateNote($wpdb);
+            break;
+        case "next-reading-reset":
+            biblioE2eResetNextReading($wpdb);
             break;
         case "state":
         case "fingerprint":

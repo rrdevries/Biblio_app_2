@@ -7,9 +7,9 @@ readonly ACTION="${1:-}"
 readonly ENV_FILE=".local/e2e.env"
 
 case "$ACTION" in
-  setup|cleanup|verify-clean|conflict-reset|conflict-activate|stale-end|note-stale-update|note-stale-delete|note-unavailable-delete|state|fingerprint) ;;
+  setup|cleanup|verify-clean|conflict-reset|conflict-activate|stale-end|note-stale-update|note-stale-delete|note-unavailable-delete|next-reading-reset|state|fingerprint) ;;
   *)
-    echo "Usage: $0 {setup|cleanup|verify-clean|conflict-reset|conflict-activate|stale-end|note-stale-update|note-stale-delete|note-unavailable-delete|state|fingerprint}" >&2
+    echo "Usage: $0 {setup|cleanup|verify-clean|conflict-reset|conflict-activate|stale-end|note-stale-update|note-stale-delete|note-unavailable-delete|next-reading-reset|state|fingerprint}" >&2
     exit 64
     ;;
 esac
