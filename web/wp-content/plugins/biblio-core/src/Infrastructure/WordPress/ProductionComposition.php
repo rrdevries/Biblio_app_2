@@ -35,7 +35,7 @@ use Biblio\Core\Application\Notes\PrivateNoteCreation;
 use Biblio\Core\Application\Notes\Read\GetMyPrivateNotesForWorkService;
 use Biblio\Core\Application\Notes\RenderPrivateNoteContentService;
 use Biblio\Core\Application\Notes\UpdatePrivateNoteContentService;
-use Biblio\Core\Application\NextReading\{AddExternalLoanToNextReadingService,AddLibraryItemToNextReadingService,AddWorkToNextReadingService,GetMyNextReadingListService,GetNextReadingHomeProjectionService,NextReadingMutation,NextReadingProjector,RemoveNextReadingEntryService,ReorderNextReadingListService};
+use Biblio\Core\Application\NextReading\{AddNextReadingEntryService,ConsumeNextReadingAfterStartService,GetMyNextReadingListService,GetNextReadingHomeProjectionService,NextReadingMutation,NextReadingProjector,RemoveNextReadingEntryService,ReorderNextReadingListService,SetNextReadingPreferredSourceService,UndoNextReadingRemovalService};
 use Biblio\Core\Application\Reading\CreateActiveReadingRoundService;
 use Biblio\Core\Application\Reading\CorrectEndedReadingRoundService;
 use Biblio\Core\Application\Reading\CorrectReadingRoundSourceService;
@@ -50,6 +50,7 @@ use Biblio\Core\Application\Reading\ReadingRoundEnd;
 use Biblio\Core\Application\Reading\RegisterHistoricalReadingRoundService;
 use Biblio\Core\Application\Reading\StartReadingFromExternalLoanService;
 use Biblio\Core\Application\Reading\StartReadingFromLibraryItemService;
+use Biblio\Core\Application\Reading\StartReadingFromNextReadingEntryService;
 use Biblio\Core\Application\Reading\StopReadingRoundService;
 use Biblio\Core\Authorization\LibraryAuthorizationPolicy;
 use Biblio\Core\Audit\ActivityEventSource;
@@ -160,6 +161,12 @@ final class ProductionComposition
         $readingRoundRepository = new WpdbReadingRoundRepository(
             $database,
             $tableNames
+        );
+        $nextReadingRepository = new WpdbNextReadingRepository($database, $tableNames);
+        $nextReadingClock = new SystemNextReadingClock();
+        $nextReadingConsumption = new ConsumeNextReadingAfterStartService(
+            $nextReadingRepository,
+            $nextReadingClock
         );
         $readingRoundIds = new OpaqueReadingRoundIdGenerator();
         $readingRoundClock = new SystemReadingRoundClock();
@@ -288,7 +295,9 @@ final class ProductionComposition
             $authenticatedUser,
             $readingRoundRepository,
             $readingRoundIds,
-            $readingRoundClock
+            $readingRoundClock,
+            $transactionManager,
+            $nextReadingConsumption
         );
         $ownedReadingRounds = new GetOwnedReadingRoundService(
             $authenticatedUser,
@@ -302,6 +311,10 @@ final class ProductionComposition
         $externalLoanReading = new StartReadingFromExternalLoanService(
             $ownedExternalLoans,
             $createReadingRound
+        );
+        $nextReadingEntryReading = new StartReadingFromNextReadingEntryService(
+            $libraryItemReading,
+            $externalLoanReading
         );
         $readingRoundEnd = new ReadingRoundEnd(
             $authenticatedUser,
@@ -451,8 +464,6 @@ final class ProductionComposition
             $reviewRepository,
             $publicationRepository
         );
-        $nextReadingRepository = new WpdbNextReadingRepository($database, $tableNames);
-        $nextReadingClock = new SystemNextReadingClock();
         $nextReadingMutation = new NextReadingMutation(
             $nextReadingRepository,
             new OpaqueNextReadingEntryIdGenerator(),
@@ -464,25 +475,33 @@ final class ProductionComposition
             $accessibleItems,
             $ownedExternalLoans
         );
-        $nextReadingWorkAdd = new AddWorkToNextReadingService(
+        $nextReadingAdd = new AddNextReadingEntryService(
             $authenticatedUser,
             $workRepository,
-            $nextReadingMutation
-        );
-        $nextReadingItemAdd = new AddLibraryItemToNextReadingService(
-            $authenticatedUser,
             $accessibleItems,
             $editionRepository,
-            $nextReadingMutation
-        );
-        $nextReadingExternalAdd = new AddExternalLoanToNextReadingService(
-            $authenticatedUser,
             $ownedExternalLoans,
             $nextReadingMutation
         );
         $nextReadingRemove = new RemoveNextReadingEntryService(
             $authenticatedUser,
             $nextReadingRepository,
+            $nextReadingClock,
+            new OpaqueNextReadingUndoTokenGenerator(),
+            $transactionManager
+        );
+        $nextReadingUndo = new UndoNextReadingRemovalService(
+            $authenticatedUser,
+            $nextReadingRepository,
+            $nextReadingClock,
+            $transactionManager
+        );
+        $nextReadingPreferredSource = new SetNextReadingPreferredSourceService(
+            $authenticatedUser,
+            $nextReadingRepository,
+            $accessibleItems,
+            $editionRepository,
+            $ownedExternalLoans,
             $nextReadingClock,
             $transactionManager
         );
@@ -513,6 +532,7 @@ final class ProductionComposition
             $ownedReadingRounds,
             $libraryItemReading,
             $externalLoanReading,
+            $nextReadingEntryReading,
             $finishReadingRound,
             $stopReadingRound,
             $historicalReadingRounds,
@@ -554,10 +574,10 @@ final class ProductionComposition
             new ModerateContributionPublicationService($publicationLifecycle),
             new RestoreContributionPublicationService($publicationLifecycle),
             $assessmentQueries,
-            $nextReadingWorkAdd,
-            $nextReadingItemAdd,
-            $nextReadingExternalAdd,
+            $nextReadingAdd,
             $nextReadingRemove,
+            $nextReadingUndo,
+            $nextReadingPreferredSource,
             $nextReadingReorder,
             $myNextReadingList,
             $nextReadingHome

@@ -25,6 +25,9 @@ final readonly class CoreSchema1006Migration implements CoreSchemaMigration
         if (!$base->isHealthy()) {
             throw new CoreSchemaHealthException($base);
         }
+        if ($this->currentNextReadingContractIsHealthy()) {
+            return;
+        }
         $targets = [$this->tables->nextReadingLists(), $this->tables->nextReadingEntries()];
         $present = array_values(array_filter($targets, fn (string $table): bool => $this->exists($table)));
         if ($present === []) {
@@ -56,6 +59,9 @@ final readonly class CoreSchema1006Migration implements CoreSchemaMigration
 
     public function migrate(): void
     {
+        if ($this->currentNextReadingContractIsHealthy()) {
+            return;
+        }
         if (!$this->exists($this->tables->nextReadingLists())) {
             $this->query($this->listSql(), "list-state");
         }
@@ -72,6 +78,9 @@ final readonly class CoreSchema1006Migration implements CoreSchemaMigration
 
     public function assertPostcondition(): void
     {
+        if ($this->currentNextReadingContractIsHealthy()) {
+            return;
+        }
         $health = $this->healthChecker->inspectForVersion(1006);
         if (!$health->isHealthy()) {
             throw new CoreSchemaHealthException($health);
@@ -161,5 +170,30 @@ final readonly class CoreSchema1006Migration implements CoreSchemaMigration
             DB_NAME,
             $trigger
         )) === 1;
+    }
+
+    private function currentNextReadingContractIsHealthy(): bool
+    {
+        if (!$this->exists($this->tables->nextReadingUndo())) {
+            return false;
+        }
+        foreach ($this->healthChecker->inspectForVersion(1008)->errors() as $error) {
+            if ($this->isNextReadingError($error)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private function isNextReadingError(string $error): bool
+    {
+        return str_contains($error, $this->tables->nextReadingLists())
+            || str_contains($error, $this->tables->nextReadingEntries())
+            || str_contains($error, $this->tables->nextReadingUndo())
+            || str_contains($error, $this->tables->nextReadingInsertTrigger())
+            || str_contains($error, $this->tables->nextReadingUpdateTrigger())
+            || str_contains($error, $this->tables->nextReadingUndoInsertTrigger())
+            || str_contains($error, $this->tables->nextReadingUndoUpdateTrigger())
+            || str_contains($error, "Next Reading");
     }
 }

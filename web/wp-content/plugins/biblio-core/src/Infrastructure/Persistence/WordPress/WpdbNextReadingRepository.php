@@ -10,7 +10,7 @@ use Biblio\Core\Exception\{FailureReason,TransactionException};
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Persistence\PersistenceException;
 use Biblio\Core\Library\LibraryId;
-use Biblio\Core\NextReading\{NextReadingEntry,NextReadingEntryId,NextReadingEntryIdCollision,NextReadingList,NextReadingListVersion,NextReadingPosition,NextReadingTarget,NextReadingTargetDuplicate,NextReadingTargetType,NextReadingTargetUnavailable,WritableNextReadingRepository};
+use Biblio\Core\NextReading\{NextReadingEntry,NextReadingEntryId,NextReadingEntryIdCollision,NextReadingList,NextReadingListVersion,NextReadingPosition,NextReadingUndoRecord,PreferredReadingSource,PreferredReadingSourceType,PreferredReadingSourceUnavailable,WritableNextReadingRepository};
 use DateTimeImmutable;
 use DateTimeZone;
 use Throwable;
@@ -81,6 +81,25 @@ final readonly class WpdbNextReadingRepository implements WritableNextReadingRep
         );
     }
 
+    public function discardProvisionedEmptyState(UserId $userId): void
+    {
+        $this->assertTransaction();
+        $lists = $this->tables->nextReadingLists();
+        $entries = $this->tables->nextReadingEntries();
+        $deleted = $this->database->query($this->database->prepare(
+            "DELETE FROM `{$lists}` WHERE user_id=%s AND list_version=1 "
+            . "AND NOT EXISTS (SELECT 1 FROM `{$entries}` WHERE user_id=%s)",
+            $userId->value(),
+            $userId->value()
+        ));
+        if ($deleted === false) {
+            throw WpdbErrorTranslator::writeFailure(
+                "Could not discard virtual Next Reading list state.",
+                $this->database->last_error
+            );
+        }
+    }
+
     public function append(
         UserId $userId,
         NextReadingEntry $entry,
@@ -96,47 +115,8 @@ final readonly class WpdbNextReadingRepository implements WritableNextReadingRep
                 failureReason: FailureReason::PersistenceWriteFailed
             );
         }
-        $this->lockAndAssertSource($userId, $entry->target());
-        $target = $entry->target();
-        $previous = $this->database->suppress_errors(true);
-        try {
-            $result = $this->database->insert(
-                $this->tables->nextReadingEntries(),
-                [
-                    "entry_id" => $entry->id()->value(),
-                    "user_id" => $userId->value(),
-                    "work_id" => $target->workId()->value(),
-                    "target_type" => $target->type()->value,
-                    "source_id_snapshot" => $target->itemIdSnapshot()?->value()
-                        ?? $target->externalLoanIdSnapshot()?->value(),
-                    "source_library_id_snapshot" => $target->libraryIdSnapshot()?->value(),
-                    "item_id" => $target->liveItemId()?->value(),
-                    "external_loan_id" => $target->liveExternalLoanId()?->value(),
-                    "position" => $entry->position()->value(),
-                    "created_at" => $this->format($entry->createdAt()),
-                ],
-                ["%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%d", "%s"]
-            );
-        } finally {
-            $this->database->suppress_errors($previous);
-        }
-        if ($result !== 1) {
-            $conflict = WpdbErrorTranslator::conflict($this->database->last_error);
-            if ($conflict?->constraintName() === "PRIMARY") {
-                throw new NextReadingEntryIdCollision();
-            }
-            if (in_array($conflict?->constraintName(), [
-                "one_next_reading_work_target",
-                "one_next_reading_item_target",
-                "one_next_reading_external_target",
-            ], true)) {
-                throw new NextReadingTargetDuplicate();
-            }
-            throw WpdbErrorTranslator::writeFailure(
-                "Could not append Next Reading Entry.",
-                $this->database->last_error
-            );
-        }
+        $this->lockAndAssertSource($userId, $entry->workId(), $entry->preferredSource());
+        $this->insertEntry($entry, "Could not append Next Reading Entry.");
         $this->advanceVersion($userId, $expectedVersion, $nextVersion, $updatedAt);
     }
 
@@ -187,15 +167,39 @@ final readonly class WpdbNextReadingRepository implements WritableNextReadingRep
                 throw WpdbErrorTranslator::writeFailure("Could not stage Next Reading order.", $this->database->last_error);
             }
             foreach ($entries as $entry) {
-                $written = $this->database->query($this->database->prepare(
-                    "UPDATE `{$entryTable}` SET position=%d WHERE user_id=%s AND entry_id=%s",
-                    $entry->position()->value(),
+                $this->lockAndAssertSource(
+                    $userId,
+                    $entry->workId(),
+                    $entry->preferredSource()
+                );
+                $existing = (int) $this->database->get_var($this->database->prepare(
+                    "SELECT COUNT(*) FROM `{$entryTable}` WHERE user_id=%s AND entry_id=%s",
                     $userId->value(),
                     $entry->id()->value()
                 ));
+                if ($existing === 0) {
+                    $this->insertEntry($entry, "Could not restore Next Reading Entry.");
+                    continue;
+                }
+                $source = $entry->preferredSource();
+                $written = $this->database->update(
+                    $entryTable,
+                    [
+                        "preferred_source_type" => $source?->type()->value,
+                        "preferred_source_id_snapshot" => $source?->itemIdSnapshot()?->value()
+                            ?? $source?->externalLoanIdSnapshot()?->value(),
+                        "preferred_source_library_id_snapshot" => $source?->libraryIdSnapshot()?->value(),
+                        "item_id" => $source?->liveItemId()?->value(),
+                        "external_loan_id" => $source?->liveExternalLoanId()?->value(),
+                        "position" => $entry->position()->value(),
+                    ],
+                    ["user_id" => $userId->value(), "entry_id" => $entry->id()->value()],
+                    ["%s", "%s", "%s", "%s", "%s", "%d"],
+                    ["%s", "%s"]
+                );
                 if ($written !== 1) {
                     throw new PersistenceException(
-                        "Could not persist complete owner-scoped Next Reading order.",
+                        "Could not persist complete owner-scoped Next Reading state.",
                         failureReason: FailureReason::PersistenceWriteFailed
                     );
                 }
@@ -204,13 +208,110 @@ final readonly class WpdbNextReadingRepository implements WritableNextReadingRep
         $this->advanceVersion($userId, $expectedVersion, $nextVersion, $updatedAt);
     }
 
+    public function storeUndo(
+        UserId $userId,
+        string $tokenHash,
+        NextReadingEntry $entry,
+        ?NextReadingEntryId $previousEntryId,
+        ?NextReadingEntryId $nextEntryId,
+        DateTimeImmutable $createdAt,
+        DateTimeImmutable $expiresAt
+    ): void {
+        $this->assertTransaction();
+        if (!$entry->userId()->equals($userId) || strlen($tokenHash) !== 64) {
+            throw new PersistenceException("Invalid Next Reading Undo state.");
+        }
+        $source = $entry->preferredSource();
+        $result = $this->database->insert(
+            $this->tables->nextReadingUndo(),
+            [
+                "undo_token_hash" => $tokenHash,
+                "user_id" => $userId->value(),
+                "entry_id" => $entry->id()->value(),
+                "work_id" => $entry->workId()->value(),
+                "preferred_source_type" => $source?->type()->value,
+                "preferred_source_id_snapshot" => $source?->itemIdSnapshot()?->value()
+                    ?? $source?->externalLoanIdSnapshot()?->value(),
+                "preferred_source_library_id_snapshot" => $source?->libraryIdSnapshot()?->value(),
+                "item_id" => $source?->liveItemId()?->value(),
+                "external_loan_id" => $source?->liveExternalLoanId()?->value(),
+                "original_position" => $entry->position()->value(),
+                "previous_entry_id" => $previousEntryId?->value(),
+                "next_entry_id" => $nextEntryId?->value(),
+                "entry_created_at" => $this->format($entry->createdAt()),
+                "created_at" => $this->format($createdAt),
+                "expires_at" => $this->format($expiresAt),
+            ],
+            ["%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%d", "%s", "%s", "%s", "%s", "%s"]
+        );
+        if ($result !== 1) {
+            throw WpdbErrorTranslator::writeFailure(
+                "Could not store Next Reading Undo.",
+                $this->database->last_error
+            );
+        }
+    }
+
+    public function takeUndo(
+        UserId $userId,
+        string $tokenHash,
+        DateTimeImmutable $now
+    ): ?NextReadingUndoRecord {
+        $this->assertTransaction();
+        if (strlen($tokenHash) !== 64) {
+            return null;
+        }
+        $table = $this->tables->nextReadingUndo();
+        $row = $this->database->get_row($this->database->prepare(
+            "SELECT * FROM `{$table}` WHERE undo_token_hash=%s AND user_id=%s "
+                . "AND expires_at>%s FOR UPDATE",
+            $tokenHash,
+            $userId->value(),
+            $this->format($now)
+        ));
+        if (!is_object($row)) {
+            return null;
+        }
+        $deleted = $this->database->delete(
+            $table,
+            ["undo_token_hash" => $tokenHash, "user_id" => $userId->value()],
+            ["%s", "%s"]
+        );
+        if ($deleted !== 1) {
+            throw new PersistenceException("Could not consume Next Reading Undo.");
+        }
+        $entryRow = (object) [
+            "entry_id" => $row->entry_id,
+            "user_id" => $row->user_id,
+            "work_id" => $row->work_id,
+            "preferred_source_type" => $row->preferred_source_type,
+            "preferred_source_id_snapshot" => $row->preferred_source_id_snapshot,
+            "preferred_source_library_id_snapshot" => $row->preferred_source_library_id_snapshot,
+            "item_id" => $row->item_id,
+            "external_loan_id" => $row->external_loan_id,
+            "position" => $row->original_position,
+            "created_at" => $row->entry_created_at,
+        ];
+        return new NextReadingUndoRecord(
+            $this->hydrate($entryRow),
+            $row->previous_entry_id === null
+                ? null
+                : new NextReadingEntryId((string) $row->previous_entry_id),
+            $row->next_entry_id === null
+                ? null
+                : new NextReadingEntryId((string) $row->next_entry_id),
+            (int) $row->original_position,
+            $this->hydrateDate((string) $row->expires_at)
+        );
+    }
+
     /** @return list<NextReadingEntry> */
     private function entries(UserId $userId, ?int $limit = null): array
     {
         $table = $this->tables->nextReadingEntries();
         $sql = $this->database->prepare(
-            "SELECT entry_id,user_id,work_id,target_type,source_id_snapshot,"
-            . "source_library_id_snapshot,item_id,external_loan_id,position,created_at "
+            "SELECT entry_id,user_id,work_id,preferred_source_type,preferred_source_id_snapshot,"
+            . "preferred_source_library_id_snapshot,item_id,external_loan_id,position,created_at "
             . "FROM `{$table}` WHERE user_id=%s ORDER BY position ASC,entry_id ASC"
             . ($limit === null ? "" : " LIMIT %d"),
             ...($limit === null ? [$userId->value()] : [$userId->value(), $limit])
@@ -231,60 +332,100 @@ final readonly class WpdbNextReadingRepository implements WritableNextReadingRep
     private function hydrate(object $row): NextReadingEntry
     {
         $workId = new WorkId((string) $row->work_id);
-        $type = NextReadingTargetType::from((string) $row->target_type);
-        $target = match ($type) {
-            NextReadingTargetType::Work => NextReadingTarget::forWork($workId),
-            NextReadingTargetType::LibraryItem => NextReadingTarget::forLibraryItem(
-                $workId,
-                new ItemId((string) $row->source_id_snapshot),
-                new LibraryId((string) $row->source_library_id_snapshot),
+        $type = $row->preferred_source_type === null
+            ? null
+            : PreferredReadingSourceType::from((string) $row->preferred_source_type);
+        $source = match ($type) {
+            null => null,
+            PreferredReadingSourceType::LibraryItem => PreferredReadingSource::libraryItem(
+                new ItemId((string) $row->preferred_source_id_snapshot),
+                new LibraryId((string) $row->preferred_source_library_id_snapshot),
                 $row->item_id !== null
             ),
-            NextReadingTargetType::ExternalLoan => NextReadingTarget::forExternalLoan(
-                $workId,
-                new ExternalLoanId((string) $row->source_id_snapshot),
+            PreferredReadingSourceType::ExternalLoan => PreferredReadingSource::externalLoan(
+                new ExternalLoanId((string) $row->preferred_source_id_snapshot),
                 $row->external_loan_id !== null
             ),
         };
         return new NextReadingEntry(
             new NextReadingEntryId((string) $row->entry_id),
             new UserId((string) $row->user_id),
-            $target,
+            $workId,
+            $source,
             new NextReadingPosition((int) $row->position),
             $this->hydrateDate((string) $row->created_at)
         );
     }
 
-    private function lockAndAssertSource(UserId $userId, NextReadingTarget $target): void
+    private function lockAndAssertSource(
+        UserId $userId,
+        WorkId $workId,
+        ?PreferredReadingSource $source
+    ): void
     {
-        if ($target->type() === NextReadingTargetType::Work) {
+        if ($source === null || ($source->liveItemId() === null && $source->liveExternalLoanId() === null)) {
             return;
         }
-        if ($target->type() === NextReadingTargetType::LibraryItem) {
+        if ($source->type() === PreferredReadingSourceType::LibraryItem) {
             $items = $this->tables->items();
             $editions = $this->tables->editions();
             $row = $this->database->get_row($this->database->prepare(
                 "SELECT i.item_id FROM `{$items}` i INNER JOIN `{$editions}` e ON e.edition_id=i.edition_id "
                 . "WHERE i.item_id=%s AND i.library_id=%s AND e.work_id=%s FOR UPDATE",
-                $target->itemIdSnapshot()?->value(),
-                $target->libraryIdSnapshot()?->value(),
-                $target->workId()->value()
+                $source->itemIdSnapshot()?->value(),
+                $source->libraryIdSnapshot()?->value(),
+                $workId->value()
             ));
             if ($row === null) {
-                throw new NextReadingTargetUnavailable();
+                throw new PreferredReadingSourceUnavailable();
             }
             return;
         }
         $loans = $this->tables->externalLoans();
         $row = $this->database->get_row($this->database->prepare(
             "SELECT external_loan_id FROM `{$loans}` WHERE external_loan_id=%s AND user_id=%s AND work_id=%s FOR UPDATE",
-            $target->externalLoanIdSnapshot()?->value(),
+            $source->externalLoanIdSnapshot()?->value(),
             $userId->value(),
-            $target->workId()->value()
+            $workId->value()
         ));
         if ($row === null) {
-            throw new NextReadingTargetUnavailable();
+            throw new PreferredReadingSourceUnavailable();
         }
+    }
+
+    private function insertEntry(NextReadingEntry $entry, string $message): void
+    {
+        $source = $entry->preferredSource();
+        $previous = $this->database->suppress_errors(true);
+        try {
+            $result = $this->database->insert(
+                $this->tables->nextReadingEntries(),
+                [
+                    "entry_id" => $entry->id()->value(),
+                    "user_id" => $entry->userId()->value(),
+                    "work_id" => $entry->workId()->value(),
+                    "preferred_source_type" => $source?->type()->value,
+                    "preferred_source_id_snapshot" => $source?->itemIdSnapshot()?->value()
+                        ?? $source?->externalLoanIdSnapshot()?->value(),
+                    "preferred_source_library_id_snapshot" => $source?->libraryIdSnapshot()?->value(),
+                    "item_id" => $source?->liveItemId()?->value(),
+                    "external_loan_id" => $source?->liveExternalLoanId()?->value(),
+                    "position" => $entry->position()->value(),
+                    "created_at" => $this->format($entry->createdAt()),
+                ],
+                ["%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%d", "%s"]
+            );
+        } finally {
+            $this->database->suppress_errors($previous);
+        }
+        if ($result === 1) {
+            return;
+        }
+        $conflict = WpdbErrorTranslator::conflict($this->database->last_error);
+        if ($conflict?->constraintName() === "PRIMARY") {
+            throw new NextReadingEntryIdCollision();
+        }
+        throw WpdbErrorTranslator::writeFailure($message, $this->database->last_error);
     }
 
     private function advanceVersion(

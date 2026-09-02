@@ -27,7 +27,7 @@ use Biblio\Core\Application\Notes\ListPrivateNotesForWorkService;
 use Biblio\Core\Application\Notes\Read\GetMyPrivateNotesForWorkService;
 use Biblio\Core\Application\Notes\RenderPrivateNoteContentService;
 use Biblio\Core\Application\Notes\UpdatePrivateNoteContentService;
-use Biblio\Core\Application\NextReading\{AddExternalLoanToNextReadingService,AddLibraryItemToNextReadingService,AddWorkToNextReadingService,GetMyNextReadingListService,GetNextReadingHomeProjectionService,RemoveNextReadingEntryService,ReorderNextReadingListService};
+use Biblio\Core\Application\NextReading\{AddNextReadingEntryService,GetMyNextReadingListService,GetNextReadingHomeProjectionService,RemoveNextReadingEntryService,ReorderNextReadingListService,SetNextReadingPreferredSourceService,UndoNextReadingRemovalService};
 use Biblio\Core\Application\Reading\GetOwnedReadingRoundService;
 use Biblio\Core\Application\Reading\CorrectEndedReadingRoundService;
 use Biblio\Core\Application\Reading\CorrectReadingRoundSourceService;
@@ -39,6 +39,7 @@ use Biblio\Core\Application\Reading\History\GetMyReadingHistoryForWorkService;
 use Biblio\Core\Application\Reading\RegisterHistoricalReadingRoundService;
 use Biblio\Core\Application\Reading\StartReadingFromExternalLoanService;
 use Biblio\Core\Application\Reading\StartReadingFromLibraryItemService;
+use Biblio\Core\Application\Reading\StartReadingFromNextReadingEntryService;
 use Biblio\Core\Application\Reading\StopReadingRoundService;
 
 /**
@@ -59,6 +60,7 @@ final readonly class CoreApplication
         private GetOwnedReadingRoundService $ownedReadingRounds,
         private StartReadingFromLibraryItemService $libraryItemReading,
         private StartReadingFromExternalLoanService $externalLoanReading,
+        private StartReadingFromNextReadingEntryService $nextReadingEntryReading,
         private FinishReadingRoundService $finishReadingRound,
         private StopReadingRoundService $stopReadingRound,
         private RegisterHistoricalReadingRoundService $historicalReadingRounds,
@@ -100,10 +102,10 @@ final readonly class CoreApplication
         private ModerateContributionPublicationService $publicationModeration,
         private RestoreContributionPublicationService $publicationRestoration,
         private AssessmentQueryService $assessmentQueries,
-        private AddWorkToNextReadingService $nextReadingWorkAdd,
-        private AddLibraryItemToNextReadingService $nextReadingItemAdd,
-        private AddExternalLoanToNextReadingService $nextReadingExternalLoanAdd,
+        private AddNextReadingEntryService $nextReadingAdd,
         private RemoveNextReadingEntryService $nextReadingRemove,
+        private UndoNextReadingRemovalService $nextReadingUndo,
+        private SetNextReadingPreferredSourceService $nextReadingPreferredSource,
         private ReorderNextReadingListService $nextReadingReorder,
         private GetMyNextReadingListService $myNextReadingList,
         private GetNextReadingHomeProjectionService $nextReadingHome
@@ -153,6 +155,11 @@ final readonly class CoreApplication
     public function externalLoanReading(): StartReadingFromExternalLoanService
     {
         return $this->externalLoanReading;
+    }
+
+    public function nextReadingEntryReading(): StartReadingFromNextReadingEntryService
+    {
+        return $this->nextReadingEntryReading;
     }
 
     public function finishReadingRound(): FinishReadingRoundService
@@ -292,10 +299,10 @@ final readonly class CoreApplication
     public function publicationModeration(): ModerateContributionPublicationService { return $this->publicationModeration; }
     public function publicationRestoration(): RestoreContributionPublicationService { return $this->publicationRestoration; }
     public function assessmentQueries(): AssessmentQueryService { return $this->assessmentQueries; }
-    public function nextReadingWorkAdd(): AddWorkToNextReadingService { return $this->nextReadingWorkAdd; }
-    public function nextReadingItemAdd(): AddLibraryItemToNextReadingService { return $this->nextReadingItemAdd; }
-    public function nextReadingExternalLoanAdd(): AddExternalLoanToNextReadingService { return $this->nextReadingExternalLoanAdd; }
+    public function nextReadingAdd(): AddNextReadingEntryService { return $this->nextReadingAdd; }
     public function nextReadingRemove(): RemoveNextReadingEntryService { return $this->nextReadingRemove; }
+    public function nextReadingUndo(): UndoNextReadingRemovalService { return $this->nextReadingUndo; }
+    public function nextReadingPreferredSource(): SetNextReadingPreferredSourceService { return $this->nextReadingPreferredSource; }
     public function nextReadingReorder(): ReorderNextReadingListService { return $this->nextReadingReorder; }
     public function myNextReadingList(): GetMyNextReadingListService { return $this->myNextReadingList; }
     public function nextReadingHome(): GetNextReadingHomeProjectionService { return $this->nextReadingHome; }

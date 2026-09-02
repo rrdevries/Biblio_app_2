@@ -36,10 +36,11 @@ enum FailureReason: string
     case PublicationStale = "publication_stale";
     case ModerationForbidden = "moderation_forbidden";
     case AssessmentIdCollisionExhausted = "assessment_id_collision_exhausted";
-    case NextReadingTargetUnavailable = "next_reading_target_unavailable";
+    case PreferredReadingSourceUnavailable = "preferred_reading_source_unavailable";
+    case NextReadingWorkUnavailable = "next_reading_work_unavailable";
     case NextReadingEntryNotAvailable = "next_reading_entry_not_available";
-    case NextReadingTargetDuplicate = "next_reading_target_duplicate";
     case NextReadingListStale = "next_reading_list_stale";
+    case NextReadingUndoUnavailable = "next_reading_undo_unavailable";
     case NextReadingEntryIdCollisionExhausted =
         "next_reading_entry_id_collision_exhausted";
     case PersonalLibraryAlreadyProvisioned =

@@ -6,14 +6,13 @@ namespace Biblio\Core\NextReading;
 
 use Biblio\Core\Borrowing\ExternalLoanId;
 use Biblio\Core\Catalog\ItemId;
-use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Library\LibraryId;
+use Biblio\Core\Reading\ReadingSource;
 
-final readonly class NextReadingTarget
+final readonly class PreferredReadingSource
 {
     private function __construct(
-        private NextReadingTargetType $type,
-        private WorkId $workId,
+        private PreferredReadingSourceType $type,
         private ?ItemId $itemIdSnapshot,
         private ?LibraryId $libraryIdSnapshot,
         private ?ExternalLoanId $externalLoanIdSnapshot,
@@ -22,20 +21,13 @@ final readonly class NextReadingTarget
     ) {
     }
 
-    public static function forWork(WorkId $workId): self
-    {
-        return new self(NextReadingTargetType::Work, $workId, null, null, null, null, null);
-    }
-
-    public static function forLibraryItem(
-        WorkId $workId,
+    public static function libraryItem(
         ItemId $itemId,
         LibraryId $libraryId,
         bool $live = true
     ): self {
         return new self(
-            NextReadingTargetType::LibraryItem,
-            $workId,
+            PreferredReadingSourceType::LibraryItem,
             $itemId,
             $libraryId,
             null,
@@ -44,14 +36,12 @@ final readonly class NextReadingTarget
         );
     }
 
-    public static function forExternalLoan(
-        WorkId $workId,
+    public static function externalLoan(
         ExternalLoanId $externalLoanId,
         bool $live = true
     ): self {
         return new self(
-            NextReadingTargetType::ExternalLoan,
-            $workId,
+            PreferredReadingSourceType::ExternalLoan,
             null,
             null,
             $externalLoanId,
@@ -60,20 +50,32 @@ final readonly class NextReadingTarget
         );
     }
 
-    public function type(): NextReadingTargetType { return $this->type; }
-    public function workId(): WorkId { return $this->workId; }
+    public function type(): PreferredReadingSourceType { return $this->type; }
     public function itemIdSnapshot(): ?ItemId { return $this->itemIdSnapshot; }
     public function libraryIdSnapshot(): ?LibraryId { return $this->libraryIdSnapshot; }
     public function externalLoanIdSnapshot(): ?ExternalLoanId { return $this->externalLoanIdSnapshot; }
     public function liveItemId(): ?ItemId { return $this->liveItemId; }
     public function liveExternalLoanId(): ?ExternalLoanId { return $this->liveExternalLoanId; }
 
-    public function uniquenessKey(): string
+    public function matchesLiveSource(ReadingSource $source): bool
     {
         return match ($this->type) {
-            NextReadingTargetType::Work => "work:" . $this->workId->value(),
-            NextReadingTargetType::LibraryItem => "item:" . $this->itemIdSnapshot?->value(),
-            NextReadingTargetType::ExternalLoan => "external:" . $this->externalLoanIdSnapshot?->value(),
+            PreferredReadingSourceType::LibraryItem =>
+                $this->liveItemId !== null
+                && $source->itemId()?->equals($this->liveItemId) === true,
+            PreferredReadingSourceType::ExternalLoan =>
+                $this->liveExternalLoanId !== null
+                && $source->externalLoanId()?->equals($this->liveExternalLoanId) === true,
         };
+    }
+
+    public function equals(self $other): bool
+    {
+        return $this->type === $other->type
+            && $this->itemIdSnapshot?->value() === $other->itemIdSnapshot?->value()
+            && $this->libraryIdSnapshot?->value() === $other->libraryIdSnapshot?->value()
+            && $this->externalLoanIdSnapshot?->value() === $other->externalLoanIdSnapshot?->value()
+            && $this->liveItemId?->value() === $other->liveItemId?->value()
+            && $this->liveExternalLoanId?->value() === $other->liveExternalLoanId?->value();
     }
 }

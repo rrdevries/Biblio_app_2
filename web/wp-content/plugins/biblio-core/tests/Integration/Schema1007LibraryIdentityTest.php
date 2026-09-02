@@ -46,7 +46,7 @@ final class Schema1007LibraryIdentityTest extends PersistenceIntegrationTestCase
         try {
             $this->migrator()->migrate();
 
-            self::assertSame(1007, $this->migrator()->installedVersion());
+            self::assertSame(1008, $this->migrator()->installedVersion());
             self::assertSame(
                 "Mijn Bibliotheek",
                 $this->database->get_var(
@@ -62,7 +62,7 @@ final class Schema1007LibraryIdentityTest extends PersistenceIntegrationTestCase
                     "memberships_by_user"
                 )
             );
-            self::assertTrue($this->migrator()->healthForVersion(1007)->isHealthy());
+            self::assertTrue($this->migrator()->health()->isHealthy());
 
             $migration = new CoreSchema1007Migration(
                 $this->database,

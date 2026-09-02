@@ -4,7 +4,20 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Tests\Integration;
 
+use Biblio\Core\Application\NextReading\RemoveNextReadingEntryService;
+use Biblio\Core\Identity\UserId;
+use Biblio\Core\Infrastructure\Persistence\WordPress\{WpdbNextReadingRepository,WpdbTransactionManager};
+use Biblio\Core\Infrastructure\WordPress\SystemNextReadingClock;
+use Biblio\Core\NextReading\{NextReadingEntryId,NextReadingListVersion,NextReadingUndoToken,NextReadingUndoTokenGenerator};
 use RuntimeException;
+
+final class FixedConcurrencyUndoTokenGenerator implements NextReadingUndoTokenGenerator
+{
+    public function next(): NextReadingUndoToken
+    {
+        return new NextReadingUndoToken("undo-race-token");
+    }
+}
 
 final class NextReadingConcurrencyTest extends PersistenceIntegrationTestCase
 {
@@ -24,9 +37,9 @@ final class NextReadingConcurrencyTest extends PersistenceIntegrationTestCase
             ["add_work", "race-work-1", 1],
             ["add_work", "race-work-1", 1],
         ]);
-        self::assertSame(["added", "duplicate"], $this->statuses($duplicate));
-        self::assertSame(2, $this->version());
-        self::assertSame(1, $this->entryCount());
+        self::assertSame(["added", "added"], $this->statuses($duplicate));
+        self::assertSame(3, $this->version());
+        self::assertSame(2, $this->entryCount());
     }
 
     public function testAddReorderAndDeleteReorderRacesAreSerializable(): void
@@ -114,6 +127,100 @@ final class NextReadingConcurrencyTest extends PersistenceIntegrationTestCase
         self::assertSame(1, $this->entryCount());
         self::assertNull($this->liveItem());
         self::assertSame("race-item", $this->snapshotItem());
+    }
+
+    public function testRemoveStartAddReorderAndPreferenceStartRacesSerialize(): void
+    {
+        $this->seedWorks(1, 2);
+        $this->seedItem();
+        $this->seedList(["race-entry-1"]);
+        $removeStart = $this->race([
+            ["remove", "race-entry-1", 2],
+            ["start_entry", "race-entry-1,race-library,race-item", 2],
+        ]);
+        self::assertTrue(in_array($this->statuses($removeStart), [
+            ["not_available", "removed"],
+            ["stale", "started"],
+        ], true));
+        self::assertSame(0, $this->entryCount());
+        self::assertSame(3, $this->version());
+
+        $this->database->query("DELETE FROM `{$this->tableNames->readingRounds()}`");
+        $this->clearList();
+        $this->seedList(["race-entry-1"]);
+        $addStart = $this->race([
+            ["add_work", "race-work-2", 2],
+            ["start_item", "race-library,race-item", 2],
+        ]);
+        self::assertSame(["added", "started"], $this->statuses($addStart));
+        self::assertSame(1, $this->entryCount());
+        self::assertSame(4, $this->version());
+
+        $this->database->query("DELETE FROM `{$this->tableNames->readingRounds()}`");
+        $this->clearList();
+        $this->seedList(["race-entry-1"]);
+        $preferenceStart = $this->race([
+            ["set_item", "race-entry-1,race-library,race-item", 2],
+            ["start_item", "race-library,race-item", 2],
+        ]);
+        self::assertTrue(in_array($this->statuses($preferenceStart), [
+            ["preferred", "started"],
+            ["not_available", "started"],
+        ], true));
+        self::assertSame(0, $this->entryCount());
+        self::assertContains($this->version(), [3, 4]);
+    }
+
+    public function testExternalStartReorderAndUndoRacesSerialize(): void
+    {
+        $this->seedWorks(1, 2, 3);
+        $this->seedItem();
+        $this->seedExternalLoan();
+        $this->seedList(["race-entry-1", "race-entry-2"]);
+        $externalReorder = $this->race([
+            ["start_external", "race-loan", 3],
+            ["reorder", "race-entry-2,race-entry-1", 3],
+        ]);
+        self::assertTrue(in_array($this->statuses($externalReorder), [
+            ["reordered", "started"],
+            ["stale", "started"],
+        ], true));
+        self::assertSame(1, $this->entryCount());
+        self::assertContains($this->version(), [4, 5]);
+
+        $this->database->query("DELETE FROM `{$this->tableNames->readingRounds()}`");
+        $this->clearList();
+        $this->seedList(["race-entry-1", "race-entry-2", "race-entry-3"]);
+        $removal = $this->remove("race-entry-2", 4);
+        $undoReorder = $this->race([
+            ["undo", $removal->value(), 5],
+            ["reorder", "race-entry-3,race-entry-1", 5],
+        ]);
+        self::assertTrue(in_array($this->statuses($undoReorder), [
+            ["reordered", "undone"],
+            ["stale", "undone"],
+        ], true));
+        self::assertSame(3, $this->entryCount());
+        self::assertSame([1, 2, 3], $this->positions());
+
+        $this->clearList();
+        $this->seedList(["race-entry-1", "race-entry-2"]);
+        $removal = $this->remove("race-entry-1", 3);
+        $undoStart = $this->race([
+            ["undo", $removal->value(), 4],
+            ["start_item", "race-library,race-item", 4],
+        ]);
+        self::assertSame(["started", "undone"], $this->statuses($undoStart));
+        self::assertContains($this->entryCount(), [1, 2]);
+        if ($this->entryCount() === 1) {
+            self::assertSame(6, $this->version());
+            self::assertSame(["race-entry-2"], $this->orderedIds());
+            self::assertSame([1], $this->positions());
+        } else {
+            self::assertSame(5, $this->version());
+            self::assertSame(["race-entry-1", "race-entry-2"], $this->orderedIds());
+            self::assertSame([1, 2], $this->positions());
+        }
     }
 
     /** @param list<array{0:string,1:string,2:int}> $operations */
@@ -215,8 +322,8 @@ final class NextReadingConcurrencyTest extends PersistenceIntegrationTestCase
             $number = $offset + 1;
             $entryResult = $this->database->insert($this->tableNames->nextReadingEntries(), [
                 "entry_id" => $entryId, "user_id" => "race-user", "work_id" => "race-work-{$number}",
-                "target_type" => "work", "source_id_snapshot" => null,
-                "source_library_id_snapshot" => null, "item_id" => null,
+                "preferred_source_type" => null, "preferred_source_id_snapshot" => null,
+                "preferred_source_library_id_snapshot" => null, "item_id" => null,
                 "external_loan_id" => null, "position" => $number,
                 "created_at" => "2026-08-23 10:00:00.000000",
             ], ["%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%d", "%s"]);
@@ -233,7 +340,7 @@ final class NextReadingConcurrencyTest extends PersistenceIntegrationTestCase
             ]);
             $this->database->insert($this->tableNames->memberships(), [
                 "library_id" => "race-library", "user_id" => "race-user", "membership_status" => "active",
-                "management_role" => "member", "use_access" => "view_only", "additional_permissions" => "[]",
+                "management_role" => "member", "use_access" => "direct", "additional_permissions" => "[]",
             ], ["%s", "%s", "%s", "%s", "%s", "%s"]);
             $this->database->insert($this->tableNames->editions(), [
                 "edition_id" => "race-edition", "work_id" => "race-work-1",
@@ -245,6 +352,33 @@ final class NextReadingConcurrencyTest extends PersistenceIntegrationTestCase
         ]);
     }
 
+    private function seedExternalLoan(): void
+    {
+        self::assertSame(1, $this->database->insert($this->tableNames->externalLoans(), [
+            "external_loan_id" => "race-loan",
+            "user_id" => "race-user",
+            "work_id" => "race-work-1",
+            "loan_status" => "active",
+            "borrowed_at" => "2026-09-01 10:00:00.000000",
+            "due_at" => null,
+        ], ["%s", "%s", "%s", "%s", "%s", "%s"]), $this->database->last_error);
+    }
+
+    private function remove(string $entryId, int $expectedVersion): NextReadingUndoToken
+    {
+        $removal = (new RemoveNextReadingEntryService(
+            new \Biblio\Core\Tests\Support\ControllableAuthenticatedUser(new UserId("race-user")),
+            new WpdbNextReadingRepository($this->database, $this->tableNames),
+            new SystemNextReadingClock(),
+            new FixedConcurrencyUndoTokenGenerator(),
+            new WpdbTransactionManager($this->database)
+        ))->remove(
+            new NextReadingEntryId($entryId),
+            new NextReadingListVersion($expectedVersion)
+        );
+        return $removal->undoToken();
+    }
+
     private function seedItemEntry(): void
     {
         $this->database->insert($this->tableNames->nextReadingLists(), [
@@ -253,8 +387,8 @@ final class NextReadingConcurrencyTest extends PersistenceIntegrationTestCase
         ], ["%s", "%d", "%s", "%s"]);
         $this->database->insert($this->tableNames->nextReadingEntries(), [
             "entry_id" => "race-item-entry", "user_id" => "race-user", "work_id" => "race-work-1",
-            "target_type" => "library_item", "source_id_snapshot" => "race-item",
-            "source_library_id_snapshot" => "race-library", "item_id" => "race-item",
+            "preferred_source_type" => "library_item", "preferred_source_id_snapshot" => "race-item",
+            "preferred_source_library_id_snapshot" => "race-library", "item_id" => "race-item",
             "external_loan_id" => null, "position" => 1,
             "created_at" => "2026-08-23 10:00:00.000000",
         ], ["%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%d", "%s"]);
@@ -308,6 +442,6 @@ final class NextReadingConcurrencyTest extends PersistenceIntegrationTestCase
     private function snapshotItem(): string
     {
         $table = $this->tableNames->nextReadingEntries();
-        return (string) $this->database->get_var("SELECT source_id_snapshot FROM `{$table}` WHERE user_id='race-user'");
+        return (string) $this->database->get_var("SELECT preferred_source_id_snapshot FROM `{$table}` WHERE user_id='race-user'");
     }
 }

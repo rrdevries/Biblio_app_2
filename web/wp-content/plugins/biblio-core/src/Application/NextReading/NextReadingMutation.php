@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace Biblio\Core\Application\NextReading;
 
 use Biblio\Core\Application\TransactionManager;
+use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Identity\UserId;
-use Biblio\Core\NextReading\{NextReadingClock,NextReadingEntry,NextReadingEntryIdCollision,NextReadingEntryIdCollisionExhausted,NextReadingEntryIdGenerator,NextReadingList,NextReadingPosition,NextReadingTarget,NextReadingTargetDuplicate,WritableNextReadingRepository};
+use Biblio\Core\NextReading\{NextReadingClock,NextReadingEntry,NextReadingEntryIdCollision,NextReadingEntryIdCollisionExhausted,NextReadingEntryIdGenerator,NextReadingList,NextReadingPosition,PreferredReadingSource,WritableNextReadingRepository};
 
 final readonly class NextReadingMutation
 {
@@ -20,20 +21,22 @@ final readonly class NextReadingMutation
     ) {
     }
 
-    public function append(UserId $actorId, NextReadingTarget $target): NextReadingList
+    public function append(
+        UserId $actorId,
+        WorkId $workId,
+        ?PreferredReadingSource $preferredSource
+    ): NextReadingList
     {
-        return $this->transactions->run(function () use ($actorId, $target): NextReadingList {
+        return $this->transactions->run(function () use ($actorId, $workId, $preferredSource): NextReadingList {
+            $current = $this->repository->lockForUser($actorId, $this->clock->now());
             $now = $this->clock->now();
-            $current = $this->repository->lockForUser($actorId, $now);
-            if ($current->containsTarget($target)) {
-                throw new NextReadingTargetDuplicate();
-            }
 
             for ($attempt = 1; $attempt <= self::MAX_ID_ATTEMPTS; $attempt++) {
                 $entry = new NextReadingEntry(
                     $this->ids->next(),
                     $actorId,
-                    $target,
+                    $workId,
+                    $preferredSource,
                     new NextReadingPosition(count($current->entries()) + 1),
                     $now
                 );

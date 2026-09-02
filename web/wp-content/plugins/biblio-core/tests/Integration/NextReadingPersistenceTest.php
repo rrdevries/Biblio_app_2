@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Tests\Integration;
 
-use Biblio\Core\Application\NextReading\NextReadingSourceStatus;
+use Biblio\Core\Application\NextReading\PreferredReadingSourceState;
 use Biblio\Core\Borrowing\ExternalLoanId;
 use Biblio\Core\Catalog\{ItemId,WorkId};
 use Biblio\Core\Exception\ValidationException;
 use Biblio\Core\Infrastructure\WordPress\ProductionComposition;
 use Biblio\Core\Library\LibraryId;
-use Biblio\Core\NextReading\{NextReadingEntryNotAvailable,NextReadingListStale,NextReadingListVersion,NextReadingTargetDuplicate,NextReadingTargetUnavailable};
+use Biblio\Core\NextReading\{NextReadingEntryNotAvailable,NextReadingListStale,NextReadingListVersion,NextReadingUndoUnavailable,NextReadingWorkUnavailable,PreferredReadingSourceType,PreferredReadingSourceUnavailable};
 
 final class NextReadingPersistenceTest extends PersistenceIntegrationTestCase
 {
@@ -20,7 +20,7 @@ final class NextReadingPersistenceTest extends PersistenceIntegrationTestCase
         parent::tearDown();
     }
 
-    public function testNamedServicesEnforceTargetsOrderingPrivacyHomeAndNoEvents(): void
+    public function testGenericEntryContractAllowsDuplicatesAndKeepsOwnerPrivacy(): void
     {
         $actor = $this->createUser("next-owner");
         $other = $this->createUser("next-other");
@@ -28,150 +28,197 @@ final class NextReadingPersistenceTest extends PersistenceIntegrationTestCase
         wp_set_current_user($actor);
         $application = (new ProductionComposition($this->database))->application();
 
-        $workList = $application->nextReadingWorkAdd()->add(new WorkId("next-work-1"));
-        $itemList = $application->nextReadingItemAdd()->add(
+        $list = $application->nextReadingAdd()->add(new WorkId("next-work-1"));
+        $list = $application->nextReadingAdd()->add(new WorkId("next-work-1"));
+        $list = $application->nextReadingAdd()->addWithLibraryItem(
+            new WorkId("next-work-1"),
             new LibraryId("next-library"),
             new ItemId("next-item")
         );
-        $loanList = $application->nextReadingExternalLoanAdd()->add(
+        $list = $application->nextReadingAdd()->addWithExternalLoan(
+            new WorkId("next-work-1"),
             new ExternalLoanId("next-loan")
         );
-        $final = $application->nextReadingWorkAdd()->add(new WorkId("next-work-4"));
 
-        self::assertSame(2, $workList->version()->value());
-        self::assertSame(5, $final->version()->value());
-        self::assertSame([1, 2, 3, 4], array_map(
-            static fn ($entry): int => $entry->position()->value(),
-            $final->entries()
-        ));
-        self::assertCount(3, $application->nextReadingHome()->get()->entries());
-        self::assertSame(NextReadingSourceStatus::Unavailable, $application
-            ->myNextReadingList()->get()->entries()[1]->sourceStatus());
-        self::assertSame(0, $this->tableCount($this->tableNames->libraryActivityEvents()));
+        self::assertSame(5, $list->version()->value());
+        self::assertCount(4, $list->entries());
         self::assertCount(4, array_unique(array_map(
             static fn ($entry): string => $entry->id()->value(),
-            $final->entries()
+            $list->entries()
         )));
+        self::assertCount(3, $application->nextReadingHome()->get()->entries());
+        self::assertSame(0, $this->tableCount($this->tableNames->libraryActivityEvents()));
 
         try {
-            $application->nextReadingWorkAdd()->add(new WorkId("next-work-1"));
-            self::fail("Duplicate Work target was accepted.");
-        } catch (NextReadingTargetDuplicate) {
+            $application->nextReadingAdd()->add(new WorkId("unknown-work"));
+            self::fail("Unavailable Work was accepted.");
+        } catch (NextReadingWorkUnavailable) {
             self::addToAssertionCount(1);
         }
+
         foreach ([
-            static fn () => $application->nextReadingItemAdd()->add(
+            static fn () => $application->nextReadingAdd()->addWithLibraryItem(
+                new WorkId("next-work-2"),
                 new LibraryId("next-library"),
                 new ItemId("next-item")
             ),
-            static fn () => $application->nextReadingExternalLoanAdd()->add(
-                new ExternalLoanId("next-loan")
-            ),
-        ] as $duplicateAdd) {
-            try {
-                $duplicateAdd();
-                self::fail("Duplicate concrete source was accepted.");
-            } catch (NextReadingTargetDuplicate) {
-                self::addToAssertionCount(1);
-            }
-        }
-        foreach ([
-            static fn () => $application->nextReadingWorkAdd()->add(new WorkId("unknown-work")),
-            static fn () => $application->nextReadingItemAdd()->add(
+            static fn () => $application->nextReadingAdd()->addWithLibraryItem(
+                new WorkId("next-work-1"),
                 new LibraryId("foreign-library"),
-                new ItemId("next-item")
+                new ItemId("foreign-item")
             ),
-            static fn () => $application->nextReadingExternalLoanAdd()->add(
-                new ExternalLoanId("foreign-loan")
+            static fn () => $application->nextReadingAdd()->addWithExternalLoan(
+                new WorkId("next-work-2"),
+                new ExternalLoanId("next-loan")
             ),
         ] as $unavailableAdd) {
             try {
                 $unavailableAdd();
-                self::fail("Unavailable target was accepted.");
-            } catch (NextReadingTargetUnavailable) {
+                self::fail("Unavailable or mismatched preferred source was accepted.");
+            } catch (PreferredReadingSourceUnavailable) {
                 self::addToAssertionCount(1);
             }
         }
 
-        $ids = array_map(static fn ($entry) => $entry->id(), $final->entries());
-        $reordered = $application->nextReadingReorder()->reorder(
-            $final->version(),
-            array_reverse($ids)
-        );
+        $ids = array_map(static fn ($entry) => $entry->id(), $list->entries());
+        $reordered = $application->nextReadingReorder()->reorder($list->version(), array_reverse($ids));
         self::assertSame(6, $reordered->version()->value());
-        $noOp = $application->nextReadingReorder()->reorder(
-            new NextReadingListVersion(1),
+        self::assertSame(6, $application->nextReadingReorder()->reorder(
+            NextReadingListVersion::initial(),
             array_reverse($ids)
-        );
-        self::assertSame(6, $noOp->version()->value());
+        )->version()->value());
 
         try {
-            $application->nextReadingReorder()->reorder(
-                new NextReadingListVersion(5),
-                $ids
-            );
+            $application->nextReadingReorder()->reorder(new NextReadingListVersion(5), $ids);
             self::fail("Divergent stale reorder was accepted.");
         } catch (NextReadingListStale $stale) {
             self::assertSame(6, $stale->current()->version()->value());
         }
 
-        $removed = $application->nextReadingRemove()->remove($ids[0], $reordered->version());
-        self::assertSame(7, $removed->version()->value());
-        self::assertSame([1, 2, 3], array_map(
-            static fn ($entry): int => $entry->position()->value(),
-            $removed->entries()
-        ));
-
+        self::assertSame(1, $this->database->insert($this->tableNames->memberships(), [
+            "library_id" => "next-library",
+            "user_id" => (string) $other,
+            "membership_status" => "active",
+            "management_role" => "owner",
+            "use_access" => "direct",
+            "additional_permissions" => "[]",
+        ]));
         wp_set_current_user($other);
         self::assertCount(0, $application->myNextReadingList()->get()->entries());
-        try {
-            $application->nextReadingReorder()->reorder(
+        foreach ([
+            static fn () => $application->nextReadingPreferredSource()->setLibraryItem(
+                $ids[0],
                 NextReadingListVersion::initial(),
-                [$ids[1]]
-            );
-            self::fail("Foreign Entry was accepted in another owner's reorder.");
-        } catch (ValidationException) {
-            self::addToAssertionCount(1);
+                new LibraryId("next-library"),
+                new ItemId("next-item")
+            ),
+            static fn () => $application->nextReadingRemove()->remove($ids[0], NextReadingListVersion::initial()),
+        ] as $foreignMutation) {
+            try {
+                $foreignMutation();
+                self::fail("A Library owner mutated another user's personal Next Reading entry.");
+            } catch (NextReadingEntryNotAvailable) {
+                self::addToAssertionCount(1);
+            }
         }
-        $this->expectException(NextReadingEntryNotAvailable::class);
-        $application->nextReadingRemove()->remove($ids[1], NextReadingListVersion::initial());
+        self::assertSame(0, $this->tableCount($this->tableNames->libraryActivityEvents()));
     }
 
-    public function testSourceDeletionAndAccessLossPreserveSnapshotOrderAndVersion(): void
+    public function testPreferredSourceIsMutableAndLossPreservesSafeSnapshotProjection(): void
     {
         $actor = $this->createUser("next-source-owner");
         $this->seed($actor);
         wp_set_current_user($actor);
         $application = (new ProductionComposition($this->database))->application();
-        $application->nextReadingItemAdd()->add(new LibraryId("next-library"), new ItemId("next-item"));
-        $application->nextReadingExternalLoanAdd()->add(new ExternalLoanId("next-loan"));
-        $before = $application->myNextReadingList()->get();
+        $list = $application->nextReadingAdd()->add(new WorkId("next-work-1"));
+        $entryId = $list->entries()[0]->id();
 
-        $this->database->update(
-            $this->tableNames->memberships(),
-            ["membership_status" => "inactive"],
-            ["library_id" => "next-library", "user_id" => (string) $actor]
+        $list = $application->nextReadingPreferredSource()->setLibraryItem(
+            $entryId,
+            $list->version(),
+            new LibraryId("next-library"),
+            new ItemId("next-item")
         );
-        $inaccessible = $application->myNextReadingList()->get();
-        self::assertSame($before->version()->value(), $inaccessible->version()->value());
-        self::assertSame(NextReadingSourceStatus::Inaccessible, $inaccessible->entries()[0]->sourceStatus());
+        $view = $application->myNextReadingList()->get()->entries()[0]->preferredSource();
+        self::assertSame(PreferredReadingSourceType::LibraryItem, $view->type());
+        self::assertSame(PreferredReadingSourceState::Available, $view->state());
+        self::assertSame("Bibliotheekexemplaar", $view->label());
 
         self::assertSame(1, $this->database->delete($this->tableNames->items(), ["item_id" => "next-item"]));
-        self::assertSame(1, $this->database->delete($this->tableNames->externalLoans(), ["external_loan_id" => "next-loan"]));
-        $after = $application->myNextReadingList()->get();
+        $afterLoss = $application->myNextReadingList()->get();
+        self::assertSame($list->version()->value(), $afterLoss->version()->value());
+        self::assertSame(1, $afterLoss->entries()[0]->position());
+        self::assertSame(PreferredReadingSourceState::Unavailable, $afterLoss->entries()[0]->preferredSource()->state());
+        self::assertSame("Voorkeursbron niet beschikbaar", $afterLoss->entries()[0]->preferredSource()->label());
 
-        self::assertSame($before->version()->value(), $after->version()->value());
-        self::assertSame([1, 2], array_map(static fn ($entry) => $entry->position(), $after->entries()));
-        self::assertSame([NextReadingSourceStatus::Missing, NextReadingSourceStatus::Missing], array_map(
-            static fn ($entry) => $entry->sourceStatus(),
-            $after->entries()
-        ));
-        self::assertSame(["next-item", "next-loan"], array_map(
-            static fn ($entry) => $entry->sourceIdSnapshot(),
-            $after->entries()
-        ));
-        self::assertSame(1, $this->tableCount($this->tableNames->works(), "work_id='next-work-1'"));
-        self::assertSame(1, $this->tableCount($this->tableNames->works(), "work_id='next-work-2'"));
+        $cleared = $application->nextReadingPreferredSource()->clear($entryId, $list->version());
+        self::assertNull($cleared->entries()[0]->preferredSource());
+        self::assertSame(PreferredReadingSourceState::None, $application->myNextReadingList()->get()->entries()[0]->preferredSource()->state());
+        self::assertSame(0, $this->tableCount($this->tableNames->libraryActivityEvents()));
+    }
+
+    public function testRemovalCreatesOwnerScopedOneTimeUndoWithSameEntryIdentity(): void
+    {
+        $actor = $this->createUser("next-undo-owner");
+        $other = $this->createUser("next-undo-other");
+        $this->seed($actor);
+        wp_set_current_user($actor);
+        $application = (new ProductionComposition($this->database))->application();
+        $list = $application->nextReadingAdd()->add(new WorkId("next-work-1"));
+        $entryId = $list->entries()[0]->id();
+        $removal = $application->nextReadingRemove()->remove($entryId, $list->version());
+
+        self::assertCount(0, $removal->list()->entries());
+        self::assertSame(1, $this->tableCount($this->tableNames->nextReadingUndo()));
+        self::assertSame(0, $this->tableCount($this->tableNames->libraryActivityEvents()));
+        self::assertSame(
+            hash("sha256", $removal->undoToken()->value()),
+            $this->database->get_var("SELECT undo_token_hash FROM `{$this->tableNames->nextReadingUndo()}`")
+        );
+
+        wp_set_current_user($other);
+        try {
+            $application->nextReadingUndo()->undo($removal->undoToken());
+            self::fail("Another owner used the Undo token.");
+        } catch (NextReadingUndoUnavailable) {
+            self::addToAssertionCount(1);
+        }
+
+        wp_set_current_user($actor);
+        $restored = $application->nextReadingUndo()->undo($removal->undoToken());
+        self::assertSame($entryId->value(), $restored->entries()[0]->id()->value());
+        self::assertSame(0, $this->tableCount($this->tableNames->nextReadingUndo()));
+
+        $this->expectException(NextReadingUndoUnavailable::class);
+        $application->nextReadingUndo()->undo($removal->undoToken());
+    }
+
+    public function testExpiredUndoIsUnavailableAndDoesNotRestoreEntry(): void
+    {
+        $actor = $this->createUser("next-undo-expiry");
+        $this->seed($actor);
+        wp_set_current_user($actor);
+        $application = (new ProductionComposition($this->database))->application();
+        $list = $application->nextReadingAdd()->add(new WorkId("next-work-1"));
+        $removal = $application->nextReadingRemove()->remove(
+            $list->entries()[0]->id(),
+            $list->version()
+        );
+        $this->database->update(
+            $this->tableNames->nextReadingUndo(),
+            [
+                "created_at" => "2020-01-01 00:00:00.000000",
+                "expires_at" => "2020-01-01 00:00:01.000000",
+            ],
+            ["undo_token_hash" => hash("sha256", $removal->undoToken()->value())]
+        );
+
+        try {
+            $application->nextReadingUndo()->undo($removal->undoToken());
+            self::fail("Expired Undo token restored an entry.");
+        } catch (NextReadingUndoUnavailable) {
+            self::assertCount(0, $application->myNextReadingList()->get()->entries());
+        }
     }
 
     public function testInvalidFullReorderFailsAtomically(): void
@@ -180,8 +227,8 @@ final class NextReadingPersistenceTest extends PersistenceIntegrationTestCase
         $this->seed($actor);
         wp_set_current_user($actor);
         $application = (new ProductionComposition($this->database))->application();
-        $list = $application->nextReadingWorkAdd()->add(new WorkId("next-work-1"));
-        $list = $application->nextReadingWorkAdd()->add(new WorkId("next-work-2"));
+        $list = $application->nextReadingAdd()->add(new WorkId("next-work-1"));
+        $list = $application->nextReadingAdd()->add(new WorkId("next-work-2"));
         $id = $list->entries()[0]->id();
 
         try {
@@ -207,7 +254,7 @@ final class NextReadingPersistenceTest extends PersistenceIntegrationTestCase
             "user_id" => (string) $actor,
             "membership_status" => "active",
             "management_role" => "member",
-            "use_access" => "view_only",
+            "use_access" => "direct",
             "additional_permissions" => "[]",
         ]);
         foreach ([1, 2, 3, 4] as $number) {
@@ -233,6 +280,22 @@ final class NextReadingPersistenceTest extends PersistenceIntegrationTestCase
             "loan_status" => "active",
             "borrowed_at" => "2026-08-23 10:00:00.000000",
             "due_at" => null,
+        ]);
+        $this->database->insert($this->tableNames->libraries(), [
+            "library_id" => "foreign-library",
+            "library_name" => "Foreign Library",
+            "library_type" => "private_library",
+            "library_status" => "active",
+        ]);
+        $this->database->insert($this->tableNames->editions(), [
+            "edition_id" => "foreign-edition",
+            "work_id" => "next-work-1",
+        ]);
+        $this->database->insert($this->tableNames->items(), [
+            "item_id" => "foreign-item",
+            "library_id" => "foreign-library",
+            "edition_id" => "foreign-edition",
+            "item_status" => "active",
         ]);
     }
 

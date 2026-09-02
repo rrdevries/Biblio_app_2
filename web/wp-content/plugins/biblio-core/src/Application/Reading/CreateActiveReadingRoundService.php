@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace Biblio\Core\Application\Reading;
 
 use Biblio\Core\Application\Identity\AuthenticatedUser;
+use Biblio\Core\Application\NextReading\ConsumeNextReadingAfterStartService;
+use Biblio\Core\Application\TransactionManager;
 use Biblio\Core\Borrowing\ExternalLoan;
 use Biblio\Core\Catalog\Edition;
 use Biblio\Core\Catalog\Item;
 use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Identity\UserId;
+use Biblio\Core\NextReading\NextReadingEntryId;
 use Biblio\Core\Reading\ReadingDate;
 use Biblio\Core\Reading\ReadingRound;
 use Biblio\Core\Reading\ReadingRoundClock;
@@ -28,7 +31,9 @@ final readonly class CreateActiveReadingRoundService
         private AuthenticatedUser $authenticatedUser,
         WritableReadingRoundRepository $readingRoundRepository,
         ReadingRoundIdGenerator $ids,
-        private ReadingRoundClock $clock
+        private ReadingRoundClock $clock,
+        private TransactionManager $transactions,
+        private ConsumeNextReadingAfterStartService $nextReadingConsumption
     ) {
         $this->creation = new ReadingRoundCreation(
             $ids,
@@ -39,7 +44,8 @@ final readonly class CreateActiveReadingRoundService
     public function createFromLibraryItem(
         Item $item,
         Edition $edition,
-        ReadingDate|DateTimeImmutable $startedOn
+        ReadingDate|DateTimeImmutable $startedOn,
+        ?NextReadingEntryId $nextReadingEntryId = null
     ): ReadingRound {
         if (!$item->editionId()->equals($edition->id())) {
             throw new ReadingSourceUnavailable();
@@ -49,13 +55,15 @@ final readonly class CreateActiveReadingRoundService
             $edition->workId(),
             ReadingSource::libraryItem($item->id()),
             $this->normalizeDate($startedOn),
-            $this->authenticatedUser->requireUserId()
+            $this->authenticatedUser->requireUserId(),
+            $nextReadingEntryId
         );
     }
 
     public function createFromExternalLoan(
         ExternalLoan $externalLoan,
-        ReadingDate|DateTimeImmutable $startedOn
+        ReadingDate|DateTimeImmutable $startedOn,
+        ?NextReadingEntryId $nextReadingEntryId = null
     ): ReadingRound {
         $authenticatedUserId = $this->authenticatedUser->requireUserId();
 
@@ -67,7 +75,8 @@ final readonly class CreateActiveReadingRoundService
             $externalLoan->workId(),
             ReadingSource::externalLoan($externalLoan->id()),
             $this->normalizeDate($startedOn),
-            $authenticatedUserId
+            $authenticatedUserId,
+            $nextReadingEntryId
         );
     }
 
@@ -75,19 +84,44 @@ final readonly class CreateActiveReadingRoundService
         WorkId $sourceWorkId,
         ReadingSource $source,
         ReadingDate $startedOn,
-        UserId $authenticatedUserId
+        UserId $authenticatedUserId,
+        ?NextReadingEntryId $nextReadingEntryId
     ): ReadingRound {
-        return $this->creation->create(
+        return $this->transactions->run(function () use (
             $authenticatedUserId,
-            fn (ReadingRoundId $id): ReadingRound => ReadingRound::active(
-                $id,
+            $sourceWorkId,
+            $source,
+            $startedOn,
+            $nextReadingEntryId
+        ): ReadingRound {
+            $lockedList = $this->nextReadingConsumption->lock($authenticatedUserId);
+            $this->nextReadingConsumption->assertExplicitEntry(
+                $lockedList,
+                $nextReadingEntryId,
+                $sourceWorkId
+            );
+            $now = $this->clock->now();
+            $round = $this->creation->create(
                 $authenticatedUserId,
+                fn (ReadingRoundId $id): ReadingRound => ReadingRound::active(
+                    $id,
+                    $authenticatedUserId,
+                    $sourceWorkId,
+                    $source,
+                    $startedOn,
+                    $now
+                )
+            );
+            $this->nextReadingConsumption->consume(
+                $authenticatedUserId,
+                $lockedList,
                 $sourceWorkId,
                 $source,
-                $startedOn,
-                $this->clock->now()
-            )
-        );
+                $nextReadingEntryId,
+                $now
+            );
+            return $round;
+        });
     }
 
     private function normalizeDate(

@@ -24,8 +24,11 @@ final readonly class CoreTableNames
     private string $contributionPublications;
     private string $nextReadingLists;
     private string $nextReadingEntries;
+    private string $nextReadingUndo;
     private string $nextReadingInsertTrigger;
     private string $nextReadingUpdateTrigger;
+    private string $nextReadingUndoInsertTrigger;
+    private string $nextReadingUndoUpdateTrigger;
     private string $libraryBookTypes;
     private string $libraryGenres;
     private string $librarySubjects;
@@ -52,8 +55,11 @@ final readonly class CoreTableNames
             . "biblio_contribution_publications";
         $this->nextReadingLists = $prefix . "biblio_next_reading_lists";
         $this->nextReadingEntries = $prefix . "biblio_next_reading_entries";
+        $this->nextReadingUndo = $prefix . "biblio_next_reading_undo";
         $this->nextReadingInsertTrigger = $prefix . "biblio_nr_entry_bi";
         $this->nextReadingUpdateTrigger = $prefix . "biblio_nr_entry_bu";
+        $this->nextReadingUndoInsertTrigger = $prefix . "biblio_nr_undo_bi";
+        $this->nextReadingUndoUpdateTrigger = $prefix . "biblio_nr_undo_bu";
         $this->libraryBookTypes = $prefix . "biblio_library_book_types";
         $this->libraryGenres = $prefix . "biblio_library_genres";
         $this->librarySubjects = $prefix . "biblio_library_subjects";
@@ -71,6 +77,9 @@ final readonly class CoreTableNames
         }
         $this->assertSafe($this->nextReadingInsertTrigger);
         $this->assertSafe($this->nextReadingUpdateTrigger);
+        $this->assertSafe($this->nextReadingUndo);
+        $this->assertSafe($this->nextReadingUndoInsertTrigger);
+        $this->assertSafe($this->nextReadingUndoUpdateTrigger);
     }
 
     public function libraries(): string
@@ -127,8 +136,11 @@ final readonly class CoreTableNames
 
     public function nextReadingLists(): string { return $this->nextReadingLists; }
     public function nextReadingEntries(): string { return $this->nextReadingEntries; }
+    public function nextReadingUndo(): string { return $this->nextReadingUndo; }
     public function nextReadingInsertTrigger(): string { return $this->nextReadingInsertTrigger; }
     public function nextReadingUpdateTrigger(): string { return $this->nextReadingUpdateTrigger; }
+    public function nextReadingUndoInsertTrigger(): string { return $this->nextReadingUndoInsertTrigger; }
+    public function nextReadingUndoUpdateTrigger(): string { return $this->nextReadingUndoUpdateTrigger; }
 
     public function libraryBookTypes(): string
     {
@@ -221,6 +233,12 @@ final readonly class CoreTableNames
     public function schema1006(): array
     {
         return [...$this->schema1005(), $this->nextReadingLists, $this->nextReadingEntries];
+    }
+
+    /** @return list<string> */
+    public function schema1008(): array
+    {
+        return [...$this->schema1006(), $this->nextReadingUndo];
     }
 
     private function assertSafe(string $tableName): void

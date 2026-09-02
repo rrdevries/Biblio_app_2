@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Biblio\Core\Application\Library\GetAccessibleLibraryItemService;
 use Biblio\Core\Application\Library\LibraryAccessService;
+use Biblio\Core\Application\NextReading\ConsumeNextReadingAfterStartService;
 use Biblio\Core\Application\Reading\CreateActiveReadingRoundService;
 use Biblio\Core\Application\Reading\StartReadingFromLibraryItemService;
 use Biblio\Core\Authorization\LibraryAuthorizationPolicy;
@@ -14,9 +15,12 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\CoreTableNames;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbEditionRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbItemRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMembershipRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbNextReadingRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbReadingRoundRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionManager;
 use Biblio\Core\Infrastructure\WordPress\OpaqueReadingRoundIdGenerator;
 use Biblio\Core\Infrastructure\WordPress\SystemReadingRoundClock;
+use Biblio\Core\Infrastructure\WordPress\SystemNextReadingClock;
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Reading\ActiveReadingRoundAlreadyExists;
 use Biblio\Core\Reading\ReadingRound;
@@ -41,6 +45,16 @@ require dirname(__DIR__) . "/bootstrap.php";
 
 $tableNames = new CoreTableNames($wpdb->prefix);
 $repository = new WpdbReadingRoundRepository($wpdb, $tableNames);
+if (file_put_contents($readyPath, "ready") === false) {
+    throw new RuntimeException("Could not signal race readiness.");
+}
+$deadline = microtime(true) + 15;
+while (!is_file($releasePath)) {
+    if (microtime(true) >= $deadline) {
+        throw new RuntimeException("Race barrier timed out.");
+    }
+    usleep(10_000);
+}
 $barrierRepository = new class(
     $repository,
     $readyPath,
@@ -141,9 +155,14 @@ $service = new StartReadingFromLibraryItemService(
     new WpdbEditionRepository($wpdb, $tableNames),
     new CreateActiveReadingRoundService(
         new ControllableAuthenticatedUser(new UserId($userValue)),
-        $barrierRepository,
+        $repository,
         new OpaqueReadingRoundIdGenerator(),
-        new SystemReadingRoundClock()
+        new SystemReadingRoundClock(),
+        new WpdbTransactionManager($wpdb),
+        new ConsumeNextReadingAfterStartService(
+            new WpdbNextReadingRepository($wpdb, $tableNames),
+            new SystemNextReadingClock()
+        )
     )
 );
 try {

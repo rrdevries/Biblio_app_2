@@ -15,7 +15,7 @@ final readonly class CoreSchemaMigrator
      * supported production schema history starts at 1000.
      */
     public const FORMAL_BASELINE_VERSION = 1000;
-    public const CURRENT_VERSION = 1007;
+    public const CURRENT_VERSION = 1008;
     public const VERSION_OPTION = "biblio_core_schema_version";
     public const LEGACY_VERSION_OPTION = "biblio_core_library_schema_version";
 

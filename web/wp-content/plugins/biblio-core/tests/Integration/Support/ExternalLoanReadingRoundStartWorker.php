@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
+use Biblio\Core\Application\NextReading\ConsumeNextReadingAfterStartService;
 use Biblio\Core\Application\Reading\CreateActiveReadingRoundService;
 use Biblio\Core\Application\Reading\StartReadingFromExternalLoanService;
 use Biblio\Core\Borrowing\ExternalLoanId;
@@ -10,9 +11,12 @@ use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Persistence\WordPress\CoreTableNames;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbExternalLoanRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbNextReadingRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbReadingRoundRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionManager;
 use Biblio\Core\Infrastructure\WordPress\OpaqueReadingRoundIdGenerator;
 use Biblio\Core\Infrastructure\WordPress\SystemReadingRoundClock;
+use Biblio\Core\Infrastructure\WordPress\SystemNextReadingClock;
 use Biblio\Core\Reading\ActiveReadingRoundAlreadyExists;
 use Biblio\Core\Reading\ReadingRound;
 use Biblio\Core\Reading\ReadingRoundId;
@@ -33,6 +37,16 @@ require dirname(__DIR__) . "/bootstrap.php";
 
 $tableNames = new CoreTableNames($wpdb->prefix);
 $repository = new WpdbReadingRoundRepository($wpdb, $tableNames);
+if (file_put_contents($readyPath, "ready") === false) {
+    throw new RuntimeException("Could not signal race readiness.");
+}
+$deadline = microtime(true) + 15;
+while (!is_file($releasePath)) {
+    if (microtime(true) >= $deadline) {
+        throw new RuntimeException("Race barrier timed out.");
+    }
+    usleep(10_000);
+}
 $barrierRepository = new class(
     $repository,
     $readyPath,
@@ -129,9 +143,14 @@ $service = new StartReadingFromExternalLoanService(
     ),
     new CreateActiveReadingRoundService(
         $actor,
-        $barrierRepository,
+        $repository,
         new OpaqueReadingRoundIdGenerator(),
-        new SystemReadingRoundClock()
+        new SystemReadingRoundClock(),
+        new WpdbTransactionManager($wpdb),
+        new ConsumeNextReadingAfterStartService(
+            new WpdbNextReadingRepository($wpdb, $tableNames),
+            new SystemNextReadingClock()
+        )
     )
 );
 
