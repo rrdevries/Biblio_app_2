@@ -1637,3 +1637,37 @@ Reading REST route, C7 UI, Elementor/Crocoblock change, Home module or C7
 Playwright. C7 is not implemented and is **READY FOR BUILD SCOPE** with only
 capability-specific discovery, REST/serialization/security, UI and E2E work
 remaining; no Next Reading domain product blocker remains.
+
+## 54. C7 Hierna lezen adapter and screen acceptance evidence
+
+Status: **GO — C7 CLOSED**
+
+C7 reuses the schema-1008/ADR-008 contract without domain or migration change.
+Acceptance requires and now proves:
+
+- private cookie/nonce `biblio/v1` list, add, remove, Undo, reorder and
+  preferred-source set/change/clear routes;
+- bounded stable title/keyset Work discovery and actor-safe same-Work source
+  options across viewable Libraries plus actor-owned ExternalLoans;
+- exact DTO allowlists, generic unavailable projection, owner isolation and
+  non-enumerating unknown/foreign errors;
+- unrestricted duplicate Works/preferences and distinct entry IDs;
+- Work-first optional-source add, exact empty copy, non-clickable rows,
+  authoritative reorder, direct remove and server-token Undo;
+- one-in-flight mutation locks, stale reload without retry, abort/revision
+  search, deliberate focus restoration and polite live announcements;
+- keyboard-only operation, minimum 44px controls, narrow wrapping and the
+  existing 640px 200%-equivalent reflow strategy without horizontal overflow;
+- guarded fixtures for duplicate/Item/loan/unavailable/foreign/Undo state and
+  schema-1008 cleanup/fingerprint coverage.
+
+Focused REST passes 7 tests/215 assertions, focused C7 frontend passes 11 tests
+and focused C7 Playwright passes 9/9 combined scenarios. Complete REST passes
+46/978, complete frontend 185/185, Start Reading/consumption 3/23, Core unit
+252/970, Core MariaDB integration 246/2,690 and full guarded Playwright 49/49
+(unchanged 1A–1D 40/40 plus C7 9/9). Double cleanup, zero residue and the
+unchanged schema-1008 non-fixture fingerprint pass. The authoritative
+route, privacy, UI, non-scope and shell evidence is
+`docs/29-c7-next-reading-exit-evidence.md`. A real manual browser-toolbar zoom
+measurement is not claimed; the explicitly permitted equivalent reflow
+strategy is used. No permanent Page or Elementor layout is created.

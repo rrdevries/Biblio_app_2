@@ -28,6 +28,7 @@ use Biblio\Core\Application\Notes\Read\GetMyPrivateNotesForWorkService;
 use Biblio\Core\Application\Notes\RenderPrivateNoteContentService;
 use Biblio\Core\Application\Notes\UpdatePrivateNoteContentService;
 use Biblio\Core\Application\NextReading\{AddNextReadingEntryService,GetMyNextReadingListService,GetNextReadingHomeProjectionService,RemoveNextReadingEntryService,ReorderNextReadingListService,SetNextReadingPreferredSourceService,UndoNextReadingRemovalService};
+use Biblio\Core\Application\NextReading\Read\NextReadingDiscoveryService;
 use Biblio\Core\Application\Reading\GetOwnedReadingRoundService;
 use Biblio\Core\Application\Reading\CorrectEndedReadingRoundService;
 use Biblio\Core\Application\Reading\CorrectReadingRoundSourceService;
@@ -108,7 +109,8 @@ final readonly class CoreApplication
         private SetNextReadingPreferredSourceService $nextReadingPreferredSource,
         private ReorderNextReadingListService $nextReadingReorder,
         private GetMyNextReadingListService $myNextReadingList,
-        private GetNextReadingHomeProjectionService $nextReadingHome
+        private GetNextReadingHomeProjectionService $nextReadingHome,
+        private NextReadingDiscoveryService $nextReadingDiscovery
     ) {
     }
 
@@ -306,4 +308,5 @@ final readonly class CoreApplication
     public function nextReadingReorder(): ReorderNextReadingListService { return $this->nextReadingReorder; }
     public function myNextReadingList(): GetMyNextReadingListService { return $this->myNextReadingList; }
     public function nextReadingHome(): GetNextReadingHomeProjectionService { return $this->nextReadingHome; }
+    public function nextReadingDiscovery(): NextReadingDiscoveryService { return $this->nextReadingDiscovery; }
 }

@@ -811,7 +811,7 @@ The complete implementation and verification record is maintained in
 
 ### F2.9 — Hierna lezen / Next Reading
 
-Status: **historical implementation superseded; current contract correction — GO**
+Status: **current contract correction and C7 adapter/screen — GO**
 
 The former F2.9 targetmodel and exit remain historical evidence in docs 14–15
 but are explicitly superseded. Current Core models stable entry identity,
@@ -828,8 +828,18 @@ protected foreign source IDs.
 
 The current normative architecture and verification record are maintained in
 `docs/decisions/ADR-008-next-reading-intent-model-and-transactional-consumption.md`
-and `docs/28-next-reading-contract-correction.md`. C7 REST, discovery and UI are
-not implemented.
+and `docs/28-next-reading-contract-correction.md`. C7 now adds bounded
+platform-wide Work search, actor-safe same-Work source options, nine private
+`biblio/v1` routes, allowlisted serialization and the standalone
+`[biblio_next_reading_app]` UI at the planned `hierna-lezen` Page slug. It
+supports duplicates, Work-first add, preference set/change/clear, authoritative
+Omhoog/Omlaag, direct remove plus server Undo, stale reconciliation, keyboard
+focus/status and responsive reflow without a selected Library context.
+
+Schema remains 1008 and the corrected Core/domain contract is unchanged. C7
+adds no Home or start-from-entry UI, ActivityEvent, Crocoblock logic, permanent
+WordPress Page or Elementor design. Formal build and exit evidence is in
+`docs/29-c7-next-reading-exit-evidence.md`.
 
 ### F2.10 — Library Identity & Context Readiness
 

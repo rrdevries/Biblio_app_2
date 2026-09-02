@@ -28,6 +28,13 @@ Work/source discovery, REST/serialization/security tests and UI/E2E remain.
 Original schema-1006 and F2.9 statements below are retained as historical
 baseline unless this update or doc 28 explicitly replaces them.
 
+C7 closure update (2026-09-02): C7 is **GO / CLOSED**. Bounded Work discovery,
+actor-safe preferred-source options, private Next Reading REST routes,
+allowlisted serializers/error mapping, standalone Biblio UI and guarded
+frontend/Playwright proof are implemented without schema/domain change. The
+original C7 open-work statements below are superseded by this update and
+`docs/29-c7-next-reading-exit-evidence.md`.
+
 ## 1. Baseline
 
 ### Repository
@@ -273,7 +280,7 @@ de praktijk alsnog A betekenen.
 | C4 | InternalLoan | Groot en risicovol, maar de eerste slice beperkt zich tot Owner/Directe toegang. Een typed source-DTO houdt latere source-uitbreiding achter Core. |
 | C5 | ExternalLoan lifecycle | Bestaande read/startfundering blijft bruikbaar; create/return UI is geen voorwaarde voor Item-start. |
 | C6 | Private Notes adapter/scherm | Core CRUD/read/render is compleet; kan na de gedeelde adapterbasis als dunne uitbreiding volgen. |
-| C7 | Hierna-lezen adapter/scherm | **READY FOR BUILD SCOPE**: gecorrigeerde Core list/mutations/Undo/consumption/readmodel zijn compleet; alleen discovery/transport/UI en capability-E2E resteren. |
+| C7 | Hierna-lezen adapter/scherm | **GO / CLOSED**: discovery, private transport, standalone UI en capability-E2E zijn geleverd bovenop het ongewijzigde schema-1008/Core-contract. |
 | C8 | ActivityEvent read / Library audit | Append-only waarheid bestaat; audit is niet nodig om de eerste private reading action uit te voeren. |
 | C9 | Timeline | Afgeleid en persoonlijk; blokkeert geen bronmutatie of authorization. |
 | C10 | Statistieken | Afgeleid van brondata; geen tweede schrijfwaarheid nodig. |

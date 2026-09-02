@@ -403,3 +403,88 @@
 
     [data-biblio-ui-root] .biblio-ui__dialog-actions { grid-template-columns: minmax(0, 1fr); }
 }
+
+[data-biblio-next-reading-root] .biblio-ui__visually-hidden {
+    block-size: 1px;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    inline-size: 1px;
+    overflow: hidden;
+    position: absolute;
+    white-space: nowrap;
+}
+
+[data-biblio-next-reading-root] .biblio-ui__next-reading-content,
+[data-biblio-next-reading-root] .biblio-ui__next-reading-empty {
+    display: grid;
+    gap: var(--biblio-space-4);
+    min-inline-size: 0;
+}
+
+[data-biblio-next-reading-root] .biblio-ui__next-reading-list {
+    display: grid;
+    gap: var(--biblio-space-4);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+[data-biblio-next-reading-root] .biblio-ui__next-reading-row {
+    background: var(--biblio-color-surface);
+    border: var(--biblio-boundary-width) solid var(--biblio-color-boundary);
+    border-radius: var(--biblio-card-radius);
+    display: grid;
+    gap: var(--biblio-space-3);
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+    padding: var(--biblio-space-4);
+}
+
+[data-biblio-next-reading-root] .biblio-ui__next-reading-source {
+    color: var(--biblio-color-primary);
+}
+
+[data-biblio-next-reading-root] .biblio-ui__next-reading-actions,
+[data-biblio-next-reading-root] .biblio-ui__next-reading-header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--biblio-space-2);
+    min-inline-size: 0;
+}
+
+[data-biblio-next-reading-root] .biblio-ui__next-reading-dialog form,
+[data-biblio-next-reading-root] .biblio-ui__work-search,
+[data-biblio-next-reading-root] .biblio-ui__work-results,
+[data-biblio-next-reading-root] .biblio-ui__source-options {
+    display: grid;
+    gap: var(--biblio-space-3);
+    min-inline-size: 0;
+}
+
+[data-biblio-next-reading-root] .biblio-ui__source-options {
+    border: 0;
+    margin: 0;
+    padding: 0;
+}
+
+[data-biblio-next-reading-root] .biblio-ui__source-options legend {
+    font-weight: 600;
+    margin-block-end: var(--biblio-space-3);
+}
+
+[data-biblio-next-reading-root] .biblio-ui__work-search input[type="search"] {
+    inline-size: 100%;
+    min-block-size: var(--biblio-control-min);
+    min-inline-size: 0;
+    padding: var(--biblio-space-2);
+}
+
+@media (max-width: 767px) {
+    [data-biblio-next-reading-root] .biblio-ui__next-reading-actions .biblio-ui__control,
+    [data-biblio-next-reading-root] .biblio-ui__next-reading-header .biblio-ui__control,
+    [data-biblio-next-reading-root] .biblio-ui__next-reading-empty .biblio-ui__control,
+    [data-biblio-next-reading-root] .biblio-ui__next-reading-undo .biblio-ui__control {
+        flex: 1 1 10rem;
+        inline-size: 100%;
+    }
+}

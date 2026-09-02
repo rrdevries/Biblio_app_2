@@ -15,6 +15,8 @@ use Biblio\Core\Application\Catalog\Read\CatalogTextValue;
 use Biblio\Core\Application\Library\LibraryContextView;
 use Biblio\Core\Application\Notes\Read\PrivateNoteView;
 use Biblio\Core\Application\Notes\Read\PrivateNoteViewPage;
+use Biblio\Core\Application\NextReading\{NextReadingEntryView,NextReadingListView,NextReadingRemoval,PreferredReadingSourceState,PreferredReadingSourceView};
+use Biblio\Core\Application\NextReading\Read\{NextReadingSourceOptionView,NextReadingWorkPage,NextReadingWorkView};
 use Biblio\Core\Application\Reading\History\ReadingHistoryEntry;
 use Biblio\Core\Application\Reading\History\ReadingHistoryPage;
 use Biblio\Core\Reading\ReadingDate;
@@ -26,7 +28,8 @@ final readonly class RestResponseSerializer
     public function __construct(
         private CatalogCursorCodec $cursors,
         private ReadingHistoryCursorCodec $historyCursors,
-        private PrivateNoteCursorCodec $privateNoteCursors
+        private PrivateNoteCursorCodec $privateNoteCursors,
+        private ?NextReadingWorkCursorCodec $nextReadingWorkCursors = null
     ) {
     }
 
@@ -155,6 +158,58 @@ final readonly class RestResponseSerializer
         ];
     }
 
+    /** @return array{list_version: int, entries: list<array<string, mixed>>} */
+    public function nextReadingList(NextReadingListView $list): array
+    {
+        return [
+            "list_version" => $list->version()->value(),
+            "entries" => array_map($this->nextReadingEntry(...), $list->entries()),
+        ];
+    }
+
+    /** @return array{list: array{list_version: int, entries: list<array<string, mixed>>}, undo: array{token: string, expires_at: string}} */
+    public function nextReadingRemoval(
+        NextReadingListView $list,
+        NextReadingRemoval $removal
+    ): array {
+        return [
+            "list" => $this->nextReadingList($list),
+            "undo" => [
+                "token" => $removal->undoToken()->value(),
+                "expires_at" => $removal->undoExpiresAt()->format("Y-m-d\\TH:i:s.u\\Z"),
+            ],
+        ];
+    }
+
+    /** @return array{items: list<array{work_id: string, title: string}>, next_cursor: ?string} */
+    public function nextReadingWorks(NextReadingWorkPage $page): array
+    {
+        return [
+            "items" => array_map(
+                static fn (NextReadingWorkView $work): array => [
+                    "work_id" => $work->workId()->value(),
+                    "title" => $work->title(),
+                ],
+                $page->works()
+            ),
+            "next_cursor" => $page->nextCursor() === null
+                ? null
+                : $this->nextReadingWorkCursorCodec()->encode(
+                    $page->nextCursor()
+                ),
+        ];
+    }
+
+    /** @param list<NextReadingSourceOptionView> $options
+     * @return array{items: list<array<string, mixed>>}
+     */
+    public function nextReadingSourceOptions(array $options): array
+    {
+        return [
+            "items" => array_map($this->nextReadingSourceOption(...), $options),
+        ];
+    }
+
     /** @return array<string, mixed> */
     private function readingHistoryEntry(ReadingHistoryEntry $entry): array
     {
@@ -165,6 +220,72 @@ final readonly class RestResponseSerializer
             "source_type" => $entry->sourceType()->value,
             "historical_registration" => $entry->historicalRegistration(),
         ];
+    }
+
+    /** @return array<string, mixed> */
+    private function nextReadingEntry(NextReadingEntryView $entry): array
+    {
+        return [
+            "entry_id" => $entry->id()->value(),
+            "position" => $entry->position(),
+            "work" => [
+                "work_id" => $entry->workId(),
+                "title" => $entry->workTitle(),
+            ],
+            "preferred_source" => $this->nextReadingPreferredSource(
+                $entry->preferredSource()
+            ),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function nextReadingPreferredSource(
+        PreferredReadingSourceView $source
+    ): array {
+        if ($source->state() === PreferredReadingSourceState::None) {
+            return [
+                "state" => "none",
+                "label" => "Geen voorkeursbron",
+            ];
+        }
+
+        if ($source->state() === PreferredReadingSourceState::Unavailable) {
+            return [
+                "state" => "unavailable",
+                "label" => "Voorkeursbron niet beschikbaar",
+            ];
+        }
+
+        return [
+            "state" => "available",
+            "type" => $source->type()?->value,
+            "label" => $source->label(),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function nextReadingSourceOption(
+        NextReadingSourceOptionView $option
+    ): array {
+        if ($option->type()->value === "library_item") {
+            return [
+                "type" => "library_item",
+                "library_id" => $option->libraryId()?->value(),
+                "item_id" => $option->itemId()?->value(),
+                "label" => $option->label(),
+            ];
+        }
+
+        return [
+            "type" => "external_loan",
+            "external_loan_id" => $option->externalLoanId()?->value(),
+            "label" => $option->label(),
+        ];
+    }
+
+    private function nextReadingWorkCursorCodec(): NextReadingWorkCursorCodec
+    {
+        return $this->nextReadingWorkCursors ?? new NextReadingWorkCursorCodec();
     }
 
     /** @return array<string, mixed> */

@@ -186,6 +186,7 @@ Reading. C7 REST and UI are not implemented by this decision.
 ## References
 
 - [Next Reading contract correction](../28-next-reading-contract-correction.md)
+- [C7 Hierna lezen build and exit evidence](../29-c7-next-reading-exit-evidence.md)
 - [F2.9a Next Reading analysis — historical](../14-f2-9a-next-reading-analysis.md)
 - [F2.9b Next Reading exit evidence — historical](../15-f2-9b-exit-evidence.md)
 - [ADR-003 — Biblio Core owns domain logic](ADR-003-biblio-core-owns-domain-logic.md)

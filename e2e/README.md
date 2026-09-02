@@ -1,9 +1,10 @@
-# Vertical Slices 1A, 1B, 1C and 1D E2E
+# Vertical Slices 1A, 1B, 1C, 1D and C7 E2E
 
 This directory contains the shared local-only Playwright acceptance layer for
 Vertical Slice 1A, the ReadingRound end evidence in Vertical Slice 1B, the
 Reading History browser evidence in Vertical Slice 1C and the authenticated
-Private Notes browser evidence in Vertical Slice 1D.
+Private Notes browser evidence in Vertical Slice 1D. It also contains the
+standalone Next Reading adapter evidence for capability C7.
 
 ## Safety boundary
 
@@ -41,8 +42,8 @@ an Item for another Edition, one actor-owned ExternalLoan, thirteen ended
 actor rounds, one active actor round and one foreign ended round. Its exact,
 month, year, stopped, source-free historical and legacy dates are fixed. The
 remaining Works isolate zero history, active-only, successful End refresh,
-failed End refresh and rapid-navigation behavior. Setup contains 18 Items, 16
-Works, 17 Editions, one ExternalLoan and 29 ReadingRounds in total. The 1C
+failed End refresh and rapid-navigation behavior. Setup contains 18 Items, 17
+Works, 18 Editions, three ExternalLoans and 29 ReadingRounds in total. The 1C
 browser spec never depends on a mutation from an earlier test.
 
 The 1D layer reuses those exact Works and Items and adds 21 allowlisted Private
@@ -54,10 +55,22 @@ existing authenticated Core application services rather than repositories or
 direct SQL. The 1D browser spec resets the complete fixture before every full
 run and executes serially on one worker.
 
+The C7 layer creates one temporary marked Page at `/hierna-lezen/`, reuses the
+primary Work and Item, and adds one dedicated Work whose Item source is made
+unavailable after seeding. It adds one actor-owned and one foreign-owned
+ExternalLoan plus five actor-owned Next Reading entries covering duplicate
+general intent, Item intent, ExternalLoan intent and unavailable-source state.
+The `next-reading-reset` action restores that exact actor-owned list through
+the existing authenticated Core application services. The C7 browser spec is
+serial and proves empty, add, duplicate, reorder, direct remove and Undo,
+preferred-source changes, stale recovery, ownership privacy, keyboard flow and
+narrow responsive behavior.
+
 Cleanup removes ReadingRounds by the exact allowlisted Work set, including
-source-free, ExternalLoan and legacy rows, then removes the one exact
-ExternalLoan and the existing exact entity allowlists. Counts report every
-relevant fixture entity separately.
+source-free, ExternalLoan and legacy rows, then removes the three exact
+ExternalLoans, the Next Reading rows and the existing exact entity allowlists.
+It also removes the marked C7 Page. Counts report every relevant fixture entity
+separately.
 
 The copied Biblio1 source was inspected only to select these safe
 bibliographic titles for the original 1A cases:
@@ -74,11 +87,12 @@ current Core read model exposes titles but intentionally returns authors,
 covers and edition metadata as `unknown`; the E2E suite verifies that omission
 instead of expanding production scope.
 
-The `stale-end`, `note-stale-update`, `note-stale-delete` and
-`note-unavailable-delete` fixture actions invoke the authenticated owner's
-existing Core application services. State and fingerprint actions are
-read-only and emit only allowlisted lifecycle/ownership fields, aggregate
-counts and hashes; they do not expose private non-E2E row content.
+The `stale-end`, `note-stale-update`, `note-stale-delete`,
+`note-unavailable-delete` and `next-reading-reset` fixture actions invoke the
+authenticated owner's existing Core application services. State and
+fingerprint actions are read-only and emit only allowlisted
+lifecycle/ownership fields, aggregate counts and hashes; they do not expose
+private non-E2E row content.
 
 ## Commands
 

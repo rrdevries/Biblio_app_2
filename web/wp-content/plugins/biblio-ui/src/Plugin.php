@@ -17,17 +17,22 @@ final class Plugin
     public const DETAIL_SCRIPT_MODULE_ID = "biblio-ui/detail-view";
     public const END_READING_SCRIPT_MODULE_ID = "biblio-ui/end-reading-view";
     public const START_READING_SCRIPT_MODULE_ID = "biblio-ui/start-reading-view";
+    public const NEXT_READING_SCRIPT_MODULE_ID = "biblio-ui/next-reading";
     public const STYLE_HANDLE = "biblio-ui";
 
     private bool $booted = false;
     private readonly LibraryAppShortcode $libraryAppShortcode;
+    private readonly NextReadingAppShortcode $nextReadingAppShortcode;
 
     public function __construct(
         private readonly string $pluginFile,
-        ?LibraryAppShortcode $libraryAppShortcode = null
+        ?LibraryAppShortcode $libraryAppShortcode = null,
+        ?NextReadingAppShortcode $nextReadingAppShortcode = null
     ) {
         $this->libraryAppShortcode = $libraryAppShortcode
             ?? new LibraryAppShortcode();
+        $this->nextReadingAppShortcode = $nextReadingAppShortcode
+            ?? new NextReadingAppShortcode();
     }
 
     public function boot(): void
@@ -37,6 +42,7 @@ final class Plugin
         }
 
         add_action("init", [$this->libraryAppShortcode, "register"]);
+        add_action("init", [$this->nextReadingAppShortcode, "register"]);
         add_action("wp_enqueue_scripts", [$this, "registerAndEnqueueAssets"]);
         $this->booted = true;
     }
@@ -45,6 +51,15 @@ final class Plugin
     {
         $assetBaseUrl = plugin_dir_url($this->pluginFile) . "assets/";
 
+        wp_register_script_module(
+            self::NEXT_READING_SCRIPT_MODULE_ID,
+            $assetBaseUrl . "js/next-reading.js",
+            [[
+                "id" => self::API_SCRIPT_MODULE_ID,
+                "import" => "static",
+            ]],
+            self::VERSION
+        );
         wp_register_script_module(
             self::API_SCRIPT_MODULE_ID,
             $assetBaseUrl . "js/api.js",
@@ -138,6 +153,13 @@ final class Plugin
             [],
             self::VERSION
         );
+
+        if (is_page(NextReadingAppShortcode::PAGE_SLUG)) {
+            wp_enqueue_script_module(self::NEXT_READING_SCRIPT_MODULE_ID);
+            wp_enqueue_style(self::STYLE_HANDLE);
+
+            return;
+        }
 
         if (!is_page(LibraryAppShortcode::PAGE_SLUG)) {
             return;

@@ -13,6 +13,7 @@ declare(strict_types=1);
 defined("ABSPATH") || exit;
 
 require_once __DIR__ . "/src/LibraryAppShortcode.php";
+require_once __DIR__ . "/src/NextReadingAppShortcode.php";
 require_once __DIR__ . "/src/Plugin.php";
 
 (new \Biblio\UI\Plugin(__FILE__))->boot();

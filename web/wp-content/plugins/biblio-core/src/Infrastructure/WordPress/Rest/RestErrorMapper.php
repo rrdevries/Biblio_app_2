@@ -65,6 +65,9 @@ final readonly class RestErrorMapper
             FailureReason::PrivateNoteNotAvailable,
             FailureReason::ReadingSourceUnavailable,
             FailureReason::ReadingRoundNotAvailable,
+            FailureReason::NextReadingWorkUnavailable,
+            FailureReason::PreferredReadingSourceUnavailable,
+            FailureReason::NextReadingEntryNotAvailable,
         ], true)) {
             return $this->error(
                 "biblio_resource_not_available",
@@ -78,6 +81,9 @@ final readonly class RestErrorMapper
             FailureReason::ReadingRoundStale,
             FailureReason::CatalogRecordAlreadyExists,
             FailureReason::PrivateNoteStale,
+            FailureReason::NextReadingListStale,
+            FailureReason::NextReadingUndoUnavailable,
+            FailureReason::NextReadingEntryIdCollisionExhausted,
         ], true)) {
             return $this->error(
                 "biblio_{$reason->value}",
