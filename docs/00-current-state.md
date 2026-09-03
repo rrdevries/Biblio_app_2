@@ -131,6 +131,14 @@ User-owned:
 
 Central identity does not mean unrestricted editing. When a central record is used by multiple Libraries, ordinary Library administrators propose corrections instead of directly changing the shared record.
 
+The technical central bibliographic baseline is schema `1009`. It persists
+stable Author and Series identities plus typed Work relationships. Work
+contributors are limited to ordered `author` and `co_author` roles. A
+Work-Series membership stores either a validated sortable decimal position or
+`NULL` for genuinely unknown position; unknown is never converted to a
+fictitious volume number. These central relationships contain no Library,
+Item or User ownership and grant no Library access.
+
 ## Reading
 
 A new active ReadingRound always has:

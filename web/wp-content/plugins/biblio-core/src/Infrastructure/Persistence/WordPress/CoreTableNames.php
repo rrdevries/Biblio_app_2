@@ -36,6 +36,10 @@ final readonly class CoreTableNames
     private string $libraryCatalogContextGenres;
     private string $libraryCatalogContextSubjects;
     private string $libraryActivityEvents;
+    private string $authors;
+    private string $workContributors;
+    private string $series;
+    private string $workSeries;
 
     public function __construct(string $prefix)
     {
@@ -71,8 +75,12 @@ final readonly class CoreTableNames
             . "biblio_library_catalog_context_subjects";
         $this->libraryActivityEvents = $prefix
             . "biblio_library_activity_events";
+        $this->authors = $prefix . "biblio_authors";
+        $this->workContributors = $prefix . "biblio_work_contributors";
+        $this->series = $prefix . "biblio_series";
+        $this->workSeries = $prefix . "biblio_work_series";
 
-        foreach ($this->schema1006() as $tableName) {
+        foreach ($this->schema1009() as $tableName) {
             $this->assertSafe($tableName);
         }
         $this->assertSafe($this->nextReadingInsertTrigger);
@@ -177,6 +185,11 @@ final readonly class CoreTableNames
         return $this->libraryActivityEvents;
     }
 
+    public function authors(): string { return $this->authors; }
+    public function workContributors(): string { return $this->workContributors; }
+    public function series(): string { return $this->series; }
+    public function workSeries(): string { return $this->workSeries; }
+
     /** @return list<string> */
     public function all(): array
     {
@@ -239,6 +252,23 @@ final readonly class CoreTableNames
     public function schema1008(): array
     {
         return [...$this->schema1006(), $this->nextReadingUndo];
+    }
+
+    /** @return list<string> */
+    public function schema1009Additions(): array
+    {
+        return [
+            $this->authors,
+            $this->workContributors,
+            $this->series,
+            $this->workSeries,
+        ];
+    }
+
+    /** @return list<string> */
+    public function schema1009(): array
+    {
+        return [...$this->schema1008(), ...$this->schema1009Additions()];
     }
 
     private function assertSafe(string $tableName): void

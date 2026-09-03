@@ -1828,3 +1828,35 @@ Implementation acceptance may not be declared until the applicable
 source-model prerequisites in doc 33 are closed or explicitly removed from a
 newly approved scope. This finalization itself changes no production code,
 test, schema, runtime data or UI behavior.
+
+## 58. Central Author and Series relationship foundation
+
+Status: **GO**
+
+Schema `1009` adds the first technical prerequisite from doc 33:
+
+- stable central Author and Series IDs with validated UTF-8 display names;
+- typed ordered Work contributors limited to `author` and `co_author`;
+- duplicate-free Work-Series membership with known decimal or `NULL` unknown
+  position;
+- forward-only 1008→1009 migration with fresh-install, health, retry,
+  unknown-partial-state and existing-Work preservation evidence;
+- batched Work/Author and Work/Series repository reads in both directions;
+- database foreign keys, duplicate constraints and restrictive deletion;
+- no Library, Item or User key in the new central tables and no REST, UI,
+  Search, filter or sort behavior.
+
+Names may be corrected behind stable IDs. Equal names do not merge identities.
+No primary-author cardinality was added because the canonical sources require
+only explicit role and deterministic order. Unknown Series position stays
+unknown; no external completeness claim is made.
+
+The authoritative implementation and gate record is
+`docs/34-author-series-relationship-foundation-exit-evidence.md`. Overall Mijn
+Bibliotheek technical implementation readiness remains blocked on the
+remaining prerequisite slices in doc 33.
+
+Final gate evidence: Core unit 267/267 with 1,014 assertions; MariaDB
+integration 261/261 with 3,030 assertions; complete syntax/PHPStan, Composer,
+WordPress smoke, manifest and whitespace checks passed. The full Core gate
+completed in 104 seconds.

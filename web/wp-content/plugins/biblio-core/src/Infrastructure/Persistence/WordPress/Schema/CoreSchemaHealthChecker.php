@@ -38,6 +38,7 @@ final readonly class CoreSchemaHealthChecker
             1006 => $this->inspectTables($this->tableNames->schema1006(), true, 1006),
             1007 => $this->inspectTables($this->tableNames->schema1006(), true, 1007),
             1008 => $this->inspectTables($this->tableNames->schema1008(), true, 1008),
+            1009 => $this->inspectTables($this->tableNames->schema1009(), true, 1009),
             default => throw new CoreSchemaMigrationException(
                 "No explicit Biblio Core schema-health contract exists for "
                 . "schema version {$expectedVersion}."
@@ -94,6 +95,15 @@ final readonly class CoreSchemaHealthChecker
             $this->tableNames->schema1001Additions(),
             false,
             1001
+        );
+    }
+
+    public function inspectExistingSchema1009Additions(): CoreSchemaHealth
+    {
+        return $this->inspectTables(
+            $this->tableNames->schema1009Additions(),
+            false,
+            1009
         );
     }
 
@@ -493,6 +503,36 @@ final readonly class CoreSchemaHealthChecker
                 "work_id" => $id,
                 "work_title" => ["type" => "varchar(512)", "nullable" => "NO"],
             ],
+            $this->tableNames->authors() => [
+                "author_id" => $id,
+                "display_name" => [
+                    "type" => "varchar(512)",
+                    "nullable" => "NO",
+                    "collation" => "utf8mb4_bin",
+                ],
+            ],
+            $this->tableNames->workContributors() => [
+                "work_id" => $id,
+                "author_id" => $id,
+                "contributor_role" => ["type" => "varchar(32)", "nullable" => "NO"],
+                "contributor_position" => ["type" => "bigint(20) unsigned", "nullable" => "NO"],
+            ],
+            $this->tableNames->series() => [
+                "series_id" => $id,
+                "display_name" => [
+                    "type" => "varchar(512)",
+                    "nullable" => "NO",
+                    "collation" => "utf8mb4_bin",
+                ],
+            ],
+            $this->tableNames->workSeries() => [
+                "work_id" => $id,
+                "series_id" => $id,
+                "series_position" => [
+                    "type" => "decimal(20,6) unsigned",
+                    "nullable" => "YES",
+                ],
+            ],
             $this->tableNames->editions() => [
                 "edition_id" => $id,
                 "work_id" => $id,
@@ -774,6 +814,38 @@ final readonly class CoreSchemaHealthChecker
             $this->tableNames->works() => [
                 "PRIMARY" => ["unique" => true, "columns" => ["work_id"]],
             ],
+            $this->tableNames->authors() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["author_id"]],
+                "authors_by_display_name" => [
+                    "unique" => false,
+                    "columns" => ["display_name", "author_id"],
+                ],
+            ],
+            $this->tableNames->workContributors() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["work_id", "author_id"]],
+                "work_contributors_by_position" => [
+                    "unique" => true,
+                    "columns" => ["work_id", "contributor_position"],
+                ],
+                "work_contributors_by_author" => [
+                    "unique" => false,
+                    "columns" => ["author_id", "work_id"],
+                ],
+            ],
+            $this->tableNames->series() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["series_id"]],
+                "series_by_display_name" => [
+                    "unique" => false,
+                    "columns" => ["display_name", "series_id"],
+                ],
+            ],
+            $this->tableNames->workSeries() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["work_id", "series_id"]],
+                "work_series_by_series_order" => [
+                    "unique" => false,
+                    "columns" => ["series_id", "series_position", "work_id"],
+                ],
+            ],
             $this->tableNames->editions() => [
                 "PRIMARY" => ["unique" => true, "columns" => ["edition_id"]],
                 "editions_by_work" => ["unique" => false, "columns" => ["work_id"]],
@@ -1014,6 +1086,14 @@ final readonly class CoreSchemaHealthChecker
                     ["library_id", "user_id"]
                 ),
             ],
+            $this->tableNames->workContributors() => [
+                $restrict(["work_id"], $this->tableNames->works(), ["work_id"]),
+                $restrict(["author_id"], $this->tableNames->authors(), ["author_id"]),
+            ],
+            $this->tableNames->workSeries() => [
+                $restrict(["work_id"], $this->tableNames->works(), ["work_id"]),
+                $restrict(["series_id"], $this->tableNames->series(), ["series_id"]),
+            ],
             $this->tableNames->editions() => [
                 $restrict(["work_id"], $this->tableNames->works(), ["work_id"]),
             ],
@@ -1158,6 +1238,16 @@ final readonly class CoreSchemaHealthChecker
             ],
             $this->tableNames->works() => [
                 "CHAR_LENGTH(TRIM(work_title)) > 0",
+            ],
+            $this->tableNames->authors() => [
+                "CHAR_LENGTH(TRIM(display_name)) > 0",
+            ],
+            $this->tableNames->workContributors() => [
+                "contributor_role IN ('author', 'co_author')",
+                "contributor_position >= 1",
+            ],
+            $this->tableNames->series() => [
+                "CHAR_LENGTH(TRIM(display_name)) > 0",
             ],
             $this->tableNames->items() => [
                 "item_status = 'active'",

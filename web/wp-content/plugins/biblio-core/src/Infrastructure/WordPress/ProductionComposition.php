@@ -10,6 +10,7 @@ use Biblio\Core\Application\Assessments\Read\GetLibraryPublicAssessmentsService;
 use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
 use Biblio\Core\Application\Catalog\AddLibraryItemService;
 use Biblio\Core\Application\Catalog\Read\CatalogUiReadService;
+use Biblio\Core\Application\Catalog\Read\BibliographicRelationshipQueryService;
 use Biblio\Core\Application\Catalog\Classification\ClassificationTermActivity;
 use Biblio\Core\Application\Catalog\Classification\CreateLibraryCatalogContextService;
 use Biblio\Core\Application\Catalog\Classification\LibraryCatalogContextActivity;
@@ -85,6 +86,8 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbReadingHistoryReadRepos
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionConnection;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionManager;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbWorkRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbAuthorRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbSeriesRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrationRegistry;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrator;
 use Biblio\Core\Infrastructure\WordPress\Lifecycle\CoreLifecycleCoordinator;
@@ -127,6 +130,8 @@ final class ProductionComposition
             $tableNames
         );
         $workRepository = new WpdbWorkRepository($database, $tableNames);
+        $authorRepository = new WpdbAuthorRepository($database, $tableNames);
+        $seriesRepository = new WpdbSeriesRepository($database, $tableNames);
         $editionRepository = new WpdbEditionRepository($database, $tableNames);
         $itemRepository = new WpdbItemRepository($database, $tableNames);
         $bookTypeRepository = new WpdbLibraryBookTypeRepository(
@@ -206,6 +211,10 @@ final class ProductionComposition
             $authenticatedUser,
             $libraryContexts,
             new WpdbCatalogUiReadRepository($database, $tableNames)
+        );
+        $bibliographicRelationships = new BibliographicRelationshipQueryService(
+            $authorRepository,
+            $seriesRepository
         );
         $activityFactory = new WordPressActivityEventFactory(
             new ActivityEventSource("core.classification")
@@ -535,6 +544,7 @@ final class ProductionComposition
             $personalLibraries,
             $libraryContexts,
             $catalogUiReads,
+            $bibliographicRelationships,
             $libraryItemCreation,
             $accessibleItems,
             $ownedExternalLoans,

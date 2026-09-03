@@ -8,22 +8,26 @@ Date: 2026-09-03.
 
 This document reconciles the final approved product decisions for server-side
 Search, Filters, Sort and query-bound keyset pagination in `Mijn Bibliotheek`.
-It changes documentation only. The current disabled controls and active-only
+The original reconciliation was documentation-only. Schema 1009 now closes the
+Author/Series prerequisite, while the current disabled controls and active-only
 title-ordered runtime remain unchanged until separately approved implementation.
 
 **Product readiness: GO.** The first implementation wave is fixed as
 Leesstatus, Auteur, Serie, Locatie, Boeksoort, Genre, Onderwerp, Collecties and
 `Zonder collectie`. No product decision remains for this wave.
 
-**Technical implementation readiness: BLOCKED.** The current schema and read
-model still lack required first-wave Author, Series, alternative-title, ISBN,
-inventory, omnibus, Location, archive and Collection sources. Existing reading
-and classification sources also need query integration. These are technical
+**Technical implementation readiness: BLOCKED.** Schema 1009 now provides the
+central Author/Series relationship foundation. The current schema and read
+model still lack required first-wave alternative-title, ISBN, inventory,
+omnibus, Location, archive and Collection sources. Existing reading and
+classification sources also need query integration. These are technical
 prerequisites, not product questions.
 
-The first technical prerequisite is the central Author/Series relationship
-foundation. The complete query feature cannot receive implementation GO until
-all applicable prerequisite slices are closed.
+The first technical prerequisite, the central Author/Series relationship
+foundation, is closed in
+`docs/34-author-series-relationship-foundation-exit-evidence.md`. The complete
+query feature cannot receive implementation GO until all remaining applicable
+prerequisite slices are closed.
 
 ## 2. Sources and authority
 
@@ -37,10 +41,9 @@ Authority order:
    `docs/05-source-register.md` and `docs/06-testing-and-acceptance.md`;
 5. F2.11/F2.12 and Vertical Slice 1A evidence in docs 18–21;
 6. docs 26, 31 and 32;
-7. current Core, REST, UI, tests and schema-1008 implementation.
+7. current Core, REST, UI, tests and schema-1009 implementation.
 
-`manifest.json` already indexes this document. The document index does not
-change, so this documentation round leaves the manifest untouched.
+`manifest.json` indexes this document and the schema-1009 foundation evidence.
 
 ## 3. Final reconciliation matrix
 
@@ -240,7 +243,7 @@ Current limitations:
 - the repository supports only active title-ordered Items;
 - REST has no strict full query allowlist or typed filter/sort parser;
 - UI controls are disabled and route state contains only Library/Item IDs;
-- schema 1008 lacks most required source models.
+- schema 1009 still lacks most required source models beyond Author/Series.
 
 Required additions retain existing boundaries: Core owns query meaning,
 Library Context, authorization and actor-private reading status; REST parses
@@ -269,15 +272,15 @@ operators, URL behavior, sort availability or archive composition.
 
 ## 11. Technical dependency matrix
 
-Evidence is schema 1008, the current domain types and repositories, and the
+Evidence is schema 1009, the current domain types and repositories, and the
 active `WpdbCatalogUiReadRepository` projection.
 
 | Feature | Required source/model | Exists now? | Gap/class | Required before query implementation? |
 |---|---|---|---|---|
 | Search: Work title | central Work title | Yes | **A — ALREADY EXISTS** | Yes; reusable now |
 | Search: alternative title | central Work-title aliases | No | **D — DOMAIN FOUNDATION MISSING** | Yes |
-| Search/filter/sort: Auteur/Co-auteur | central Author identity plus ordered typed Work relationship | No | **D — DOMAIN FOUNDATION MISSING** | Yes |
-| Search/filter/sort: Serie | central Series identity plus Work membership and volume sort value | No | **D — DOMAIN FOUNDATION MISSING** | Yes |
+| Search/filter/sort: Auteur/Co-auteur | central Author identity plus ordered typed Work relationship | Yes | **A — ALREADY EXISTS**; query integration still to add | Yes; reusable now |
+| Search/filter/sort: Serie | central Series identity plus Work membership and volume sort value | Yes | **A — ALREADY EXISTS**; query integration still to add | Yes; reusable now |
 | Search: ISBN | Edition ISBN source including explicit no-ISBN/unknown distinction | No | **D — DOMAIN FOUNDATION MISSING** | Yes |
 | Search: inventory number | Library Item inventory identity | No | **D — DOMAIN FOUNDATION MISSING** | Yes |
 | Search: omnibus metadata | Work/Edition containment relationship | No | **D — DOMAIN FOUNDATION MISSING** | Yes |
@@ -316,6 +319,7 @@ Collections, each with different ownership and migration invariants.
 ### Slice 1 — central Author and Series relationship foundation
 
 - **Severity:** High.
+- **Status:** **GO / CLOSED** in schema 1009; see doc 34.
 - **Dependency:** existing central Work identity, schema migration baseline and
   Core-owned domain rules.
 - **Scope:** Author identities; typed Auteur/Co-auteur Work relationships;
@@ -403,6 +407,9 @@ Collections, each with different ownership and migration invariants.
 **Title:** Central Author and Series Relationship Foundation
 
 **Task severity:** High.
+
+**Implementation status:** **GO / CLOSED** in schema 1009. The retained brief
+below records the approved boundary; implementation evidence is in doc 34.
 
 **Goal:** add the smallest complete central bibliographic foundation for
 Auteur/Co-auteur and Serie relationships so later Search, filter and sort work
@@ -524,6 +531,7 @@ were performed.
 | Technical implementation readiness | **BLOCKED — prerequisite foundations** |
 | Architecture/security readiness | **READY WITH CONDITIONS** |
 
-Implementation may start only through a separately approved technical slice.
-The recommended first slice is section 14; this documentation round performs
-no production, schema, test, fixture, REST, frontend or runtime change.
+Further implementation may proceed only through separately approved technical
+slices. The expected next prerequisite is Slice 2, Remaining Search Metadata
+Foundation. The completed Slice 1 adds no REST, frontend, Search/filter/sort
+query behavior or runtime fixture data.

@@ -140,6 +140,23 @@ Central identity governance:
 - shared records require correction proposal;
 - structural merges/splits remain central administration.
 
+The schema-1009 Author/Series foundation represents this identity with
+separate central Author and Series records and explicit Work relationships.
+Author names and Series names remain mutable labels behind stable binary IDs;
+name equality is not identity and causes no automatic merge. Work contributors
+use the closed roles `author` and `co_author` plus a unique positive position
+per Work. Work-Series membership is unique per Work + Series and distinguishes
+a known non-negative decimal position from `NULL`/unknown. The decimal storage
+allows fractional numbering without claiming that an external Series is
+complete.
+
+Both relationship repositories accept ID batches in each direction. This
+keeps later catalog projections free to load Work→Author, Author→Work,
+Work→Series and Series→Work without an inherent N+1 contract. The application
+boundary exposes only typed central relationship reads; no REST or public
+enumeration route is introduced. Library-facing catalog reads must still begin
+with authorized Library Context and reachable Items.
+
 ## 6. Reading source model
 
 ReadingRound is user-owned. An active ReadingRound requires exactly one concrete source identity.
@@ -257,6 +274,12 @@ Fase 0 proved this baseline for:
 - platform-wide Work and Edition;
 - Library-owned Item;
 - user-owned ExternalLoan and ReadingRound.
+
+Schema `1009` extends that baseline with central Author and Series identities,
+ordered Work contributors and Work-Series memberships. Relationship foreign
+keys use `RESTRICT`; primary/unique keys prevent duplicate Author membership,
+duplicate Series membership and duplicate contributor positions. Reverse
+lookup and Series-order indexes support the four normal relationship paths.
 
 Work and Edition remain in this persistence for v2.001. There is no technical need to move them to CPT or CCT now.
 

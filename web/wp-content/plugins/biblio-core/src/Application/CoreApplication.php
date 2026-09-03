@@ -10,6 +10,7 @@ use Biblio\Core\Application\Assessments\Read\GetLibraryPublicAssessmentsService;
 use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
 use Biblio\Core\Application\Catalog\AddLibraryItemService;
 use Biblio\Core\Application\Catalog\Read\CatalogUiReadService;
+use Biblio\Core\Application\Catalog\Read\BibliographicRelationshipQueryService;
 use Biblio\Core\Application\Catalog\Classification\CreateLibraryCatalogContextService;
 use Biblio\Core\Application\Catalog\Classification\ManageLibraryBookTypesService;
 use Biblio\Core\Application\Catalog\Classification\ManageLibraryGenresService;
@@ -56,6 +57,7 @@ final readonly class CoreApplication
         private EnsurePersonalPrivateLibraryService $personalLibraries,
         private LibraryContextQueryService $libraryContexts,
         private CatalogUiReadService $catalogUiReads,
+        private BibliographicRelationshipQueryService $bibliographicRelationships,
         private AddLibraryItemService $libraryItemCreation,
         private GetAccessibleLibraryItemService $accessibleLibraryItems,
         private GetOwnedExternalLoanService $ownedExternalLoans,
@@ -134,6 +136,11 @@ final readonly class CoreApplication
     public function catalogUiReads(): CatalogUiReadService
     {
         return $this->catalogUiReads;
+    }
+
+    public function bibliographicRelationships(): BibliographicRelationshipQueryService
+    {
+        return $this->bibliographicRelationships;
     }
 
     public function accessibleLibraryItems(): GetAccessibleLibraryItemService
