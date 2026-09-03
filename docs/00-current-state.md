@@ -1524,3 +1524,24 @@ No Core, REST, schema, authorization, domain behavior, Elementor Page or theme
 template changes were made. Full scope, collisions, non-scope and acceptance
 mapping are recorded in
 `docs/32-mijn-bibliotheek-design-system-slice.md`.
+
+### Mijn Bibliotheek — server-side catalog query readiness
+
+Status: **Analyzed — BLOCKED**
+
+The readiness analysis for full-catalog server-side Search, Filters, Sort and
+query-bound keyset pagination is recorded in
+`docs/33-mijn-bibliotheek-server-side-catalog-query-readiness.md`.
+
+Library-search scope, fields, relevance classes, general minimum query length,
+the active default and the current title/Item order are canonical. The requested
+filter set, alternate Author/Series/date sorts, matching normalization and
+frontend persistence/apply behavior are not sufficiently decided. Most rich
+search/filter fields also have no reliable schema-1008 source: Author, Series,
+ISBN, inventory, Location, Condition, acquisition, loan/archive and Collections
+remain prerequisite capabilities.
+
+No Core, REST, UI, schema, Elementor or runtime behavior changed. The existing
+disabled controls and current active title-ordered cursor overview remain
+authoritative until a separately approved implementation scope closes the
+documented product and data prerequisites.

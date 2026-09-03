@@ -1744,3 +1744,29 @@ guarded authenticated Chromium 50/50 plus final focused Quick View Chromium
 all fixture counts at zero; the before/after non-fixture fingerprint is equal
 with 39 Core rows and SHA-256
 `314a9fc54ef83367cb7cfa4dc4030e9c0d49fcc665a58a1fb00562abca039cfa`.
+
+## 57. Mijn Bibliotheek server-side catalog query readiness
+
+The documentation-only readiness analysis is
+`docs/33-mijn-bibliotheek-server-side-catalog-query-readiness.md` and concludes
+**BLOCKED** for the complete Search/Filter/Sort implementation.
+
+Readiness acceptance established:
+
+- canonical Library search scope, fields, ranking classes, minimum query length,
+  active default and current title/Item keyset order are traced to sources;
+- incomplete matching, filter, alternate-sort, Collection and frontend-state
+  semantics are isolated as open product decisions rather than inferred;
+- current Core → repository → REST → UI flow and exact missing layer contracts
+  are mapped;
+- a versioned sort-specific cursor with a canonical query fingerprint is the
+  recommended technical direction, while authorization remains independent;
+- schema 1008 and live local indexes/plans are inspected read-only; the local
+  1-Item dataset is explicitly not treated as 1k/10k performance evidence;
+- required unit, MariaDB integration, REST, frontend, E2E, security and
+  performance acceptance is specified for later implementation slices;
+- no production code, test, schema, runtime data or UI behavior is changed.
+
+Implementation acceptance may not be declared until the product decisions and
+source-model prerequisites listed in doc 33 are closed or explicitly removed
+from a newly approved scope.
