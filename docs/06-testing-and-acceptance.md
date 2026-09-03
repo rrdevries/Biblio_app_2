@@ -1747,16 +1747,23 @@ with 39 Core rows and SHA-256
 
 ## 57. Mijn Bibliotheek server-side catalog query readiness
 
-The documentation-only readiness analysis is
-`docs/33-mijn-bibliotheek-server-side-catalog-query-readiness.md` and concludes
+The documentation-only readiness analysis and product-contract reconciliation
+are recorded in
+`docs/33-mijn-bibliotheek-server-side-catalog-query-readiness.md` and conclude
 **BLOCKED** for the complete Search/Filter/Sort implementation.
 
 Readiness acceptance established:
 
 - canonical Library search scope, fields, ranking classes, minimum query length,
-  active default and current title/Item keyset order are traced to sources;
-- incomplete matching, filter, alternate-sort, Collection and frontend-state
-  semantics are isolated as open product decisions rather than inferred;
+  active default and title-ascending default order are traced to sources;
+- personal `Standaardweergave`, personal per-Library `Archief tonen`, temporary
+  archive search and the no-silent-default-mutation boundary are reconciled;
+- the physical-only scope excludes a varying media-form filter in v2.001;
+- incomplete matching, first-release filter/operators, alternate-sort,
+  Collection, generic session/URL and archive-interaction semantics are isolated
+  as nine real product decisions rather than inferred;
+- normalization, cursor/fingerprint, transport, SQL, tie-breaker and index
+  choices are classified as technical rather than user product decisions;
 - current Core → repository → REST → UI flow and exact missing layer contracts
   are mapped;
 - a versioned sort-specific cursor with a canonical query fingerprint is the
@@ -1769,4 +1776,5 @@ Readiness acceptance established:
 
 Implementation acceptance may not be declared until the product decisions and
 source-model prerequisites listed in doc 33 are closed or explicitly removed
-from a newly approved scope.
+from a newly approved scope. The reconciliation itself changes no production
+code, test, schema, runtime data or UI behavior.

@@ -1527,19 +1527,26 @@ mapping are recorded in
 
 ### Mijn Bibliotheek — server-side catalog query readiness
 
-Status: **Analyzed — BLOCKED**
+Status: **Reconciled — BLOCKED**
 
 The readiness analysis for full-catalog server-side Search, Filters, Sort and
 query-bound keyset pagination is recorded in
 `docs/33-mijn-bibliotheek-server-side-catalog-query-readiness.md`.
 
 Library-search scope, fields, relevance classes, general minimum query length,
-the active default and the current title/Item order are canonical. The requested
-filter set, alternate Author/Series/date sorts, matching normalization and
-frontend persistence/apply behavior are not sufficiently decided. Most rich
+active default and title-ascending default order are canonical. Personal
+`Standaardweergave`, personal per-Library `Archief tonen` (default off), the
+temporary archive-search reset rule and the no-silent-default-mutation boundary
+are also fixed. Cursor/fingerprint, safe limits, transport normalization and SQL
+shape are technical rather than user product decisions.
+
+The requested first-release filter set/operators, Collection-filter semantics,
+alternate Author/Series/date sorts, search matching/result-surface behavior and
+generic session/URL/archive interaction are not sufficiently decided. Most rich
 search/filter fields also have no reliable schema-1008 source: Author, Series,
 ISBN, inventory, Location, Condition, acquisition, loan/archive and Collections
-remain prerequisite capabilities.
+remain prerequisite capabilities. The reconciled matrix and nine real product
+questions are in document 33.
 
 No Core, REST, UI, schema, Elementor or runtime behavior changed. The existing
 disabled controls and current active title-ordered cursor overview remain

@@ -6,21 +6,24 @@ Date: 2026-09-03.
 
 ## 1. Context, scope and verdict
 
-This analysis defines what is known and what is still missing before server-side
-Search, Filters, Sort and context-bound keyset pagination may be implemented for
-the existing `Mijn Bibliotheek` active-Item overview.
+This reconciled analysis defines what is known and what is still missing before
+server-side Search, Filters, Sort and context-bound keyset pagination may be
+implemented for the existing `Mijn Bibliotheek` overview.
 
 No production code, schema, REST route, UI behavior, Elementor configuration or
 runtime data is changed by this slice. The current route and UI remain limited to
 the existing active overview ordered by Work title and Item ID.
 
-**Verdict: BLOCKED.** The repository contains canonical Library-search fields
-and ranking direction, but it does not contain a sufficiently complete product
-contract for the requested filters, alternate sort options or their interaction.
-Most canonical search fields and almost every requested filter also lack a
-reliable persisted source in schema 1008. The complete feature therefore cannot
-enter implementation without product decisions and prerequisite catalog,
-Collection and Item-lifecycle data capabilities.
+**Verdict: BLOCKED.** Reconciliation closes several false or over-broad open
+questions: the personal/default view contract, archive preference and temporary
+archive-search behavior, title-ascending default, empty-query browse behavior,
+and a set of implementation-only normalization/cursor/transport choices. The
+repository still does not contain a definitive filter set, Collection-filter
+operators, alternate Author/Series/date sort contract or complete search and
+state UX. Most canonical search fields and almost every candidate rich filter
+also lack a reliable persisted source in schema 1008. The complete feature
+therefore still cannot enter implementation without the short product-decision
+list in section 16 and prerequisite data capabilities.
 
 The existing title-only data permits a later, separately approved technical
 subslice, but that would not satisfy the feature requested here.
@@ -41,46 +44,74 @@ The analysis used, in authority order:
 7. current Core, REST, UI, tests, schema registry and the local schema-1008
    MariaDB runtime.
 
-`manifest.json` lists docs through 32 and no later canonical catalog-query
-source. Document 33 is therefore the next free documentation number.
+`manifest.json` already indexes document 33. No document-index change is needed
+for this reconciliation.
 
-## 3. Canonical source matrix
+## 3. Reconciliation matrix
 
-`Definitief` means the cited source fixes the behavior. `Open` means the source
-describes a domain value or visual affordance but does not fix the filter/sort
-contract. `Niet beschikbaar` means current schema 1008 cannot supply the value.
+Statuses mean: `CANONICAL` is a complete existing product decision; `PARTIAL`
+has a fixed basis but unresolved product semantics; `OPEN` has no definitive
+repository decision; `TECHNICAL` needs no user product decision;
+`DOCUMENTATION GAP` existed in authoritative implementation/current-state
+evidence but was insufficiently centralized in the functional design before
+this reconciliation.
 
-| Onderwerp | Canonieke bron | Besluit | Status |
+| Onderwerp | Status vóór reconciliation | Bron | Definitieve status |
 |---|---|---|---|
-| Search scope | Functional design §§5 and 15; testing §12; ADR-001/003 | Strict current-Library scope; active Items by default; all matching copies remain reachable. | Definitief |
-| Search fields | Functional design §§5 and 15 | Work title/alternative title, Auteur/Co-auteur, Serie, relevant Item ISBN and inventory number. | Definitief; only Work title is currently persisted |
-| Search ranking | Functional design §15 | Exact title/ISBN, title, Auteur/Co-auteur, Serie, other valid contextual match; equal relevance uses alphabetical title. | Definitief; implementation detail within each class remains open |
-| Search length | Functional design §15 | General minimum two characters; exact identifiers are exempt. | Definitief at principle level; identifier recognition and maximum are open |
-| Filter leesstatus | Functional design §§5–6 | The three actor-private derived states are canonical. Whether/how they are exposed as a filter is not specified. | Open |
-| Filter vorm | Functional design §§1 and 4; AGENTS.md | v2.001 supports physical books only. No varying form source exists in the overview. | Not a meaningful current filter; open for later media scope |
-| Filter locatie | Functional design §5 | Location is Library-owned and optional, but no Mijn Bibliotheek filter contract or persistence exists. | Open / not available |
-| Filter collectie | Functional design §10; roadmap A-02 | Collection membership is active same-Library physical Items only. Filter selection/cardinality/OR behavior is not canonicalized. | Open / not available |
-| Zonder collectie | No current canonical source | No filter behavior or exclusivity contract is recorded. | Open / not available |
-| Filter Auteur | Functional design §§4, 11 | Auteur/Co-auteur identity is canonical, but the filter contract and persistence are absent. | Open / not available |
-| Filter Serie | Functional design §§4, 11 | Series identity is canonical, but the filter contract and persistence are absent. | Open / not available |
-| Filter taal | Functional design §4 | Edition language semantics exist; filter semantics and persistence do not. | Open / not available |
-| Filter uitgever | Functional design §4 | Publisher is Edition metadata; filter semantics and persistence do not. | Open / not available |
-| Filter uitleenstatus | Functional design §§5 and 8 | Availability/loan meanings exist; filter semantics and internal-loan persistence do not. | Open / not available |
-| Filter conditie | Functional design §4 | Item Condition values exist; filter semantics and persistence do not. | Open / not available |
-| Filter toevoeg-/aanwinstdatum | Functional design §5 | Business acquisition date and technical registration time are distinct. Which one filters/sorts and its range semantics are open; neither is persisted. | Open / not available |
-| Classification filters | Functional design §5; ADR-006 | Boeksoort/Genre/Onderwerp and scoped IDs exist, but no overview filter contract is canonical. | Open; data available |
-| Sort titel | F2.11 docs 00/18; current Core and UI placeholder | Current overview order is Work title ASC, Item ID ASC. | Definitief for the current default |
-| Search result order | Functional design §15 | Relevance classes, then alphabetical title. | Definitief direction; exact scoring/ties beyond Item ID are technical work |
-| Sort auteur | No current canonical source | No alternate Author sort, primary-author rule or null order is fixed. | Open / not available |
-| Seriesortering | Functional design §11; roadmap B-12/C-01 | No external series order/completeness truth is fixed. | Open / not available |
-| Datum-sorteringen | No current canonical source | No acquisition/registration/publication sort is approved for this overview. | Open / not available |
-| Archief-context | Functional design §§5, 9, 15 and 17 | Search defaults active; temporary `Ook in archief zoeken` resets on refresh/navigation and is separate from personal `Archief tonen`, default off. | Definitief semantically; archive persistence/preferences are not available |
-| Toolbar/chips | Design System §12; doc 32 | Toolbar has Search, Filters, Sort and view switch; active filters use removable chips. Controls remain deferred until the full-catalog server contract exists. | Definitief presentation direction |
+| Library scope, authorization, active default and visible copies | Definitief | Functional design §§5 and 15; testing §12; ADR-001/003 | CANONICAL |
+| Search fields: Work title/alternative title, Auteur/Co-auteur, Serie, relevant ISBN, inventory number | Definitief | Functional design §§5 and 15 | CANONICAL |
+| Search ranking and two-character minimum | Definitief met implementatiedetails open | Functional design §15 | CANONICAL |
+| Scoring within a relevance class and exact-identifier recognition | Open productbesluit | Canonical ranking/length behavior supplies the constraint | TECHNICAL |
+| Empty/absent query returns the normal overview | Open | Existing backward-compatible F2.11/F2.12 overview; functional design §5 | CANONICAL |
+| Case, Unicode/whitespace, identifier punctuation, maximum length and query transport | Open productbesluit | ADR-003; functional design §§15 and 18; implementation must preserve approved matching behavior | TECHNICAL |
+| Prefix/token/substring and accent-equivalence behavior | Open productbesluit | No definitive source | OPEN |
+| Contained Work title for an omnibus | Open | Functional design §4 defines the relation but not Library-search matching | OPEN |
+| Set result | Open for this Item overview | Functional design §§4 and 15 fixes direct Set matching and excludes child-only duplicate Set results | PARTIAL |
+| Quick filters `Alles`, `Ongelezen`, `Aan het lezen`, `Uitgelezen` | Open | Functional design §§5–6 fixes the default active overview and derived statuses, not quick-filter exposure/operators | PARTIAL |
+| Quick filters `Fysiek`, `E-book`, `Luisterboek` | Open/later media | Functional design §§1 and 4; scope doc §Media excludes a varying v2.001 media filter | CANONICAL |
+| Quick filters `Uitgeleend`, `Serie` | Open | Functional design §§4–5, 8 and 11 fixes the underlying concepts, not filter exposure | PARTIAL |
+| Expanded Auteur, Serie, Locatie, Taal, Uitgever, Uitleenstatus, Conditie | Open | Functional design §§4–5, 8 and 11 define values, not filter semantics; most sources unavailable | PARTIAL |
+| Expanded Vorm/drager | Open | Physical-only v2.001 scope excludes a varying form filter | CANONICAL |
+| Expanded Leesstatus | Open | Functional design §§5–6 defines three derived values, not filter mechanics | PARTIAL |
+| Expanded Aankoop-/toevoegdatum | Open | Functional design §5 defines business acquisition date versus registration timestamp, not filter field/range | PARTIAL |
+| Boeksoort/Genre/Onderwerp filters | Open | Functional design §5; ADR-006; data exists but overview exposure/operators are open | PARTIAL |
+| Collection member boundaries and multiple Collection membership | Open als filtercontract | Functional design §10; testing §10; roadmap A-02; domain prerequisites only | CANONICAL |
+| Collection multi-select, OR, AND with other groups, `Zonder collectie`, exclusivity and option lifecycle | Open | No definitive repository source for these filter semantics | OPEN |
+| One result row per matching Item identity | Mixed into Collection product semantics | Existing Item result identity; duplicate-safe query requirement | TECHNICAL |
+| Default Library-overview order: title ascending | Definitief alleen in technical/current-state evidence | Docs 00/18; current Core; now centralized in functional design §5 | DOCUMENTATION GAP |
+| Explicit Title sort options beyond the default | Open | No definitive source | OPEN |
+| Author sort | Open | No primary-author or missing-value order is fixed | OPEN |
+| Series sort and unknown volume numbers last | Open | Functional design §11; roadmap B-12/C-01 fixes Series identity but not order/volume behavior | PARTIAL |
+| Date sorts | Open | No definitive source | OPEN |
+| Personal `Standaardweergave` and fallback | Asked again under view persistence | Functional design §17; testing §17; source register defaults/preferences | CANONICAL |
+| Temporary filter/sort versus permanent defaults | Open together with session state | Functional design §§17–18; settings save behavior; temporary controls do not silently change defaults | DOCUMENTATION GAP |
+| Session survival, user+Library+module memory, URL and Back/forward | Open | Archive search has a specific session/reset rule; no generic catalog rule exists | OPEN |
+| Personal `Archief tonen`, default off | Partly open | Functional design §17; testing §17; terminology | CANONICAL |
+| Temporary `Ook in archief zoeken` | Partly open | Functional design §§5 and 15; testing §12 fixes session-only, no preference mutation and reset | CANONICAL |
+| Archive interaction with ordinary browse, filters and sort | Open | No complete source beyond the two preceding contracts | PARTIAL |
+| Cursor tuple/fingerprint, list encoding, SQL shape, indexes and deterministic tie-breakers | Mixed into product questions | ADR-002/003/004; architecture and current adapter contracts | TECHNICAL |
+| Toolbar, detail disclosure and active chips | Definitief | Design System §12; doc 32 | CANONICAL |
 
-The task description mentions multi-Collection OR semantics, no duplicates and
-exclusive `Zonder collectie`. The repository search found no canonical source
-for those filter semantics. They are therefore not silently promoted to product
-truth by this analysis.
+No repository file or Git-history revision contains the proposed complete
+quick/expanded filter list or the multi-Collection OR/`Zonder collectie`
+contract. The source register confirms that older handovers once carried
+detailed Collection and preference history, but those source files are not in
+this checkout and its summaries do not preserve these exact filter rules. They
+cannot be promoted to current truth without source evidence. The two actual
+documentation gaps closed here are the title-ascending product default and the
+boundary between temporary controls and explicit saved defaults.
+
+### Documentation gaps closed
+
+- The title-ascending Library-overview default existed in F2.11/current-state
+  evidence but was not stated in the central functional-design search contract.
+- `Standaardweergave`, explicit settings save behavior and the generic
+  temporary-filter rule existed separately; their no-silent-default-mutation
+  consequence was not stated together for Mijn Bibliotheek filter/sort/view
+  controls.
+
+No complete historical quick/expanded filter or Collection-filter decision was
+recoverable from the repository, so no such gap is claimed as closed.
 
 ## 4. Current implementation and request flow
 
@@ -158,8 +189,8 @@ stale query-response protection and any approved URL/session persistence.
 | Serie | Yes | None | Requires Series identity/relations and an explicit representation model. |
 | ISBN | Yes | None | Requires Edition ISBN persistence including `Geen ISBN` semantics. |
 | Inventory number | Yes | None | Requires Item inventory persistence and same-Library uniqueness. |
-| Contained Work title in omnibus | Insufficient source proof | Omnibus relation absent | **OPEN PRODUCT DECISION:** whether it matches the container Item and how the hit is labelled/ranked. |
-| Set title/ISBN | Canonical for Set search, but not for this Item route | Set model absent | **OPEN PRODUCT DECISION:** whether Set results belong in this `/items` overview or a separate result model. |
+| Contained Work title in omnibus | Insufficient source proof | Omnibus relation absent | **OPEN PRODUCT DECISION:** whether it matches the container Item. Labelling within an approved result model is later UX detail. |
+| Set title/ISBN | Direct Set matching is canonical, but inclusion in this Item overview is not | Set model absent | **OPEN PRODUCT DECISION:** whether this implementation scope includes Set results or leaves them to a separate result surface. |
 | Publisher/language/classification/free text | Not canonical Library-search fields | Partial/no sources | Do not add without a product decision. |
 
 Canonical behavior already known:
@@ -172,12 +203,16 @@ Canonical behavior already known:
 - no hidden external metadata search;
 - no Notes/review/Collection-description free-text search.
 
-**OPEN PRODUCT DECISIONS:** case behavior as product contract; whitespace
-normalization; substring versus prefix/token matching; accent/diacritic
-equivalence; maximum query length; empty `q` behavior; exact identifier
-recognition; punctuation/hyphen normalization for ISBN/inventory; multi-author
-match presentation; contained-title semantics; and whether an explicit
-alternate sort may override relevance while search is active.
+**OPEN PRODUCT DECISIONS:** prefix/token/substring behavior;
+accent/diacritic-equivalence where it materially changes expected results;
+contained-title semantics; Set inclusion in this result surface; and whether an
+explicit alternate sort may override relevance while search is active.
+
+Empty or absent `q` retains the normal title-ordered overview. Case-folding,
+Unicode and whitespace normalization, safe maximum length, exact-identifier
+recognition, ISBN/inventory punctuation handling and transport encoding are
+technical choices. They must be deterministic, tested and may not narrow or
+expand an approved matching contract accidentally.
 
 The current `work_title` collation is `utf8mb4_unicode_520_ci`, so current SQL
 comparison is case-insensitive and generally accent-insensitive. That database
@@ -185,8 +220,9 @@ fact is not a product decision and must not become one accidentally.
 
 ## 6. Filter contract analysis
 
-No requested filter has a complete canonical UI/query contract. The following
-questions must be decided per exposed filter before implementation:
+The underlying meaning of many candidate values is canonical, but no complete
+Mijn Bibliotheek filter set or operator contract exists. For every filter that
+is approved for exposure, the remaining product questions are:
 
 1. quick filter or expanded filter;
 2. single or multi-select;
@@ -194,8 +230,9 @@ questions must be decided per exposed filter before implementation:
 4. AND relationship to other groups;
 5. null/unknown inclusion and label;
 6. active-only versus archive interaction;
-7. stable ID versus normalized value transport;
-8. source and option-list visibility.
+7. source and option-list visibility.
+
+Stable-ID transport, strict parsing and duplicate-safe SQL are technical.
 
 Technical availability today:
 
@@ -205,8 +242,9 @@ Technical availability today:
 - **Boeksoort/Genre/Onderwerp:** Library-scoped IDs and Work-context junctions
   exist with useful Library-leading indexes. The product has not approved these
   as Mijn Bibliotheek filters.
-- **Form:** all v2.001 Items are physical books; the DTO's known value is not a
-  variable persisted classification.
+- **Form:** all v2.001 Items are physical books; `Fysiek` would not narrow the
+  result and `E-book`/`Luisterboek` are outside v2.001. Do not expose these as a
+  varying current filter.
 - **Location, Author, Series, language, publisher, loan status, Condition,
   acquisition, Collections and archive:** no reliable current source.
 
@@ -216,12 +254,14 @@ Canonical Collection membership boundaries are usable prerequisites: active
 Items in the same Library only; one Item may belong to multiple Collections;
 archived Items are not current members; archived Collections are read-only.
 
-The proposed target behavior—one or multiple selected Collections, OR within
-that group, no duplicate Item rows, exclusive `Zonder collectie`, active
-Collections only, active Items only and AND with other groups—needs an explicit
-product decision because the current repository does not record it. A future
-query should use `EXISTS` predicates or a deduplicated Item-ID subquery rather
-than a multiplicative membership join.
+The domain already fixes active same-Library Item membership, permits one Item
+in multiple Collections and excludes archived Items from current Collection
+membership. It does **not** fix one/multiple selection, OR within the group,
+AND with other groups, `Zonder collectie`, its exclusivity, or whether archived
+Collections are omitted from or separately available in filter options. Those
+remain one explicit Collection-filter product decision. Whatever is approved,
+one Item identity must not become duplicate rows merely because multiple
+membership relations match; the duplicate-safe SQL shape is technical.
 
 ## 7. Sort and keyset contract
 
@@ -243,13 +283,13 @@ The ranking classes come from the functional design; exact SQL scoring within a
 class is technical, provided it is deterministic and does not invent a new
 semantic rank. Item ID remains the final unique tie-breaker.
 
-### 7.2 Open alternate orders
+### 7.2 Alternate orders
 
 | Sort | Required tuple if later approved | Current blocker |
 |---|---|---|
-| Title descending | `title DESC, item_id DESC` | Not canonically offered. |
+| Title descending | `title DESC, item_id DESC` | Not canonically offered; product decision required. |
 | Author | normalized/display Author key, title, Item ID | No primary-author/null rule, no data. |
-| Series | Series key, canonical volume/order key, title, Item ID | No order/completeness model or data. |
+| Series | Series key, canonical volume/order key, title, Item ID | Series identity is canonical, but no order/volume model, unknown-volume placement or data exists. |
 | Acquisition/registration/publication date | precision/null-aware date tuple plus Item ID | Field choice, precision/null order and data are open. |
 
 Locale/collation behavior must be fixed and tested. Keyset comparison and
@@ -398,10 +438,16 @@ Correctness rules:
 - Quick View/detail continues to use returned scoped Item IDs and reauthorizes;
 - stale responses can never overwrite a newer query.
 
-**OPEN PRODUCT DECISIONS:** URL persistence versus component/session state;
-Back/forward semantics; search debounce versus explicit submit; whether filter
-changes apply immediately or via Apply; reset scope; and whether view state is
-remembered. Existing `route-state.js` supports only Library/Item identity and
+The effective personal/Library/platform `Standaardweergave` contract determines
+the initial view. An ordinary view switch is temporary and does not silently
+save a new preference. The same no-silent-default rule applies to filter and
+sort controls.
+
+**OPEN PRODUCT DECISIONS:** whether ordinary filter/sort choices survive
+in-module navigation during the current session and, if so, their exact
+user+Library+module scope; URL persistence and Back/forward semantics; search
+debounce versus explicit submit; immediate versus Apply filter changes; and
+reset scope. Existing `route-state.js` supports only Library/Item identity and
 cannot be extended silently because URL persistence changes UX behavior. The
 existing explicit-submit Next Reading search is a reusable technical pattern,
 not canonical proof for Mijn Bibliotheek.
@@ -418,7 +464,7 @@ semantics are approved.
 
 | Parameter | Type | Requirement | Normalization / allowed values | Cursor interaction | Status |
 |---|---|---|---|---|---|
-| `q` | string | optional | Canonical UTF-8 search normalization; min 2 except recognized exact identifier; maximum open | Included in fingerprint | Search fields approved; normalization blocked |
+| `q` | string | optional | Approved matching contract; min 2 except recognized exact identifier; bounded technical maximum | Included in fingerprint | Search fields ready; matching UX still open; normalization technical |
 | `reading_status` | list of enum | optional | Proposed values `reading`, `read`, `not_read`; multiplicity/OR open | Included | Blocked product contract |
 | `form` | list of enum | optional | No useful v2.001 values beyond `physical_book` | Included | Do not expose now |
 | `location_id` | list of ID | optional | Typed same-Library IDs | Included | Blocked product/data |
@@ -431,7 +477,7 @@ semantics are approved.
 | `acquired_from`, `acquired_to` | precision-aware date/range | optional | Must use approved acquisition business date, not registration time | Included | Blocked product/data |
 | `collection_id` | list of ID | optional | Typed active same-Library IDs | Included | Blocked product/data |
 | `without_collection` | boolean | optional | Proposed exclusive with `collection_id`; exact contract open | Included | Blocked product/data |
-| `include_archived` | boolean | optional | Temporary search-session behavior; separate from preference | Included | Blocked archive data/UI interaction |
+| `include_archived` | boolean | optional | Canonical temporary search-session behavior; never mutates preference | Included | Semantic basis ready; archive data and wider filter interaction blocked |
 | `sort` | enum | optional | `title_asc` is the only proven overview sort; relevance behavior with `q` must be decided | Included | Partial |
 | `page_size` | integer | optional | Existing 1–100, default 24 | Excluded from fingerprint | Ready |
 | `cursor` | opaque string | optional | Versioned, sort-specific and context-bound | Must match all context | Ready direction |
@@ -446,7 +492,28 @@ IDs must not reveal existence; use the established non-enumerating mapping.
 ## 14. Security and tenant review
 
 No separate reviewer agent was available. An explicit independent second pass
-was performed against architecture, security, privacy and regression risk.
+was performed in two roles after the documentation changes.
+
+### Biblio Product Guardian pass
+
+- Current canonical scope supersedes any old digital-media quick-filter idea:
+  `Fysiek` is invariant and `E-book`/`Luisterboek` are outside v2.001.
+- Underlying status, metadata and Collection concepts were not mistaken for
+  approval of a filter UI or operator.
+- The absent historical handover files were not reconstructed from the task
+  wording or source-register summaries.
+- Existing view/default and archive decisions were retained and separated from
+  genuinely open interaction details.
+
+### Biblio Architect pass
+
+- Core remains owner of Library scope, authorization, private reading-status
+  derivation and query meaning; REST and UI remain adapters.
+- Cursor, transport, normalization, duplicate-safe query shape, collation,
+  tie-breakers, limits and indexes are technical implementation decisions.
+- Missing Author/Series/ISBN/Item lifecycle/Collection sources remain explicit
+  prerequisites; no UI or REST simulation is authorized.
+- No production, schema, runtime or authorization contract changed.
 
 ### Blockers
 
@@ -553,33 +620,89 @@ was performed against architecture, security, privacy and regression risk.
 - query count and representative `EXPLAIN`/`EXPLAIN ANALYZE`;
 - no complete catalog materialization in PHP or browser.
 
-## 16. Product decisions and technical prerequisites
+## 16. Reconciled decisions and remaining prerequisites
 
-### Proven
+### Canonical Search contract
 
-- Library-scoped authorized search and active default;
-- canonical search fields and ranking classes;
-- two-character general minimum with exact-identifier exemption;
-- all physical copies remain reachable;
-- temporary archive-search concept;
-- current title ASC + Item-ID keyset order;
-- derived actor-private reading-status meanings;
-- toolbar/chip presentation direction.
+- strict authorized current-Library scope and active Items by default;
+- Work title/alternative title, Auteur/Co-auteur, Serie, relevant ISBN and
+  inventory number;
+- exact title/ISBN, title, Auteur/Co-auteur, Serie and then other valid context,
+  with alphabetical title inside equal relevance;
+- minimum two characters for general queries, exact identifiers exempt;
+- empty/absent query returns the normal title-ascending overview;
+- every matching physical Item remains reachable; no hidden external search.
 
-### OPEN PRODUCT DECISIONS
+### Canonical Filter contract
 
-1. search case/whitespace/partial/accent/punctuation and maximum-length rules;
-2. contained-title/omnibus and Set-result behavior;
-3. empty query and relevance-versus-user-sort interaction;
-4. which filters actually ship in Mijn Bibliotheek;
-5. quick/expanded placement, cardinality, group operators and null behavior for
-   every filter;
-6. Collection OR/exclusivity/active-option filter semantics;
-7. alternate Title, Author, Series and date sorts including null/tie rules;
-8. URL/session persistence, Back/forward, debounce/submit, apply/reset and view
-   persistence;
-9. interaction between temporary archive search, `Archief tonen`, filters and
-   ordinary browsing.
+- the current v2.001 overview does not expose a varying media-form filter:
+  physical books are the only supported medium;
+- the three reading statuses and all named metadata/domain values retain their
+  definitions, but that does not itself approve them as filters;
+- Collection membership is active same-Library physical Items only and an Item
+  may belong to multiple Collections; filter operators remain open;
+- filters change view only and never mutate underlying data or a saved default.
+
+### Canonical Sort contract
+
+- default/no-search order is Work title ascending;
+- search uses the canonical relevance classes and then alphabetical title;
+- stable unique tie-breakers and collation implementation are technical;
+- no alternate Title, Author, Series, volume or date order is yet approved.
+
+### Session/persistence contract
+
+- effective initial view follows personal `Standaardweergave`, then Library
+  default, then Biblio fallback;
+- ordinary view/filter/sort controls do not silently rewrite permanent
+  preferences or defaults; those change only through explicit settings;
+- only temporary archive search has a complete current-session/reset contract;
+  generic filter/sort session survival and URL behavior remain open.
+
+### Archive interaction contract
+
+- `Archief tonen` is personal per Library and defaults off;
+- `Ook in archief zoeken` is temporary, does not change that preference and
+  resets on refresh/navigation;
+- archived hits are marked and archived Items are not active Collection
+  members or available reading sources;
+- the ordinary overview/filter/sort interaction with the personal preference
+  remains incomplete.
+
+### REAL OPEN PRODUCT DECISIONS
+
+1. Which non-media filters ship in the first Mijn Bibliotheek release, and
+   which are quick filters versus expanded filters?
+2. For each approved filter, is selection single or multiple, is matching OR
+   within a group and AND between groups, and how are missing/unknown values
+   represented?
+3. Does the Collection filter use multi-select OR, combine with other groups
+   through AND, offer exclusive `Zonder collectie`, and omit archived
+   Collections from normal options?
+4. Should text matching use prefix, token or substring behavior, should accent
+   differences be equivalent, and should contained Work titles in an omnibus
+   match its Item?
+5. Is Set search part of this Item-overview implementation scope, and may a
+   chosen sort override relevance while a search is active?
+6. Which alternate orders are offered: Title descending, Author, Series and/or
+   date; for Series, what is the ordering source and where do unknown volume
+   numbers appear?
+7. Does search run live or after confirmation, do expanded filters apply
+   immediately or via Apply, and what does reset clear?
+8. Should ordinary filter/sort state survive in-module navigation during the
+   session, and what are the URL and Back/forward semantics?
+9. Does personal `Archief tonen` affect the initial ordinary overview and all
+   filters, and how is that distinguished from temporary `Ook in archief
+   zoeken`?
+
+### Technical-only decisions
+
+- case folding, Unicode/whitespace normalization and safe maximum query length;
+- exact-identifier detection and ISBN/inventory punctuation normalization;
+- stable ID/list transport, strict parsing and option-query DTO shape;
+- sort-specific cursor tuple, version, fingerprint/HMAC choice and v1 bridge;
+- duplicate-safe `EXISTS`/subquery SQL, collation, tie-breakers and indexes;
+- query limits, cardinality caps, performance budgets and safe error mapping.
 
 ### Technical prerequisites
 
@@ -595,12 +718,20 @@ No assumption in this document closes those decisions.
 
 The complete feature is not responsible as one implementation commit.
 
+Reconciliation removes separate product-decision work for empty-query behavior,
+personal/default view resolution, the temporary archive-search lifecycle and
+cursor/transport/SQL mechanics. It also removes media-form filters from the
+v2.001 candidate set. It does not remove the metadata, Item-lifecycle and
+Collection source slices, and it does not authorize filter or alternate-sort
+implementation before the section-16 product answers exist.
+
 1. **Prerequisite domain/persistence capabilities — High.** Implement only
    separately approved metadata, Author/Series, Item lifecycle/metadata and
    Collection sources with their own migrations, authorization and tests.
 2. **Catalog query foundation — Medium.** Add the typed query model, strict REST
-   parsing, title/default/relevance contract that is then approved, context-bound
-   cursor v2 and repository query framework; retain backward compatibility.
+   parsing, canonical title/default/relevance behavior, the approved text-match
+   contract, context-bound cursor v2 and repository query framework; retain
+   backward compatibility.
 3. **Approved filters and query optimization — High.** Add only decided filters,
    scoped option reads, duplicate-safe SQL, migrations/indexes justified by
    1k/10k evidence and security tests.
@@ -616,10 +747,11 @@ Search/Filter/Sort feature and needs explicit approval.
 
 | Acceptance condition | Result |
 |---|---|
-| Every planned Search semantic sourced | **Partially proven** — fields/ranking/minimum are known; matching/normalization/interactions are open. |
-| Every planned Filter semantic sourced | **Not proven**. |
-| Every planned Sort semantic sourced | **Partially proven** — current title order and search ranking only. |
-| Missing decisions isolated | **Proven** in section 16. |
+| Every planned Search semantic sourced | **Partially proven** — fields/ranking/minimum/default browse are known; matching and result-surface interactions are open; implementation normalization is technical. |
+| Every planned Filter semantic sourced | **Not proven** — underlying domain values are often canonical, but the exposed set and operators are not. |
+| Every planned Sort semantic sourced | **Partially proven** — title-ascending default and search ranking are canonical; alternates are open. |
+| Existing decisions reconciled | **Proven** in sections 3 and 16, including view/default and archive contracts. |
+| Missing decisions isolated | **Proven** as nine answerable product questions in section 16. |
 | Cursor/query-context direction clear | **Proven** as technical recommendation. |
 | Core/REST/UI changes known | **Proven at layer/class level**. |
 | Schema/index impact known | **Partially proven** — schema prerequisites are known; exact indexes await approved models and representative plans. |
@@ -627,6 +759,9 @@ Search/Filter/Sort feature and needs explicit approval.
 | Test matrix complete | **Proven as an implementation plan**. |
 | Implementation slices concretely bounded | **Proven**, but prerequisites prevent immediate start of the complete feature. |
 
-**BLOCKED.** Do not issue an implementation GO for the complete feature until
-the section-16 product decisions are approved and the required source models are
+**BLOCKED.** The reconciliation materially reduces the decision surface but the
+first-release filter set/operators, alternate sorting, search-result behavior
+and archive/state interaction are still fundamental parts of the requested
+contract. Do not issue an implementation GO for the complete feature until the
+section-16 product decisions are approved and the required source models are
 either implemented or explicitly removed from the implementation scope.

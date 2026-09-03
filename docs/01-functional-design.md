@@ -544,6 +544,10 @@ Searchable via:
 
 Default search includes only active Items.
 
+Without an active search or an explicitly selected alternate order, the
+Library overview is ordered by Work title ascending. A technical stable
+tie-breaker may be added without becoming a separate user-facing sort choice.
+
 Temporary `Ook in archief zoeken`:
 - applies only to the current search-page session;
 - does not change the personal `Archief tonen` preference;
@@ -1551,6 +1555,10 @@ Concrete v2.001 Library-specific personal preferences:
 - Standaardweergave;
 - Archief tonen.
 
+The effective `Standaardweergave` determines the initial Mijn Bibliotheek view.
+Using the ordinary view switch does not silently rewrite that preference; a
+permanent change follows the explicit settings save behavior below.
+
 Home configuration is not duplicated here.
 
 ## Library defaults
@@ -1798,6 +1806,11 @@ Predictable module-specific default order.
 Filters alter view only, not underlying data.
 
 Temporary filters are not automatically persisted as preferences unless explicitly designed.
+
+A temporary filter, sort or view choice does not silently change a personal
+preference or Library default. Permanent defaults change only through an
+explicit settings flow. Whether ordinary filter/sort state survives navigation
+within a session or is represented in the URL is not yet specified.
 
 ## Large lists
 
