@@ -181,8 +181,12 @@ Filter acceptance:
 - values within one group use OR and groups combine through AND;
 - changes apply directly without an Apply button;
 - every active value has a removable chip and `Alle filters wissen` exists;
+- the first v2.001 implementation wave contains Leesstatus, Auteur, Serie,
+  Locatie, Boeksoort, Genre, Onderwerp, Collecties and `Zonder collectie`;
 - Collection multi-select uses OR, combines through AND, yields each Item once,
   supports exclusive `Zonder collectie` and offers active Collections only;
+- Taal, Uitgever, Uitleenstatus, Conditie and `In bibliotheek sinds` remain
+  **deferred within v2.001**, not removed, rejected or future-version-only;
 - no varying physical/digital form filter exists in v2.001.
 
 Sort acceptance:
@@ -1782,9 +1786,9 @@ with 39 Core rows and SHA-256
 ## 57. Mijn Bibliotheek server-side catalog query readiness
 
 The finalized documentation-only product contract is recorded in
-`docs/33-mijn-bibliotheek-server-side-catalog-query-readiness.md`. Product and
-technical readiness remain separately **BLOCKED**: one filter-scope answer and
-the relevant source-model/migration prerequisites remain.
+`docs/33-mijn-bibliotheek-server-side-catalog-query-readiness.md`. Product
+readiness is **GO**. Technical implementation readiness remains **BLOCKED** on
+the relevant source-model/migration prerequisites.
 
 Readiness acceptance established:
 
@@ -1802,8 +1806,12 @@ Readiness acceptance established:
   fallback preserve the permanent-preference boundary;
 - `Titel A–Z`, `Auteur A–Z`, conditional `Serievolgorde` with unknown volumes
   last, relevance-first Search and mixed active/archive results are fixed;
-- only the exact first-release non-media filter-group selection remains a real
-  product decision;
+- the first implementation wave is fixed as Leesstatus, Auteur, Serie, Locatie,
+  Boeksoort, Genre, Onderwerp, Collecties and `Zonder collectie`;
+- Taal, Uitgever, Uitleenstatus, Conditie and `In bibliotheek sinds` remain
+  explicitly deferred within v2.001 rather than removed or moved to a future
+  version;
+- no product decision remains for the first implementation wave;
 - normalization, cursor/fingerprint, transport, SQL, tie-breaker and index
   choices are classified as technical rather than user product decisions;
 - current Core → repository → REST → UI flow and exact missing layer contracts
@@ -1816,7 +1824,7 @@ Readiness acceptance established:
   performance acceptance is specified for later implementation slices;
 - no production code, test, schema, runtime data or UI behavior is changed.
 
-Implementation acceptance may not be declared until that product decision and
-the applicable source-model prerequisites in doc 33 are closed or explicitly
-removed from a newly approved scope. This finalization itself changes no
-production code, test, schema, runtime data or UI behavior.
+Implementation acceptance may not be declared until the applicable
+source-model prerequisites in doc 33 are closed or explicitly removed from a
+newly approved scope. This finalization itself changes no production code,
+test, schema, runtime data or UI behavior.

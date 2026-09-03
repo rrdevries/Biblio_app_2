@@ -578,6 +578,23 @@ through AND unless a filter has an explicitly documented exception. Expanded
 filters apply directly without an Apply button. Active values appear above the
 results as individually removable chips, together with `Alle filters wissen`.
 
+The first v2.001 implementation wave contains exactly:
+
+- Leesstatus;
+- Auteur;
+- Serie;
+- Locatie;
+- Boeksoort;
+- Genre;
+- Onderwerp;
+- Collecties;
+- `Zonder collectie`.
+
+Taal, Uitgever, Uitleenstatus, Conditie and `In bibliotheek sinds` remain part
+of the broader v2.001 product design but are deferred within v2.001 and are not
+part of this first implementation wave. They are not removed, rejected or
+reclassified as future-version-only.
+
 Search, filter and sort state is represented in the URL. Browser Back/Forward
 restores the earlier query and a copied URL opens the same temporary query.
 When no explicit URL query state exists, temporary session state may be used,

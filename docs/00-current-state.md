@@ -1527,7 +1527,7 @@ mapping are recorded in
 
 ### Mijn Bibliotheek — server-side catalog query readiness
 
-Status: **Finalized — PRODUCT BLOCKED / TECHNICAL BLOCKED**
+Status: **Finalized — PRODUCT GO / TECHNICAL BLOCKED**
 
 The readiness analysis for full-catalog server-side Search, Filters, Sort and
 query-bound keyset pagination is recorded in
@@ -1540,12 +1540,19 @@ Collection-filter semantics, URL plus session state, `Titel A–Z`, `Auteur A–
 conditional `Serievolgorde`, and one mixed active/archive result list with
 `Archief` labels. Search relevance remains authoritative while Search is active.
 
-One product-scope decision remains: which non-media filter groups ship in the
-first v2.001 implementation. Most rich search/filter fields also have no
-reliable schema-1008 source: Author, Series, alternative/contained titles, ISBN,
-inventory, Location, Condition, acquisition, loan/archive and Collections are
-technical prerequisite capabilities. Document 33 separates product readiness
-from technical implementation readiness and defines four bounded slices.
+The first implementation wave is now fixed as Leesstatus, Auteur, Serie,
+Locatie, Boeksoort, Genre, Onderwerp, Collecties and `Zonder collectie`.
+Taal, Uitgever, Uitleenstatus, Conditie and `In bibliotheek sinds` remain in the
+broader v2.001 design as **deferred within v2.001**; they are not removed or
+future-version-only. No product decision remains for the first wave.
+
+Technical implementation remains blocked. Schema 1008 has no central
+Author/Co-auteur or Series relationship foundation and also lacks required
+alternative/contained-title, ISBN, inventory, Location, archive and Collection
+sources. Existing Leesstatus and LibraryCatalogContext classification data can
+be reused, but need query integration. Document 33 records the dependency
+matrix, splits the former broad prerequisite phase and identifies the central
+Author/Series relationship foundation as the next technical slice.
 
 No Core, REST, UI, schema, Elementor or runtime behavior changed. The existing
 disabled controls and current active title-ordered cursor overview remain
