@@ -268,7 +268,7 @@ de praktijk alsnog A betekenen.
 | B4 | Classificatie-, Location-, Condition- en Acquisition-read/write contracten | Classificatiewrites bestaan, maar keuze-/lijstprojecties en de overige Itemmetadata niet. Formulieren hebben betrouwbare options en capabilities nodig. |
 | B5 | Membership-, role-, permission-, Library create/rename- en transfercontracten | Het huidige model kan authorization beslissen maar beheert de lifecycle niet. Bouw dit vóór Bibliotheekbeheer-UI om self-escalation en multi-recordregels uit Elementor te houden. |
 | B6 | Current reading, ReadingRound history en Leesvoorraadprojecties | Lifecyclemutaties bestaan; gedeelde lijst-/sourceprojecties ontbreken. Bouw deze vóór Home/Leeslog/finish-stop-UI om schermspecifieke joins te voorkomen. |
-| B7 | Ratings/Reviews Library-public read boundary | Bevestig audience en voeg collection-view authorization, cursor/paging en DTO-adaptertests toe vóór een Library-beoordelingenscherm. |
+| B7 | Ratings/Reviews Library-public read boundary | **GO / CLOSED:** authenticated actor + Core `canViewCollection`, non-enumerating Library-context, bounded keysetpaging, safe DTOs, publiek aggregate en adaptertests zijn geleverd. |
 
 ### C. KAN NA START ELEMENTOR
 
@@ -656,12 +656,15 @@ C-domein geeft geen NO-GO zolang de eerste slice er niet van afhankelijk is.
    en backfill gebruiken `Mijn Bibliotheek`. Schema 1007 en F2.10-tests bewijzen
    dit zonder de naam uit de technische ID af te leiden.
 
+### Afgerond in B7
+
+2. **Ratings/Reviews audience:** publicatie is niet internet-open. De read-
+   authority is iedere ingelogde actor waarvoor Core `canViewCollection` voor
+   de expliciete Library toestaat. Ontbrekende toegang faalt vóór disclosure
+   met dezelfde non-enumerating 404 als een onbekende Library.
+
 ### Niet blocker voor F3.0, wel vóór hun eigen slice
 
-2. **Ratings/Reviews audience:** betekent “published to a Library” zichtbaar
-   voor iedere webbezoeker of alleen voor gebruikers die de Librarycollectie
-   mogen bekijken? Tot besluit geldt de veiligste grens: geen ongeautoriseerde
-   public REST-route.
 3. **InternalLoan als ReadingRound-source:** derde expliciete FK of een
    gemeenschappelijke physical-source-identiteit. ADR-004 laat dit bewust open.
 4. **Rijke cataloguspersistence/governance:** exacte Auteur/Serie/Edition-

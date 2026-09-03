@@ -184,6 +184,16 @@ final class RestController
                 "permission_callback" => [$this, "authenticated"],
             ]
         );
+        register_rest_route(
+            self::NAMESPACE,
+            "/libraries/(?P<library_id>[^/]+)/works/"
+                . "(?P<work_id>[^/]+)/assessments",
+            [
+                "methods" => WP_REST_Server::READABLE,
+                "callback" => [$this, "publicAssessments"],
+                "permission_callback" => [$this, "authenticated"],
+            ]
+        );
 
         $this->routesRegistered = true;
     }
@@ -295,6 +305,30 @@ final class RestController
             return $this->success(
                 $this->responses->readingHistory($history)
             );
+        });
+    }
+
+    public function publicAssessments(
+        WP_REST_Request $request
+    ): WP_REST_Response|WP_Error {
+        return $this->execute(function (
+            CoreApplication $application
+        ) use ($request): WP_REST_Response {
+            $libraryId = $this->requests->libraryId($request);
+            $workId = $this->requests->workId($request);
+            $pageRequest = $this->requests->publicAssessmentPage($request);
+            $page = $application->libraryPublicAssessments()->forWork(
+                $libraryId,
+                $workId,
+                $pageRequest["cursor"],
+                $pageRequest["page_size"]
+            );
+
+            return $this->success($this->responses->publicAssessments(
+                $libraryId,
+                $workId,
+                $page
+            ));
         });
     }
 

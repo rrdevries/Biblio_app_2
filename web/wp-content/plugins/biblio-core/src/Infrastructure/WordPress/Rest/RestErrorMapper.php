@@ -68,6 +68,10 @@ final readonly class RestErrorMapper
             FailureReason::NextReadingWorkUnavailable,
             FailureReason::PreferredReadingSourceUnavailable,
             FailureReason::NextReadingEntryNotAvailable,
+            FailureReason::RatingNotAvailable,
+            FailureReason::ReviewNotAvailable,
+            FailureReason::PublicationNotAvailable,
+            FailureReason::ModerationForbidden,
         ], true)) {
             return $this->error(
                 "biblio_resource_not_available",
@@ -84,11 +88,24 @@ final readonly class RestErrorMapper
             FailureReason::NextReadingListStale,
             FailureReason::NextReadingUndoUnavailable,
             FailureReason::NextReadingEntryIdCollisionExhausted,
+            FailureReason::ContributionDuplicate,
+            FailureReason::AssessmentStale,
+            FailureReason::PublicationAlreadyActive,
+            FailureReason::PublicationStale,
+            FailureReason::AssessmentIdCollisionExhausted,
         ], true)) {
             return $this->error(
                 "biblio_{$reason->value}",
                 "The requested change conflicts with the current state.",
                 409
+            );
+        }
+
+        if ($reason === FailureReason::PublicationIneligible) {
+            return $this->error(
+                "biblio_publication_ineligible",
+                "The requested publication state is not eligible.",
+                422
             );
         }
 

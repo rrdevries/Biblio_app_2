@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Biblio\Core\Application;
 
 use Biblio\Core\Application\Assessments\{AssessmentQueryService,CorrectRatingReadingRoundService,CorrectReviewReadingRoundService,CreateRatingForReadingRoundService,CreateRatingForWorkService,CreateReviewForReadingRoundService,CreateReviewForWorkService,DeleteOwnRatingService,DeleteOwnReviewService,ModerateContributionPublicationService,MoveContributionPublicationService,PublishRatingToLibraryService,PublishReviewToLibraryService,RestoreContributionPublicationService,UpdateRatingValueService,UpdateReviewContentService,WithdrawContributionPublicationService};
+use Biblio\Core\Application\Assessments\Read\GetLibraryPublicAssessmentsService;
 
 use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
 use Biblio\Core\Application\Catalog\AddLibraryItemService;
@@ -103,6 +104,7 @@ final readonly class CoreApplication
         private ModerateContributionPublicationService $publicationModeration,
         private RestoreContributionPublicationService $publicationRestoration,
         private AssessmentQueryService $assessmentQueries,
+        private GetLibraryPublicAssessmentsService $libraryPublicAssessments,
         private AddNextReadingEntryService $nextReadingAdd,
         private RemoveNextReadingEntryService $nextReadingRemove,
         private UndoNextReadingRemovalService $nextReadingUndo,
@@ -301,6 +303,7 @@ final readonly class CoreApplication
     public function publicationModeration(): ModerateContributionPublicationService { return $this->publicationModeration; }
     public function publicationRestoration(): RestoreContributionPublicationService { return $this->publicationRestoration; }
     public function assessmentQueries(): AssessmentQueryService { return $this->assessmentQueries; }
+    public function libraryPublicAssessments(): GetLibraryPublicAssessmentsService { return $this->libraryPublicAssessments; }
     public function nextReadingAdd(): AddNextReadingEntryService { return $this->nextReadingAdd; }
     public function nextReadingRemove(): RemoveNextReadingEntryService { return $this->nextReadingRemove; }
     public function nextReadingUndo(): UndoNextReadingRemovalService { return $this->nextReadingUndo; }

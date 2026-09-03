@@ -809,6 +809,35 @@ canonical source→Library→publication lock order.
 The complete implementation and verification record is maintained in
 `docs/13-f2-8b-exit-evidence.md`.
 
+### B7 — Ratings & Reviews Library-public read boundary
+
+Status: **Implemented — GO / UI FOUNDATION READY**
+
+The personal Rating average now uses a dedicated owner + Work database
+aggregate and therefore counts every current own Rating rather than inheriting
+the 100-row display-list bound. Private and published Ratings both count;
+Ratings belonging to another actor or Work do not.
+
+The authenticated `biblio/v1` adapter exposes one bounded read route:
+`GET /libraries/{library_id}/works/{work_id}/assessments`. Before any
+contribution lookup, the application boundary resolves the actor server-side
+and calls the existing Library-context boundary, which applies Core
+`canViewCollection`. Unknown, inaccessible and inactive contexts remain the
+same non-enumerating 404. Publication is not an internet-open concept.
+
+The response contains one stable keyset-paged mixed list of currently visible
+Rating and Review publications plus the Library + Work public aggregate.
+Historical visible publications remain separate list entries; the aggregate
+still selects only the latest currently visible Rating per User + Work using
+`rating.updated_at DESC, rating_id DESC`. Hidden, removed and withdrawn
+publications are excluded, active Work-representation loss suppresses output,
+and Library isolation is enforced. Public DTOs expose no source owner ID,
+ReadingRound identity, membership, moderation reason or private content.
+
+Schema remains 1008. No owner Rating/Review REST writes, Ratings/Reviews UI,
+Elementor/Crocoblock change or moderation-management UI is part of B7. The
+complete evidence is in `docs/30-b7-ratings-reviews-public-read-evidence.md`.
+
 ### F2.9 — Hierna lezen / Next Reading
 
 Status: **current contract correction and C7 adapter/screen — GO**

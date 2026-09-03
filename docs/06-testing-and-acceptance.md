@@ -1671,3 +1671,40 @@ route, privacy, UI, non-scope and shell evidence is
 `docs/29-c7-next-reading-exit-evidence.md`. A real manual browser-toolbar zoom
 measurement is not claimed; the explicitly permitted equivalent reflow
 strategy is used. No permanent Page or Elementor layout is created.
+
+## 55. B7 Ratings & Reviews public read foundation
+
+Status: **GO**
+
+Acceptance requires and the current implementation proves:
+
+- personal average is a dedicated owner + Work SQL aggregate with no display-
+  list limit; zero, one, multiple and 101 own Ratings are covered, including a
+  published/private mix and exclusions for other actor/Work;
+- `GET /biblio/v1/libraries/{library_id}/works/{work_id}/assessments` requires
+  WordPress cookie authentication and nonce, then authorizes through
+  `LibraryContextQueryService::get()` and Core `canViewCollection` before the
+  assessment repository is called;
+- missing, inactive and foreign Library contexts return the same non-
+  enumerating 404; malformed limits/cursors and unknown query fields return
+  safe 400 responses;
+- one mixed public contribution list is ordered by publication update time and
+  publication ID descending, uses an opaque keyset cursor, defaults to 20 and
+  has a server maximum of 50;
+- every currently visible historical Rating/Review publication may occur in
+  the list, while the aggregate selects at most one Rating per User + Work by
+  `rating.updated_at DESC, rating_id DESC`;
+- withdraw, hide, remove and source delete fall back to an older still-visible
+  Rating; membership end does not retract an existing publication; active Work
+  presence loss suppresses list and aggregate and restoration reveals valid
+  history again;
+- Rating and Review publication remain independent, Review output is escaped,
+  hidden Reviews do not affect a visible Rating, and cross-Library rows do not
+  leak;
+- assessment unavailable failures map to non-enumerating 404, duplicate/stale
+  failures to 409 and publication ineligibility to 422;
+- schema remains 1008 and no migration, UI, Elementor/Crocoblock or permanent
+  runtime testdata is added.
+
+The authoritative scope, route, DTO and gate record is
+`docs/30-b7-ratings-reviews-public-read-evidence.md`.

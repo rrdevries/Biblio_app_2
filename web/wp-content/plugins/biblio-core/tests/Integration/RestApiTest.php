@@ -91,6 +91,8 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             "/biblio/v1/me/next-reading/(?P<entry_id>[^/]+)/preferred-source",
             "/biblio/v1/me/works",
             "/biblio/v1/me/works/(?P<work_id>[^/]+)/preferred-source-options",
+            "/biblio/v1/libraries/(?P<library_id>[^/]+)/works/"
+                . "(?P<work_id>[^/]+)/assessments",
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/items",
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/items/(?P<item_id>[^/]+)",
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/items/"
@@ -106,7 +108,7 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             }
         }
 
-        self::assertCount(15, array_filter(
+        self::assertCount(16, array_filter(
             array_keys($routes),
             static fn (string $route): bool => str_starts_with(
                 $route,

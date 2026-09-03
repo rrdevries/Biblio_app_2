@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Biblio\Core\Infrastructure\WordPress;
 
 use Biblio\Core\Application\Assessments\{AssessmentQueryService,CorrectRatingReadingRoundService,CorrectReviewReadingRoundService,CreateRatingForReadingRoundService,CreateRatingForWorkService,CreateReviewForReadingRoundService,CreateReviewForWorkService,DeleteOwnRatingService,DeleteOwnReviewService,ModerateContributionPublicationService,MoveContributionPublicationService,PublicationService,PublishRatingToLibraryService,PublishReviewToLibraryService,RestoreContributionPublicationService,SourceContributionService,UpdateRatingValueService,UpdateReviewContentService,WithdrawContributionPublicationService};
+use Biblio\Core\Application\Assessments\Read\GetLibraryPublicAssessmentsService;
 
 use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
 use Biblio\Core\Application\Catalog\AddLibraryItemService;
@@ -582,6 +583,10 @@ final class ProductionComposition
             new ModerateContributionPublicationService($publicationLifecycle),
             new RestoreContributionPublicationService($publicationLifecycle),
             $assessmentQueries,
+            new GetLibraryPublicAssessmentsService(
+                $libraryContexts,
+                $publicationRepository
+            ),
             $nextReadingAdd,
             $nextReadingRemove,
             $nextReadingUndo,

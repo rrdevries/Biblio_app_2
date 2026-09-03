@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Infrastructure\WordPress\Rest;
 
+use Biblio\Core\Application\Assessments\Read\{PublicAssessmentKind,PublicAssessmentPage,PublicAssessmentView};
 use Biblio\Core\Application\Catalog\Read\CatalogActiveReadingRoundView;
 use Biblio\Core\Application\Catalog\Read\CatalogItemCapabilities;
 use Biblio\Core\Application\Catalog\Read\CatalogItemCardView;
@@ -19,9 +20,12 @@ use Biblio\Core\Application\NextReading\{NextReadingEntryView,NextReadingListVie
 use Biblio\Core\Application\NextReading\Read\{NextReadingSourceOptionView,NextReadingWorkPage,NextReadingWorkView};
 use Biblio\Core\Application\Reading\History\ReadingHistoryEntry;
 use Biblio\Core\Application\Reading\History\ReadingHistoryPage;
+use Biblio\Core\Catalog\WorkId;
+use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Reading\ReadingDate;
 use Biblio\Core\Reading\ReadingRound;
 use LogicException;
+use DateTimeZone;
 
 final readonly class RestResponseSerializer
 {
@@ -29,7 +33,8 @@ final readonly class RestResponseSerializer
         private CatalogCursorCodec $cursors,
         private ReadingHistoryCursorCodec $historyCursors,
         private PrivateNoteCursorCodec $privateNoteCursors,
-        private ?NextReadingWorkCursorCodec $nextReadingWorkCursors = null
+        private ?NextReadingWorkCursorCodec $nextReadingWorkCursors = null,
+        private ?PublicAssessmentCursorCodec $publicAssessmentCursors = null
     ) {
     }
 
@@ -137,6 +142,33 @@ final readonly class RestResponseSerializer
         ];
     }
 
+    /** @return array<string, mixed> */
+    public function publicAssessments(
+        LibraryId $libraryId,
+        WorkId $workId,
+        PublicAssessmentPage $page
+    ): array {
+        $aggregate = $page->aggregate();
+
+        return [
+            "library_id" => $libraryId->value(),
+            "work_id" => $workId->value(),
+            "contributions" => array_map(
+                $this->publicAssessment(...),
+                $page->contributions()
+            ),
+            "aggregate" => [
+                "average" => $aggregate->average(),
+                "voter_count" => $aggregate->uniqueUsers(),
+            ],
+            "next_cursor" => $page->nextCursor() === null
+                ? null
+                : $this->publicAssessmentCursorCodec()->encode(
+                    $page->nextCursor()
+                ),
+        ];
+    }
+
     /** @return array{items: list<array<string, int|string>>, next_cursor: ?string} */
     public function privateNotes(PrivateNoteViewPage $page): array
     {
@@ -223,6 +255,31 @@ final readonly class RestResponseSerializer
     }
 
     /** @return array<string, mixed> */
+    private function publicAssessment(PublicAssessmentView $assessment): array
+    {
+        $base = [
+            "type" => $assessment->kind()->value,
+            "display_name" => $assessment->displayName(),
+            "published_at" => $assessment->publishedAt()
+                ->setTimezone(new DateTimeZone("UTC"))
+                ->format("Y-m-d\\TH:i:s.u\\Z"),
+        ];
+
+        if ($assessment->kind() === PublicAssessmentKind::Rating) {
+            return [
+                ...$base,
+                "rating" => $assessment->rating()?->stars(),
+            ];
+        }
+
+        return [
+            ...$base,
+            "rating" => $assessment->rating()?->stars(),
+            "review_html" => $assessment->escapedReviewText(),
+        ];
+    }
+
+    /** @return array<string, mixed> */
     private function nextReadingEntry(NextReadingEntryView $entry): array
     {
         return [
@@ -286,6 +343,12 @@ final readonly class RestResponseSerializer
     private function nextReadingWorkCursorCodec(): NextReadingWorkCursorCodec
     {
         return $this->nextReadingWorkCursors ?? new NextReadingWorkCursorCodec();
+    }
+
+    private function publicAssessmentCursorCodec(): PublicAssessmentCursorCodec
+    {
+        return $this->publicAssessmentCursors
+            ?? new PublicAssessmentCursorCodec();
     }
 
     /** @return array<string, mixed> */
