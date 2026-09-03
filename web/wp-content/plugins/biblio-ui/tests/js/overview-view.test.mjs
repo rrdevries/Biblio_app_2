@@ -13,6 +13,8 @@ class FakeElement {
         this.disabled = false;
         this.listeners = new Map();
         this.focused = false;
+        this.open = false;
+        this.parent = null;
     }
 
     setAttribute(name, value) {
@@ -25,10 +27,16 @@ class FakeElement {
 
     append(...children) {
         this.children.push(...children);
+        for (const child of children) {
+            child.parent = this;
+        }
     }
 
     replaceChildren(...children) {
         this.children = [...children];
+        for (const child of children) {
+            child.parent = this;
+        }
     }
 
     addEventListener(type, listener) {
@@ -41,12 +49,34 @@ class FakeElement {
 
     querySelector(selector) {
         return descendants(this, (node) => (
-            selector === "h1" && node.tagName === "H1"
+            ["h1", "dialog"].includes(selector)
+            && node.tagName === selector.toUpperCase()
         ))[0] ?? null;
+    }
+
+    querySelectorAll(selector) {
+        return selector === "[data-quick-view-for]"
+            ? descendants(this, (node) => node.getAttribute("data-quick-view-for") !== null)
+            : [];
     }
 
     focus() {
         this.focused = true;
+    }
+
+    showModal() {
+        this.open = true;
+    }
+
+    close() {
+        this.open = false;
+        this.listeners.get("close")?.();
+    }
+
+    remove() {
+        if (this.parent !== null) {
+            this.parent.children = this.parent.children.filter((child) => child !== this);
+        }
     }
 }
 
@@ -72,6 +102,10 @@ function descendants(root, predicate) {
 
 function byTag(root, tagName) {
     return descendants(root, (node) => node.tagName === tagName.toUpperCase());
+}
+
+function byClass(root, className) {
+    return descendants(root, (node) => node.className.split(" ").includes(className));
 }
 
 function text(root) {
@@ -289,10 +323,16 @@ test("empty overview and cursor controls follow the exact component states", () 
 
     view.render(
         overviewModel({ nextCursor: "cursor", loadingMore: true }),
-        { loadMore() { loads += 1; } }
+        {
+            loadMore() { loads += 1; },
+            quickView() {},
+        }
     );
-    assert.equal(byTag(root, "button")[0].disabled, true);
-    assert.equal(byTag(root, "button")[0].getAttribute("aria-busy"), "true");
+    assert.equal(byClass(root, "biblio-ui__load-more")[0].disabled, true);
+    assert.equal(
+        byClass(root, "biblio-ui__load-more")[0].getAttribute("aria-busy"),
+        "true"
+    );
 
     view.render(
         overviewModel({
@@ -303,12 +343,14 @@ test("empty overview and cursor controls follow the exact component states", () 
         {
             retryLoadMore() { retries += 1; },
             restart() { restarts += 1; },
+            quickView() {},
         }
     );
     assert.match(text(root), /Meer boeken konden niet worden geladen/);
-    assert.equal(byTag(root, "button").length, 2);
-    byTag(root, "button")[0].click();
-    byTag(root, "button")[1].click();
+    const error = byClass(root, "biblio-ui__inline-error")[0];
+    assert.equal(byTag(error, "button").length, 2);
+    byTag(error, "button")[0].click();
+    byTag(error, "button")[1].click();
     assert.equal(retries, 1);
     assert.equal(restarts, 1);
 
@@ -318,9 +360,83 @@ test("empty overview and cursor controls follow the exact component states", () 
             loadMoreError: true,
             canRetryCursor: false,
         }),
-        { restart() { restarts += 1; } }
+        {
+            restart() { restarts += 1; },
+            quickView() {},
+        }
     );
-    assert.equal(byTag(root, "button").length, 1);
+    assert.equal(
+        byTag(byClass(root, "biblio-ui__inline-error")[0], "button").length,
+        1
+    );
+});
+
+test("toolbar reveals deferred filters and switches Grid, List and Bookshelf", () => {
+    const { root, view } = setup();
+    const actions = { openItem() {}, quickView() {} };
+
+    view.render(overviewModel(), actions);
+    assert.equal(byTag(root, "input")[0].getAttribute("disabled"), "disabled");
+    assert.equal(byTag(root, "select")[0].getAttribute("disabled"), "disabled");
+    assert.equal(
+        byClass(root, "biblio-ui__catalog-list")[0].getAttribute("data-catalog-view"),
+        "grid"
+    );
+
+    byTag(root, "button").find((button) => button.textContent === "Filters").click();
+    assert.match(text(root), /Gedetailleerde filters/);
+    assert.match(text(root), /Library-REST-contract/);
+
+    byTag(root, "button").find((button) => button.textContent === "Lijst").click();
+    assert.equal(
+        byClass(root, "biblio-ui__catalog-list")[0].getAttribute("data-catalog-view"),
+        "list"
+    );
+
+    byTag(root, "button").find((button) => button.textContent === "Boekenplank").click();
+    assert.match(text(root), /Weergave voorbereid Boekenplank/);
+    assert.equal(byClass(root, "biblio-ui__catalog-list").length, 0);
+    byTag(root, "button").find((button) => button.textContent === "Terug naar Grid").click();
+    assert.equal(
+        byClass(root, "biblio-ui__catalog-list")[0].getAttribute("data-catalog-view"),
+        "grid"
+    );
+});
+
+test("Quick View is a modal overlay with status text and full-detail route", () => {
+    const { root, view } = setup();
+    let closed = 0;
+    let opened = null;
+    const detail = {
+        ...item("one", {
+            title: "Overlayboek",
+            authors: { state: "known", values: ["Auteur"] },
+        }),
+        reading: { status: "reading" },
+    };
+
+    view.render(overviewModel({
+        quickView: { state: "ready", itemId: "one", detail },
+    }), {
+        openItem(itemId) { opened = itemId; },
+        quickView() {},
+        closeQuickView() { closed += 1; },
+    });
+
+    const dialog = byTag(root, "dialog")[0];
+    assert.equal(dialog.open, true);
+    assert.match(text(dialog), /Overlayboek[\s\S]*Auteur[\s\S]*Leesstatus: Aan het lezen/);
+    const detailLink = byTag(dialog, "a")[0];
+    detailLink.click({
+        button: 0,
+        defaultPrevented: false,
+        preventDefault() { this.defaultPrevented = true; },
+    });
+    assert.equal(opened, "one");
+    byTag(dialog, "button")[0].click();
+    assert.equal(closed, 1);
+    assert.equal(byTag(root, "dialog").length, 0);
+    assert.equal(byClass(root, "biblio-ui__quick-view-trigger")[0].focused, true);
 });
 
 test("overview mirrors busy state and focuses its heading when requested", () => {

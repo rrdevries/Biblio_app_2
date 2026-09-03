@@ -547,8 +547,16 @@ function biblioE2eInsertExternalLoan(
 
 function biblioE2eCreateNextReadingPage(): void
 {
-    if (get_page_by_path(BIBLIO_E2E_C7_PAGE_SLUG, OBJECT, "page") !== null) {
-        biblioE2eFail("the isolated C7 Page slug is already occupied.");
+    $existing = get_page_by_path(BIBLIO_E2E_C7_PAGE_SLUG, OBJECT, "page");
+    if ($existing instanceof WP_Post) {
+        if (
+            $existing->post_status !== "publish"
+            || trim($existing->post_content) !== "[biblio_next_reading_app]"
+        ) {
+            biblioE2eFail("the isolated C7 Page slug is already occupied.");
+        }
+
+        return;
     }
     $result = wp_insert_post([
         "post_title" => "E2E Hierna lezen",

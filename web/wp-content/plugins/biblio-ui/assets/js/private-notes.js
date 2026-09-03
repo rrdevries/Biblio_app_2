@@ -283,7 +283,7 @@ function appendSafeHtml(documentImpl, parent, html) {
     parent.append(safePrivateNoteFragment(documentImpl, html));
 }
 
-function formatButton(documentImpl, label, command, actions) {
+function formatButton(documentImpl, label, command, actions, restoreEditorFocus) {
     const button = control(documentImpl, label);
     button.className += " biblio-ui__format-control";
     button.setAttribute("data-biblio-format", command);
@@ -294,6 +294,8 @@ function formatButton(documentImpl, label, command, actions) {
         if (typeof pressed === "boolean") {
             button.setAttribute("aria-pressed", pressed ? "true" : "false");
         }
+
+        restoreEditorFocus();
     });
 
     return button;
@@ -321,20 +323,6 @@ function renderEditor(documentImpl, editor, actions) {
         text: editor.dirty ? "Niet-opgeslagen wijzigingen." : "",
         attributes: { id: editor.dirtyId },
     });
-    const toolbar = element(documentImpl, "div", {
-        className: "biblio-ui__editor-toolbar",
-        attributes: { "aria-label": "Notitie opmaken", role: "toolbar" },
-    });
-    toolbar.append(
-        formatButton(documentImpl, "Vet", "bold", actions),
-        formatButton(documentImpl, "Cursief", "italic", actions),
-        formatButton(documentImpl, "Opsomming", "insertUnorderedList", actions),
-        formatButton(documentImpl, "Nummering", "insertOrderedList", actions),
-        formatButton(documentImpl, "Citaat", "blockquote", actions)
-    );
-    for (const button of Array.from(toolbar.children)) {
-        button.disabled = editor.pending;
-    }
     const editable = element(documentImpl, "div", {
         className: "biblio-ui__editor-surface",
         attributes: {
@@ -349,6 +337,21 @@ function renderEditor(documentImpl, editor, actions) {
             "data-biblio-note-editor": "true",
         },
     });
+    const toolbar = element(documentImpl, "div", {
+        className: "biblio-ui__editor-toolbar",
+        attributes: { "aria-label": "Notitie opmaken", role: "toolbar" },
+    });
+    const restoreEditorFocus = () => editable.focus();
+    toolbar.append(
+        formatButton(documentImpl, "Vet", "bold", actions, restoreEditorFocus),
+        formatButton(documentImpl, "Cursief", "italic", actions, restoreEditorFocus),
+        formatButton(documentImpl, "Opsomming", "insertUnorderedList", actions, restoreEditorFocus),
+        formatButton(documentImpl, "Nummering", "insertOrderedList", actions, restoreEditorFocus),
+        formatButton(documentImpl, "Citaat", "blockquote", actions, restoreEditorFocus)
+    );
+    for (const button of Array.from(toolbar.children)) {
+        button.disabled = editor.pending;
+    }
 
     if (editor.contentHtml !== "") {
         appendSafeHtml(documentImpl, editable, editor.contentHtml);

@@ -34,7 +34,7 @@ function contrast(foreground, background) {
     return (light + 0.05) / (dark + 0.05);
 }
 
-test("functional design tokens cover the complete step 10 scale", () => {
+test("Deep Library exposes the canonical spacing and semantic token architecture", () => {
     for (const contract of [
         "--biblio-space-1: 0.25rem",
         "--biblio-space-2: 0.5rem",
@@ -44,29 +44,66 @@ test("functional design tokens cover the complete step 10 scale", () => {
         "--biblio-space-8: 2rem",
         "--biblio-space-12: 3rem",
         "--biblio-space-16: 4rem",
-        "--biblio-content-max: 72rem",
+        "--biblio-content-max: 90rem",
         "--biblio-reading-max: 48rem",
         "--biblio-dialog-max: 32rem",
         "--biblio-control-min: 44px",
-        "--biblio-card-radius: 0.75rem",
+        "--biblio-radius-compact: 0.25rem",
+        "--biblio-radius-control: 0.375rem",
+        "--biblio-radius-overlay: 0.5rem",
+        "--biblio-radius-elevated: 0.625rem",
         "--biblio-boundary-width: 1px",
         "--biblio-focus-width: 2px",
     ]) {
         assert.match(css, new RegExp(contract.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     }
 
-    assert.match(css, /--biblio-color-primary: #[0-9a-f]{6}/i);
-    assert.match(css, /var\(--e-global-typography-primary-font-family, inherit\)/);
+    for (const role of [
+        "page",
+        "surface",
+        "surface-elevated",
+        "navigation",
+        "navigation-hover",
+        "navigation-active",
+        "text-primary",
+        "text-secondary",
+        "text-muted",
+        "interactive",
+        "interactive-hover",
+        "interactive-subtle",
+        "border",
+        "border-strong",
+        "focus",
+        "brass",
+        "brass-subtle",
+        "status-success",
+        "status-warning",
+        "status-danger",
+        "book-atmosphere",
+    ]) {
+        assert.match(css, new RegExp(`--biblio-color-${role}:`));
+    }
+
+    assert.match(css, /--biblio-font-serif: "Cormorant Garamond"/);
+    assert.match(css, /--biblio-font-sans: "Source Sans 3"/);
+    assert.match(css, /font-family: var\(--biblio-font-serif\)/);
+    assert.match(css, /inline-size: 100vw/);
+    assert.match(css, /margin-inline: calc\(50% - 50vw\)/);
     assert.match(css, /:focus-visible/);
     assert.doesNotMatch(css, /\.elementor(?:-|\s|\{|\.)/);
 });
 
-test("responsive CSS expresses the three breakpoint families and component layouts", () => {
+test("shell, views and Quick View recompose across the three breakpoint families", () => {
     assert.match(css, /@media \(min-width: 768px\) and \(max-width: 1023px\)/);
     assert.match(css, /@media \(max-width: 767px\)/);
-    assert.match(css, /\.biblio-ui__cover--overview[\s\S]*inline-size: 6rem/);
-    assert.match(css, /inline-size: 4\.5rem/);
-    assert.match(css, /inline-size: 4rem/);
+    assert.match(css, /\.biblio-ui__shell \{[\s\S]*grid-template-columns: 14rem minmax\(0, 1fr\)/);
+    assert.match(css, /data-sidebar-collapsed="true"[\s\S]*grid-template-columns: 4\.5rem/);
+    assert.match(css, /data-catalog-view="grid"[\s\S]*repeat\(auto-fill, minmax\(min\(100%, 9\.25rem\), 1fr\)\)/);
+    assert.match(css, /data-catalog-view="list"/);
+    assert.match(css, /\.biblio-ui__bookshelf-placeholder/);
+    assert.match(css, /\.biblio-ui__quick-view[\s\S]*position: fixed|\.biblio-ui__sidebar[\s\S]*position: fixed/);
+    assert.match(css, /\.biblio-ui__quick-view[\s\S]*min-block-size: calc\(100dvb - var\(--biblio-space-8\)\)/);
+    assert.match(css, /data-mobile-nav-open="true"/);
     assert.match(css, /\.biblio-ui__load-more,[\s\S]*inline-size: 100%/);
     assert.match(css, /\.biblio-ui__detail-layout[\s\S]*grid-template-columns/);
     assert.match(css, /\.biblio-ui__reading-dialog[\s\S]*margin: auto 0 0/);
@@ -75,8 +112,13 @@ test("responsive CSS expresses the three breakpoint families and component layou
     assert.match(css, /\.biblio-ui__history-list[\s\S]*display: grid/);
     assert.match(css, /\.biblio-ui__history-entry[\s\S]*min-inline-size: 0/);
     assert.match(css, /\.biblio-ui__history-load-more,[\s\S]*inline-size: 100%/);
-    assert.doesNotMatch(css, /position:\s*(?:fixed|sticky)/);
     assert.doesNotMatch(css, /\.biblio-ui__history[^\{]*\{[^}]*overflow-x:/);
+
+    const librarySlice = css.slice(
+        css.indexOf("/* Mijn Bibliotheek"),
+        css.indexOf("[data-biblio-next-reading-root]")
+    );
+    assert.doesNotMatch(librarySlice, /#[0-9a-f]{3,8}/iu);
 });
 
 test("Reading history CSS preserves reflow, native lists and scoped token use", () => {
@@ -172,10 +214,10 @@ test("Private Notes CSS keeps native list semantics, wrapping editor controls an
     );
 });
 
-test("existing Biblio text, control and focus colors retain readable contrast", () => {
-    assert.ok(contrast("1f2933", "ffffff") >= 4.5);
-    assert.ok(contrast("1f2933", "f5f7fa") >= 4.5);
-    assert.ok(contrast("243b53", "ffffff") >= 4.5);
-    assert.ok(contrast("005fcc", "ffffff") >= 3);
+test("Ink Light text, navigation and focus work values retain readable contrast", () => {
+    assert.ok(contrast("22252b", "f7f4ed") >= 4.5);
+    assert.ok(contrast("686e78", "f7f4ed") >= 4.5);
+    assert.ok(contrast("ffffff", "172238") >= 4.5);
+    assert.ok(contrast("075f9e", "f7f4ed") >= 3);
     assert.ok(contrast("9b1c1c", "ffffff") >= 4.5);
 });

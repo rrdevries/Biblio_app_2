@@ -728,6 +728,7 @@ test("view exposes zero/list/editor semantics and programmatic editor status", (
     assert.match(region.textContent, /Niet-opgeslagen wijzigingen/);
     formatButtons[0].click();
     assert.equal(formatButtons[0].getAttribute("aria-pressed"), "true");
+    assert.equal(textbox.focused, true);
 });
 
 test("editor focus is restored after a native keyboard click default action without stealing later focus", async () => {

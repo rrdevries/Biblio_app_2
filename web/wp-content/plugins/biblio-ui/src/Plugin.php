@@ -6,7 +6,7 @@ namespace Biblio\UI;
 
 final class Plugin
 {
-    public const VERSION = "0.2.0";
+    public const VERSION = "0.3.0";
     public const SCRIPT_MODULE_ID = "biblio-ui/app";
     public const API_SCRIPT_MODULE_ID = "biblio-ui/api";
     public const ROUTE_SCRIPT_MODULE_ID = "biblio-ui/route-state";
@@ -17,6 +17,8 @@ final class Plugin
     public const DETAIL_SCRIPT_MODULE_ID = "biblio-ui/detail-view";
     public const END_READING_SCRIPT_MODULE_ID = "biblio-ui/end-reading-view";
     public const START_READING_SCRIPT_MODULE_ID = "biblio-ui/start-reading-view";
+    public const UI_PREFERENCES_SCRIPT_MODULE_ID = "biblio-ui/ui-preferences";
+    public const UI_SHELL_SCRIPT_MODULE_ID = "biblio-ui/ui-shell";
     public const NEXT_READING_SCRIPT_MODULE_ID = "biblio-ui/next-reading";
     public const STYLE_HANDLE = "biblio-ui";
 
@@ -85,6 +87,21 @@ final class Plugin
             self::VERSION
         );
         wp_register_script_module(
+            self::UI_PREFERENCES_SCRIPT_MODULE_ID,
+            $assetBaseUrl . "js/ui-preferences.js",
+            [],
+            self::VERSION
+        );
+        wp_register_script_module(
+            self::UI_SHELL_SCRIPT_MODULE_ID,
+            $assetBaseUrl . "js/ui-shell.js",
+            [[
+                "id" => self::UI_PREFERENCES_SCRIPT_MODULE_ID,
+                "import" => "static",
+            ]],
+            self::VERSION
+        );
+        wp_register_script_module(
             self::READING_HISTORY_SCRIPT_MODULE_ID,
             $assetBaseUrl . "js/reading-history.js",
             [],
@@ -143,6 +160,9 @@ final class Plugin
                 "import" => "static",
             ], [
                 "id" => self::END_READING_SCRIPT_MODULE_ID,
+                "import" => "static",
+            ], [
+                "id" => self::UI_SHELL_SCRIPT_MODULE_ID,
                 "import" => "static",
             ]],
             self::VERSION
