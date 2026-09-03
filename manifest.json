@@ -37,6 +37,7 @@
     "docs/28-next-reading-contract-correction.md",
     "docs/29-c7-next-reading-exit-evidence.md",
     "docs/30-b7-ratings-reviews-public-read-evidence.md",
+    "docs/31-biblio-design-system.md",
     "docs/decisions/ADR-001-single-site-tenancy.md",
     "docs/decisions/ADR-002-modular-monolith.md",
     "docs/decisions/ADR-003-biblio-core-owns-domain-logic.md",
@@ -44,7 +45,8 @@
     "docs/decisions/ADR-005-formal-core-schema-migration-baseline.md",
     "docs/decisions/ADR-006-f2-5-library-catalog-context-and-classification.md",
     "docs/decisions/ADR-007-f2-6-reading-round-lifecycle-and-historical-truth.md",
-    "docs/decisions/ADR-008-next-reading-intent-model-and-transactional-consumption.md"
+    "docs/decisions/ADR-008-next-reading-intent-model-and-transactional-consumption.md",
+    "docs/decisions/ADR-009-biblio-ui-theming-and-atmosphere-architecture.md"
   ],
   "assumptions": [
     "For v2.001 each user has at most one designated personal Privébibliotheek, auto-created on first relevant reading/borrowing action if absent and named Mijn Bibliotheek."

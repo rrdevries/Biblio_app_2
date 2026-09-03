@@ -6,6 +6,11 @@ Explicit decisions, directions and open design questions for versions after
 the active v2.001 scope are maintained in
 `docs/26-future-roadmap-decisions.md`.
 
+The canonical living visual and UI baseline is maintained in
+`docs/31-biblio-design-system.md`. Its structural theming and Atmosphere
+architecture is accepted in
+`docs/decisions/ADR-009-biblio-ui-theming-and-atmosphere-architecture.md`.
+
 ## Product model
 
 Biblio is one application. Every platform user has one private, platform-wide environment: `Mijn Biblio`.
