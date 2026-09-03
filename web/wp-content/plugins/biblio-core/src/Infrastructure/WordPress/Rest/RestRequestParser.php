@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Infrastructure\WordPress\Rest;
 
+use Biblio\Core\Application\Assessments\Read\{PublicAssessmentCursor,PublicAssessmentPageSize};
 use Biblio\Core\Application\Catalog\Read\CatalogOverviewCursor;
 use Biblio\Core\Application\Catalog\Read\CatalogOverviewPageSize;
 use Biblio\Core\Application\Reading\History\ReadingHistoryCursor;
@@ -32,7 +33,8 @@ final readonly class RestRequestParser
         private CatalogCursorCodec $cursors,
         private ReadingHistoryCursorCodec $historyCursors,
         private PrivateNoteCursorCodec $privateNoteCursors,
-        private ?NextReadingWorkCursorCodec $nextReadingWorkCursors = null
+        private ?NextReadingWorkCursorCodec $nextReadingWorkCursors = null,
+        private ?PublicAssessmentCursorCodec $publicAssessmentCursors = null
     ) {
     }
 
@@ -399,6 +401,42 @@ final readonly class RestRequestParser
         }
     }
 
+    /** @return array{cursor: ?PublicAssessmentCursor, page_size: PublicAssessmentPageSize} */
+    public function publicAssessmentPage(WP_REST_Request $request): array
+    {
+        $this->validateQueryFields($request, ["limit", "cursor"]);
+        $query = $request->get_query_params();
+        $value = $query["limit"] ?? null;
+
+        if (
+            $value !== null
+            && !(is_int($value) || (is_string($value)
+                && preg_match('/^[0-9]+$/D', $value) === 1))
+        ) {
+            throw RestRequestException::wrongType("limit", "an integer");
+        }
+
+        try {
+            $pageSize = new PublicAssessmentPageSize(
+                $value === null ? PublicAssessmentPageSize::DEFAULT : (int) $value
+            );
+        } catch (Throwable) {
+            throw RestRequestException::invalid("limit");
+        }
+
+        $cursorValue = $query["cursor"] ?? null;
+        if ($cursorValue !== null && !is_string($cursorValue)) {
+            throw RestRequestException::wrongType("cursor", "a string");
+        }
+
+        return [
+            "cursor" => $cursorValue === null
+                ? null
+                : $this->publicAssessmentCursorCodec()->decode($cursorValue),
+            "page_size" => $pageSize,
+        ];
+    }
+
     public function startedOn(WP_REST_Request $request): ReadingDate
     {
         /** @var mixed $body */
@@ -516,6 +554,12 @@ final readonly class RestRequestParser
             (int) $parts["month"],
             (int) $parts["day"]
         );
+    }
+
+    private function publicAssessmentCursorCodec(): PublicAssessmentCursorCodec
+    {
+        return $this->publicAssessmentCursors
+            ?? new PublicAssessmentCursorCodec();
     }
 
     /**

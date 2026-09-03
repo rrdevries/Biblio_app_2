@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 namespace Biblio\Core\Infrastructure\Persistence\WordPress;
-use Biblio\Core\Assessments\{ContributionDuplicate,Rating,RatingId,RatingIdCollision,RatingValue,RatingVersion,WritableRatingRepository};
+use Biblio\Core\Assessments\{ContributionDuplicate,Rating,RatingAggregate,RatingId,RatingIdCollision,RatingValue,RatingVersion,WritableRatingRepository};
 use Biblio\Core\Catalog\WorkId; use Biblio\Core\Exception\{AuthorizationException,FailureReason}; use Biblio\Core\Identity\UserId; use Biblio\Core\Infrastructure\Persistence\PersistenceException; use Biblio\Core\Reading\ReadingRoundId; use DateTimeImmutable; use DateTimeZone; use Throwable; use wpdb;
 final readonly class WpdbRatingRepository implements WritableRatingRepository
 {
@@ -18,6 +18,34 @@ final readonly class WpdbRatingRepository implements WritableRatingRepository
     public function findForUserAndWork(UserId $user,WorkId $work): array { return $this->many('user_id=%s AND work_id=%s',[$user->value(),$work->value()]); }
     public function findForUserAndRound(UserId $user,ReadingRoundId $round): array { return $this->many('user_id=%s AND reading_round_id=%s',[$user->value(),$round->value()]); }
     public function findAllForUser(UserId $user,int $limit=50): array { $limit=max(1,min(100,$limit)); return $this->many('user_id=%s',[$user->value()],$limit); }
+    public function aggregateForUserAndWork(UserId $user,WorkId $work): RatingAggregate
+    {
+        $table=$this->tables->ratings();
+        $row=$this->db->get_row($this->db->prepare(
+            "SELECT COUNT(*) AS rating_count, "
+            . "COALESCE(SUM(rating_half_units), 0) AS sum_half_units "
+            . "FROM `{$table}` WHERE user_id=%s AND work_id=%s",
+            $user->value(),
+            $work->value()
+        ));
+        if($row===null||$this->db->last_error!==""){
+            throw new PersistenceException(
+                'Could not aggregate Ratings.',
+                0,
+                WpdbErrorTranslator::diagnostic(
+                    'Personal Rating aggregate',
+                    $this->db->last_error
+                ),
+                FailureReason::PersistenceReadFailed
+            );
+        }
+        $count=(int)$row->rating_count;
+        return new RatingAggregate(
+            $count,
+            (int)$row->sum_half_units,
+            $count===0?0:1
+        );
+    }
     public function replaceIfVersionMatches(UserId $actor,Rating $r,RatingVersion $expected): bool
     {
         $this->assertOwner($actor,$r); $this->assertRound($r); if ($r->version()->value()!==$expected->value()+1) throw new PersistenceException('Rating replacement must increment once.',failureReason:FailureReason::PersistenceWriteFailed);

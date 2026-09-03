@@ -10,6 +10,7 @@ interface WritableRatingRepository
     /** @return list<Rating> */ public function findForUserAndWork(UserId $user, WorkId $work): array;
     /** @return list<Rating> */ public function findForUserAndRound(UserId $user, ReadingRoundId $round): array;
     /** @return list<Rating> */ public function findAllForUser(UserId $user, int $limit = 50): array;
+    public function aggregateForUserAndWork(UserId $user, WorkId $work): RatingAggregate;
     public function replaceIfVersionMatches(UserId $actor, Rating $replacement, RatingVersion $expected): bool;
     public function deleteIfVersionMatches(UserId $actor, RatingId $id, RatingVersion $expected): bool;
 }

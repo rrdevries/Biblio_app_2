@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Tests\Unit\Application;
 
+use Biblio\Core\Application\Assessments\Read\GetLibraryPublicAssessmentsService;
 use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
 use Biblio\Core\Application\Catalog\AddLibraryItemService;
 use Biblio\Core\Application\Catalog\Classification\CreateLibraryCatalogContextService;
@@ -71,6 +72,7 @@ final class ProductionApplicationBoundaryTest extends TestCase
             [ListMyPrivateNotesService::class, "list"],
             [NextReadingDiscoveryService::class, "searchWorks"],
             [NextReadingDiscoveryService::class, "sourceOptions"],
+            [GetLibraryPublicAssessmentsService::class, "forWork"],
             [
                 CreateLibraryCatalogContextService::class,
                 "createForRepresentedWork",
@@ -132,6 +134,7 @@ final class ProductionApplicationBoundaryTest extends TestCase
             "libraryContexts",
             "libraryItemCreation",
             "libraryItemReading",
+            "libraryPublicAssessments",
             "myNextReadingList",
             "myPrivateNotes",
             "nextReadingAdd",
