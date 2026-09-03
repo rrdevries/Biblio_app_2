@@ -10,6 +10,7 @@ import {
     readReadingHistoryPage,
 } from "biblio-ui/reading-history";
 import { createStartReadingView } from "biblio-ui/start-reading-view";
+import { createLibraryShell } from "biblio-ui/ui-shell";
 import {
     buildRouteUrl,
     createRouteController,
@@ -37,6 +38,7 @@ export {
     readReadingHistoryPage,
 } from "biblio-ui/reading-history";
 export { createStartReadingView } from "biblio-ui/start-reading-view";
+export { createLibraryShell } from "biblio-ui/ui-shell";
 export {
     buildRouteUrl,
     createRouteController,
@@ -508,6 +510,7 @@ export function createLibraryApp(mount, {
     readingHistoryViewFactory = createReadingHistoryView,
     privateNotesControllerFactory = createPrivateNotesController,
     startReadingViewFactory = createStartReadingView,
+    shellFactory = createLibraryShell,
     reload = () => locationImpl.reload(),
     abortControllerFactory = () => new AbortController(),
 } = {}) {
@@ -529,6 +532,7 @@ export function createLibraryApp(mount, {
         eventTarget,
     });
     let view;
+    let shell;
     let detailView;
     let endReadingView;
     let readingHistoryView;
@@ -542,9 +546,26 @@ export function createLibraryApp(mount, {
     let started = false;
     let idlePromise = Promise.resolve();
 
+    function applicationRoot() {
+        if (shell === undefined) {
+            shell = typeof mount?.replaceChildren === "function"
+                ? shellFactory(mount, {
+                    documentImpl,
+                    eventTarget,
+                    overviewUrl: config.overviewUrl,
+                })
+                : Object.freeze({
+                    contentRoot: mount,
+                    destroy() {},
+                });
+        }
+
+        return shell.contentRoot;
+    }
+
     function currentView() {
         if (view === undefined) {
-            view = viewFactory(mount, {
+            view = viewFactory(applicationRoot(), {
                 documentImpl,
                 overviewUrl: config.overviewUrl,
                 itemUrl(libraryId, itemId) {
@@ -561,7 +582,7 @@ export function createLibraryApp(mount, {
 
     function currentDetailView() {
         if (detailView === undefined) {
-            detailView = detailViewFactory(mount, { documentImpl });
+            detailView = detailViewFactory(applicationRoot(), { documentImpl });
         }
 
         return detailView;
@@ -569,7 +590,7 @@ export function createLibraryApp(mount, {
 
     function currentStartReadingView() {
         if (startReadingView === undefined) {
-            startReadingView = startReadingViewFactory(mount, {
+            startReadingView = startReadingViewFactory(applicationRoot(), {
                 documentImpl,
                 loginUrl: config.loginUrl,
                 reload,
@@ -581,7 +602,7 @@ export function createLibraryApp(mount, {
 
     function currentEndReadingView() {
         if (endReadingView === undefined) {
-            endReadingView = endReadingViewFactory(mount, {
+            endReadingView = endReadingViewFactory(applicationRoot(), {
                 documentImpl,
                 loginUrl: config.loginUrl,
                 reload,
@@ -593,7 +614,7 @@ export function createLibraryApp(mount, {
 
     function currentReadingHistoryView() {
         if (readingHistoryView === undefined) {
-            readingHistoryView = readingHistoryViewFactory(mount, {
+            readingHistoryView = readingHistoryViewFactory(applicationRoot(), {
                 documentImpl,
             });
         }
@@ -1370,7 +1391,7 @@ export function createLibraryApp(mount, {
                     itemId: requestedItemId,
                 });
                 privateNotesController = privateNotesControllerFactory({
-                    root: mount,
+                    root: applicationRoot(),
                     api,
                     workId: currentDetail.work_id,
                     signal: controller.signal,
@@ -1413,7 +1434,58 @@ export function createLibraryApp(mount, {
                 loadingMore: false,
                 loadMoreError: false,
                 canRetryCursor: false,
+                quickView: null,
             };
+            let quickViewRevision = 0;
+
+            async function openQuickView(itemId) {
+                const requestRevision = quickViewRevision + 1;
+                quickViewRevision = requestRevision;
+                overview.quickView = Object.freeze({
+                    state: "loading",
+                    itemId,
+                });
+                renderOverview();
+
+                try {
+                    const detailPayload = await api.get(
+                        detailPath(resolution.library.library_id, itemId),
+                        { signal: controller.signal }
+                    );
+
+                    if (
+                        !isCurrent(runGeneration, controller)
+                        || requestRevision !== quickViewRevision
+                    ) {
+                        return;
+                    }
+
+                    overview.quickView = Object.freeze({
+                        state: "ready",
+                        itemId,
+                        detail: readDetail(
+                            detailPayload,
+                            resolution.library.library_id,
+                            itemId
+                        ),
+                    });
+                } catch (error) {
+                    if (
+                        isAborted(error)
+                        || !isCurrent(runGeneration, controller)
+                        || requestRevision !== quickViewRevision
+                    ) {
+                        return;
+                    }
+
+                    overview.quickView = Object.freeze({
+                        state: isUnavailable(error) ? "unavailable" : "error",
+                        itemId,
+                    });
+                }
+
+                renderOverview();
+            }
 
             function renderOverview() {
                 if (!isCurrent(runGeneration, controller)) {
@@ -1439,6 +1511,16 @@ export function createLibraryApp(mount, {
                                 resolution.library.library_id,
                                 itemId
                             );
+                        },
+                        quickView(itemId) {
+                            return setIdle(openQuickView(itemId));
+                        },
+                        retryQuickView(itemId) {
+                            return setIdle(openQuickView(itemId));
+                        },
+                        closeQuickView() {
+                            quickViewRevision += 1;
+                            overview.quickView = null;
                         },
                     }
                 );
@@ -1563,6 +1645,8 @@ export function createLibraryApp(mount, {
         mutationController = null;
         currentController?.abort();
         currentController = null;
+        shell?.destroy();
+        shell = undefined;
         unsubscribePopState?.();
         unsubscribePopState = null;
         started = false;

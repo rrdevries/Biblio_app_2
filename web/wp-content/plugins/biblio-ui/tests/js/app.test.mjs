@@ -17,6 +17,8 @@ for (const [moduleId, file] of [
     ["biblio-ui/reading-history", "reading-history.js"],
     ["biblio-ui/route-state", "route-state.js"],
     ["biblio-ui/start-reading-view", "start-reading-view.js"],
+    ["biblio-ui/ui-preferences", "ui-preferences.js"],
+    ["biblio-ui/ui-shell", "ui-shell.js"],
 ]) {
     appSource = appSource.replaceAll(
         `"${moduleId}"`,
@@ -197,7 +199,7 @@ test("abort is control flow while other transport errors remain unchanged", asyn
     assert.deepEqual(browser.historyCalls, []);
 });
 
-test("step 8 modules contain no storage or later-slice operations", async () => {
+test("functional modules keep personal UI storage isolated from domain state", async () => {
     const sources = await Promise.all([
         "app.js",
         "route-state.js",
@@ -208,6 +210,7 @@ test("step 8 modules contain no storage or later-slice operations", async () => 
         "detail-view.js",
         "end-reading-view.js",
         "start-reading-view.js",
+        "ui-shell.js",
     ].map((file) => readFile(
         new URL(`../../assets/js/${file}`, import.meta.url),
         "utf8"
@@ -223,4 +226,11 @@ test("step 8 modules contain no storage or later-slice operations", async () => 
     );
     assert.equal((source.match(/me\/libraries/g) ?? []).length, 1);
     assert.equal((source.match(/page_size/g) ?? []).length, 0);
+
+    const preferences = await readFile(
+        new URL("../../assets/js/ui-preferences.js", import.meta.url),
+        "utf8"
+    );
+    assert.match(preferences, /localStorage/);
+    assert.doesNotMatch(preferences, /library_id|item_id|authorization|capabilit/iu);
 });

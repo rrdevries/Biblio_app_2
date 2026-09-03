@@ -17,6 +17,8 @@ for (const [moduleId, file] of [
     ["biblio-ui/reading-history", "reading-history.js"],
     ["biblio-ui/route-state", "route-state.js"],
     ["biblio-ui/start-reading-view", "start-reading-view.js"],
+    ["biblio-ui/ui-preferences", "ui-preferences.js"],
+    ["biblio-ui/ui-shell", "ui-shell.js"],
 ]) {
     appSource = appSource.replaceAll(
         `"${moduleId}"`,
@@ -548,7 +550,44 @@ test("a selected Library loads only the exact active overview contract", async (
         loadingMore: false,
         loadMoreError: false,
         canRetryCursor: false,
+        quickView: null,
     });
+});
+
+test("Quick View rereads the existing scoped detail endpoint without changing route", async () => {
+    const selected = library("library-1", { designated: true });
+    const requests = [];
+    const renders = recorder();
+    const { app, browser } = createApp({
+        url: "https://example.test/mijn-bibliotheek/?library_id=library-1",
+        renders,
+        async get(path) {
+            requests.push(path);
+            if (path === "me/libraries") {
+                return { libraries: [selected] };
+            }
+            if (path === "libraries/library-1/items/item-1") {
+                return detail(selected, "item-1");
+            }
+            return overview(selected, [item("item-1")]);
+        },
+    });
+
+    await app.start();
+    await renders.renders.at(-1).actions.quickView("item-1");
+
+    assert.deepEqual(requests, [
+        "me/libraries",
+        "libraries/library-1/items",
+        "libraries/library-1/items/item-1",
+    ]);
+    assert.equal(browser.historyCalls.length, 0);
+    assert.equal(renders.renders.at(-2).model.quickView.state, "loading");
+    assert.equal(renders.renders.at(-1).model.quickView.state, "ready");
+    assert.equal(renders.renders.at(-1).model.quickView.detail.item_id, "item-1");
+    const renderCount = renders.renders.length;
+    renders.renders.at(-1).actions.closeQuickView();
+    assert.equal(renders.renders.length, renderCount);
 });
 
 test("a direct Item URL dispatches only the encoded detail contract", async () => {

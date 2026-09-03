@@ -1708,3 +1708,39 @@ Acceptance requires and the current implementation proves:
 
 The authoritative scope, route, DTO and gate record is
 `docs/30-b7-ratings-reviews-public-read-evidence.md`.
+
+## 56. Mijn Bibliotheek Design System implementation slice
+
+Status: **GO WITH EXPLICIT DEFERRED CAPABILITIES**
+
+Acceptance requires:
+
+- one root-scoped Ink/Light shell around all existing Biblio UI states;
+- desktop 224px sidebar and remembered 72px rail, tablet recomposition and
+  mobile off-canvas navigation with keyboard close and focus return;
+- semantic token use, canonical spacing/radii direction and no component-local
+  second palette;
+- Grid default with 148px desktop cover work value, working List, explicit
+  Bookshelf placeholder and no invented missing covers;
+- a non-layout-shifting Quick View that rereads the existing authorized detail
+  endpoint and retains the full detail route;
+- no client-only search/filter/sort claim against a cursor-paginated partial
+  result;
+- no Core/REST/schema/Elementor/domain regression and no fixture residue;
+- authenticated desktop/tablet/mobile geometry, overflow, keyboard/focus and
+  visual artifacts.
+
+The complete rationale and criterion mapping are in
+`docs/32-mijn-bibliotheek-design-system-slice.md`. Exact Theme palettes,
+production font validation, iconography, cover-ratio choice and Atmosphere
+assets remain open Design System work. Search/filter/sort requires a separately
+approved server read contract. No full WCAG claim is made.
+
+Final evidence: UI smoke and frontend 191/191; focused UI PHPStan; Core unit
+252/252 with 977 assertions; MariaDB integration 253/253 with 2,966 assertions;
+complete Core syntax/PHPStan, Composer, WordPress smoke, manifest and whitespace;
+guarded authenticated Chromium 50/50 plus final focused Quick View Chromium
+1/1. Five fixture guards fail closed. Double cleanup and `verify-clean` leave
+all fixture counts at zero; the before/after non-fixture fingerprint is equal
+with 39 Core rows and SHA-256
+`314a9fc54ef83367cb7cfa4dc4030e9c0d49fcc665a58a1fb00562abca039cfa`.

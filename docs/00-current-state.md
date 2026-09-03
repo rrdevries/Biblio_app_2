@@ -1499,3 +1499,28 @@ There are no 1D blockers. Non-blocking presentation polish is registered in
 `docs/26-future-roadmap-decisions.md`; no CSS or product behavior changes in
 1D.7. The authoritative exit record is
 `docs/27-elementor-vertical-slice-1d-private-notes-exit-evidence.md`.
+
+### Mijn Bibliotheek — Design System implementation slice
+
+Status: **Implemented — GO WITH EXPLICIT DEFERRED CAPABILITIES**
+
+The existing Core-backed `Mijn Bibliotheek` application now renders inside an
+Ink/Light Deep Library shell. Desktop has a 224px Classic Sidebar with a
+remembered 72px rail; tablet and mobile recompose to rail/off-canvas navigation.
+The overview defaults to a 148px-cover Grid and provides a working List view,
+an explicit Bookshelf placeholder and a native right-overlay Quick View backed
+by the existing scoped Item-detail GET. Semantic tokens isolate Theme,
+Appearance and future Atmosphere roles; only the personal sidebar collapse
+preference is stored locally.
+
+Search, filter values, active chips and alternate server sort remain deferred.
+The current overview REST contract supports only cursor pagination, while the
+Slice 1A contract explicitly excludes Search and Filters. Controls are present
+but disabled/explanatory rather than falsely operating on one fetched page.
+Bookshelf remains a placeholder because cover-ratio/spine behavior is open.
+Exact palette/font/icon/Atmosphere values also remain non-canonical work.
+
+No Core, REST, schema, authorization, domain behavior, Elementor Page or theme
+template changes were made. Full scope, collisions, non-scope and acceptance
+mapping are recorded in
+`docs/32-mijn-bibliotheek-design-system-slice.md`.
