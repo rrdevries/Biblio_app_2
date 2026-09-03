@@ -121,6 +121,7 @@ final class ProductionApplicationBoundaryTest extends TestCase
             "__construct",
             "accessibleLibraryItems",
             "assessmentQueries",
+            "bibliographicRelationships",
             "bookTypeManagement",
             "catalogContextCreation",
             "catalogContextManagement",

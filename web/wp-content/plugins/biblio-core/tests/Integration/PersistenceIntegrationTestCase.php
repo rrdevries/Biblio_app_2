@@ -63,6 +63,10 @@ abstract class PersistenceIntegrationTestCase extends TestCase
         $items = $this->tableNames->items();
         $editions = $this->tableNames->editions();
         $works = $this->tableNames->works();
+        $workContributors = $this->tableNames->workContributors();
+        $authors = $this->tableNames->authors();
+        $workSeries = $this->tableNames->workSeries();
+        $series = $this->tableNames->series();
         $personalLibraryDesignations = $this->tableNames
             ->personalLibraryDesignations();
         $memberships = $this->tableNames->memberships();
@@ -102,6 +106,18 @@ abstract class PersistenceIntegrationTestCase extends TestCase
         $this->database->query("DELETE FROM `{$externalLoans}`");
         $this->database->query("DELETE FROM `{$items}`");
         $this->database->query("DELETE FROM `{$editions}`");
+        if ($this->tableExists($workContributors)) {
+            $this->database->query("DELETE FROM `{$workContributors}`");
+        }
+        if ($this->tableExists($workSeries)) {
+            $this->database->query("DELETE FROM `{$workSeries}`");
+        }
+        if ($this->tableExists($authors)) {
+            $this->database->query("DELETE FROM `{$authors}`");
+        }
+        if ($this->tableExists($series)) {
+            $this->database->query("DELETE FROM `{$series}`");
+        }
         $this->database->query("DELETE FROM `{$works}`");
         $this->database->query(
             "DELETE FROM `{$personalLibraryDesignations}`"
