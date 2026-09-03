@@ -120,6 +120,7 @@ final class Schema1001MigrationTest extends PersistenceIntegrationTestCase
                     "context_version" => 1,
                 ]
             );
+            $this->productionMigrator()->migrate();
             $catalogContexts = new WpdbLibraryCatalogContextRepository(
                 $this->database,
                 $this->tableNames
@@ -153,7 +154,7 @@ final class Schema1001MigrationTest extends PersistenceIntegrationTestCase
             self::assertSame("migration-library", $item->libraryId()->value());
 
             $permissionsAfterFirstRun = $this->permissionsFor(101);
-            $this->migrator()->migrate();
+            $this->productionMigrator()->migrate();
             self::assertSame(
                 $permissionsAfterFirstRun,
                 $this->permissionsFor(101)
@@ -376,7 +377,7 @@ final class Schema1001MigrationTest extends PersistenceIntegrationTestCase
 
     private function downgradeToVersion1000(): void
     {
-        foreach (array_reverse($this->tableNames->schema1009()) as $table) {
+        foreach (array_reverse($this->tableNames->schema1010()) as $table) {
             $this->database->query("DROP TABLE IF EXISTS `{$table}`");
         }
         delete_option(CoreSchemaMigrator::VERSION_OPTION);
@@ -399,7 +400,7 @@ final class Schema1001MigrationTest extends PersistenceIntegrationTestCase
 
     private function restoreCurrentSchema(): void
     {
-        if ($this->productionMigrator()->installedVersion() !== 1009) {
+        if ($this->productionMigrator()->installedVersion() !== 1010) {
             $this->productionMigrator()->migrate();
         }
     }

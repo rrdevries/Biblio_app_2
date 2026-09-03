@@ -23,6 +23,8 @@ final class CoreTableNamesTest extends TestCase
         self::assertCount(22, $tableNames->schema1008());
         self::assertCount(4, $tableNames->schema1009Additions());
         self::assertCount(26, $tableNames->schema1009());
+        self::assertCount(2, $tableNames->schema1010Additions());
+        self::assertCount(28, $tableNames->schema1010());
         self::assertSame("wp_biblio_libraries", $tableNames->libraries());
         self::assertSame(
             "wp_biblio_reading_rounds",

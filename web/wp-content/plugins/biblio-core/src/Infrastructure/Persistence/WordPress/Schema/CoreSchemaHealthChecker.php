@@ -39,6 +39,7 @@ final readonly class CoreSchemaHealthChecker
             1007 => $this->inspectTables($this->tableNames->schema1006(), true, 1007),
             1008 => $this->inspectTables($this->tableNames->schema1008(), true, 1008),
             1009 => $this->inspectTables($this->tableNames->schema1009(), true, 1009),
+            1010 => $this->inspectTables($this->tableNames->schema1010(), true, 1010),
             default => throw new CoreSchemaMigrationException(
                 "No explicit Biblio Core schema-health contract exists for "
                 . "schema version {$expectedVersion}."
@@ -104,6 +105,33 @@ final readonly class CoreSchemaHealthChecker
             $this->tableNames->schema1009Additions(),
             false,
             1009
+        );
+    }
+
+    public function inspectExistingSchema1010Additions(): CoreSchemaHealth
+    {
+        return $this->inspectTables(
+            $this->tableNames->schema1010Additions(),
+            false,
+            1010
+        );
+    }
+
+    public function inspectSchema1010EditionMetadata(): CoreSchemaHealth
+    {
+        return $this->inspectTables(
+            [$this->tableNames->editions()],
+            true,
+            1010
+        );
+    }
+
+    public function inspectSchema1010ItemMetadata(): CoreSchemaHealth
+    {
+        return $this->inspectTables(
+            [$this->tableNames->items()],
+            true,
+            1010
         );
     }
 
@@ -533,15 +561,55 @@ final readonly class CoreSchemaHealthChecker
                     "nullable" => "YES",
                 ],
             ],
+            $this->tableNames->workAlternateTitles() => [
+                "work_id" => $id,
+                "alternate_title" => [
+                    "type" => "varchar(512)",
+                    "nullable" => "NO",
+                    "collation" => "utf8mb4_bin",
+                ],
+                "normalized_title" => [
+                    "type" => "varchar(512)",
+                    "nullable" => "NO",
+                    "collation" => "utf8mb4_bin",
+                ],
+            ],
+            $this->tableNames->workContainments() => [
+                "parent_work_id" => $id,
+                "contained_work_id" => $id,
+                "contained_position" => [
+                    "type" => "bigint(20) unsigned",
+                    "nullable" => "NO",
+                ],
+            ],
             $this->tableNames->editions() => [
                 "edition_id" => $id,
                 "work_id" => $id,
+                ...($schemaVersion >= 1010 ? [
+                    "isbn_10" => [
+                        "type" => "varchar(10)",
+                        "nullable" => "YES",
+                        "collation" => "utf8mb4_bin",
+                    ],
+                    "isbn_13" => [
+                        "type" => "varchar(13)",
+                        "nullable" => "YES",
+                        "collation" => "utf8mb4_bin",
+                    ],
+                    "explicitly_no_isbn" => [
+                        "type" => "tinyint(3) unsigned",
+                        "nullable" => "NO",
+                    ],
+                ] : []),
             ],
             $this->tableNames->items() => [
                 "item_id" => $id,
                 "library_id" => $id,
                 "edition_id" => $id,
                 "item_status" => ["type" => "varchar(32)", "nullable" => "NO"],
+                ...($schemaVersion >= 1010 ? [
+                    "inventory_number" => $nullableId,
+                ] : []),
             ],
             $this->tableNames->externalLoans() => [
                 "external_loan_id" => $id,
@@ -846,14 +914,54 @@ final readonly class CoreSchemaHealthChecker
                     "columns" => ["series_id", "series_position", "work_id"],
                 ],
             ],
+            $this->tableNames->workAlternateTitles() => [
+                "PRIMARY" => [
+                    "unique" => true,
+                    "columns" => ["work_id", "normalized_title"],
+                ],
+                "alternate_titles_by_title" => [
+                    "unique" => false,
+                    "columns" => ["normalized_title", "work_id"],
+                ],
+            ],
+            $this->tableNames->workContainments() => [
+                "PRIMARY" => [
+                    "unique" => true,
+                    "columns" => ["parent_work_id", "contained_work_id"],
+                ],
+                "work_containments_by_position" => [
+                    "unique" => true,
+                    "columns" => ["parent_work_id", "contained_position"],
+                ],
+                "work_containments_by_contained" => [
+                    "unique" => false,
+                    "columns" => ["contained_work_id", "parent_work_id"],
+                ],
+            ],
             $this->tableNames->editions() => [
                 "PRIMARY" => ["unique" => true, "columns" => ["edition_id"]],
                 "editions_by_work" => ["unique" => false, "columns" => ["work_id"]],
+                ...($schemaVersion >= 1010 ? [
+                    "editions_by_isbn10" => [
+                        "unique" => false,
+                        "columns" => ["isbn_10", "edition_id"],
+                    ],
+                    "editions_by_isbn13" => [
+                        "unique" => false,
+                        "columns" => ["isbn_13", "edition_id"],
+                    ],
+                ] : []),
             ],
             $this->tableNames->items() => [
                 "PRIMARY" => ["unique" => true, "columns" => ["item_id"]],
                 "items_by_library" => ["unique" => false, "columns" => ["library_id"]],
                 "items_by_edition" => ["unique" => false, "columns" => ["edition_id"]],
+                ...($schemaVersion >= 1010 ? [
+                    "items_by_library_inventory_number" => [
+                        "unique" => true,
+                        "columns" => ["library_id", "inventory_number"],
+                    ],
+                ] : []),
             ],
             $this->tableNames->externalLoans() => [
                 "PRIMARY" => ["unique" => true, "columns" => ["external_loan_id"]],
@@ -1094,6 +1202,21 @@ final readonly class CoreSchemaHealthChecker
                 $restrict(["work_id"], $this->tableNames->works(), ["work_id"]),
                 $restrict(["series_id"], $this->tableNames->series(), ["series_id"]),
             ],
+            $this->tableNames->workAlternateTitles() => [
+                $restrict(["work_id"], $this->tableNames->works(), ["work_id"]),
+            ],
+            $this->tableNames->workContainments() => [
+                $restrict(
+                    ["parent_work_id"],
+                    $this->tableNames->works(),
+                    ["work_id"]
+                ),
+                $restrict(
+                    ["contained_work_id"],
+                    $this->tableNames->works(),
+                    ["work_id"]
+                ),
+            ],
             $this->tableNames->editions() => [
                 $restrict(["work_id"], $this->tableNames->works(), ["work_id"]),
             ],
@@ -1249,8 +1372,25 @@ final readonly class CoreSchemaHealthChecker
             $this->tableNames->series() => [
                 "CHAR_LENGTH(TRIM(display_name)) > 0",
             ],
+            $this->tableNames->workAlternateTitles() => [
+                "CHAR_LENGTH(TRIM(alternate_title)) > 0",
+                "CHAR_LENGTH(TRIM(normalized_title)) > 0",
+            ],
+            $this->tableNames->workContainments() => [
+                "parent_work_id <> contained_work_id",
+                "contained_position >= 1",
+            ],
+            $this->tableNames->editions() => $schemaVersion >= 1010 ? [
+                "explicitly_no_isbn IN (0, 1)",
+                "explicitly_no_isbn = 0 OR isbn_10 IS NULL AND isbn_13 IS NULL",
+                "isbn_10 IS NULL OR isbn_10 REGEXP '^[0-9]{9}[0-9X]$'",
+                "isbn_13 IS NULL OR isbn_13 REGEXP '^[0-9]{13}$'",
+            ] : [],
             $this->tableNames->items() => [
                 "item_status = 'active'",
+                ...($schemaVersion >= 1010
+                    ? ["inventory_number IS NULL OR CHAR_LENGTH(TRIM(inventory_number)) > 0"]
+                    : []),
             ],
             $this->tableNames->externalLoans() => [
                 "CHAR_LENGTH(TRIM(user_id)) > 0",
