@@ -8,24 +8,27 @@ Date: 2026-09-03.
 
 This document reconciles the final approved product decisions for server-side
 Search, Filters, Sort and query-bound keyset pagination in `Mijn Bibliotheek`.
-The original reconciliation was documentation-only. Schema 1009 now closes the
-Author/Series prerequisite, while the current disabled controls and active-only
-title-ordered runtime remain unchanged until separately approved implementation.
+The original reconciliation was documentation-only. Schemas 1009 and 1010 now
+close the Author/Series and remaining Search-metadata prerequisites, while the
+current disabled controls and active-only title-ordered runtime remain
+unchanged until separately approved implementation.
 
 **Product readiness: GO.** The first implementation wave is fixed as
 Leesstatus, Auteur, Serie, Locatie, Boeksoort, Genre, Onderwerp, Collecties and
 `Zonder collectie`. No product decision remains for this wave.
 
-**Technical implementation readiness: BLOCKED.** Schema 1009 now provides the
-central Author/Series relationship foundation. The current schema and read
-model still lack required first-wave alternative-title, ISBN, inventory,
-omnibus, Location, archive and Collection sources. Existing reading and
-classification sources also need query integration. These are technical
-prerequisites, not product questions.
+**Technical implementation readiness: BLOCKED.** Schemas 1009 and 1010 provide
+the central Author/Series and remaining Search-metadata foundations. The
+current schema and read model still lack required first-wave Location, archive
+and Collection sources. Existing reading, classification and bibliographic
+sources also need query integration. These are technical prerequisites, not
+product questions.
 
 The first technical prerequisite, the central Author/Series relationship
 foundation, is closed in
-`docs/34-author-series-relationship-foundation-exit-evidence.md`. The complete
+`docs/34-author-series-relationship-foundation-exit-evidence.md`. The second,
+the remaining Search-metadata foundation, is closed in
+`docs/35-remaining-search-metadata-foundation-exit-evidence.md`. The complete
 query feature cannot receive implementation GO until all remaining applicable
 prerequisite slices are closed.
 
@@ -41,9 +44,9 @@ Authority order:
    `docs/05-source-register.md` and `docs/06-testing-and-acceptance.md`;
 5. F2.11/F2.12 and Vertical Slice 1A evidence in docs 18–21;
 6. docs 26, 31 and 32;
-7. current Core, REST, UI, tests and schema-1009 implementation.
+7. current Core, REST, UI, tests and schema-1010 implementation.
 
-`manifest.json` indexes this document and the schema-1009 foundation evidence.
+`manifest.json` indexes this document and both foundation evidence records.
 
 ## 3. Final reconciliation matrix
 
@@ -243,7 +246,8 @@ Current limitations:
 - the repository supports only active title-ordered Items;
 - REST has no strict full query allowlist or typed filter/sort parser;
 - UI controls are disabled and route state contains only Library/Item IDs;
-- schema 1009 still lacks most required source models beyond Author/Series.
+- schema 1010 has the remaining Search-metadata sources but still lacks
+  Location, archive lifecycle and Collection sources plus query composition.
 
 Required additions retain existing boundaries: Core owns query meaning,
 Library Context, authorization and actor-private reading status; REST parses
@@ -272,18 +276,18 @@ operators, URL behavior, sort availability or archive composition.
 
 ## 11. Technical dependency matrix
 
-Evidence is schema 1009, the current domain types and repositories, and the
+Evidence is schema 1010, the current domain types and repositories, and the
 active `WpdbCatalogUiReadRepository` projection.
 
 | Feature | Required source/model | Exists now? | Gap/class | Required before query implementation? |
 |---|---|---|---|---|
 | Search: Work title | central Work title | Yes | **A — ALREADY EXISTS** | Yes; reusable now |
-| Search: alternative title | central Work-title aliases | No | **D — DOMAIN FOUNDATION MISSING** | Yes |
+| Search: alternative title | central Work-title aliases | Yes | **A — ALREADY EXISTS**; query integration still to add | Yes; reusable now |
 | Search/filter/sort: Auteur/Co-auteur | central Author identity plus ordered typed Work relationship | Yes | **A — ALREADY EXISTS**; query integration still to add | Yes; reusable now |
 | Search/filter/sort: Serie | central Series identity plus Work membership and volume sort value | Yes | **A — ALREADY EXISTS**; query integration still to add | Yes; reusable now |
-| Search: ISBN | Edition ISBN source including explicit no-ISBN/unknown distinction | No | **D — DOMAIN FOUNDATION MISSING** | Yes |
-| Search: inventory number | Library Item inventory identity | No | **D — DOMAIN FOUNDATION MISSING** | Yes |
-| Search: omnibus metadata | Work/Edition containment relationship | No | **D — DOMAIN FOUNDATION MISSING** | Yes |
+| Search: ISBN | Edition ISBN source including explicit no-ISBN/unknown distinction | Yes | **A — ALREADY EXISTS**; query integration still to add | Yes; reusable now |
+| Search: inventory number | Library Item inventory identity | Yes | **A — ALREADY EXISTS**; authorized query integration still to add | Yes; reusable now |
+| Search: omnibus metadata | ordered acyclic Work containment relationship | Yes | **A — ALREADY EXISTS**; Item-preserving query integration still to add | Yes; reusable now |
 | Filter: Leesstatus | actor-owned ReadingRounds and derived Work status | Yes | **A — ALREADY EXISTS**; query predicate still to add | Yes; no new persistence |
 | Filters: Boeksoort/Genre/Onderwerp | LibraryCatalogContext and typed Library terms/links | Yes | **B — EXISTS BUT READ MODEL MISSING** | Yes |
 | Filter: Locatie | Library Item Location source | No | **D — DOMAIN FOUNDATION MISSING** | Yes |
@@ -336,10 +340,11 @@ Collections, each with different ownership and migration invariants.
 ### Slice 2 — remaining Search metadata foundation
 
 - **Severity:** High.
+- **Status:** **GO / CLOSED** in schema 1010; see doc 35.
 - **Dependency:** Slice 1 and central Work/Edition/Item identity.
 - **Scope:** alternative Work titles, ISBN semantics, inventory number and
   omnibus containment needed by canonical Search.
-- **Schema impact:** forward migration(s) and search-supporting indexes.
+- **Schema impact:** forward schema-1010 migration and search-supporting indexes.
 - **Exit condition:** each source is canonical, persistence-tested and can
   expose exact Item-preserving omnibus matches without virtual Items.
 - **Outside scope:** query execution, filters, REST/UI and deferred metadata.
@@ -482,7 +487,10 @@ deferred v2.001 metadata, automatic merge and external Series completeness.
 
 **Suggested commit message:** `Add Author and Series relationship foundation`
 
-**Expected next slice after completion:** Remaining Search Metadata Foundation.
+**Completed next slice:** Remaining Search Metadata Foundation; see doc 35.
+
+**Current expected next slice:** Item Location and Archive Lifecycle
+Foundation.
 
 ## 15. Review
 
@@ -532,6 +540,7 @@ were performed.
 | Architecture/security readiness | **READY WITH CONDITIONS** |
 
 Further implementation may proceed only through separately approved technical
-slices. The expected next prerequisite is Slice 2, Remaining Search Metadata
-Foundation. The completed Slice 1 adds no REST, frontend, Search/filter/sort
-query behavior or runtime fixture data.
+slices. After completed Slices 1 and 2, the expected next prerequisite is Slice
+3, Item Location and Archive Lifecycle Foundation. The completed foundations
+add no REST, frontend, Search/filter/sort query behavior or runtime fixture
+data.

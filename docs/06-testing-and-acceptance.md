@@ -1860,3 +1860,32 @@ Final gate evidence: Core unit 267/267 with 1,014 assertions; MariaDB
 integration 261/261 with 3,030 assertions; complete syntax/PHPStan, Composer,
 WordPress smoke, manifest and whitespace checks passed. The full Core gate
 completed in 104 seconds.
+
+## 59. Remaining Search metadata foundation
+
+Status: **GO**
+
+Schema `1010` closes Slice 2 from doc 33 with:
+
+- validated, lossless alternative Work titles and deterministic per-Work
+  duplicate identity;
+- optional checksum-valid ISBN-10/ISBN-13 on Edition, distinct from explicit
+  no ISBN and unknown/not entered;
+- optional Item inventory number, unique per Library when present;
+- ordered, duplicate-free and acyclic Work containment for omnibus/bundles;
+- forward-only 1009→1010 migration with health, retry, unknown-partial-state
+  and existing Work/Edition/Item preservation evidence;
+- batch reads for alternative titles, Edition/ISBN and containment in both
+  directions, plus authorized Library-scoped inventory reads;
+- no Search execution, filter, sort, REST, UI or virtual contained Item.
+
+The authoritative implementation and gate record is
+`docs/35-remaining-search-metadata-foundation-exit-evidence.md`. Overall Mijn
+Bibliotheek technical implementation readiness remains blocked on Location,
+archive lifecycle, Collections and the later query-integration slices in doc
+33.
+
+Final gate evidence: Core unit 274/274 with 1,050 assertions; MariaDB
+integration 270/270 with 3,079 assertions; complete syntax/PHPStan, Composer,
+WordPress smoke, manifest and whitespace checks passed. The full Core gate
+completed in 108 seconds.

@@ -157,6 +157,14 @@ boundary exposes only typed central relationship reads; no REST or public
 enumeration route is introduced. Library-facing catalog reads must still begin
 with authorized Library Context and reachable Items.
 
+Schema 1010 follows the same boundary for alternative Work titles, Edition
+ISBN metadata and Work containment. ISBN absence is tri-state: one or both
+validated identifiers, explicitly no ISBN, or unknown/not entered. Containment
+is an ordered acyclic Work graph; it never creates a virtual Item. Item
+inventory number is the sole Library-owned addition and is unique only within
+its Library. Its application read boundary verifies Library Context before a
+Library-scoped batch query.
+
 ## 6. Reading source model
 
 ReadingRound is user-owned. An active ReadingRound requires exactly one concrete source identity.
@@ -280,6 +288,12 @@ ordered Work contributors and Work-Series memberships. Relationship foreign
 keys use `RESTRICT`; primary/unique keys prevent duplicate Author membership,
 duplicate Series membership and duplicate contributor positions. Reverse
 lookup and Series-order indexes support the four normal relationship paths.
+
+Schema `1010` adds two central tables for alternative titles and ordered Work
+containment, extends Edition with indexed ISBN-10/ISBN-13 and explicit-no-ISBN
+columns, and extends Item with a nullable binary inventory number plus a unique
+Library/inventory key. Foreign keys on central Work relations are restrictive;
+domain and adapter checks reject containment cycles.
 
 Work and Edition remain in this persistence for v2.001. There is no technical need to move them to CPT or CCT now.
 

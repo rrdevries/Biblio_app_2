@@ -67,6 +67,8 @@ abstract class PersistenceIntegrationTestCase extends TestCase
         $authors = $this->tableNames->authors();
         $workSeries = $this->tableNames->workSeries();
         $series = $this->tableNames->series();
+        $workAlternateTitles = $this->tableNames->workAlternateTitles();
+        $workContainments = $this->tableNames->workContainments();
         $personalLibraryDesignations = $this->tableNames
             ->personalLibraryDesignations();
         $memberships = $this->tableNames->memberships();
@@ -111,6 +113,12 @@ abstract class PersistenceIntegrationTestCase extends TestCase
         }
         if ($this->tableExists($workSeries)) {
             $this->database->query("DELETE FROM `{$workSeries}`");
+        }
+        if ($this->tableExists($workAlternateTitles)) {
+            $this->database->query("DELETE FROM `{$workAlternateTitles}`");
+        }
+        if ($this->tableExists($workContainments)) {
+            $this->database->query("DELETE FROM `{$workContainments}`");
         }
         if ($this->tableExists($authors)) {
             $this->database->query("DELETE FROM `{$authors}`");

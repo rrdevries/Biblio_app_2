@@ -40,6 +40,8 @@ final readonly class CoreTableNames
     private string $workContributors;
     private string $series;
     private string $workSeries;
+    private string $workAlternateTitles;
+    private string $workContainments;
 
     public function __construct(string $prefix)
     {
@@ -79,8 +81,10 @@ final readonly class CoreTableNames
         $this->workContributors = $prefix . "biblio_work_contributors";
         $this->series = $prefix . "biblio_series";
         $this->workSeries = $prefix . "biblio_work_series";
+        $this->workAlternateTitles = $prefix . "biblio_work_alternate_titles";
+        $this->workContainments = $prefix . "biblio_work_containments";
 
-        foreach ($this->schema1009() as $tableName) {
+        foreach ($this->schema1010() as $tableName) {
             $this->assertSafe($tableName);
         }
         $this->assertSafe($this->nextReadingInsertTrigger);
@@ -189,6 +193,11 @@ final readonly class CoreTableNames
     public function workContributors(): string { return $this->workContributors; }
     public function series(): string { return $this->series; }
     public function workSeries(): string { return $this->workSeries; }
+    public function workAlternateTitles(): string
+    {
+        return $this->workAlternateTitles;
+    }
+    public function workContainments(): string { return $this->workContainments; }
 
     /** @return list<string> */
     public function all(): array
@@ -269,6 +278,18 @@ final readonly class CoreTableNames
     public function schema1009(): array
     {
         return [...$this->schema1008(), ...$this->schema1009Additions()];
+    }
+
+    /** @return list<string> */
+    public function schema1010Additions(): array
+    {
+        return [$this->workAlternateTitles, $this->workContainments];
+    }
+
+    /** @return list<string> */
+    public function schema1010(): array
+    {
+        return [...$this->schema1009(), ...$this->schema1010Additions()];
     }
 
     private function assertSafe(string $tableName): void

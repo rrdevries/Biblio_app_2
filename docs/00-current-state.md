@@ -139,6 +139,15 @@ Work-Series membership stores either a validated sortable decimal position or
 fictitious volume number. These central relationships contain no Library,
 Item or User ownership and grant no Library access.
 
+Schema `1010` adds the remaining canonical Search metadata foundation:
+lossless alternative Work titles with deterministic technical identity,
+validated optional ISBN-10/ISBN-13 plus an explicit no-ISBN state on Edition,
+optional Library-scoped Item inventory numbers, and ordered acyclic
+Work-containment relations for omnibus/bundle identity. Central metadata
+remains ownership-neutral. Inventory-number reads require authorized Library
+Context and remain scoped to the requested Library. This foundation adds no
+Search, filter, sort, REST or UI behavior.
+
 ## Reading
 
 A new active ReadingRound always has:

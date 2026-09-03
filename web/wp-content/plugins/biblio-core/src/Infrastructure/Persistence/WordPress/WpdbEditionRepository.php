@@ -7,6 +7,9 @@ namespace Biblio\Core\Infrastructure\Persistence\WordPress;
 use Biblio\Core\Catalog\CatalogRecordAlreadyExists;
 use Biblio\Core\Catalog\Edition;
 use Biblio\Core\Catalog\EditionId;
+use Biblio\Core\Catalog\EditionIsbnMetadata;
+use Biblio\Core\Catalog\Isbn10;
+use Biblio\Core\Catalog\Isbn13;
 use Biblio\Core\Catalog\WritableEditionRepository;
 use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Exception\FailureReason;
@@ -32,8 +35,12 @@ final readonly class WpdbEditionRepository implements WritableEditionRepository
                 [
                     "edition_id" => $edition->id()->value(),
                     "work_id" => $edition->workId()->value(),
+                    "isbn_10" => $edition->isbnMetadata()->isbn10()?->value(),
+                    "isbn_13" => $edition->isbnMetadata()->isbn13()?->value(),
+                    "explicitly_no_isbn" => $edition->isbnMetadata()
+                        ->isExplicitlyWithoutIsbn() ? 1 : 0,
                 ],
-                ["%s", "%s"]
+                ["%s", "%s", "%s", "%s", "%d"]
             );
         } finally {
             $this->database->suppress_errors($previousSuppression);
@@ -64,7 +71,8 @@ final readonly class WpdbEditionRepository implements WritableEditionRepository
     {
         $table = $this->tableNames->editions();
         $row = $this->database->get_row($this->database->prepare(
-            "SELECT edition_id, work_id FROM `{$table}` WHERE edition_id = %s",
+            "SELECT edition_id, work_id, isbn_10, isbn_13, explicitly_no_isbn "
+            . "FROM `{$table}` WHERE edition_id = %s",
             $editionId->value()
         ));
 
@@ -73,10 +81,7 @@ final readonly class WpdbEditionRepository implements WritableEditionRepository
         }
 
         try {
-            return new Edition(
-                new EditionId($row->edition_id),
-                new WorkId($row->work_id)
-            );
+            return $this->hydrate($row);
         } catch (Throwable $exception) {
             throw new PersistenceException(
                 "Stored Edition data is invalid.",
@@ -85,5 +90,26 @@ final readonly class WpdbEditionRepository implements WritableEditionRepository
                 FailureReason::PersistenceReadFailed
             );
         }
+    }
+
+    private function hydrate(object $row): Edition
+    {
+        $isbn10 = $row->isbn_10 === null
+            ? null
+            : new Isbn10((string) $row->isbn_10);
+        $isbn13 = $row->isbn_13 === null
+            ? null
+            : new Isbn13((string) $row->isbn_13);
+        $metadata = (int) $row->explicitly_no_isbn === 1
+            ? EditionIsbnMetadata::withoutIsbn()
+            : ($isbn10 === null && $isbn13 === null
+                ? EditionIsbnMetadata::unknown()
+                : EditionIsbnMetadata::identified($isbn10, $isbn13));
+
+        return new Edition(
+            new EditionId((string) $row->edition_id),
+            new WorkId((string) $row->work_id),
+            $metadata
+        );
     }
 }
