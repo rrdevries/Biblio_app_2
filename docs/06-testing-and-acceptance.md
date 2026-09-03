@@ -167,6 +167,40 @@ Library:
 - inventory number works;
 - no Item deduplication.
 
+Search/query acceptance:
+- ordinary text is partial, case-insensitive and accent/diacritic-tolerant;
+- live Search starts from two characters and only the newest valid query may
+  determine results;
+- exact identifiers may be recognized and ranked as exact matches;
+- contained title/Auteur/Co-auteur/Serie may return the omnibus Item with
+  `Bevat:` context, never a virtual contained Item;
+- relevance remains primary during Search, with alphabetical title inside
+  equal relevance.
+
+Filter acceptance:
+- values within one group use OR and groups combine through AND;
+- changes apply directly without an Apply button;
+- every active value has a removable chip and `Alle filters wissen` exists;
+- Collection multi-select uses OR, combines through AND, yields each Item once,
+  supports exclusive `Zonder collectie` and offers active Collections only;
+- no varying physical/digital form filter exists in v2.001.
+
+Sort acceptance:
+- `Titel A–Z` is default and `Auteur A–Z` is available;
+- `Serievolgorde` is available only with an active Serie filter and puts
+  unknown volume numbers last;
+- date, Location, Rating and other unlisted sorts are absent in v2.001;
+- alternate sort does not override canonical relevance order during Search.
+
+State/archive acceptance:
+- allowlisted stable URL state reproduces Search/filter/sort and browser
+  Back/Forward restores it;
+- without explicit URL state, session fallback is scoped to authenticated user
+  + Library + module;
+- URL/session state never saves a permanent preference;
+- `Archief tonen` or `Ook in archief zoeken` produces one mixed active/archive
+  result list and every archived Item is labelled `Archief`.
+
 No-result:
 - no hidden external metadata search;
 - add Item requires valid target Library and authorization.
@@ -1747,10 +1781,10 @@ with 39 Core rows and SHA-256
 
 ## 57. Mijn Bibliotheek server-side catalog query readiness
 
-The documentation-only readiness analysis and product-contract reconciliation
-are recorded in
-`docs/33-mijn-bibliotheek-server-side-catalog-query-readiness.md` and conclude
-**BLOCKED** for the complete Search/Filter/Sort implementation.
+The finalized documentation-only product contract is recorded in
+`docs/33-mijn-bibliotheek-server-side-catalog-query-readiness.md`. Product and
+technical readiness remain separately **BLOCKED**: one filter-scope answer and
+the relevant source-model/migration prerequisites remain.
 
 Readiness acceptance established:
 
@@ -1759,9 +1793,17 @@ Readiness acceptance established:
 - personal `Standaardweergave`, personal per-Library `Archief tonen`, temporary
   archive search and the no-silent-default-mutation boundary are reconciled;
 - the physical-only scope excludes a varying media-form filter in v2.001;
-- incomplete matching, first-release filter/operators, alternate-sort,
-  Collection, generic session/URL and archive-interaction semantics are isolated
-  as nine real product decisions rather than inferred;
+- live partial case-/accent-insensitive matching and contained-Work omnibus
+  behavior are fixed;
+- OR within a filter group, AND between groups, direct apply, removable chips,
+  reset and Collection multi-select/`Zonder collectie`/active-option behavior
+  are fixed;
+- URL query state, Back/Forward, copied URLs and user+Library+module session
+  fallback preserve the permanent-preference boundary;
+- `Titel A–Z`, `Auteur A–Z`, conditional `Serievolgorde` with unknown volumes
+  last, relevance-first Search and mixed active/archive results are fixed;
+- only the exact first-release non-media filter-group selection remains a real
+  product decision;
 - normalization, cursor/fingerprint, transport, SQL, tie-breaker and index
   choices are classified as technical rather than user product decisions;
 - current Core → repository → REST → UI flow and exact missing layer contracts
@@ -1774,7 +1816,7 @@ Readiness acceptance established:
   performance acceptance is specified for later implementation slices;
 - no production code, test, schema, runtime data or UI behavior is changed.
 
-Implementation acceptance may not be declared until the product decisions and
-source-model prerequisites listed in doc 33 are closed or explicitly removed
-from a newly approved scope. The reconciliation itself changes no production
-code, test, schema, runtime data or UI behavior.
+Implementation acceptance may not be declared until that product decision and
+the applicable source-model prerequisites in doc 33 are closed or explicitly
+removed from a newly approved scope. This finalization itself changes no
+production code, test, schema, runtime data or UI behavior.

@@ -542,18 +542,57 @@ Searchable via:
 - ISBN relevant to Library Items;
 - inventory number.
 
+Search is live while typing and starts when the canonical minimum of two
+characters is reached. Ordinary text matching is partial, case-insensitive and
+accent/diacritic-tolerant. Exact identifiers such as ISBN and inventory number
+may be recognized as exact matches and ranked higher. A technical debounce and
+stale-request cancellation/ignoring are allowed; only the newest valid query
+may determine the visible result.
+
+An omnibus can match through the title, Auteur/Co-auteur or Serie of a contained
+Work. The omnibus Item remains the Library result and shows context such as
+`Bevat: [titel]`; a contained Work without its own Library Item is never shown
+as a virtual Item. A separately present Item for that Work remains its own
+normal result.
+
 Default search includes only active Items.
 
 Without an active search or an explicitly selected alternate order, the
 Library overview is ordered by Work title ascending. A technical stable
 tie-breaker may be added without becoming a separate user-facing sort choice.
 
+v2.001 sort choices are:
+
+- `Titel A–Z` — default;
+- `Auteur A–Z`;
+- `Serievolgorde` — available only while a Serie filter is active, with unknown
+  volume numbers last.
+
+No date, Location, Rating or other unlisted sort is available in v2.001. During
+active Search the canonical relevance order remains authoritative, including
+alphabetical title within equal relevance; a selected alternate sort does not
+override it and becomes effective again when Search is no longer active.
+
+Within one filter group selected values use OR. Different filter groups combine
+through AND unless a filter has an explicitly documented exception. Expanded
+filters apply directly without an Apply button. Active values appear above the
+results as individually removable chips, together with `Alle filters wissen`.
+
+Search, filter and sort state is represented in the URL. Browser Back/Forward
+restores the earlier query and a copied URL opens the same temporary query.
+When no explicit URL query state exists, temporary session state may be used,
+scoped to authenticated user + Library + module. Neither URL nor session state
+silently changes a permanent preference; permanent preferences change only
+through explicit settings.
+
 Temporary `Ook in archief zoeken`:
 - applies only to the current search-page session;
 - does not change the personal `Archief tonen` preference;
 - resets on refresh/navigation.
 
-Archived hits are clearly marked.
+When personal `Archief tonen` or temporary `Ook in archief zoeken` is active,
+active and archived Items appear in the same result list. There is no parallel
+Archive result group. Archived hits are clearly marked `Archief`.
 
 Multiple matching Items are all visible. Work may group for readability but does not deduplicate physical copies.
 
@@ -913,6 +952,17 @@ Not allowed:
 - archived Items.
 
 An Item may belong to multiple Collections.
+
+In the Mijn Bibliotheek Collection filter:
+
+- multiple active Collections may be selected;
+- an Item matches when it belongs to at least one selected Collection;
+- matches use OR within the Collection group and AND against other groups;
+- an Item appears at most once;
+- `Zonder collectie` is available and is exclusive with ordinary Collection
+  selections;
+- only active Collections are normal filter options; archived Collections are
+  not normal active options.
 
 No functional maximum unless technical limits require one later.
 
@@ -1809,8 +1859,10 @@ Temporary filters are not automatically persisted as preferences unless explicit
 
 A temporary filter, sort or view choice does not silently change a personal
 preference or Library default. Permanent defaults change only through an
-explicit settings flow. Whether ordinary filter/sort state survives navigation
-within a session or is represented in the URL is not yet specified.
+explicit settings flow. Search/filter/sort state is represented in an
+allowlisted reproducible URL. Browser history restores that state. When the URL
+contains no explicit query state, temporary state may be remembered for the
+current authenticated user + Library + module session.
 
 ## Large lists
 
