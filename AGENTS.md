@@ -1,5 +1,7 @@
 # AGENTS.md — Biblio V2
 
+Dit document is het operationele uitvoeringscontract voor coding-agents binnen de Biblio-repository. Projectbrede AI-orkestratie en de keuze tussen Chat, Work, Codex en eventuele specialistagents worden buiten deze repository bepaald.
+
 ## Source of truth
 
 Before changing Biblio behavior, read:
@@ -12,6 +14,18 @@ Before changing Biblio behavior, read:
 6. `docs/06-testing-and-acceptance.md`
 
 Do not infer current product behavior from historical source files when the canonical docs contain a later decision.
+
+## Preflight
+
+Classificeer de technische taak vóór wijzigingen als Light, Medium of High.
+
+- Light: één uitvoerder, gerichte tests.
+- Medium: één primaire uitvoerder; aparte review waar zinvol.
+- High: analyse/review expliciet scheiden van implementatie; één primaire implementatie-eigenaar en onafhankelijke review waar tooling dit ondersteunt.
+
+## Reviewer
+
+Als geen afzonderlijke reviewer-agent beschikbaar of zinvol is, voer na implementatie een expliciete tweede reviewpass uit alsof je een onafhankelijke reviewer bent. Controleer daarbij de uiteindelijke diff opnieuw tegen requirements, architectuur, security en regressierisico.
 
 ## Non-negotiable engineering rules
 
