@@ -69,6 +69,13 @@ final class ReadingInMemoryItemRepository implements ItemRepository
             ? $item
             : null;
     }
+
+    public function findManyInLibrary(LibraryId $libraryId, array $itemIds): array
+    {
+        $result = [];
+        foreach ($itemIds as $itemId) { $result[$itemId->value()] = $this->findInLibrary($itemId, $libraryId); }
+        return $result;
+    }
 }
 
 final class ReadingInMemoryEditionRepository implements EditionRepository

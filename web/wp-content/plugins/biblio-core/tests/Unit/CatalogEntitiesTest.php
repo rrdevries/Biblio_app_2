@@ -11,6 +11,7 @@ use Biblio\Core\Catalog\ItemId;
 use Biblio\Core\Catalog\ItemStatus;
 use Biblio\Core\Catalog\LibraryLocation;
 use Biblio\Core\Catalog\LocationId;
+use Biblio\Core\Catalog\{ItemArchivePeriod,ItemArchiveReason,ItemArchiveTransitionUnavailable,ItemVersion};
 use Biblio\Core\Catalog\Work;
 use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Library\LibraryId;
@@ -20,6 +21,71 @@ use PHPUnit\Framework\Attributes\DataProvider;
 
 final class CatalogEntitiesTest extends TestCase
 {
+    public function testCanonicalArchiveReasonsAreExactAndLossless(): void
+    {
+        self::assertSame([
+            "sold",
+            "given_away",
+            "donated",
+            "lost",
+            "damaged_discarded",
+            "not_returned",
+        ], array_map(
+            static fn (ItemArchiveReason $reason): string => $reason->value,
+            ItemArchiveReason::cases()
+        ));
+    }
+
+    public function testItemArchiveLifecyclePreservesIdentityMetadataAndVersion(): void
+    {
+        $item = Item::active(
+            new ItemId("item-a"),
+            new LibraryId("library-a"),
+            new EditionId("edition-a"),
+            null,
+            new LocationId("location-a")
+        );
+
+        $archived = $item->archive();
+        $restored = $archived->restore();
+
+        self::assertSame(ItemStatus::Archived, $archived->status());
+        self::assertSame(2, $archived->version()->value());
+        self::assertSame(ItemStatus::Active, $restored->status());
+        self::assertSame(3, $restored->version()->value());
+        self::assertTrue($item->id()->equals($restored->id()));
+        self::assertTrue($item->editionId()->equals($restored->editionId()));
+        self::assertSame($item->locationId()?->value(), $restored->locationId()?->value());
+    }
+
+    public function testInvalidItemArchiveTransitionsAreTyped(): void
+    {
+        $item = Item::active(new ItemId("item-a"), new LibraryId("library-a"), new EditionId("edition-a"));
+        foreach ([$item->restore(...), $item->archive()->archive(...)] as $transition) {
+            try { $transition(); self::fail("Invalid lifecycle transition was accepted."); }
+            catch (ItemArchiveTransitionUnavailable) { self::assertTrue(true); }
+        }
+    }
+
+    public function testArchivePeriodPreservesReasonAndMicrosecondTime(): void
+    {
+        $archivedAt = new \DateTimeImmutable("2026-09-04 10:11:12.123456+00:00");
+        $restoredAt = new \DateTimeImmutable("2026-09-05 11:12:13.654321+00:00");
+        $period = new ItemArchivePeriod(
+            new LibraryId("library-a"),
+            new ItemId("item-a"),
+            new ItemVersion(2),
+            ItemArchiveReason::DamagedDiscarded,
+            $archivedAt,
+            new ItemVersion(3),
+            $restoredAt
+        );
+
+        self::assertSame(ItemArchiveReason::DamagedDiscarded, $period->reason());
+        self::assertSame("123456", $period->archivedAt()->format("u"));
+        self::assertSame("654321", $period->restoredAt()?->format("u"));
+        self::assertFalse($period->isOpen());
+    }
     public function testWorkRequiresMeaningfulTitle(): void
     {
         $this->expectException(InvalidArgumentException::class);

@@ -98,6 +98,10 @@ final readonly class LibraryContextQueryService
                     $context,
                     $membership
                 ),
+                $this->authorizationPolicy->canManageCatalogItems(
+                    $context,
+                    $membership
+                ),
                 $this->authorizationPolicy->canModifyLibraryCatalogContext(
                     $context,
                     $membership

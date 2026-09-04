@@ -8,8 +8,8 @@ Date: 2026-09-04.
 
 This document reconciles the final approved product decisions for server-side
 Search, Filters, Sort and query-bound keyset pagination in `Mijn Bibliotheek`.
-The original reconciliation was documentation-only. Schemas 1009–1011 now
-close the Author/Series, remaining Search-metadata and Location prerequisites,
+The original reconciliation was documentation-only. Schemas 1009–1012 now
+close the Author/Series, remaining Search-metadata, Location and Archive prerequisites,
 while the current disabled controls and active-only title-ordered runtime
 remain unchanged until separately approved implementation.
 
@@ -17,10 +17,10 @@ remain unchanged until separately approved implementation.
 Leesstatus, Auteur, Serie, Locatie, Boeksoort, Genre, Onderwerp, Collecties and
 `Zonder collectie`. No product decision remains for this wave.
 
-**Technical implementation readiness: BLOCKED.** Schemas 1009–1011 provide
-the central Author/Series, remaining Search-metadata and Item Location
+**Technical implementation readiness: BLOCKED.** Schemas 1009–1012 provide
+the central Author/Series, remaining Search-metadata, Item Location and Archive
 foundations. The current schema and read model still lack required first-wave
-archive and Collection sources. Existing reading, classification and
+Collection sources. Existing reading, classification and
 bibliographic sources also need query integration. These are technical
 prerequisites, not product questions.
 
@@ -31,6 +31,8 @@ the remaining Search-metadata foundation, is closed in
 `docs/35-remaining-search-metadata-foundation-exit-evidence.md`. The complete
 Location foundation is closed in
 `docs/36-library-item-location-foundation-exit-evidence.md`. The complete
+Archive lifecycle foundation is closed in
+`docs/37-library-item-archive-lifecycle-foundation-exit-evidence.md`. The complete
 query feature cannot receive implementation GO until all remaining applicable
 prerequisite slices are closed.
 
@@ -48,7 +50,7 @@ Authority order:
 6. docs 26, 31 and 32;
 7. current Core, REST, UI, tests and schema-1010 implementation.
 
-`manifest.json` indexes this document and both foundation evidence records.
+`manifest.json` indexes this document and all completed foundation evidence records.
 
 ## 3. Final reconciliation matrix
 
@@ -248,8 +250,8 @@ Current limitations:
 - the repository supports only active title-ordered Items;
 - REST has no strict full query allowlist or typed filter/sort parser;
 - UI controls are disabled and route state contains only Library/Item IDs;
-- schema 1011 has the Search-metadata and Location sources but still lacks
-  archive lifecycle and Collection sources plus query composition.
+- schema 1012 has the Search-metadata, Location and Archive sources but still
+  lacks Collection sources plus query composition.
 
 Required additions retain existing boundaries: Core owns query meaning,
 Library Context, authorization and actor-private reading status; REST parses
@@ -278,7 +280,7 @@ operators, URL behavior, sort availability or archive composition.
 
 ## 11. Technical dependency matrix
 
-Evidence is schema 1011, the current domain types and repositories, and the
+Evidence is schema 1012, the current domain types and repositories, and the
 active `WpdbCatalogUiReadRepository` projection.
 
 | Feature | Required source/model | Exists now? | Gap/class | Required before query implementation? |
@@ -295,7 +297,7 @@ active `WpdbCatalogUiReadRepository` projection.
 | Filter: Locatie | Library Item Location source | Yes | **A — ALREADY EXISTS**; authorized query integration still to add | Yes; reusable now |
 | Filters: Collecties/`Zonder collectie` | Library-owned Collection and Item membership | No | **D — DOMAIN FOUNDATION MISSING** | Yes |
 | Sort: Titel A–Z | Work title plus Item-ID tie-breaker | Yes | **A — ALREADY EXISTS** | Yes; reusable now |
-| Archive/query context | Item active/archive lifecycle state | No; enum/schema allow active only | **D — DOMAIN FOUNDATION MISSING** | Yes |
+| Archive/query context | Item active/archive lifecycle state | Yes | **A — ALREADY EXISTS**; mixed-result query integration still to add | Yes; reusable now |
 | Deferred filters | language, publisher, lending, condition and acquisition sources | Mixed/absent | **F — NOT NEEDED FOR FIRST WAVE** | No |
 | Scale | query-specific composite indexes and plans | Partly | **E — INDEX/PERFORMANCE ONLY** after query shape exists | Before technical GO, not before foundations |
 
@@ -365,6 +367,7 @@ Collections, each with different ownership and migration invariants.
 ### Slice 3B — Archive lifecycle foundation
 
 - **Severity:** High.
+- **Status:** **GO / CLOSED** in schema 1012; see doc 37.
 - **Dependency:** current Item/Library ownership model.
 - **Scope:** active/archive Item lifecycle required by first-wave filtering and
   mixed archive results.
@@ -502,8 +505,7 @@ deferred v2.001 metadata, automatic merge and external Series completeness.
 
 **Completed next slice:** Remaining Search Metadata Foundation; see doc 35.
 
-**Current expected next slice:** Item Location and Archive Lifecycle
-Foundation.
+**Current expected next slice:** Collection and membership foundation.
 
 ## 15. Review
 
@@ -553,7 +555,7 @@ were performed.
 | Architecture/security readiness | **READY WITH CONDITIONS** |
 
 Further implementation may proceed only through separately approved technical
-slices. After completed Slices 1, 2 and 3A, the expected next prerequisite is
-Slice 3B, Archive Lifecycle Foundation. The completed foundations
+slices. After completed Slices 1, 2, 3A and 3B, the expected next prerequisite
+is Slice 4, Collection and membership foundation. The completed foundations
 add no REST, frontend, Search/filter/sort query behavior or runtime fixture
 data.

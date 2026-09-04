@@ -1918,3 +1918,33 @@ Schema `1011` is accepted when:
 
 Evidence is recorded in
 `docs/36-library-item-location-foundation-exit-evidence.md`.
+
+## 61. Library Item Archive lifecycle foundation
+
+Schema `1012` is accepted when:
+
+- authorized Owner/Beheerder transitions preserve Item identity and implement
+  Active→Archived and Archived→Active with monotonic optimistic versioning;
+- identical target-state retries are no-op successes, stale unapplied requests
+  are typed conflicts and divergent same-state archive reasons are rejected;
+- all six canonical reasons and microsecond UTC archive/restore timestamps
+  round-trip losslessly across multiple historical periods;
+- current state and history reads are deterministic, batch-first, explicitly
+  Library-scoped and protected by server-side Library Context;
+- missing, foreign and cross-Library Item identities do not enumerate data, and
+  relational constraints reject dangling/cross-Library history;
+- migration 1011→1012 preserves existing Items as active version 1, Location
+  and bibliographic links, handles completed/known partial retries, rejects
+  unknown partial state and passes postcondition health;
+- archived Items are rejected by current Library Item source reads while
+  existing active catalog projections remain active-only;
+- archive/restore creates Library audit events but never silently changes or
+  deletes private ReadingRounds or other user-owned data;
+- no REST, frontend, Elementor, Archive UI, catalog-query composition,
+  Collections, Condition, Acquisition or lending implementation is added.
+
+Because InternalLoan has no current aggregate or persistence, the active-loan
+guard is presently vacuous. Its check and settlement routes remain mandatory
+integration work for the separately approved lending foundation. Evidence is
+recorded in
+`docs/37-library-item-archive-lifecycle-foundation-exit-evidence.md`.

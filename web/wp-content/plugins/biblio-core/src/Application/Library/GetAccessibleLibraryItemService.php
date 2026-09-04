@@ -7,6 +7,7 @@ namespace Biblio\Core\Application\Library;
 use Biblio\Core\Application\Identity\AuthenticatedUser;
 use Biblio\Core\Catalog\ItemId;
 use Biblio\Core\Catalog\ItemRepository;
+use Biblio\Core\Catalog\ItemStatus;
 use Biblio\Core\Library\LibraryContext;
 use Biblio\Core\Library\LibraryId;
 
@@ -39,6 +40,7 @@ final readonly class GetAccessibleLibraryItemService
 
         if (
             $item === null
+            || $item->status() !== ItemStatus::Active
             || !$context->libraryId()->equals($item->libraryId())
         ) {
             return null;

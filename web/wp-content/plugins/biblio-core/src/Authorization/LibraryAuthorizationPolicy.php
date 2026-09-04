@@ -24,6 +24,20 @@ final class LibraryAuthorizationPolicy
         );
     }
 
+    public function canManageCatalogItems(
+        LibraryContext $context,
+        LibraryMembershipAssignment $assignment
+    ): bool {
+        $context->assertMembershipApplies($assignment);
+        $membership = $assignment->membership();
+
+        return $membership->status() === MembershipStatus::Active
+            && in_array($membership->managementRole(), [
+                ManagementRole::Owner,
+                ManagementRole::Manager,
+            ], true);
+    }
+
     public function canInitializeCatalogContextDuringItemAdd(
         LibraryContext $context,
         LibraryMembershipAssignment $assignment

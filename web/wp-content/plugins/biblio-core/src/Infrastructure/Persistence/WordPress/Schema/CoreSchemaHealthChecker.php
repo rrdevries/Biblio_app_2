@@ -41,6 +41,7 @@ final readonly class CoreSchemaHealthChecker
             1009 => $this->inspectTables($this->tableNames->schema1009(), true, 1009),
             1010 => $this->inspectTables($this->tableNames->schema1010(), true, 1010),
             1011 => $this->inspectTables($this->tableNames->schema1011(), true, 1011),
+            1012 => $this->inspectTables($this->tableNames->schema1012(), true, 1012),
             default => throw new CoreSchemaMigrationException(
                 "No explicit Biblio Core schema-health contract exists for "
                 . "schema version {$expectedVersion}."
@@ -148,6 +149,16 @@ final readonly class CoreSchemaHealthChecker
     public function inspectSchema1011ItemLocation(): CoreSchemaHealth
     {
         return $this->inspectTables([$this->tableNames->items()], true, 1011);
+    }
+
+    public function inspectExistingSchema1012Additions(): CoreSchemaHealth
+    {
+        return $this->inspectTables($this->tableNames->schema1012Additions(), false, 1012);
+    }
+
+    public function inspectSchema1012ItemLifecycle(): CoreSchemaHealth
+    {
+        return $this->inspectTables([$this->tableNames->items()], true, 1012);
     }
 
     /** @param list<string> $tableNames */
@@ -408,6 +419,18 @@ final readonly class CoreSchemaHealthChecker
         foreach (($this->expectedChecks($schemaVersion)[$tableName] ?? []) as $expected) {
             $normalized = $this->normalizeExpression($expected);
 
+            if (
+                $tableName === $this->tableNames->items()
+                && $normalized === $this->normalizeExpression("item_status = 'active'")
+                && in_array(
+                    $this->normalizeExpression("item_status IN ('active', 'archived')"),
+                    $actualChecks,
+                    true
+                )
+            ) {
+                continue;
+            }
+
             if (!in_array($normalized, $actualChecks, true)) {
                 $issues[] = "Table {$tableName} missing required CHECK: "
                     . $expected . "; found ["
@@ -632,6 +655,21 @@ final readonly class CoreSchemaHealthChecker
                 ...($schemaVersion >= 1011 ? [
                     "location_id" => $nullableId,
                 ] : []),
+                ...($schemaVersion >= 1012 ? [
+                    "item_version" => ["type" => "bigint(20) unsigned", "nullable" => "NO"],
+                ] : []),
+            ],
+            $this->tableNames->itemArchivePeriods() => [
+                "library_id" => $id,
+                "item_id" => $id,
+                "archive_version" => ["type" => "bigint(20) unsigned", "nullable" => "NO"],
+                "archive_reason" => ["type" => "varchar(32)", "nullable" => "NO"],
+                "archived_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "restore_version" => ["type" => "bigint(20) unsigned", "nullable" => "YES"],
+                "restored_at" => ["type" => "datetime(6)", "nullable" => "YES"],
+                "open_item_id" => $generatedId + [
+                    "expression" => "CASE WHEN restored_at IS NULL THEN item_id ELSE NULL END",
+                ],
             ],
             $this->tableNames->locations() => [
                 "library_id" => $id,
@@ -998,7 +1036,21 @@ final readonly class CoreSchemaHealthChecker
                     "unique" => false,
                     "columns" => ["library_id", "location_id", "item_id"],
                 ],
+            ] : []) + ($schemaVersion >= 1012 ? [
+                "items_by_library_identity" => [
+                    "unique" => true,
+                    "columns" => ["library_id", "item_id"],
+                ],
+                "items_by_library_status_location" => [
+                    "unique" => false,
+                    "columns" => ["library_id", "item_status", "location_id", "item_id"],
+                ],
             ] : []),
+            $this->tableNames->itemArchivePeriods() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["library_id", "item_id", "archive_version"]],
+                "one_open_item_archive_period" => ["unique" => true, "columns" => ["library_id", "open_item_id"]],
+                "item_archive_periods_by_item_time" => ["unique" => false, "columns" => ["library_id", "item_id", "archived_at", "archive_version"]],
+            ],
             $this->tableNames->locations() => [
                 "PRIMARY" => [
                     "unique" => true,
@@ -1277,6 +1329,13 @@ final readonly class CoreSchemaHealthChecker
                     ),
                 ] : []),
             ],
+            $this->tableNames->itemArchivePeriods() => [
+                $restrict(
+                    ["library_id", "item_id"],
+                    $this->tableNames->items(),
+                    ["library_id", "item_id"]
+                ),
+            ],
             $this->tableNames->locations() => [
                 $restrict(["library_id"], $this->tableNames->libraries(), ["library_id"]),
             ],
@@ -1443,10 +1502,20 @@ final readonly class CoreSchemaHealthChecker
                 "isbn_13 IS NULL OR isbn_13 REGEXP '^[0-9]{13}$'",
             ] : [],
             $this->tableNames->items() => [
-                "item_status = 'active'",
+                $schemaVersion >= 1012
+                    ? "item_status IN ('active', 'archived')"
+                    : "item_status = 'active'",
                 ...($schemaVersion >= 1010
                     ? ["inventory_number IS NULL OR CHAR_LENGTH(TRIM(inventory_number)) > 0"]
                     : []),
+                ...($schemaVersion >= 1012 ? ["item_version >= 1"] : []),
+            ],
+            $this->tableNames->itemArchivePeriods() => [
+                "archive_version >= 2",
+                "archive_reason IN ('sold', 'given_away', 'donated', 'lost', 'damaged_discarded', 'not_returned')",
+                "restore_version IS NULL = (restored_at IS NULL)",
+                "restore_version IS NULL OR restore_version > archive_version",
+                "restored_at IS NULL OR restored_at >= archived_at",
             ],
             $this->tableNames->locations() => [
                 "CHAR_LENGTH(TRIM(display_name)) > 0",

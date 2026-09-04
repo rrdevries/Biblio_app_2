@@ -31,6 +31,17 @@ final readonly class LibraryAccessService
         );
     }
 
+    public function canManageCatalogItems(LibraryContext $context): bool
+    {
+        $assignment = $this->findMembership($context);
+
+        return $assignment !== null
+            && $this->authorizationPolicy->canManageCatalogItems(
+                $context,
+                $assignment
+            );
+    }
+
     public function canInitializeCatalogContextDuringItemAdd(
         LibraryContext $context
     ): bool {

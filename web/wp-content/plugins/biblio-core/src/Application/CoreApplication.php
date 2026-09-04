@@ -9,11 +9,13 @@ use Biblio\Core\Application\Assessments\Read\GetLibraryPublicAssessmentsService;
 
 use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
 use Biblio\Core\Application\Catalog\AddLibraryItemService;
+use Biblio\Core\Application\Catalog\ManageLibraryItemArchiveService;
 use Biblio\Core\Application\Catalog\Read\CatalogUiReadService;
 use Biblio\Core\Application\Catalog\Read\BibliographicRelationshipQueryService;
 use Biblio\Core\Application\Catalog\Read\BibliographicMetadataQueryService;
 use Biblio\Core\Application\Catalog\Read\LibraryItemMetadataQueryService;
 use Biblio\Core\Application\Catalog\Read\LibraryItemLocationQueryService;
+use Biblio\Core\Application\Catalog\Read\LibraryItemArchiveQueryService;
 use Biblio\Core\Application\Catalog\Classification\CreateLibraryCatalogContextService;
 use Biblio\Core\Application\Catalog\Classification\ManageLibraryBookTypesService;
 use Biblio\Core\Application\Catalog\Classification\ManageLibraryGenresService;
@@ -64,7 +66,9 @@ final readonly class CoreApplication
         private BibliographicMetadataQueryService $bibliographicMetadata,
         private LibraryItemMetadataQueryService $libraryItemMetadata,
         private LibraryItemLocationQueryService $libraryItemLocations,
+        private LibraryItemArchiveQueryService $libraryItemArchives,
         private AddLibraryItemService $libraryItemCreation,
+        private ManageLibraryItemArchiveService $libraryItemArchiveManagement,
         private GetAccessibleLibraryItemService $accessibleLibraryItems,
         private GetOwnedExternalLoanService $ownedExternalLoans,
         private GetOwnedReadingRoundService $ownedReadingRounds,
@@ -162,6 +166,16 @@ final readonly class CoreApplication
     public function libraryItemLocations(): LibraryItemLocationQueryService
     {
         return $this->libraryItemLocations;
+    }
+
+    public function libraryItemArchives(): LibraryItemArchiveQueryService
+    {
+        return $this->libraryItemArchives;
+    }
+
+    public function libraryItemArchiveManagement(): ManageLibraryItemArchiveService
+    {
+        return $this->libraryItemArchiveManagement;
     }
 
     public function accessibleLibraryItems(): GetAccessibleLibraryItemService

@@ -34,7 +34,7 @@ final class Schema1011LocationTest extends PersistenceIntegrationTestCase
 
         $this->migrator()->migrate();
 
-        self::assertSame(1011, $this->migrator()->installedVersion());
+        self::assertSame(1012, $this->migrator()->installedVersion());
         self::assertNull($this->database->get_var(
             "SELECT location_id FROM `{$this->tableNames->items()}` WHERE item_id='preserved-item'"
         ));
@@ -50,6 +50,8 @@ final class Schema1011LocationTest extends PersistenceIntegrationTestCase
         $migration->assertPrecondition();
         $migration->assertPostcondition();
         self::assertTrue($this->migrator()->healthForVersion(1011)->isHealthy());
+        update_option(CoreSchemaMigrator::VERSION_OPTION, "1011", false);
+        $this->migrator()->migrate();
     }
 
     public function testUnknownPartialItemStateFailsBeforeVersionBump(): void
@@ -64,12 +66,26 @@ final class Schema1011LocationTest extends PersistenceIntegrationTestCase
         } catch (CoreSchemaMigrationException $exception) {
             self::assertStringContainsString("failed before the version bump", $exception->getMessage());
             self::assertSame(1010, $this->migrator()->installedVersion());
+        } finally {
+            $this->database->query(
+                "ALTER TABLE `{$this->tableNames->items()}` DROP COLUMN location_id"
+            );
+            $this->migrator()->migrate();
         }
     }
 
     private function restoreSchema1010(): void
     {
         $items = $this->tableNames->items();
+        $this->database->query("DROP TABLE IF EXISTS `{$this->tableNames->itemArchivePeriods()}`");
+        if (in_array("item_version", $this->columns($items), true)) {
+            $this->database->query("ALTER TABLE `{$items}` DROP INDEX items_by_library_status_location");
+            $this->database->query("ALTER TABLE `{$items}` DROP INDEX items_by_library_identity");
+            $this->database->query("ALTER TABLE `{$items}` DROP CONSTRAINT items_status_supported");
+            $this->database->query("ALTER TABLE `{$items}` DROP CONSTRAINT items_version_positive");
+            $this->database->query("ALTER TABLE `{$items}` DROP COLUMN item_version");
+            $this->database->query("ALTER TABLE `{$items}` ADD CONSTRAINT items_status_active CHECK (item_status IN ('active'))");
+        }
         if (in_array("location_id", $this->columns($items), true)) {
             $this->database->query("ALTER TABLE `{$items}` DROP FOREIGN KEY items_location_fk");
             $this->database->query("ALTER TABLE `{$items}` DROP INDEX items_by_library_location");

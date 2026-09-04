@@ -1594,9 +1594,10 @@ Taal, Uitgever, Uitleenstatus, Conditie and `In bibliotheek sinds` remain in the
 broader v2.001 design as **deferred within v2.001**; they are not removed or
 future-version-only. No product decision remains for the first wave.
 
-Technical implementation remains blocked. Schemas 1009–1011 now provide the
+Technical implementation remains blocked. Schemas 1009–1012 now provide the
 central Author/Series, remaining Search-metadata and Item Location foundations.
-Archive lifecycle and Collection sources are still absent. Existing
+The Item Archive lifecycle foundation is also complete; Collection sources are
+still absent. Existing
 Leesstatus and LibraryCatalogContext classification data can be reused, but
 need query integration. Document 33 records the remaining dependency slices.
 
@@ -1613,4 +1614,23 @@ Schema `1011` provides Library-owned typed Locations, an optional tenant-safe
 Item relation and authorized batch reads. No canonical free-text Location
 source existed, so existing Items remain losslessly unlocated. The evidence is
 recorded in `docs/36-library-item-location-foundation-exit-evidence.md`.
-Archive lifecycle is the expected next technical prerequisite.
+Archive lifecycle was the next prerequisite and is now closed below.
+
+### Library Item Archive lifecycle foundation
+
+Status: **GO / CLOSED**
+
+Schema `1012` adds explicit `active`/`archived` Item state, optimistic Item
+versioning and historically retained archive periods with reason and microsecond UTC
+timestamps. Archive and restore retain the same Item, Edition, inventory and
+Location identities. Owner and Beheerder management is authorized server-side;
+batch lifecycle/history reads require validated Library Context and remain
+tenant-scoped. Current-source reads reject archived Items, while no private
+ReadingRound or other user-owned record is changed.
+
+The active-InternalLoan archive guard is currently vacuously satisfied because
+InternalLoan persistence and lifecycle do not yet exist. Integrating that guard
+and the special loan-settlement routes remains explicitly deferred to the
+lending foundation; no lending behavior was introduced here. Evidence is in
+`docs/37-library-item-archive-lifecycle-foundation-exit-evidence.md`.
+Collection Foundation is the expected next prerequisite.

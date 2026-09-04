@@ -9,11 +9,14 @@ use Biblio\Core\Application\Assessments\Read\GetLibraryPublicAssessmentsService;
 
 use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
 use Biblio\Core\Application\Catalog\AddLibraryItemService;
+use Biblio\Core\Application\Catalog\ItemArchiveActivity;
+use Biblio\Core\Application\Catalog\ManageLibraryItemArchiveService;
 use Biblio\Core\Application\Catalog\Read\CatalogUiReadService;
 use Biblio\Core\Application\Catalog\Read\BibliographicRelationshipQueryService;
 use Biblio\Core\Application\Catalog\Read\BibliographicMetadataQueryService;
 use Biblio\Core\Application\Catalog\Read\LibraryItemMetadataQueryService;
 use Biblio\Core\Application\Catalog\Read\LibraryItemLocationQueryService;
+use Biblio\Core\Application\Catalog\Read\LibraryItemArchiveQueryService;
 use Biblio\Core\Application\Catalog\Classification\ClassificationTermActivity;
 use Biblio\Core\Application\Catalog\Classification\CreateLibraryCatalogContextService;
 use Biblio\Core\Application\Catalog\Classification\LibraryCatalogContextActivity;
@@ -73,6 +76,7 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryWorkRepresentati
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbClassificationSeedEvolutionFactory;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbExternalLoanRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbItemRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbItemArchiveRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLocationRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMembershipRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbActorLibraryContextRepository;
@@ -139,6 +143,7 @@ final class ProductionComposition
         $seriesRepository = new WpdbSeriesRepository($database, $tableNames);
         $editionRepository = new WpdbEditionRepository($database, $tableNames);
         $itemRepository = new WpdbItemRepository($database, $tableNames);
+        $itemArchiveRepository = new WpdbItemArchiveRepository($database, $tableNames);
         $locationRepository = new WpdbLocationRepository($database, $tableNames);
         $bibliographicMetadataRepository =
             new WpdbBibliographicMetadataRepository($database, $tableNames);
@@ -235,8 +240,18 @@ final class ProductionComposition
             $libraryContexts,
             $locationRepository
         );
+        $libraryItemArchives = new LibraryItemArchiveQueryService(
+            $libraryContexts,
+            $itemRepository,
+            $itemArchiveRepository
+        );
         $activityFactory = new WordPressActivityEventFactory(
             new ActivityEventSource("core.classification")
+        );
+        $itemArchiveActivity = new ItemArchiveActivity(
+            new WordPressActivityEventFactory(
+                new ActivityEventSource("core.item_archive")
+            )
         );
         $selectionResolver = new LibraryCatalogSelectionResolver(
             $bookTypeRepository,
@@ -260,6 +275,15 @@ final class ProductionComposition
             $catalogContextRepository,
             $contextInitializer,
             $contextActivity,
+            $activityEvents,
+            $transactionManager
+        );
+        $libraryItemArchiveManagement = new ManageLibraryItemArchiveService(
+            $authenticatedUser,
+            $libraryAccess,
+            $itemArchiveRepository,
+            new SystemItemArchiveClock(),
+            $itemArchiveActivity,
             $activityEvents,
             $transactionManager
         );
@@ -567,7 +591,9 @@ final class ProductionComposition
             $bibliographicMetadata,
             $libraryItemMetadata,
             $libraryItemLocations,
+            $libraryItemArchives,
             $libraryItemCreation,
+            $libraryItemArchiveManagement,
             $accessibleItems,
             $ownedExternalLoans,
             $ownedReadingRounds,

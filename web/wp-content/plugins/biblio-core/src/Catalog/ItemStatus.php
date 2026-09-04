@@ -7,4 +7,5 @@ namespace Biblio\Core\Catalog;
 enum ItemStatus: string
 {
     case Active = "active";
+    case Archived = "archived";
 }

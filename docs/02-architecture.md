@@ -902,3 +902,37 @@ reproducible layout artifact, not a second application truth.
 
 The accepted boundary and final evidence are recorded in
 `docs/21-elementor-vertical-slice-1a-exit-evidence.md`.
+
+## 24. Library Item Archive lifecycle foundation
+
+Item archive is an explicit Core aggregate transition, not a generic lifecycle
+engine or a delete. `Item` carries `ItemStatus` and monotonic `ItemVersion`;
+`ManageLibraryItemArchiveService` owns authenticated actor resolution,
+Library-scoped Owner/Beheerder authorization, locking, transition semantics,
+history and transactional Library ActivityEvent ordering. Identical requests
+whose target state already exists are no-op successes; divergent same-state
+archive requests are invalid and version divergence before an unapplied target
+is a typed stale conflict.
+
+Schema 1012 stores current state/version on the Item and every archive period
+separately. `(library_id,item_id)` referential identity prevents dangling and
+cross-Library history, one generated-key uniqueness rule permits at most one
+open period, and Library/status/location plus history indexes support later
+query composition. The 1011→1012 migration preserves existing Items as active
+version 1, accepts a known completed Item-DDL partial state, completes a missing
+history-table step, rejects unknown partial definitions and validates the final
+schema before version bump.
+
+`LibraryItemArchiveQueryService` exposes only authorized, tenant-scoped batch
+Items and periods. Existing active catalog projections remain active-only, and
+`GetAccessibleLibraryItemService` now rejects archived Items so they cannot be
+used as current Leesvoorraad, preferred or new ReadingRound sources. Archive
+updates only Item state/version and archive/audit rows: it does not close or
+delete ReadingRounds, ratings, reviews, notes, goals or snapshots and preserves
+Location.
+
+No InternalLoan aggregate exists in the current implementation, so an active
+InternalLoan cannot presently be represented and the ordinary archive guard is
+vacuously true. The future lending slice must integrate its active-loan check
+and the canonical settlement-before-archive routes without changing this Item
+identity/history contract.
