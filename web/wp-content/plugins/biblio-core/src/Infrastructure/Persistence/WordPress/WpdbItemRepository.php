@@ -9,6 +9,7 @@ use Biblio\Core\Catalog\EditionId;
 use Biblio\Core\Catalog\Item;
 use Biblio\Core\Catalog\ItemId;
 use Biblio\Core\Catalog\InventoryNumber;
+use Biblio\Core\Catalog\LocationId;
 use Biblio\Core\Catalog\LibraryItemMetadataRepository;
 use Biblio\Core\Catalog\WritableItemRepository;
 use Biblio\Core\Catalog\ItemStatus;
@@ -41,8 +42,9 @@ final readonly class WpdbItemRepository implements
                     "edition_id" => $item->editionId()->value(),
                     "item_status" => $item->status()->value,
                     "inventory_number" => $item->inventoryNumber()?->value(),
+                    "location_id" => $item->locationId()?->value(),
                 ],
-                ["%s", "%s", "%s", "%s", "%s"]
+                ["%s", "%s", "%s", "%s", "%s", "%s"]
             );
         } finally {
             $this->database->suppress_errors($previousSuppression);
@@ -80,7 +82,7 @@ final readonly class WpdbItemRepository implements
         $table = $this->tableNames->items();
         $row = $this->database->get_row($this->database->prepare(
             "SELECT item_id, library_id, edition_id, item_status, "
-            . "inventory_number "
+            . "inventory_number, location_id "
             . "FROM `{$table}` WHERE item_id = %s AND library_id = %s",
             $itemId->value(),
             $libraryId->value()
@@ -98,7 +100,10 @@ final readonly class WpdbItemRepository implements
                 ItemStatus::from($row->item_status),
                 $row->inventory_number === null
                     ? null
-                    : new InventoryNumber((string) $row->inventory_number)
+                    : new InventoryNumber((string) $row->inventory_number),
+                $row->location_id === null
+                    ? null
+                    : new LocationId((string) $row->location_id)
             );
         } catch (Throwable $exception) {
             throw new PersistenceException(

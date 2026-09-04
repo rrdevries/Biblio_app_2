@@ -13,6 +13,7 @@ use Biblio\Core\Application\Catalog\Read\CatalogUiReadService;
 use Biblio\Core\Application\Catalog\Read\BibliographicRelationshipQueryService;
 use Biblio\Core\Application\Catalog\Read\BibliographicMetadataQueryService;
 use Biblio\Core\Application\Catalog\Read\LibraryItemMetadataQueryService;
+use Biblio\Core\Application\Catalog\Read\LibraryItemLocationQueryService;
 use Biblio\Core\Application\Catalog\Classification\ClassificationTermActivity;
 use Biblio\Core\Application\Catalog\Classification\CreateLibraryCatalogContextService;
 use Biblio\Core\Application\Catalog\Classification\LibraryCatalogContextActivity;
@@ -72,6 +73,7 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryWorkRepresentati
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbClassificationSeedEvolutionFactory;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbExternalLoanRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbItemRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLocationRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMembershipRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbActorLibraryContextRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbCatalogUiReadRepository;
@@ -137,6 +139,7 @@ final class ProductionComposition
         $seriesRepository = new WpdbSeriesRepository($database, $tableNames);
         $editionRepository = new WpdbEditionRepository($database, $tableNames);
         $itemRepository = new WpdbItemRepository($database, $tableNames);
+        $locationRepository = new WpdbLocationRepository($database, $tableNames);
         $bibliographicMetadataRepository =
             new WpdbBibliographicMetadataRepository($database, $tableNames);
         $bookTypeRepository = new WpdbLibraryBookTypeRepository(
@@ -227,6 +230,10 @@ final class ProductionComposition
         $libraryItemMetadata = new LibraryItemMetadataQueryService(
             $libraryContexts,
             $itemRepository
+        );
+        $libraryItemLocations = new LibraryItemLocationQueryService(
+            $libraryContexts,
+            $locationRepository
         );
         $activityFactory = new WordPressActivityEventFactory(
             new ActivityEventSource("core.classification")
@@ -559,6 +566,7 @@ final class ProductionComposition
             $bibliographicRelationships,
             $bibliographicMetadata,
             $libraryItemMetadata,
+            $libraryItemLocations,
             $libraryItemCreation,
             $accessibleItems,
             $ownedExternalLoans,

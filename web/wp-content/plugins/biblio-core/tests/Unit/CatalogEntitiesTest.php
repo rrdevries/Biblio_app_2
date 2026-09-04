@@ -9,11 +9,14 @@ use Biblio\Core\Catalog\EditionId;
 use Biblio\Core\Catalog\Item;
 use Biblio\Core\Catalog\ItemId;
 use Biblio\Core\Catalog\ItemStatus;
+use Biblio\Core\Catalog\LibraryLocation;
+use Biblio\Core\Catalog\LocationId;
 use Biblio\Core\Catalog\Work;
 use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Library\LibraryId;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 final class CatalogEntitiesTest extends TestCase
 {
@@ -77,5 +80,30 @@ final class CatalogEntitiesTest extends TestCase
         self::assertTrue($libraryId->equals($item->libraryId()));
         self::assertTrue($edition->id()->equals($item->editionId()));
         self::assertSame(ItemStatus::Active, $item->status());
+        self::assertNull($item->locationId());
+    }
+
+    public function testLibraryLocationIsTypedOwnedAndLossless(): void
+    {
+        $location = new LibraryLocation(
+            new LocationId("location-a"),
+            new LibraryId("library-a"),
+            "Kast Één"
+        );
+        self::assertSame("location-a", $location->id()->value());
+        self::assertSame("library-a", $location->libraryId()->value());
+        self::assertSame("Kast Één", $location->displayName());
+    }
+
+    #[DataProvider("invalidLocationNames")]
+    public function testLibraryLocationRejectsInvalidNames(string $name): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        new LibraryLocation(new LocationId("location-a"), new LibraryId("library-a"), $name);
+    }
+
+    public static function invalidLocationNames(): array
+    {
+        return [["   "], ["invalid-\xFF"], [str_repeat("é", LibraryLocation::MAX_NAME_LENGTH + 1)]];
     }
 }

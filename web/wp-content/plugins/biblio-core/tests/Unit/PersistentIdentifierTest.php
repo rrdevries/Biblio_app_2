@@ -7,6 +7,7 @@ namespace Biblio\Core\Tests\Unit;
 use Biblio\Core\Borrowing\ExternalLoanId;
 use Biblio\Core\Catalog\EditionId;
 use Biblio\Core\Catalog\ItemId;
+use Biblio\Core\Catalog\LocationId;
 use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Exception\ValidationException;
@@ -58,6 +59,7 @@ final class PersistentIdentifierTest extends TestCase
         yield "WorkId" => [WorkId::class];
         yield "EditionId" => [EditionId::class];
         yield "ItemId" => [ItemId::class];
+        yield "LocationId" => [LocationId::class];
         yield "ExternalLoanId" => [ExternalLoanId::class];
         yield "ReadingRoundId" => [ReadingRoundId::class];
     }

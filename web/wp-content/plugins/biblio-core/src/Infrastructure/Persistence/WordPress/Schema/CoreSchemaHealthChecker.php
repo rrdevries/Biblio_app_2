@@ -40,6 +40,7 @@ final readonly class CoreSchemaHealthChecker
             1008 => $this->inspectTables($this->tableNames->schema1008(), true, 1008),
             1009 => $this->inspectTables($this->tableNames->schema1009(), true, 1009),
             1010 => $this->inspectTables($this->tableNames->schema1010(), true, 1010),
+            1011 => $this->inspectTables($this->tableNames->schema1011(), true, 1011),
             default => throw new CoreSchemaMigrationException(
                 "No explicit Biblio Core schema-health contract exists for "
                 . "schema version {$expectedVersion}."
@@ -135,6 +136,20 @@ final readonly class CoreSchemaHealthChecker
         );
     }
 
+    public function inspectExistingSchema1011Additions(): CoreSchemaHealth
+    {
+        return $this->inspectTables(
+            $this->tableNames->schema1011Additions(),
+            false,
+            1011
+        );
+    }
+
+    public function inspectSchema1011ItemLocation(): CoreSchemaHealth
+    {
+        return $this->inspectTables([$this->tableNames->items()], true, 1011);
+    }
+
     /** @param list<string> $tableNames */
     private function inspectTables(
         array $tableNames,
@@ -162,7 +177,7 @@ final readonly class CoreSchemaHealthChecker
 
             $this->inspectColumns($tableName, $issues, $schemaVersion);
             $this->inspectIndexes($tableName, $issues, $schemaVersion);
-            $this->inspectForeignKeys($tableName, $issues);
+            $this->inspectForeignKeys($tableName, $issues, $schemaVersion);
             $this->inspectChecks($tableName, $issues, $schemaVersion);
         }
 
@@ -308,7 +323,11 @@ final readonly class CoreSchemaHealthChecker
     }
 
     /** @param list<string> $issues */
-    private function inspectForeignKeys(string $tableName, array &$issues): void
+    private function inspectForeignKeys(
+        string $tableName,
+        array &$issues,
+        int $schemaVersion
+    ): void
     {
         $rows = $this->database->get_results($this->database->prepare(
             "SELECT k.CONSTRAINT_NAME AS constraint_name, "
@@ -340,7 +359,7 @@ final readonly class CoreSchemaHealthChecker
 
         $unmatched = array_values($actual);
 
-        foreach (($this->expectedForeignKeys()[$tableName] ?? []) as $expected) {
+        foreach (($this->expectedForeignKeys($schemaVersion)[$tableName] ?? []) as $expected) {
             $match = null;
 
             foreach ($unmatched as $key => $candidate) {
@@ -610,6 +629,18 @@ final readonly class CoreSchemaHealthChecker
                 ...($schemaVersion >= 1010 ? [
                     "inventory_number" => $nullableId,
                 ] : []),
+                ...($schemaVersion >= 1011 ? [
+                    "location_id" => $nullableId,
+                ] : []),
+            ],
+            $this->tableNames->locations() => [
+                "library_id" => $id,
+                "location_id" => $id,
+                "display_name" => [
+                    "type" => "varchar(512)",
+                    "nullable" => "NO",
+                    "collation" => "utf8mb4_bin",
+                ],
             ],
             $this->tableNames->externalLoans() => [
                 "external_loan_id" => $id,
@@ -962,6 +993,21 @@ final readonly class CoreSchemaHealthChecker
                         "columns" => ["library_id", "inventory_number"],
                     ],
                 ] : []),
+            ] + ($schemaVersion >= 1011 ? [
+                "items_by_library_location" => [
+                    "unique" => false,
+                    "columns" => ["library_id", "location_id", "item_id"],
+                ],
+            ] : []),
+            $this->tableNames->locations() => [
+                "PRIMARY" => [
+                    "unique" => true,
+                    "columns" => ["library_id", "location_id"],
+                ],
+                "locations_by_library_name" => [
+                    "unique" => false,
+                    "columns" => ["library_id", "display_name", "location_id"],
+                ],
             ],
             $this->tableNames->externalLoans() => [
                 "PRIMARY" => ["unique" => true, "columns" => ["external_loan_id"]],
@@ -1146,7 +1192,7 @@ final readonly class CoreSchemaHealthChecker
     }
 
     /** @return array<string, list<array{columns: list<string>, referenced_table: string, referenced_columns: list<string>, update: string, delete: string}>> */
-    private function expectedForeignKeys(): array
+    private function expectedForeignKeys(int $schemaVersion): array
     {
         $restrict = static fn (
             array $columns,
@@ -1223,6 +1269,16 @@ final readonly class CoreSchemaHealthChecker
             $this->tableNames->items() => [
                 $restrict(["library_id"], $this->tableNames->libraries(), ["library_id"]),
                 $restrict(["edition_id"], $this->tableNames->editions(), ["edition_id"]),
+                ...($schemaVersion >= 1011 ? [
+                    $restrict(
+                        ["library_id", "location_id"],
+                        $this->tableNames->locations(),
+                        ["library_id", "location_id"]
+                    ),
+                ] : []),
+            ],
+            $this->tableNames->locations() => [
+                $restrict(["library_id"], $this->tableNames->libraries(), ["library_id"]),
             ],
             $this->tableNames->externalLoans() => [
                 $restrict(["work_id"], $this->tableNames->works(), ["work_id"]),
@@ -1391,6 +1447,9 @@ final readonly class CoreSchemaHealthChecker
                 ...($schemaVersion >= 1010
                     ? ["inventory_number IS NULL OR CHAR_LENGTH(TRIM(inventory_number)) > 0"]
                     : []),
+            ],
+            $this->tableNames->locations() => [
+                "CHAR_LENGTH(TRIM(display_name)) > 0",
             ],
             $this->tableNames->externalLoans() => [
                 "CHAR_LENGTH(TRIM(user_id)) > 0",

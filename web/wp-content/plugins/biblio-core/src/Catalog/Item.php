@@ -15,7 +15,8 @@ final readonly class Item
         private LibraryId $libraryId,
         private EditionId $editionId,
         private ItemStatus $status,
-        ?InventoryNumber $inventoryNumber = null
+        ?InventoryNumber $inventoryNumber = null,
+        private ?LocationId $locationId = null
     ) {
         $this->inventoryNumber = $inventoryNumber;
     }
@@ -24,14 +25,16 @@ final readonly class Item
         ItemId $id,
         LibraryId $libraryId,
         EditionId $editionId,
-        ?InventoryNumber $inventoryNumber = null
+        ?InventoryNumber $inventoryNumber = null,
+        ?LocationId $locationId = null
     ): self {
         return new self(
             $id,
             $libraryId,
             $editionId,
             ItemStatus::Active,
-            $inventoryNumber
+            $inventoryNumber,
+            $locationId
         );
     }
 
@@ -58,5 +61,10 @@ final readonly class Item
     public function inventoryNumber(): ?InventoryNumber
     {
         return $this->inventoryNumber;
+    }
+
+    public function locationId(): ?LocationId
+    {
+        return $this->locationId;
     }
 }
