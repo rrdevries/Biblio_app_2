@@ -209,9 +209,16 @@ No-result:
 - no hidden external metadata search;
 - add Item requires valid target Library and authorization.
 
-## 13. Home
+## 13. Biblio Home and Bibliotheek Home
 
 Acceptance:
+- Biblio Home remains outside one active Library Context and exposes accessible
+  Libraries/opening/switching without presenting the full Library shell as
+  active;
+- opening a Library establishes the explicit server-authorized Library Context;
+- within that context, Home / Action Center and `Mijn Bibliotheek` full catalog
+  remain separate primary destinations;
+- Bibliotheek Home stays selective and does not enumerate the full catalog;
 - fixed elements cannot be disabled;
 - module visibility/order persists account-wide;
 - Openstaande acties with zero content occupies no space;

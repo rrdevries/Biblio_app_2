@@ -218,28 +218,50 @@ consumption does not. The technical default Undo TTL is 30 seconds.
 
 No loan request/reservation workflow in v2.001.
 
-## Home
+## Biblio Home, Bibliotheek Home en Mijn Bibliotheek
 
-Home is the modular start page inside Mijn Biblio.
+Biblio kent drie structureel verschillende navigatieniveaus:
 
-Fixed:
-- Zoeken
-- Mijn bibliotheken
-- Home aanpassen
+- **Biblio Home** is het platformniveau buiten één specifieke actieve
+  Bibliotheekcontext. Het toont de Bibliotheken waartoe de gebruiker toegang
+  heeft, laat een Bibliotheek openen of wisselen en kan lichte platformbrede
+  persoonlijke context tonen. Het is geen volledige catalogus en doet zonder
+  actieve Bibliotheek niet alsof de Library-shell of -sidebar al actief is.
+- **Bibliotheek Home** is de bestaande persoonlijke, selectieve en
+  actie-/discoverygerichte Home / Action Center binnen precies één door Core
+  gevalideerde actieve Library Context. Deze Home kan lokale zoekfunctie,
+  primaire acties, Nu aan het lezen, Openstaande acties, Hierna lezen,
+  Leesvoorraad en relevante of recente boeken bevatten, maar toont bewust niet
+  de volledige catalogus. Home blijft een uitnodigend actiecentrum en geen
+  zwaar dashboard.
+- **Mijn Bibliotheek** is de volledige actieve catalogus binnen die ene
+  Bibliotheek: alle actieve Library Items, met de toepasselijke zoek-, filter-,
+  sorteer-, Grid-, Lijst-, Boekenplank-, filterchip-, cursor/load-more-, Quick
+  View- en Itembeheercontracten voor zover afzonderlijk ondersteund. Deze
+  bestemming is functioneler, rustiger, scanbaarder en informatiedichter en is
+  niet de Bibliotheek Home.
 
-Default modules on:
-1. Nu aan het lezen
-2. Openstaande acties
-3. Hierna lezen
-4. Leesdoelen
-5. Leesvoorraad
-6. Geleend
+Bij het openen van een Bibliotheek vanuit Biblio Home ontstaat de actieve
+Library Context. Binnen die context zijn `Home` en `Mijn Bibliotheek` aparte
+hoofdnavigatiebestemmingen, conceptueel naast `Collecties`, `Lezen` en andere
+Library-functies:
 
-Default off:
-- Verlanglijst
-- Recente activiteit
-- Statistieken
-- Snelle acties
+```text
+Home                → Bibliotheek Home / Action Center
+Mijn Bibliotheek    → volledige actieve catalogus
+```
+
+Oudere mockups en formuleringen waarin Home-functionaliteit onder de titel
+`Mijn Bibliotheek` stond, zijn uitsluitend historische ontwerpcontext en geen
+actuele informatiearchitectuur.
+
+Biblio Home bevat de bestaande toegang tot `Mijn bibliotheken`. Bibliotheek
+Home behoudt de reeds ontworpen lokale zoek-/actiecontext en `Home aanpassen`.
+De standaard ingeschakelde Action Center-modules zijn Nu aan het lezen,
+Openstaande acties, Hierna lezen, Leesdoelen, Leesvoorraad en Geleend;
+Verlanglijst, Recente activiteit, Statistieken en Snelle acties staan standaard
+uit. Deze verdeling verfijnt de IA en ontwerpt de bestaande Home-functionaliteit
+niet opnieuw.
 
 ## Audit
 

@@ -2,7 +2,7 @@
 
 Status: canonical functional design for Biblio V2 v2.001.
 
-This document states the latest approved product behavior. Historical handovers can contain superseded models such as WordPress Multisite, the role `Lezer`, `Wishlist`, `Next to read`, `Gepauzeerd`, mandatory Library context for every ReadingRound, and the old fixed Home model. Those historical variants are not current behavior unless explicitly retained here.
+This document states the latest approved product behavior. Historical handovers can contain superseded models such as WordPress Multisite, the role `Lezer`, `Wishlist`, `Next to read`, `Gepauzeerd`, mandatory Library context for every ReadingRound, the old fixed Home model, or mockups that place Home content under `Mijn Bibliotheek`. Those historical variants are not current behavior unless explicitly retained here.
 
 ---
 
@@ -1274,16 +1274,45 @@ Deleting the user-owned source removes its derived timeline event.
 
 Historical Library context may remain after membership loss without restoring access to protected Library records.
 
-# 15. Home and search
+# 15. Biblio Home, Bibliotheek Home and search
 
-Home is the modular start page inside Mijn Biblio.
+The current information architecture distinguishes three levels:
 
-## Fixed elements
+1. `Biblio Home` is the platform-level entry outside one active Library
+   Context. It exposes accessible Libraries, opening and switching Libraries,
+   and optionally light platform-wide personal context. It is not a catalog or
+   a Library Home. Without a selected Library, the complete Library shell and
+   sidebar are not presented as active.
+2. `Bibliotheek Home` is the existing Home / Action Center inside one active
+   Library Context. It is personal, selective, action-oriented and
+   discovery-oriented; it deliberately does not enumerate the full catalog.
+3. `Mijn Bibliotheek` is the complete active catalog inside that Library. It
+   is the functional, calm, scannable and information-dense destination for
+   all active Library Items and supported Search, Filters, Sort, Grid, List,
+   Bookshelf, active filter chips, cursor/load-more, Quick View and Item
+   management.
 
-Always:
-- Zoeken;
-- Mijn bibliotheken;
-- Home aanpassen.
+Opening a Library from Biblio Home establishes the selected target from which
+Core constructs and authorizes the active Library Context. Inside that context,
+`Home` and `Mijn Bibliotheek` are separate primary navigation destinations:
+
+```text
+Home                → Bibliotheek Home / Action Center
+Mijn Bibliotheek    → complete active catalog
+Collecties
+Lezen
+…
+```
+
+Older mockups or labels that put the Home modules below a `Mijn Bibliotheek`
+heading are retained only as historical design context. They do not define the
+current IA.
+
+## Biblio Home
+
+Biblio Home provides the platform-level Library entry and switcher described
+above. Its platform-wide personal context stays light and does not replace the
+Library-bound Action Center or catalog.
 
 ## Mijn bibliotheken
 
@@ -1310,6 +1339,17 @@ Create flow visibly shows:
 - Uitleenbibliotheek — disabled/grey, future version.
 
 Existing Library shows read-only `Type: Privébibliotheek`.
+
+## Bibliotheek Home / Action Center
+
+Bibliotheek Home is the modular start page inside the active Library Context.
+It may be visually expressive and inviting, but remains an action center rather
+than a heavy dashboard.
+
+Its fixed entry/action elements are the local Search and `Home aanpassen`.
+`Mijn bibliotheken` belongs to Biblio Home; Library switching from within an
+active context must preserve the same server-authorized Library Context
+contract rather than merging the two Home levels.
 
 ## Default Home modules
 

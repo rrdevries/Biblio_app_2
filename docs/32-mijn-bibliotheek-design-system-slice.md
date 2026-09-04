@@ -8,6 +8,12 @@ This record covers the presentation-only implementation slice that applies
 to the existing `Mijn Bibliotheek` page. It does not change Core domain rules,
 authorization, persistence, REST routes or the Elementor Page artifact.
 
+In the current information architecture this page is explicitly the complete
+active catalog inside one active Library Context. It is not Biblio Home and not
+the Library's Home / Action Center. References below to the overview, shell or
+sidebar describe this catalog slice; any older mockup association between the
+title `Mijn Bibliotheek` and Home modules is historical design context only.
+
 ## 1. Baseline and implementation order
 
 The slice started from `main` at

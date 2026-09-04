@@ -77,7 +77,10 @@ geen informatiearchitectuur of componentstructuur. Atmosphere staat los van
 Theme, Appearance, Genre en Werkmetadata.
 
 Theme beïnvloedt onder andere navigatie- en interactieve kleuren, hover/active
-states, subtiele washes, focusdetails en Dark Mode-surfaces.
+states, subtiele washes, focusdetails, algemene surface textures en Dark
+Mode-surfaces. Algemene sidebar-/page-surface-texture hoort bij Appearance,
+Theme en de Deep Library surface language; zij is geen Atmosphere en wordt
+niet gekozen door een Atmosphere Pack.
 
 Voor later geparkeerde Themes zijn onder andere Forest en Golden Amber.
 Mogelijke latere Atmosphere Packs zijn Abstract, Nocturne, Seasonal en Custom.
@@ -189,6 +192,20 @@ automatisch een card.
 Er staat niet standaard een card rond ieder boek, filtergebied,
 metadata-blok, formulierdeel of iedere detailsectie.
 
+Belangrijke shell- en contentsurfaces mogen een subtiele organische textuur
+dragen, bijvoorbeeld papiernerf, lichte plaster-/steenstructuur, zachte wolking
+of zeer terughoudende marmering. Dit is een low-contrast surface treatment,
+geen illustratie of dominante patroonlaag. Tekst, iconen en focusstates blijven
+volledig leesbaar; textuur communiceert nooit betekenis, status, selectie of
+interactie en blijft altijd ondergeschikt aan de content.
+
+De donkere sidebar mag een rustige, Theme-aware textuur gebruiken wanneer die
+diepte toevoegt zonder afleiding. Dat principe geldt in Light en Dark voor
+zover de gekozen Theme-familie het logisch ondersteunt. Warme
+contentachtergronden mogen dezelfde organische surface language gebruiken:
+Bibliotheek Home relatief zichtbaarder, Mijn Bibliotheek subtieler en
+rustiger. Dit zijn expressiviteitsvarianten binnen één Design System.
+
 ## 7. Spacing en informatiedichtheid
 
 Status: **Definitief**.
@@ -237,6 +254,23 @@ functies, actieve state en toegankelijke tooltips/focuslabels.
 - mobiel: off-canvas;
 - responsive gedrag is hercompositie, niet simpel verkleinen.
 
+### 8.1 Informatieniveaus en hoofdnavigatie
+
+Biblio Home staat op platformniveau buiten één specifieke actieve Library
+Context. Het ontsluit en wisselt Bibliotheken en activeert niet voortijdig de
+volledige Library-sidebar. Na het openen van een Bibliotheek bestaan binnen de
+actieve Library Context twee afzonderlijke hoofdbestemmingen:
+
+- `Home`: Bibliotheek Home / Action Center; persoonlijk, selectief,
+  actiegericht, discoverygericht en visueel expressiever;
+- `Mijn Bibliotheek`: de volledige actieve catalogus; functioneel, rustig,
+  scanbaar en informatiedichter.
+
+`Home` staat conceptueel naast `Mijn Bibliotheek`, `Collecties`, `Lezen` en
+andere Library-functies. Home is geen volledige catalogus en Mijn Bibliotheek
+is geen Home-pagina. Historische mockups waarin deze functies onder één titel
+staan, zijn geen actuele IA.
+
 ## 9. Mijn Bibliotheek en views
 
 Status: **Definitief**, behalve waar expliciet als werkwaarde aangegeven.
@@ -262,6 +296,11 @@ Mijn Bibliotheek ondersteunt uiteindelijk drie expliciete views:
 De mogelijke gebruikerskeuze tussen uniforme en oorspronkelijke coverratio is
 nog open.
 
+Mijn Bibliotheek gebruikt **Functional / Refined Deep Library**: dezelfde
+kleuren, typografie, tokens, surface language en componentfamilie als
+Bibliotheek Home, met minder decoratieve diepte, cover-3D, zware shadows en
+visuele effecten voor voorspelbare scanbaarheid op catalogusschaal.
+
 ## 10. Page header en Quick View
 
 Status: **Definitief**.
@@ -285,9 +324,38 @@ De richting is **Refined Deep Library**, bewust tussen Strak en Gebalanceerd.
 - borders: circa `1 px` hairline, laag contrast en alleen functioneel;
 - radii: `4 px` voor chips/compacte controls, `6 px` voor fields/dropdowns,
   `8 px` voor normale overlays en circa `10 px` voor grotere elevated overlays;
-- shadows: niet op gewone content; zeer subtiel onder covers, licht bij
-  dropdown/popover en zacht maar duidelijker bij Quick View/modal;
+- shadows: een gebalanceerd/refined, zacht, gelaagd, gecontroleerd en
+  contextafhankelijk systeem; niet op gewone content, zeer subtiel onder
+  covers, licht bij dropdown/popover en zacht maar duidelijker bij Quick
+  View/modal, sheets, elevated actions en geselecteerde panelen;
 - covers krijgen geen sterke kunstmatige afronding.
+
+Harde Material Design-drop shadows, zware card-elevation op ieder blok en
+overmatig visueel zweven passen niet bij Deep Library. Bibliotheek Home mag
+relatief meer elevation gebruiken dan Mijn Bibliotheek.
+
+### 11.1 BookCoverPresentation
+
+Featured en Catalog zijn presentatievarianten van één gedeelde visuele
+covercomponent, conceptueel `BookCoverPresentation`, en geen losse
+designsystemen. De gedeelde basis bewaakt later consistente fallback, theming,
+responsive gedrag, accessibility, sizing en loading.
+
+- **`featured` / Bibliotheek Home:** een rijkere, objectmatige behandeling met
+  zachte contactshadow, subtiele fysieke diepte en optioneel een terughoudende
+  rug/rand, paginarandillusie, perspective en gecontroleerde highlights. Faux
+  3D is uitsluitend een enhancement; echte 3D-rendering is geen
+  baselinevereiste en de cover blijft zonder effect volledig bruikbaar.
+- **`catalog` / Mijn Bibliotheek:** vrijwel vlak, met hoogstens een subtiele
+  shadow, vaste voorspelbare geometrie en zonder sterke perspective of
+  opvallende spine-/3D-constructie. Grote catalogi krijgen geen zware
+  3D-treatment per cover.
+
+Bibliotheek Home volgt daarmee **Expressive Deep Library** en mag relatief
+meer texture, shadow, fysieke coverwerking, decoratieve compositie, Atmosphere
+en ademruimte inzetten. Mijn Bibliotheek volgt **Functional / Refined Deep
+Library**. De identiteit blijft gelijk; alleen expressiviteit en
+informatiedichtheid verschillen.
 
 Iconografie volgt **Refined Outline**: standaard outline, circa `1.5–1.75 px`
 stroke, meestal `18–20 px`, subtiel afgerond en niet overdreven speels of
@@ -513,8 +581,15 @@ zoom/scaling, screenreader-logica, non-color statuscommunicatie en geschikte
 touch targets. Rustige styling mag focus, disabled state of status nooit
 onduidelijk maken.
 
-Motion blijft subtiel, rustig en functioneel. Exacte durations, easing en
-reduced-motion-gedrag zijn nog open.
+Texture, shadow en coverdiepte zijn decoratieve enhancements en nooit nodig om
+status, selectie, interactie, beschikbaarheid of navigatie te begrijpen.
+Content blijft zonder deze effecten bruikbaar, contrast blijft leidend en
+focusstates blijven expliciet. Echte complexe 3D is geen baselinevereiste;
+latere CSS-/DOM-faux-3D is alleen aanvaardbaar wanneer die performant en
+onderhoudbaar blijft.
+
+Motion blijft subtiel, rustig en functioneel en respecteert reduced motion.
+Exacte durations, easing en reduced-motion-details zijn nog open.
 
 ## 18. Nog open en werkwaarden
 

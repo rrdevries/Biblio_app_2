@@ -26,7 +26,8 @@
 - Reading goals.
 - personal Stats/Jaaroverzicht/Tijdlijn.
 - Library operational statistics.
-- modular Home.
+- platform-level Biblio Home plus modular Bibliotheek Home / Action Center,
+  distinct from the `Mijn Bibliotheek` full-catalog destination.
 - Library audit.
 - Library settings and platform administration required for v2.001.
 - lightweight central metadata correction proposal.
