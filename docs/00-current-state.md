@@ -1575,7 +1575,7 @@ mapping are recorded in
 
 ### Mijn Bibliotheek — server-side catalog query readiness
 
-Status: **Finalized — PRODUCT GO / TECHNICAL BLOCKED**
+Status: **Finalized — PRODUCT GO / TECHNICAL SOURCE READY**
 
 The readiness analysis for full-catalog server-side Search, Filters, Sort and
 query-bound keyset pagination is recorded in
@@ -1594,12 +1594,12 @@ Taal, Uitgever, Uitleenstatus, Conditie and `In bibliotheek sinds` remain in the
 broader v2.001 design as **deferred within v2.001**; they are not removed or
 future-version-only. No product decision remains for the first wave.
 
-Technical implementation remains blocked. Schemas 1009–1013 now provide the
-central Author/Series, remaining Search-metadata and Item Location foundations.
-The Item Archive lifecycle and Collection/membership foundations are also
-complete. Existing Leesstatus and LibraryCatalogContext classification data
-still need a reusable filter/read foundation before combined query composition.
-Document 33 records the remaining dependency slices.
+Technical source readiness is complete. Schemas 1009–1013 provide the central
+Author/Series, remaining Search-metadata, Item Location, Archive and
+Collection/membership foundations. The reusable Leesstatus and
+LibraryCatalogContext filter/read boundaries are closed in Slice 5 below.
+Document 33 records Slice 6 typed query composition as the remaining Core
+implementation layer.
 
 The completed technical foundations do not enable REST, UI, Elementor or new
 catalog-query behavior. The existing disabled controls and current active
@@ -1662,4 +1662,27 @@ Location, cover, reading status or Item archive.
 No REST, frontend, Elementor, Collection UI, catalog-query composition,
 Condition, Acquisition or lending behavior is introduced. Evidence is in
 `docs/38-library-collection-membership-foundation-exit-evidence.md`. The next
-prerequisite is the existing-source filter/read foundation from doc 33.
+prerequisite was the existing-source filter/read foundation from doc 33 and is
+now closed below.
+
+### Mijn Bibliotheek — existing-source filter/read foundation
+
+Status: **GO / CLOSED — READY FOR TYPED CATALOG QUERY COMPOSITION**
+
+Schema remains `1013`. Existing Author/Series, Search metadata, inventory,
+Location, Archive and Collection read contracts were already batch-capable and
+remain unchanged. Slice 5 adds the two missing narrow boundaries: authorized
+Library-scoped active classification options plus batch Work classification,
+and actor-private batch projection of the existing Work reading status.
+
+Classification batches preserve explicit missing context, keep Boeksoort,
+Genre and Onderwerp typed and separate, and execute in three queries rather
+than per Work. Personal reading status derives from owned ReadingRounds in one
+query, remains Work-level and never becomes Library-owned. Both batch inputs
+are bounded to 100 Works. No existing Archive, Collection, Rating/Review, Note,
+Next Reading or Goal state is changed.
+
+No schema/migration, combined catalog query, Search/filter execution, sort,
+cursor, REST, frontend or Elementor behavior is introduced. Evidence is in
+`docs/39-existing-source-filter-read-foundation-exit-evidence.md`. The next
+technical slice is Slice 6, typed catalog query composition.

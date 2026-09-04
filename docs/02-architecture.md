@@ -972,3 +972,31 @@ per Item, active Items per Collection, active counts and previous membership
 context for currently archived Items. Active joins require active Collection,
 membership and Item state. No query-composition, REST or presentation behavior
 is part of this boundary.
+
+## 26. Existing-source filter/read foundation
+
+Slice 5 preserves separate source ownership while removing the final evident
+read N+1 gaps before catalog-query composition. It does not introduce a generic
+catalog repository or compose the final result.
+
+`LibraryClassificationQueryService` is the adapter-facing read boundary for
+Library-owned Boeksoort, Genre and Onderwerp. Every call first resolves the
+authenticated Library Context. Its dedicated read repository returns active
+typed option lists and batch `LibraryCatalogSelection|null` projections for up
+to 100 Work IDs. Base context, Genre links and Onderwerp links use three total
+tenant-scoped queries; absent context stays explicit and one-to-many links are
+grouped below one Work identity. Existing linked inactive terms remain valid
+under ADR-006 but are never active options.
+
+`GetPersonalWorkReadingStatusService` remains user-owned and Library-agnostic.
+Its new batch operation resolves the actor internally and loads owned
+ReadingRounds for up to 100 Work IDs through one query. Core derives the same
+`reading`/`read`/`not_read` status as the prior single-Work method, which now
+delegates to the batch path. A Library Item merely supplies a Work identity;
+neither Library membership nor shared Item access transfers personal history.
+
+Other source boundaries remain independent: central Author/Series and Search
+metadata, Library inventory/Location/Archive/Collection, and the existing main
+catalog projection. Slice 6 may compose their typed outputs and SQL predicates,
+but central metadata never authorizes Item visibility and retained Work-level
+state cannot reintroduce an archived Item. Schema remains 1013.

@@ -93,7 +93,7 @@ data integrity/schema, tests/regression and Product Guardian scope. No visible
 Collection ActivityEvents were added because they are not canonical v2.001
 behavior.
 
-The complete Mijn Bibliotheek query remains blocked on Slice 5 existing-source
-filter/read integration and Slice 6 typed query composition. The next approved
-technical prerequisite should therefore be the Medium-severity existing-source
-filter/read foundation. No push is part of this slice.
+At this slice's exit, the complete Mijn Bibliotheek query remained blocked on
+Slice 5 existing-source filter/read integration and Slice 6 typed query
+composition. Slice 5 is now closed in doc 39; typed query composition is the
+remaining Core slice. No push was part of this slice.

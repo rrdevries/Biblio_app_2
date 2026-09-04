@@ -1,6 +1,6 @@
 # 33 — Mijn Bibliotheek server-side catalog query readiness
 
-Status: **PRODUCT GO / TECHNICAL BLOCKED — first-wave prerequisite analysis**.
+Status: **PRODUCT GO / TECHNICAL SOURCE READY — READY FOR TYPED CATALOG QUERY COMPOSITION**.
 
 Date: 2026-09-04.
 
@@ -17,12 +17,11 @@ title-ordered runtime remain unchanged until separately approved implementation.
 Leesstatus, Auteur, Serie, Locatie, Boeksoort, Genre, Onderwerp, Collecties and
 `Zonder collectie`. No product decision remains for this wave.
 
-**Technical implementation readiness: BLOCKED.** Schemas 1009–1013 provide
-the central Author/Series, remaining Search-metadata, Item Location, Archive and
-Collection/membership foundations. Existing reading, classification,
-bibliographic and Collection sources still need the approved read/predicate and
-query integration layers. These are technical prerequisites, not product
-questions.
+**Technical source readiness: GO.** Schemas 1009–1013 provide the central
+Author/Series, remaining Search-metadata, Item Location, Archive and
+Collection/membership foundations. Slice 5 closes the remaining actor-private
+reading-status and Library-classification batch/read gaps without new schema.
+Only Slice 6 typed catalog-query composition remains before transport/UI work.
 
 The first technical prerequisite, the central Author/Series relationship
 foundation, is closed in
@@ -35,8 +34,8 @@ Archive lifecycle foundation is closed in
 `docs/37-library-item-archive-lifecycle-foundation-exit-evidence.md`, and the
 complete Collection/membership foundation is closed in
 `docs/38-library-collection-membership-foundation-exit-evidence.md`. The query
-feature cannot receive implementation GO until all remaining applicable
-prerequisite slices are closed.
+source foundation is closed in
+`docs/39-existing-source-filter-read-foundation-exit-evidence.md`.
 
 ## 2. Sources and authority
 
@@ -252,8 +251,9 @@ Current limitations:
 - the repository supports only active title-ordered Items;
 - REST has no strict full query allowlist or typed filter/sort parser;
 - UI controls are disabled and route state contains only Library/Item IDs;
-- schema 1013 has the Search-metadata, Location, Archive and Collection sources
-  but still lacks existing-source predicate integration and query composition.
+- schema 1013 has every required first-wave source and Slice 5 exposes the
+  remaining reading-status/classification batches; query composition is still
+  absent by design.
 
 Required additions retain existing boundaries: Core owns query meaning,
 Library Context, authorization and actor-private reading status; REST parses
@@ -282,7 +282,7 @@ operators, URL behavior, sort availability or archive composition.
 
 ## 11. Technical dependency matrix
 
-Evidence is schema 1012, the current domain types and repositories, and the
+Evidence is schema 1013, the current domain types and repositories, and the
 active `WpdbCatalogUiReadRepository` projection.
 
 | Feature | Required source/model | Exists now? | Gap/class | Required before query implementation? |
@@ -294,10 +294,10 @@ active `WpdbCatalogUiReadRepository` projection.
 | Search: ISBN | Edition ISBN source including explicit no-ISBN/unknown distinction | Yes | **A — ALREADY EXISTS**; query integration still to add | Yes; reusable now |
 | Search: inventory number | Library Item inventory identity | Yes | **A — ALREADY EXISTS**; authorized query integration still to add | Yes; reusable now |
 | Search: omnibus metadata | ordered acyclic Work containment relationship | Yes | **A — ALREADY EXISTS**; Item-preserving query integration still to add | Yes; reusable now |
-| Filter: Leesstatus | actor-owned ReadingRounds and derived Work status | Yes | **A — ALREADY EXISTS**; query predicate still to add | Yes; no new persistence |
-| Filters: Boeksoort/Genre/Onderwerp | LibraryCatalogContext and typed Library terms/links | Yes | **B — EXISTS BUT READ MODEL MISSING** | Yes |
+| Filter: Leesstatus | actor-owned ReadingRounds and derived Work status | Yes | **A — BATCH READ READY**; composition still to add | Yes; no new persistence |
+| Filters: Boeksoort/Genre/Onderwerp | LibraryCatalogContext and typed Library terms/links | Yes | **A — OPTIONS/BATCH READ READY** | Yes; no new persistence |
 | Filter: Locatie | Library Item Location source | Yes | **A — ALREADY EXISTS**; authorized query integration still to add | Yes; reusable now |
-| Filters: Collecties/`Zonder collectie` | Library-owned Collection and Item membership | No | **D — DOMAIN FOUNDATION MISSING** | Yes |
+| Filters: Collecties/`Zonder collectie` | Library-owned Collection and Item membership | Yes | **A — BATCH READ READY** | Yes; reusable now |
 | Sort: Titel A–Z | Work title plus Item-ID tie-breaker | Yes | **A — ALREADY EXISTS** | Yes; reusable now |
 | Archive/query context | Item active/archive lifecycle state | Yes | **A — ALREADY EXISTS**; mixed-result query integration still to add | Yes; reusable now |
 | Deferred filters | language, publisher, lending, condition and acquisition sources | Mixed/absent | **F — NOT NEEDED FOR FIRST WAVE** | No |
@@ -305,8 +305,8 @@ active `WpdbCatalogUiReadRepository` projection.
 
 No evidence supports treating placeholder fields in card/detail view objects as
 production sources: the current repository deliberately hydrates most of them
-as unavailable. Classification terms and Work-level assignments do exist, so
-they need a query/read slice rather than a new domain foundation.
+as unavailable. Classification terms and Work-level assignments are exposed by
+the dedicated Slice-5 read boundary without introducing a new domain source.
 
 Performance acceptance ultimately requires deterministic 1,000- and
 10,000-Item Library fixtures, selective and broad searches/filters,
@@ -396,10 +396,11 @@ Collections, each with different ownership and migration invariants.
 ### Slice 5 — existing-source filter/read foundation
 
 - **Severity:** Medium.
+- **Status:** **GO / CLOSED**; see doc 39.
 - **Dependency:** current ReadingRound and LibraryCatalogContext persistence.
 - **Scope:** reusable Core read predicates/options for Leesstatus, Boeksoort,
   Genre and Onderwerp; no duplicate persistence.
-- **Schema impact:** none expected; add indexes only with measured evidence.
+- **Schema impact:** none; schema remains 1013.
 - **Exit condition:** actor-private status and Library-scoped classifications
   are queryable with active-option semantics and tenant-safe tests.
 - **Outside scope:** complete query object, REST and frontend controls.
@@ -508,7 +509,7 @@ deferred v2.001 metadata, automatic merge and external Series completeness.
 
 **Completed next slice:** Remaining Search Metadata Foundation; see doc 35.
 
-**Current expected next slice:** existing-source filter/read foundation.
+**Current expected next slice:** Slice 6, typed catalog query composition.
 
 ## 15. Review
 
@@ -554,11 +555,10 @@ were performed.
 | Archive interaction product contract | **GO** |
 | Remaining first-wave product decisions | **NONE** |
 | Product readiness | **GO** |
-| Technical implementation readiness | **BLOCKED — prerequisite foundations** |
-| Architecture/security readiness | **READY WITH CONDITIONS** |
+| Technical source readiness | **GO** |
+| Architecture/security readiness | **READY FOR SLICE 6** |
 
-Further implementation may proceed only through separately approved technical
-slices. After completed Slices 1, 2, 3A, 3B and 4, the expected next prerequisite
-is Slice 5, existing-source filter/read foundation. The completed foundations
-add no REST, frontend, Search/filter/sort query behavior or runtime fixture
-data.
+All source foundations in Slices 1–5 are closed. Further implementation may
+proceed only through separately approved Slice 6 typed catalog-query
+composition. The completed foundations add no REST, frontend,
+Search/filter/sort query behavior or runtime fixture data.

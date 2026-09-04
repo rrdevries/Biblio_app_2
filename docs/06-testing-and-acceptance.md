@@ -1982,3 +1982,32 @@ Schema `1013` is accepted when:
 
 Evidence is recorded in
 `docs/38-library-collection-membership-foundation-exit-evidence.md`.
+
+## 63. Existing-source filter/read foundation
+
+Slice 5 is accepted when:
+
+- every classification read resolves authorized Library Context before any
+  term or context repository access and foreign Libraries remain
+  non-enumerating;
+- active Boeksoort, Genre and Onderwerp options are typed, tenant-scoped,
+  deterministic and exclude inactive terms;
+- classifications for up to 100 Works are returned in one ordered keyed map,
+  use three total queries, preserve explicit `null` for missing/foreign context
+  and retain ADR-006-valid inactive links without exposing them as options;
+- multiple Genres and Onderwerpen cannot duplicate Work or Item identity;
+- personal reading status for up to 100 Works uses one actor-scoped query,
+  returns `reading`, `read` or `not_read` with existing precedence and never
+  exposes another user's ReadingRounds;
+- empty batches execute no source query and oversized batches fail typed
+  validation before source access;
+- normal active Item/Collection reads still exclude archived Items, inactive
+  Collections and historical memberships, while restore and retained personal
+  history follow their existing contracts;
+- Rating/Review, Private Note, Next Reading, Goal, Archive and Collection state
+  is not mutated or reinterpreted;
+- schema remains 1013, complete migration regressions stay green and no REST,
+  frontend, Elementor or combined catalog-query behavior is added.
+
+Evidence is recorded in
+`docs/39-existing-source-filter-read-foundation-exit-evidence.md`.
