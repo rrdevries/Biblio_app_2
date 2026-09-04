@@ -42,6 +42,7 @@ final readonly class CoreSchemaHealthChecker
             1010 => $this->inspectTables($this->tableNames->schema1010(), true, 1010),
             1011 => $this->inspectTables($this->tableNames->schema1011(), true, 1011),
             1012 => $this->inspectTables($this->tableNames->schema1012(), true, 1012),
+            1013 => $this->inspectTables($this->tableNames->schema1013(), true, 1013),
             default => throw new CoreSchemaMigrationException(
                 "No explicit Biblio Core schema-health contract exists for "
                 . "schema version {$expectedVersion}."
@@ -159,6 +160,11 @@ final readonly class CoreSchemaHealthChecker
     public function inspectSchema1012ItemLifecycle(): CoreSchemaHealth
     {
         return $this->inspectTables([$this->tableNames->items()], true, 1012);
+    }
+
+    public function inspectExistingSchema1013Additions(): CoreSchemaHealth
+    {
+        return $this->inspectTables($this->tableNames->schema1013Additions(), false, 1013);
     }
 
     /** @param list<string> $tableNames */
@@ -534,6 +540,12 @@ final readonly class CoreSchemaHealthChecker
             "collation" => "utf8mb4_bin",
         ];
         $generatedId = $nullableId + ["extra" => "STORED GENERATED"];
+        $generatedCollectionName = [
+            "type" => "varchar(80)",
+            "nullable" => "YES",
+            "collation" => "utf8mb4_bin",
+            "extra" => "STORED GENERATED",
+        ];
 
         $libraryColumns = [
                 "library_id" => $id,
@@ -669,6 +681,35 @@ final readonly class CoreSchemaHealthChecker
                 "restored_at" => ["type" => "datetime(6)", "nullable" => "YES"],
                 "open_item_id" => $generatedId + [
                     "expression" => "CASE WHEN restored_at IS NULL THEN item_id ELSE NULL END",
+                ],
+            ],
+            $this->tableNames->collections() => [
+                "library_id" => $id,
+                "collection_id" => $id,
+                "collection_name" => ["type" => "varchar(80)", "nullable" => "NO"],
+                "normalized_name" => ["type" => "varchar(80)", "nullable" => "NO", "collation" => "utf8mb4_bin"],
+                "description" => ["type" => "varchar(300)", "nullable" => "YES"],
+                "collection_status" => ["type" => "varchar(16)", "nullable" => "NO"],
+                "collection_position" => ["type" => "bigint(20) unsigned", "nullable" => "NO"],
+                "collection_version" => ["type" => "bigint(20) unsigned", "nullable" => "NO"],
+                "created_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "updated_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "active_normalized_name" => $generatedCollectionName + [
+                    "expression" => "CASE WHEN collection_status = 'active' THEN normalized_name ELSE NULL END",
+                ],
+            ],
+            $this->tableNames->collectionMemberships() => [
+                "library_id" => $id,
+                "membership_id" => $id,
+                "collection_id" => $id,
+                "item_id" => $id,
+                "membership_status" => ["type" => "varchar(16)", "nullable" => "NO"],
+                "item_position" => ["type" => "bigint(20) unsigned", "nullable" => "NO"],
+                "added_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "ended_at" => ["type" => "datetime(6)", "nullable" => "YES"],
+                "end_reason" => ["type" => "varchar(32)", "nullable" => "YES"],
+                "active_item_id" => $generatedId + [
+                    "expression" => "CASE WHEN membership_status = 'active' THEN item_id ELSE NULL END",
                 ],
             ],
             $this->tableNames->locations() => [
@@ -1051,6 +1092,18 @@ final readonly class CoreSchemaHealthChecker
                 "one_open_item_archive_period" => ["unique" => true, "columns" => ["library_id", "open_item_id"]],
                 "item_archive_periods_by_item_time" => ["unique" => false, "columns" => ["library_id", "item_id", "archived_at", "archive_version"]],
             ],
+            $this->tableNames->collections() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["library_id", "collection_id"]],
+                "collections_active_name" => ["unique" => true, "columns" => ["library_id", "active_normalized_name"]],
+                "collections_active_order" => ["unique" => false, "columns" => ["library_id", "collection_status", "collection_position", "collection_id"]],
+            ],
+            $this->tableNames->collectionMemberships() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["library_id", "membership_id"]],
+                "collection_one_active_item" => ["unique" => true, "columns" => ["library_id", "collection_id", "active_item_id"]],
+                "collection_memberships_active_order" => ["unique" => false, "columns" => ["library_id", "collection_id", "membership_status", "item_position"]],
+                "collection_memberships_by_item" => ["unique" => false, "columns" => ["library_id", "item_id", "membership_status"]],
+                "collection_memberships_history" => ["unique" => false, "columns" => ["library_id", "item_id", "end_reason", "ended_at"]],
+            ],
             $this->tableNames->locations() => [
                 "PRIMARY" => [
                     "unique" => true,
@@ -1336,6 +1389,21 @@ final readonly class CoreSchemaHealthChecker
                     ["library_id", "item_id"]
                 ),
             ],
+            $this->tableNames->collections() => [
+                $restrict(["library_id"], $this->tableNames->libraries(), ["library_id"]),
+            ],
+            $this->tableNames->collectionMemberships() => [
+                $restrict(
+                    ["library_id", "collection_id"],
+                    $this->tableNames->collections(),
+                    ["library_id", "collection_id"]
+                ),
+                $restrict(
+                    ["library_id", "item_id"],
+                    $this->tableNames->items(),
+                    ["library_id", "item_id"]
+                ),
+            ],
             $this->tableNames->locations() => [
                 $restrict(["library_id"], $this->tableNames->libraries(), ["library_id"]),
             ],
@@ -1516,6 +1584,22 @@ final readonly class CoreSchemaHealthChecker
                 "restore_version IS NULL = (restored_at IS NULL)",
                 "restore_version IS NULL OR restore_version > archive_version",
                 "restored_at IS NULL OR restored_at >= archived_at",
+            ],
+            $this->tableNames->collections() => [
+                "CHAR_LENGTH(TRIM(collection_name)) > 0",
+                "CHAR_LENGTH(TRIM(normalized_name)) > 0",
+                "collection_status IN ('active', 'archived')",
+                "collection_position >= 1",
+                "collection_version >= 1",
+                "updated_at >= created_at",
+            ],
+            $this->tableNames->collectionMemberships() => [
+                "membership_status IN ('active', 'inactive')",
+                "item_position >= 1",
+                "ended_at IS NULL = (end_reason IS NULL)",
+                "membership_status = 'active' AND ended_at IS NULL OR membership_status = 'inactive' AND ended_at IS NOT NULL",
+                "end_reason IS NULL OR end_reason IN ('removed', 'item_archived')",
+                "ended_at IS NULL OR ended_at >= added_at",
             ],
             $this->tableNames->locations() => [
                 "CHAR_LENGTH(TRIM(display_name)) > 0",

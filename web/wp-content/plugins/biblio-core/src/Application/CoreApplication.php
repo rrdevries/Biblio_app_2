@@ -21,6 +21,8 @@ use Biblio\Core\Application\Catalog\Classification\ManageLibraryBookTypesService
 use Biblio\Core\Application\Catalog\Classification\ManageLibraryGenresService;
 use Biblio\Core\Application\Catalog\Classification\ManageLibrarySubjectsService;
 use Biblio\Core\Application\Catalog\Classification\SaveLibraryCatalogContextService;
+use Biblio\Core\Application\Collections\ManageLibraryCollectionsService;
+use Biblio\Core\Application\Collections\Read\LibraryCollectionQueryService;
 use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
 use Biblio\Core\Application\Library\GetAccessibleLibraryItemService;
 use Biblio\Core\Application\Library\LibraryContextQueryService;
@@ -67,8 +69,10 @@ final readonly class CoreApplication
         private LibraryItemMetadataQueryService $libraryItemMetadata,
         private LibraryItemLocationQueryService $libraryItemLocations,
         private LibraryItemArchiveQueryService $libraryItemArchives,
+        private LibraryCollectionQueryService $libraryCollections,
         private AddLibraryItemService $libraryItemCreation,
         private ManageLibraryItemArchiveService $libraryItemArchiveManagement,
+        private ManageLibraryCollectionsService $libraryCollectionManagement,
         private GetAccessibleLibraryItemService $accessibleLibraryItems,
         private GetOwnedExternalLoanService $ownedExternalLoans,
         private GetOwnedReadingRoundService $ownedReadingRounds,
@@ -176,6 +180,16 @@ final readonly class CoreApplication
     public function libraryItemArchiveManagement(): ManageLibraryItemArchiveService
     {
         return $this->libraryItemArchiveManagement;
+    }
+
+    public function libraryCollections(): LibraryCollectionQueryService
+    {
+        return $this->libraryCollections;
+    }
+
+    public function libraryCollectionManagement(): ManageLibraryCollectionsService
+    {
+        return $this->libraryCollectionManagement;
     }
 
     public function accessibleLibraryItems(): GetAccessibleLibraryItemService

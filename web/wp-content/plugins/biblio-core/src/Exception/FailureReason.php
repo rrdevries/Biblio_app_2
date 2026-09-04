@@ -52,6 +52,12 @@ enum FailureReason: string
     case ItemArchiveTransitionUnavailable =
         "item_archive_transition_unavailable";
     case ItemArchiveStale = "item_archive_stale";
+    case CollectionNotAvailable = "collection_not_available";
+    case CollectionItemNotAvailable = "collection_item_not_available";
+    case CollectionStale = "collection_stale";
+    case CollectionTransitionUnavailable = "collection_transition_unavailable";
+    case CollectionNameConflict = "collection_name_conflict";
+    case CollectionMembershipConflict = "collection_membership_conflict";
     case ClassificationTermConflict = "classification_term_conflict";
     case LibraryCatalogContextAlreadyExists =
         "library_catalog_context_already_exists";

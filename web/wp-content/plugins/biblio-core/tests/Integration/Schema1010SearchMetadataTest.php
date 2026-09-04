@@ -30,7 +30,7 @@ final class Schema1010SearchMetadataTest extends PersistenceIntegrationTestCase
 
         $this->migrator()->migrate();
 
-        self::assertSame(1012, $this->migrator()->installedVersion());
+        self::assertSame(1013, $this->migrator()->installedVersion());
         self::assertSame("Preserved", $this->database->get_var("SELECT work_title FROM `{$this->tableNames->works()}` WHERE work_id='preserved-work'"));
         self::assertNull($this->database->get_var("SELECT isbn_10 FROM `{$this->tableNames->editions()}` WHERE edition_id='preserved-edition'"));
         self::assertSame("0", (string) $this->database->get_var("SELECT explicitly_no_isbn FROM `{$this->tableNames->editions()}` WHERE edition_id='preserved-edition'"));
@@ -66,7 +66,7 @@ final class Schema1010SearchMetadataTest extends PersistenceIntegrationTestCase
 
         $this->database->query("ALTER TABLE `{$this->tableNames->editions()}` DROP COLUMN isbn_10");
         $this->migrator()->migrate();
-        self::assertSame(1012, $this->migrator()->installedVersion());
+        self::assertSame(1013, $this->migrator()->installedVersion());
     }
 
     private function migrator(): CoreSchemaMigrator
@@ -80,11 +80,28 @@ final class Schema1010SearchMetadataTest extends PersistenceIntegrationTestCase
 
     private function restoreSchema1009(): void
     {
+        $this->database->query("DROP TABLE IF EXISTS `{$this->tableNames->collectionMemberships()}`");
+        $this->database->query("DROP TABLE IF EXISTS `{$this->tableNames->collections()}`");
+        $this->database->query("DROP TABLE IF EXISTS `{$this->tableNames->itemArchivePeriods()}`");
+        $items = $this->tableNames->items();
+        if (in_array("item_version", $this->columns($items), true)) {
+            $this->database->query("ALTER TABLE `{$items}` DROP INDEX items_by_library_status_location");
+            $this->database->query("ALTER TABLE `{$items}` DROP INDEX items_by_library_identity");
+            $this->database->query("ALTER TABLE `{$items}` DROP CONSTRAINT items_status_supported");
+            $this->database->query("ALTER TABLE `{$items}` DROP CONSTRAINT items_version_positive");
+            $this->database->query("ALTER TABLE `{$items}` DROP COLUMN item_version");
+            $this->database->query("ALTER TABLE `{$items}` ADD CONSTRAINT items_status_active CHECK (item_status IN ('active'))");
+        }
+        if (in_array("location_id", $this->columns($items), true)) {
+            $this->database->query("ALTER TABLE `{$items}` DROP FOREIGN KEY items_location_fk");
+            $this->database->query("ALTER TABLE `{$items}` DROP INDEX items_by_library_location");
+            $this->database->query("ALTER TABLE `{$items}` DROP COLUMN location_id");
+        }
+        $this->database->query("DROP TABLE IF EXISTS `{$this->tableNames->locations()}`");
         foreach (array_reverse($this->tableNames->schema1010Additions()) as $table) {
             $this->database->query("DROP TABLE IF EXISTS `{$table}`");
         }
         if (in_array("inventory_number", $this->columns($this->tableNames->items()), true)) {
-            $items = $this->tableNames->items();
             $this->database->query("ALTER TABLE `{$items}` DROP INDEX items_by_library_inventory_number");
             $this->database->query("ALTER TABLE `{$items}` DROP CONSTRAINT items_inventory_number_non_empty");
             $this->database->query("ALTER TABLE `{$items}` DROP COLUMN inventory_number");

@@ -33,19 +33,24 @@ final class AdditionalPermissionsTest extends TestCase
         $permissions = AdditionalPermissions::fromValues(
             "future.catalog.permission",
             AdditionalPermissions::CATALOG_ITEM_ADD,
-            AdditionalPermissions::CATALOG_CLASSIFICATION_MANAGE
+            AdditionalPermissions::CATALOG_CLASSIFICATION_MANAGE,
+            AdditionalPermissions::COLLECTIONS_MANAGE
         );
 
         self::assertSame([
             "future.catalog.permission",
             "catalog.item_add",
             "catalog.classification_manage",
+            "collections",
         ], $permissions->values());
         self::assertTrue($permissions->contains(
             AdditionalPermissions::CATALOG_ITEM_ADD
         ));
         self::assertTrue($permissions->contains(
             AdditionalPermissions::CATALOG_CLASSIFICATION_MANAGE
+        ));
+        self::assertTrue($permissions->contains(
+            AdditionalPermissions::COLLECTIONS_MANAGE
         ));
     }
 

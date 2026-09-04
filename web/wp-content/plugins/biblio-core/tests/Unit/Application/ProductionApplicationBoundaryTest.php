@@ -13,6 +13,8 @@ use Biblio\Core\Application\Catalog\Classification\ManageLibraryGenresService;
 use Biblio\Core\Application\Catalog\Classification\ManageLibrarySubjectsService;
 use Biblio\Core\Application\Catalog\Classification\SaveLibraryCatalogContextService;
 use Biblio\Core\Application\CoreApplication;
+use Biblio\Core\Application\Collections\ManageLibraryCollectionsService;
+use Biblio\Core\Application\Collections\Read\LibraryCollectionQueryService;
 use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
 use Biblio\Core\Application\Library\GetAccessibleLibraryItemService;
 use Biblio\Core\Application\Library\LibraryContextQueryService;
@@ -73,6 +75,20 @@ final class ProductionApplicationBoundaryTest extends TestCase
             [NextReadingDiscoveryService::class, "searchWorks"],
             [NextReadingDiscoveryService::class, "sourceOptions"],
             [GetLibraryPublicAssessmentsService::class, "forWork"],
+            [LibraryCollectionQueryService::class, "activeCollections"],
+            [LibraryCollectionQueryService::class, "collections"],
+            [LibraryCollectionQueryService::class, "activeCollectionsForItems"],
+            [LibraryCollectionQueryService::class, "activeItemsForCollections"],
+            [LibraryCollectionQueryService::class, "activeCounts"],
+            [LibraryCollectionQueryService::class, "previousCollectionsForArchivedItems"],
+            [ManageLibraryCollectionsService::class, "create"],
+            [ManageLibraryCollectionsService::class, "update"],
+            [ManageLibraryCollectionsService::class, "archive"],
+            [ManageLibraryCollectionsService::class, "restore"],
+            [ManageLibraryCollectionsService::class, "reorderCollections"],
+            [ManageLibraryCollectionsService::class, "addItem"],
+            [ManageLibraryCollectionsService::class, "removeItem"],
+            [ManageLibraryCollectionsService::class, "saveItems"],
             [
                 CreateLibraryCatalogContextService::class,
                 "createForRepresentedWork",
@@ -133,6 +149,8 @@ final class ProductionApplicationBoundaryTest extends TestCase
             "genreManagement",
             "historicalReadingRoundDeletion",
             "historicalReadingRounds",
+            "libraryCollectionManagement",
+            "libraryCollections",
             "libraryContexts",
             "libraryItemArchiveManagement",
             "libraryItemArchives",

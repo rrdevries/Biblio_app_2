@@ -62,6 +62,8 @@ abstract class PersistenceIntegrationTestCase extends TestCase
         $externalLoans = $this->tableNames->externalLoans();
         $items = $this->tableNames->items();
         $itemArchivePeriods = $this->tableNames->itemArchivePeriods();
+        $collectionMemberships = $this->tableNames->collectionMemberships();
+        $collections = $this->tableNames->collections();
         $locations = $this->tableNames->locations();
         $editions = $this->tableNames->editions();
         $works = $this->tableNames->works();
@@ -110,6 +112,12 @@ abstract class PersistenceIntegrationTestCase extends TestCase
         $this->database->query("DELETE FROM `{$externalLoans}`");
         if ($this->tableExists($itemArchivePeriods)) {
             $this->database->query("DELETE FROM `{$itemArchivePeriods}`");
+        }
+        if ($this->tableExists($collectionMemberships)) {
+            $this->database->query("DELETE FROM `{$collectionMemberships}`");
+        }
+        if ($this->tableExists($collections)) {
+            $this->database->query("DELETE FROM `{$collections}`");
         }
         $this->database->query("DELETE FROM `{$items}`");
         if ($this->tableExists($locations)) {

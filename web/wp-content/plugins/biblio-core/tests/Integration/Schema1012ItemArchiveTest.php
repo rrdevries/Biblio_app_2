@@ -47,7 +47,7 @@ final class Schema1012ItemArchiveTest extends PersistenceIntegrationTestCase
         $migration->assertPrecondition();
         $migration->assertPostcondition();
         $this->migrator()->migrate();
-        self::assertSame(1012, $this->migrator()->installedVersion());
+        self::assertSame(1013, $this->migrator()->installedVersion());
     }
 
     public function testUnknownPartialStateFailsBeforeVersionBump(): void
@@ -70,6 +70,8 @@ final class Schema1012ItemArchiveTest extends PersistenceIntegrationTestCase
     private function restoreSchema1011(): void
     {
         $items = $this->tableNames->items();
+        $this->database->query("DROP TABLE IF EXISTS `{$this->tableNames->collectionMemberships()}`");
+        $this->database->query("DROP TABLE IF EXISTS `{$this->tableNames->collections()}`");
         $this->database->query("DROP TABLE IF EXISTS `{$this->tableNames->itemArchivePeriods()}`");
         if (in_array("item_version", $this->columns($items), true)) {
             foreach (["items_by_library_status_location", "items_by_library_identity"] as $index) {

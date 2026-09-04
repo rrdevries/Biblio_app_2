@@ -208,6 +208,33 @@ final class LibraryAuthorizationPolicyTest extends TestCase
         self::assertTrue($policy->canModerateContribution($ownerContext, $owner));
     }
 
+    public function testCollectionManagementUsesOwnerOverrideAndCanonicalManagerPermission(): void
+    {
+        $policy = new LibraryAuthorizationPolicy();
+        [$ownerContext, $owner] = $this->membership(
+            UseAccess::Direct,
+            MembershipStatus::Active,
+            ManagementRole::Owner
+        );
+        self::assertTrue($policy->canManageCollections($ownerContext, $owner));
+
+        [$managerContext, $manager] = $this->membership(
+            UseAccess::ViewOnly,
+            MembershipStatus::Active,
+            ManagementRole::Manager,
+            AdditionalPermissions::fromValues(AdditionalPermissions::COLLECTIONS_MANAGE)
+        );
+        self::assertTrue($policy->canManageCollections($managerContext, $manager));
+
+        [$deniedContext, $denied] = $this->membership(
+            UseAccess::Direct,
+            MembershipStatus::Active,
+            ManagementRole::Member,
+            AdditionalPermissions::fromValues(AdditionalPermissions::COLLECTIONS_MANAGE)
+        );
+        self::assertFalse($policy->canManageCollections($deniedContext, $denied));
+    }
+
     public function testPolicyRejectsAssignmentFromAnotherLibrary(): void
     {
         $userId = new UserId("user-1");

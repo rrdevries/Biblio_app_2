@@ -10,6 +10,7 @@ final readonly class LibraryCapabilities
         private bool $viewCollection,
         private bool $addCatalogItem,
         private bool $manageCatalogItems,
+        private bool $manageCollections,
         private bool $modifyCatalogContext,
         private bool $manageClassificationTerms,
         private bool $publishContribution,
@@ -22,6 +23,7 @@ final readonly class LibraryCapabilities
     public function canViewCollection(): bool { return $this->viewCollection; }
     public function canAddCatalogItem(): bool { return $this->addCatalogItem; }
     public function canManageCatalogItems(): bool { return $this->manageCatalogItems; }
+    public function canManageCollections(): bool { return $this->manageCollections; }
     public function canModifyCatalogContext(): bool { return $this->modifyCatalogContext; }
     public function canManageClassificationTerms(): bool { return $this->manageClassificationTerms; }
     public function canPublishContribution(): bool { return $this->publishContribution; }
