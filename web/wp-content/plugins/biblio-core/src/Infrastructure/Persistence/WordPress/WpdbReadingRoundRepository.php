@@ -13,6 +13,7 @@ use Biblio\Core\Exception\TransactionException;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Persistence\PersistenceException;
 use Biblio\Core\Reading\ActiveReadingRoundAlreadyExists;
+use Biblio\Core\Reading\PersonalWorkReadingStatusSource;
 use Biblio\Core\Reading\ReadingDate;
 use Biblio\Core\Reading\ReadingPeriod;
 use Biblio\Core\Reading\ReadingRound;
@@ -30,7 +31,8 @@ use Throwable;
 use wpdb;
 
 final readonly class WpdbReadingRoundRepository implements
-    WritableReadingRoundRepository
+    WritableReadingRoundRepository,
+    PersonalWorkReadingStatusSource
 {
     private const DATABASE_DATE_FORMAT = "Y-m-d H:i:s.u";
     private WpdbTransactionConnection $transactionConnection;
@@ -291,6 +293,31 @@ final readonly class WpdbReadingRoundRepository implements
         ));
 
         return array_map($this->hydrate(...), $rows);
+    }
+
+    public function findAllForUserAndWorks(UserId $userId, array $workIds): array
+    {
+        $result = [];
+        foreach ($workIds as $workId) {
+            $result[$workId->value()] = [];
+        }
+        if ($workIds === []) {
+            return $result;
+        }
+
+        $table = $this->tableNames->readingRounds();
+        $placeholders = implode(',', array_fill(0, count($workIds), '%s'));
+        $rows = $this->database->get_results($this->database->prepare(
+            "SELECT {$this->selectColumns()} FROM `{$table}` "
+                . "WHERE user_id=%s AND work_id IN ({$placeholders}) "
+                . "ORDER BY work_id,reading_round_id",
+            $userId->value(),
+            ...array_map(static fn (WorkId $id): string => $id->value(), $workIds)
+        ));
+        foreach ($rows as $row) {
+            $result[(string) $row->work_id][] = $this->hydrate($row);
+        }
+        return $result;
     }
 
     private function findOne(

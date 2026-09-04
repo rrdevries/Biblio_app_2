@@ -21,6 +21,7 @@ use Biblio\Core\Application\Catalog\Classification\ManageLibraryBookTypesService
 use Biblio\Core\Application\Catalog\Classification\ManageLibraryGenresService;
 use Biblio\Core\Application\Catalog\Classification\ManageLibrarySubjectsService;
 use Biblio\Core\Application\Catalog\Classification\SaveLibraryCatalogContextService;
+use Biblio\Core\Application\Catalog\Classification\Read\LibraryClassificationQueryService;
 use Biblio\Core\Application\Collections\ManageLibraryCollectionsService;
 use Biblio\Core\Application\Collections\Read\LibraryCollectionQueryService;
 use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
@@ -70,6 +71,7 @@ final readonly class CoreApplication
         private LibraryItemLocationQueryService $libraryItemLocations,
         private LibraryItemArchiveQueryService $libraryItemArchives,
         private LibraryCollectionQueryService $libraryCollections,
+        private LibraryClassificationQueryService $libraryClassifications,
         private AddLibraryItemService $libraryItemCreation,
         private ManageLibraryItemArchiveService $libraryItemArchiveManagement,
         private ManageLibraryCollectionsService $libraryCollectionManagement,
@@ -185,6 +187,11 @@ final readonly class CoreApplication
     public function libraryCollections(): LibraryCollectionQueryService
     {
         return $this->libraryCollections;
+    }
+
+    public function libraryClassifications(): LibraryClassificationQueryService
+    {
+        return $this->libraryClassifications;
     }
 
     public function libraryCollectionManagement(): ManageLibraryCollectionsService

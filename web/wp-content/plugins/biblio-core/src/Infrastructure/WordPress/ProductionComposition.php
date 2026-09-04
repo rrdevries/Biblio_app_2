@@ -19,6 +19,7 @@ use Biblio\Core\Application\Catalog\Read\LibraryItemLocationQueryService;
 use Biblio\Core\Application\Catalog\Read\LibraryItemArchiveQueryService;
 use Biblio\Core\Application\Catalog\Classification\ClassificationTermActivity;
 use Biblio\Core\Application\Catalog\Classification\CreateLibraryCatalogContextService;
+use Biblio\Core\Application\Catalog\Classification\Read\LibraryClassificationQueryService;
 use Biblio\Core\Application\Catalog\Classification\LibraryCatalogContextActivity;
 use Biblio\Core\Application\Catalog\Classification\LibraryCatalogContextInitializer;
 use Biblio\Core\Application\Catalog\Classification\LibraryCatalogSelectionResolver;
@@ -72,6 +73,7 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbEditionRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbActivityEventAppender;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryBookTypeRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryCatalogContextRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryClassificationReadRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryGenreRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMutationLock;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibrarySubjectRepository;
@@ -253,6 +255,10 @@ final class ProductionComposition
         $libraryCollections = new LibraryCollectionQueryService(
             $libraryContexts,
             $collectionRepository
+        );
+        $libraryClassifications = new LibraryClassificationQueryService(
+            $libraryContexts,
+            new WpdbLibraryClassificationReadRepository($database, $tableNames)
         );
         $activityFactory = new WordPressActivityEventFactory(
             new ActivityEventSource("core.classification")
@@ -615,6 +621,7 @@ final class ProductionComposition
             $libraryItemLocations,
             $libraryItemArchives,
             $libraryCollections,
+            $libraryClassifications,
             $libraryItemCreation,
             $libraryItemArchiveManagement,
             $libraryCollectionManagement,

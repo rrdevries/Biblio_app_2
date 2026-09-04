@@ -12,6 +12,7 @@ use Biblio\Core\Application\Catalog\Classification\ManageLibraryBookTypesService
 use Biblio\Core\Application\Catalog\Classification\ManageLibraryGenresService;
 use Biblio\Core\Application\Catalog\Classification\ManageLibrarySubjectsService;
 use Biblio\Core\Application\Catalog\Classification\SaveLibraryCatalogContextService;
+use Biblio\Core\Application\Catalog\Classification\Read\LibraryClassificationQueryService;
 use Biblio\Core\Application\CoreApplication;
 use Biblio\Core\Application\Collections\ManageLibraryCollectionsService;
 use Biblio\Core\Application\Collections\Read\LibraryCollectionQueryService;
@@ -81,6 +82,10 @@ final class ProductionApplicationBoundaryTest extends TestCase
             [LibraryCollectionQueryService::class, "activeItemsForCollections"],
             [LibraryCollectionQueryService::class, "activeCounts"],
             [LibraryCollectionQueryService::class, "previousCollectionsForArchivedItems"],
+            [LibraryClassificationQueryService::class, "activeBookTypes"],
+            [LibraryClassificationQueryService::class, "activeGenres"],
+            [LibraryClassificationQueryService::class, "activeSubjects"],
+            [LibraryClassificationQueryService::class, "classificationsForWorks"],
             [ManageLibraryCollectionsService::class, "create"],
             [ManageLibraryCollectionsService::class, "update"],
             [ManageLibraryCollectionsService::class, "archive"],
@@ -149,6 +154,7 @@ final class ProductionApplicationBoundaryTest extends TestCase
             "genreManagement",
             "historicalReadingRoundDeletion",
             "historicalReadingRounds",
+            "libraryClassifications",
             "libraryCollectionManagement",
             "libraryCollections",
             "libraryContexts",
