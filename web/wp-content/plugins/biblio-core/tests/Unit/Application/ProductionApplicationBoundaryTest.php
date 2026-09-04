@@ -134,6 +134,8 @@ final class ProductionApplicationBoundaryTest extends TestCase
             "historicalReadingRoundDeletion",
             "historicalReadingRounds",
             "libraryContexts",
+            "libraryItemArchiveManagement",
+            "libraryItemArchives",
             "libraryItemCreation",
             "libraryItemLocations",
             "libraryItemMetadata",

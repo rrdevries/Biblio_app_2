@@ -43,6 +43,13 @@ final class ItemAccessInMemoryItemRepository implements ItemRepository
 
         return $item;
     }
+
+    public function findManyInLibrary(LibraryId $libraryId, array $itemIds): array
+    {
+        $result = [];
+        foreach ($itemIds as $itemId) { $result[$itemId->value()] = $this->findInLibrary($itemId, $libraryId); }
+        return $result;
+    }
 }
 
 final class ItemAccessInMemoryMembershipRepository implements
@@ -133,6 +140,28 @@ final class GetAccessibleLibraryItemServiceTest extends TestCase
         self::assertNull($service->get($libraryB, $item->id()));
     }
 
+    public function testArchivedItemIsNotAnAvailableCurrentSource(): void
+    {
+        [$service, $actor, $items, $memberships] = $this->fixture();
+        $libraryId = new LibraryId("library-a");
+        $user = new UserId("direct-user");
+        $item = Item::active(
+            new ItemId("item-a"),
+            $libraryId,
+            new EditionId("edition-e")
+        )->archive();
+        $items->add($item);
+        $memberships->add($this->membership(
+            $libraryId,
+            $user,
+            ManagementRole::Member,
+            UseAccess::Direct
+        ));
+        $actor->authenticateAs($user);
+
+        self::assertNull($service->get($libraryId, $item->id()));
+    }
+
     public function testActorCannotUseAnotherUsersMembership(): void
     {
         [$service, $actor, $items, $memberships] = $this->fixture();
@@ -186,6 +215,11 @@ final class GetAccessibleLibraryItemServiceTest extends TestCase
                 LibraryId $libraryId
             ): ?Item {
                 return $this->item;
+            }
+
+            public function findManyInLibrary(LibraryId $libraryId, array $itemIds): array
+            {
+                return array_fill_keys(array_map(static fn (ItemId $id): string => $id->value(), $itemIds), $this->item);
             }
         };
         $service = new GetAccessibleLibraryItemService(

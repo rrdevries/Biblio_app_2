@@ -30,7 +30,7 @@ final class Schema1010SearchMetadataTest extends PersistenceIntegrationTestCase
 
         $this->migrator()->migrate();
 
-        self::assertSame(1011, $this->migrator()->installedVersion());
+        self::assertSame(1012, $this->migrator()->installedVersion());
         self::assertSame("Preserved", $this->database->get_var("SELECT work_title FROM `{$this->tableNames->works()}` WHERE work_id='preserved-work'"));
         self::assertNull($this->database->get_var("SELECT isbn_10 FROM `{$this->tableNames->editions()}` WHERE edition_id='preserved-edition'"));
         self::assertSame("0", (string) $this->database->get_var("SELECT explicitly_no_isbn FROM `{$this->tableNames->editions()}` WHERE edition_id='preserved-edition'"));
@@ -66,7 +66,7 @@ final class Schema1010SearchMetadataTest extends PersistenceIntegrationTestCase
 
         $this->database->query("ALTER TABLE `{$this->tableNames->editions()}` DROP COLUMN isbn_10");
         $this->migrator()->migrate();
-        self::assertSame(1011, $this->migrator()->installedVersion());
+        self::assertSame(1012, $this->migrator()->installedVersion());
     }
 
     private function migrator(): CoreSchemaMigrator

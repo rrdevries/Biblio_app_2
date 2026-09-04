@@ -61,6 +61,7 @@ abstract class PersistenceIntegrationTestCase extends TestCase
         $nextReadingUndo = $this->tableNames->nextReadingUndo();
         $externalLoans = $this->tableNames->externalLoans();
         $items = $this->tableNames->items();
+        $itemArchivePeriods = $this->tableNames->itemArchivePeriods();
         $locations = $this->tableNames->locations();
         $editions = $this->tableNames->editions();
         $works = $this->tableNames->works();
@@ -107,6 +108,9 @@ abstract class PersistenceIntegrationTestCase extends TestCase
         }
         $this->database->query("DELETE FROM `{$readingRounds}`");
         $this->database->query("DELETE FROM `{$externalLoans}`");
+        if ($this->tableExists($itemArchivePeriods)) {
+            $this->database->query("DELETE FROM `{$itemArchivePeriods}`");
+        }
         $this->database->query("DELETE FROM `{$items}`");
         if ($this->tableExists($locations)) {
             $this->database->query("DELETE FROM `{$locations}`");

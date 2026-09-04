@@ -16,7 +16,8 @@ final readonly class Item
         private EditionId $editionId,
         private ItemStatus $status,
         ?InventoryNumber $inventoryNumber = null,
-        private ?LocationId $locationId = null
+        private ?LocationId $locationId = null,
+        private ItemVersion $version = new ItemVersion(1)
     ) {
         $this->inventoryNumber = $inventoryNumber;
     }
@@ -66,5 +67,44 @@ final readonly class Item
     public function locationId(): ?LocationId
     {
         return $this->locationId;
+    }
+
+    public function version(): ItemVersion
+    {
+        return $this->version;
+    }
+
+    public function archive(): self
+    {
+        if ($this->status !== ItemStatus::Active) {
+            throw new ItemArchiveTransitionUnavailable();
+        }
+
+        return new self(
+            $this->id,
+            $this->libraryId,
+            $this->editionId,
+            ItemStatus::Archived,
+            $this->inventoryNumber,
+            $this->locationId,
+            $this->version->next()
+        );
+    }
+
+    public function restore(): self
+    {
+        if ($this->status !== ItemStatus::Archived) {
+            throw new ItemArchiveTransitionUnavailable();
+        }
+
+        return new self(
+            $this->id,
+            $this->libraryId,
+            $this->editionId,
+            ItemStatus::Active,
+            $this->inventoryNumber,
+            $this->locationId,
+            $this->version->next()
+        );
     }
 }
