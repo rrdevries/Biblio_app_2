@@ -148,6 +148,15 @@ remains ownership-neutral. Inventory-number reads require authorized Library
 Context and remain scoped to the requested Library. This foundation adds no
 Search, filter, sort, REST or UI behavior.
 
+Schema `1011` adds the Library Item Location foundation. A Location has a
+stable ID, a lossless validated display name and exactly one owning Library.
+An Item has zero or one current Location. The nullable Item relation is
+protected by a composite Library+Location foreign key, so an Item cannot use a
+Location from another Library. Authorized Library-scoped batch reads cover
+Library→Locations, Items→Location and Locations→Items without an inherent
+N+1 contract. Equal display names do not merge. No archive lifecycle,
+Location management flow, Search/filter query, REST or UI was added.
+
 ## Reading
 
 A new active ReadingRound always has:
@@ -1563,15 +1572,23 @@ Taal, Uitgever, Uitleenstatus, Conditie and `In bibliotheek sinds` remain in the
 broader v2.001 design as **deferred within v2.001**; they are not removed or
 future-version-only. No product decision remains for the first wave.
 
-Technical implementation remains blocked. Schema 1008 has no central
-Author/Co-auteur or Series relationship foundation and also lacks required
-alternative/contained-title, ISBN, inventory, Location, archive and Collection
-sources. Existing Leesstatus and LibraryCatalogContext classification data can
-be reused, but need query integration. Document 33 records the dependency
-matrix, splits the former broad prerequisite phase and identifies the central
-Author/Series relationship foundation as the next technical slice.
+Technical implementation remains blocked. Schemas 1009–1011 now provide the
+central Author/Series, remaining Search-metadata and Item Location foundations.
+Archive lifecycle and Collection sources are still absent. Existing
+Leesstatus and LibraryCatalogContext classification data can be reused, but
+need query integration. Document 33 records the remaining dependency slices.
 
-No Core, REST, UI, schema, Elementor or runtime behavior changed. The existing
-disabled controls and current active title-ordered cursor overview remain
-authoritative until a separately approved implementation scope closes the
-documented product and data prerequisites.
+The completed technical foundations do not enable REST, UI, Elementor or new
+catalog-query behavior. The existing disabled controls and current active
+title-ordered cursor overview remain authoritative until a separately approved
+implementation scope closes the documented product and data prerequisites.
+
+### Library Item Location foundation
+
+Status: **GO / CLOSED**
+
+Schema `1011` provides Library-owned typed Locations, an optional tenant-safe
+Item relation and authorized batch reads. No canonical free-text Location
+source existed, so existing Items remain losslessly unlocated. The evidence is
+recorded in `docs/36-library-item-location-foundation-exit-evidence.md`.
+Archive lifecycle is the expected next technical prerequisite.

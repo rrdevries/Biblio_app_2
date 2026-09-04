@@ -1889,3 +1889,25 @@ Final gate evidence: Core unit 274/274 with 1,050 assertions; MariaDB
 integration 270/270 with 3,079 assertions; complete syntax/PHPStan, Composer,
 WordPress smoke, manifest and whitespace checks passed. The full Core gate
 completed in 108 seconds.
+
+## 60. Library Item Location foundation
+
+Schema `1011` is accepted when:
+
+- Location identity, Library ownership and UTF-8 display name round-trip
+  losslessly; empty, invalid and overlong names fail before persistence;
+- an Item supports zero or one Location and assignment can be replaced or
+  cleared without duplicate membership state;
+- composite Library+Location referential integrity rejects dangling and
+  cross-Library relations;
+- listing and both batch directions are explicitly Library-scoped,
+  duplicate-free and execute without a query-per-Item contract;
+- every application read authorizes Library Context before repository access;
+- migration 1010→1011 preserves existing Items with `NULL` Location, is
+  retryable after completion, rejects unknown partial state before version
+  bump and passes fresh-install/current health;
+- no Archive, Collections, Search/filter query, REST, frontend or management
+  UI behavior is introduced.
+
+Evidence is recorded in
+`docs/36-library-item-location-foundation-exit-evidence.md`.

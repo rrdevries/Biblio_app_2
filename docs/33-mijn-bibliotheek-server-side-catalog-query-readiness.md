@@ -2,33 +2,35 @@
 
 Status: **PRODUCT GO / TECHNICAL BLOCKED — first-wave prerequisite analysis**.
 
-Date: 2026-09-03.
+Date: 2026-09-04.
 
 ## 1. Context, scope and verdict
 
 This document reconciles the final approved product decisions for server-side
 Search, Filters, Sort and query-bound keyset pagination in `Mijn Bibliotheek`.
-The original reconciliation was documentation-only. Schemas 1009 and 1010 now
-close the Author/Series and remaining Search-metadata prerequisites, while the
-current disabled controls and active-only title-ordered runtime remain
-unchanged until separately approved implementation.
+The original reconciliation was documentation-only. Schemas 1009–1011 now
+close the Author/Series, remaining Search-metadata and Location prerequisites,
+while the current disabled controls and active-only title-ordered runtime
+remain unchanged until separately approved implementation.
 
 **Product readiness: GO.** The first implementation wave is fixed as
 Leesstatus, Auteur, Serie, Locatie, Boeksoort, Genre, Onderwerp, Collecties and
 `Zonder collectie`. No product decision remains for this wave.
 
-**Technical implementation readiness: BLOCKED.** Schemas 1009 and 1010 provide
-the central Author/Series and remaining Search-metadata foundations. The
-current schema and read model still lack required first-wave Location, archive
-and Collection sources. Existing reading, classification and bibliographic
-sources also need query integration. These are technical prerequisites, not
-product questions.
+**Technical implementation readiness: BLOCKED.** Schemas 1009–1011 provide
+the central Author/Series, remaining Search-metadata and Item Location
+foundations. The current schema and read model still lack required first-wave
+archive and Collection sources. Existing reading, classification and
+bibliographic sources also need query integration. These are technical
+prerequisites, not product questions.
 
 The first technical prerequisite, the central Author/Series relationship
 foundation, is closed in
 `docs/34-author-series-relationship-foundation-exit-evidence.md`. The second,
 the remaining Search-metadata foundation, is closed in
 `docs/35-remaining-search-metadata-foundation-exit-evidence.md`. The complete
+Location foundation is closed in
+`docs/36-library-item-location-foundation-exit-evidence.md`. The complete
 query feature cannot receive implementation GO until all remaining applicable
 prerequisite slices are closed.
 
@@ -246,8 +248,8 @@ Current limitations:
 - the repository supports only active title-ordered Items;
 - REST has no strict full query allowlist or typed filter/sort parser;
 - UI controls are disabled and route state contains only Library/Item IDs;
-- schema 1010 has the remaining Search-metadata sources but still lacks
-  Location, archive lifecycle and Collection sources plus query composition.
+- schema 1011 has the Search-metadata and Location sources but still lacks
+  archive lifecycle and Collection sources plus query composition.
 
 Required additions retain existing boundaries: Core owns query meaning,
 Library Context, authorization and actor-private reading status; REST parses
@@ -276,7 +278,7 @@ operators, URL behavior, sort availability or archive composition.
 
 ## 11. Technical dependency matrix
 
-Evidence is schema 1010, the current domain types and repositories, and the
+Evidence is schema 1011, the current domain types and repositories, and the
 active `WpdbCatalogUiReadRepository` projection.
 
 | Feature | Required source/model | Exists now? | Gap/class | Required before query implementation? |
@@ -290,7 +292,7 @@ active `WpdbCatalogUiReadRepository` projection.
 | Search: omnibus metadata | ordered acyclic Work containment relationship | Yes | **A — ALREADY EXISTS**; Item-preserving query integration still to add | Yes; reusable now |
 | Filter: Leesstatus | actor-owned ReadingRounds and derived Work status | Yes | **A — ALREADY EXISTS**; query predicate still to add | Yes; no new persistence |
 | Filters: Boeksoort/Genre/Onderwerp | LibraryCatalogContext and typed Library terms/links | Yes | **B — EXISTS BUT READ MODEL MISSING** | Yes |
-| Filter: Locatie | Library Item Location source | No | **D — DOMAIN FOUNDATION MISSING** | Yes |
+| Filter: Locatie | Library Item Location source | Yes | **A — ALREADY EXISTS**; authorized query integration still to add | Yes; reusable now |
 | Filters: Collecties/`Zonder collectie` | Library-owned Collection and Item membership | No | **D — DOMAIN FOUNDATION MISSING** | Yes |
 | Sort: Titel A–Z | Work title plus Item-ID tie-breaker | Yes | **A — ALREADY EXISTS** | Yes; reusable now |
 | Archive/query context | Item active/archive lifecycle state | No; enum/schema allow active only | **D — DOMAIN FOUNDATION MISSING** | Yes |
@@ -349,12 +351,23 @@ Collections, each with different ownership and migration invariants.
   expose exact Item-preserving omnibus matches without virtual Items.
 - **Outside scope:** query execution, filters, REST/UI and deferred metadata.
 
-### Slice 3 — Item Location and archive lifecycle foundation
+### Slice 3A — Item Location foundation
+
+- **Severity:** Medium.
+- **Status:** **GO / CLOSED** in schema 1011; see doc 36.
+- **Dependency:** current Item/Library ownership model.
+- **Scope:** Library-scoped Location and optional tenant-safe Item relation.
+- **Schema impact:** forward schema-1011 migration and Library/location indexes.
+- **Exit condition:** typed lossless persistence, batch reads, authorization,
+  migration health and cross-Library rejection are proven.
+- **Outside scope:** Archive, query execution, REST/UI and Location management.
+
+### Slice 3B — Archive lifecycle foundation
 
 - **Severity:** High.
 - **Dependency:** current Item/Library ownership model.
-- **Scope:** Library-scoped Location and active/archive Item lifecycle required
-  by first-wave filtering and mixed archive results.
+- **Scope:** active/archive Item lifecycle required by first-wave filtering and
+  mixed archive results.
 - **Schema impact:** forward migration(s), lifecycle constraints and
   Library/status/location indexes.
 - **Exit condition:** transitions preserve history, authorization and tenant
@@ -540,7 +553,7 @@ were performed.
 | Architecture/security readiness | **READY WITH CONDITIONS** |
 
 Further implementation may proceed only through separately approved technical
-slices. After completed Slices 1 and 2, the expected next prerequisite is Slice
-3, Item Location and Archive Lifecycle Foundation. The completed foundations
+slices. After completed Slices 1, 2 and 3A, the expected next prerequisite is
+Slice 3B, Archive Lifecycle Foundation. The completed foundations
 add no REST, frontend, Search/filter/sort query behavior or runtime fixture
 data.

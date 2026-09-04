@@ -25,6 +25,8 @@ final class CoreTableNamesTest extends TestCase
         self::assertCount(26, $tableNames->schema1009());
         self::assertCount(2, $tableNames->schema1010Additions());
         self::assertCount(28, $tableNames->schema1010());
+        self::assertCount(1, $tableNames->schema1011Additions());
+        self::assertCount(29, $tableNames->schema1011());
         self::assertSame("wp_biblio_libraries", $tableNames->libraries());
         self::assertSame(
             "wp_biblio_reading_rounds",
@@ -53,6 +55,7 @@ final class CoreTableNamesTest extends TestCase
         self::assertSame("wp_biblio_work_contributors", $tableNames->workContributors());
         self::assertSame("wp_biblio_series", $tableNames->series());
         self::assertSame("wp_biblio_work_series", $tableNames->workSeries());
+        self::assertSame("wp_biblio_locations", $tableNames->locations());
     }
 
     public function testUnsafePrefixIsRejected(): void
