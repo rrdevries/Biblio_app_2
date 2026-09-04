@@ -936,3 +936,39 @@ InternalLoan cannot presently be represented and the ordinary archive guard is
 vacuously true. The future lending slice must integrate its active-loan check
 and the canonical settlement-before-archive routes without changing this Item
 identity/history contract.
+
+## 25. Library Collection and membership foundation
+
+`LibraryCollection` is a Library-owned aggregate with stable `CollectionId`,
+display and normalized names, optional description, active/archived status,
+manual Library order, optimistic version and microsecond UTC creation/update
+instants. `ManageLibraryCollectionsService` is the transaction owner for
+create, detail update, archive/restore, Collection reorder and atomic ordered
+membership drafts. It resolves the authenticated actor and applies
+`canManageCollections` before resource access; Owner is implicit and a Manager
+requires the existing canonical `collections` permission.
+
+`CollectionMembership` is a separately identified membership period. It holds
+the shared `library_id`, Collection and Item identities, active/inactive state,
+manual Item position, creation time and optional end time/reason. A removed
+membership and an Item-archive-ended membership remain distinguishable.
+Collection archive does not mutate memberships or Items. Item archive invokes
+the narrow `CollectionMembershipArchivePort` in the existing Item archive
+transaction, preserving history without broadening the Item aggregate; restore
+does not call that port and cannot reactivate membership.
+
+Schema 1013 adds `biblio_collections` and
+`biblio_collection_memberships`. Composite foreign keys through `library_id`
+make dangling and cross-Library relations impossible. Generated nullable keys
+enforce unique active normalized Collection names per Library and at most one
+active membership per Collection+Item while permitting historical periods.
+Checks protect lifecycle pairing, supported states/reasons, positive order and
+version, and timestamp order. Tenant/status/order, Item lookup and historical
+lookup indexes support deterministic batch reads without a query per Item.
+
+`LibraryCollectionQueryService` authorizes Library Context before exposing
+active Collection order, batch Collection identity/context, active Collections
+per Item, active Items per Collection, active counts and previous membership
+context for currently archived Items. Active joins require active Collection,
+membership and Item state. No query-composition, REST or presentation behavior
+is part of this boundary.

@@ -8,21 +8,21 @@ Date: 2026-09-04.
 
 This document reconciles the final approved product decisions for server-side
 Search, Filters, Sort and query-bound keyset pagination in `Mijn Bibliotheek`.
-The original reconciliation was documentation-only. Schemas 1009–1012 now
-close the Author/Series, remaining Search-metadata, Location and Archive prerequisites,
-while the current disabled controls and active-only title-ordered runtime
-remain unchanged until separately approved implementation.
+The original reconciliation was documentation-only. Schemas 1009–1013 now
+close the Author/Series, remaining Search-metadata, Location, Archive and
+Collection prerequisites, while the current disabled controls and active-only
+title-ordered runtime remain unchanged until separately approved implementation.
 
 **Product readiness: GO.** The first implementation wave is fixed as
 Leesstatus, Auteur, Serie, Locatie, Boeksoort, Genre, Onderwerp, Collecties and
 `Zonder collectie`. No product decision remains for this wave.
 
-**Technical implementation readiness: BLOCKED.** Schemas 1009–1012 provide
-the central Author/Series, remaining Search-metadata, Item Location and Archive
-foundations. The current schema and read model still lack required first-wave
-Collection sources. Existing reading, classification and
-bibliographic sources also need query integration. These are technical
-prerequisites, not product questions.
+**Technical implementation readiness: BLOCKED.** Schemas 1009–1013 provide
+the central Author/Series, remaining Search-metadata, Item Location, Archive and
+Collection/membership foundations. Existing reading, classification,
+bibliographic and Collection sources still need the approved read/predicate and
+query integration layers. These are technical prerequisites, not product
+questions.
 
 The first technical prerequisite, the central Author/Series relationship
 foundation, is closed in
@@ -32,8 +32,10 @@ the remaining Search-metadata foundation, is closed in
 Location foundation is closed in
 `docs/36-library-item-location-foundation-exit-evidence.md`. The complete
 Archive lifecycle foundation is closed in
-`docs/37-library-item-archive-lifecycle-foundation-exit-evidence.md`. The complete
-query feature cannot receive implementation GO until all remaining applicable
+`docs/37-library-item-archive-lifecycle-foundation-exit-evidence.md`, and the
+complete Collection/membership foundation is closed in
+`docs/38-library-collection-membership-foundation-exit-evidence.md`. The query
+feature cannot receive implementation GO until all remaining applicable
 prerequisite slices are closed.
 
 ## 2. Sources and authority
@@ -250,8 +252,8 @@ Current limitations:
 - the repository supports only active title-ordered Items;
 - REST has no strict full query allowlist or typed filter/sort parser;
 - UI controls are disabled and route state contains only Library/Item IDs;
-- schema 1012 has the Search-metadata, Location and Archive sources but still
-  lacks Collection sources plus query composition.
+- schema 1013 has the Search-metadata, Location, Archive and Collection sources
+  but still lacks existing-source predicate integration and query composition.
 
 Required additions retain existing boundaries: Core owns query meaning,
 Library Context, authorization and actor-private reading status; REST parses
@@ -380,6 +382,7 @@ Collections, each with different ownership and migration invariants.
 ### Slice 4 — Collection and membership foundation
 
 - **Severity:** High.
+- **Status:** **GO / CLOSED** in schema 1013; see doc 38.
 - **Dependency:** Item lifecycle and existing Library authorization.
 - **Scope:** active/archived Library-owned Collections and duplicate-free
   same-Library active-Item memberships required for Collecties and
@@ -505,7 +508,7 @@ deferred v2.001 metadata, automatic merge and external Series completeness.
 
 **Completed next slice:** Remaining Search Metadata Foundation; see doc 35.
 
-**Current expected next slice:** Collection and membership foundation.
+**Current expected next slice:** existing-source filter/read foundation.
 
 ## 15. Review
 
@@ -555,7 +558,7 @@ were performed.
 | Architecture/security readiness | **READY WITH CONDITIONS** |
 
 Further implementation may proceed only through separately approved technical
-slices. After completed Slices 1, 2, 3A and 3B, the expected next prerequisite
-is Slice 4, Collection and membership foundation. The completed foundations
+slices. After completed Slices 1, 2, 3A, 3B and 4, the expected next prerequisite
+is Slice 5, existing-source filter/read foundation. The completed foundations
 add no REST, frontend, Search/filter/sort query behavior or runtime fixture
 data.

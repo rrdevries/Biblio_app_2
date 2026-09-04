@@ -26,6 +26,8 @@ use Biblio\Core\Application\Catalog\Classification\ManageLibraryBookTypesService
 use Biblio\Core\Application\Catalog\Classification\ManageLibraryGenresService;
 use Biblio\Core\Application\Catalog\Classification\ManageLibrarySubjectsService;
 use Biblio\Core\Application\Catalog\Classification\SaveLibraryCatalogContextService;
+use Biblio\Core\Application\Collections\ManageLibraryCollectionsService;
+use Biblio\Core\Application\Collections\Read\LibraryCollectionQueryService;
 use Biblio\Core\Application\CoreApplication;
 use Biblio\Core\Application\Library\CreateLibraryService;
 use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
@@ -64,6 +66,7 @@ use Biblio\Core\Application\Reading\StopReadingRoundService;
 use Biblio\Core\Authorization\LibraryAuthorizationPolicy;
 use Biblio\Core\Audit\ActivityEventSource;
 use Biblio\Core\Catalog\Classification\ClassificationNameNormalizer;
+use Biblio\Core\Collections\CollectionNameNormalizer;
 use Biblio\Core\Infrastructure\Persistence\WordPress\CoreTableNames;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbEditionRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbActivityEventAppender;
@@ -77,6 +80,7 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbClassificationSeedEvolu
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbExternalLoanRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbItemRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbItemArchiveRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbCollectionRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLocationRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMembershipRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbActorLibraryContextRepository;
@@ -144,6 +148,7 @@ final class ProductionComposition
         $editionRepository = new WpdbEditionRepository($database, $tableNames);
         $itemRepository = new WpdbItemRepository($database, $tableNames);
         $itemArchiveRepository = new WpdbItemArchiveRepository($database, $tableNames);
+        $collectionRepository = new WpdbCollectionRepository($database, $tableNames);
         $locationRepository = new WpdbLocationRepository($database, $tableNames);
         $bibliographicMetadataRepository =
             new WpdbBibliographicMetadataRepository($database, $tableNames);
@@ -245,6 +250,10 @@ final class ProductionComposition
             $itemRepository,
             $itemArchiveRepository
         );
+        $libraryCollections = new LibraryCollectionQueryService(
+            $libraryContexts,
+            $collectionRepository
+        );
         $activityFactory = new WordPressActivityEventFactory(
             new ActivityEventSource("core.classification")
         );
@@ -282,9 +291,22 @@ final class ProductionComposition
             $authenticatedUser,
             $libraryAccess,
             $itemArchiveRepository,
+            $collectionRepository,
             new SystemItemArchiveClock(),
             $itemArchiveActivity,
             $activityEvents,
+            $transactionManager
+        );
+        $libraryCollectionManagement = new ManageLibraryCollectionsService(
+            $authenticatedUser,
+            $libraryAccess,
+            $itemRepository,
+            $collectionRepository,
+            $libraryMutationLock,
+            new CollectionNameNormalizer(),
+            new OpaqueCollectionIdGenerator(),
+            new OpaqueCollectionMembershipIdGenerator(),
+            new SystemCollectionClock(),
             $transactionManager
         );
         $termActivity = new ClassificationTermActivity($activityFactory);
@@ -592,8 +614,10 @@ final class ProductionComposition
             $libraryItemMetadata,
             $libraryItemLocations,
             $libraryItemArchives,
+            $libraryCollections,
             $libraryItemCreation,
             $libraryItemArchiveManagement,
+            $libraryCollectionManagement,
             $accessibleItems,
             $ownedExternalLoans,
             $ownedReadingRounds,

@@ -125,7 +125,7 @@ final class Schema1008NextReadingContractCorrectionTest extends PersistenceInteg
 
         $this->migrator()->migrate();
 
-        self::assertSame(1012, $this->migrator()->installedVersion());
+        self::assertSame(1013, $this->migrator()->installedVersion());
         $rows = $this->database->get_results(
             "SELECT entry_id,work_id,preferred_source_type,preferred_source_id_snapshot,"
             . "preferred_source_library_id_snapshot,item_id,external_loan_id,position,created_at "

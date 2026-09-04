@@ -38,6 +38,17 @@ final class LibraryAuthorizationPolicy
             ], true);
     }
 
+    public function canManageCollections(
+        LibraryContext $context,
+        LibraryMembershipAssignment $assignment
+    ): bool {
+        return $this->canUseManagementPermission(
+            $context,
+            $assignment,
+            AdditionalPermissions::COLLECTIONS_MANAGE
+        );
+    }
+
     public function canInitializeCatalogContextDuringItemAdd(
         LibraryContext $context,
         LibraryMembershipAssignment $assignment

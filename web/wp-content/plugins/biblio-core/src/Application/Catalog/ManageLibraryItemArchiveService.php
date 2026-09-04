@@ -9,6 +9,7 @@ use Biblio\Core\Application\Library\LibraryAccessService;
 use Biblio\Core\Application\TransactionManager;
 use Biblio\Core\Audit\ActivityEventAppender;
 use Biblio\Core\Catalog\{Item,ItemArchiveClock,ItemArchivePeriod,ItemArchiveReason,ItemArchiveStale,ItemArchiveTransitionUnavailable,ItemId,ItemStatus,ItemVersion,WritableItemArchiveRepository};
+use Biblio\Core\Collections\CollectionMembershipArchivePort;
 use Biblio\Core\Library\{LibraryContext,LibraryId};
 
 final readonly class ManageLibraryItemArchiveService
@@ -17,6 +18,7 @@ final readonly class ManageLibraryItemArchiveService
         private AuthenticatedUser $authenticatedUser,
         private LibraryAccessService $libraryAccess,
         private WritableItemArchiveRepository $repository,
+        private CollectionMembershipArchivePort $collectionMemberships,
         private ItemArchiveClock $clock,
         private ItemArchiveActivity $activity,
         private ActivityEventAppender $activityEvents,
@@ -38,8 +40,10 @@ final readonly class ManageLibraryItemArchiveService
             if (!$current->version()->equals($expectedVersion)) { throw new ItemArchiveStale($current); }
 
             $replacement = $current->archive();
-            $period = new ItemArchivePeriod($context->libraryId(), $itemId, $replacement->version(), $reason, $this->clock->now());
+            $archivedAt = $this->clock->now();
+            $period = new ItemArchivePeriod($context->libraryId(), $itemId, $replacement->version(), $reason, $archivedAt);
             if (!$this->repository->saveArchive($replacement, $expectedVersion, $period)) { throw new ItemArchiveStale($current); }
+            $this->collectionMemberships->deactivateForArchivedItem($context->libraryId(), $itemId, $archivedAt);
             $this->activityEvents->append($this->activity->archived($context->userId(), $replacement, $reason));
             return $replacement;
         });

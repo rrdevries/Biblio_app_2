@@ -34,7 +34,7 @@ final class Schema1011LocationTest extends PersistenceIntegrationTestCase
 
         $this->migrator()->migrate();
 
-        self::assertSame(1012, $this->migrator()->installedVersion());
+        self::assertSame(1013, $this->migrator()->installedVersion());
         self::assertNull($this->database->get_var(
             "SELECT location_id FROM `{$this->tableNames->items()}` WHERE item_id='preserved-item'"
         ));
@@ -77,6 +77,8 @@ final class Schema1011LocationTest extends PersistenceIntegrationTestCase
     private function restoreSchema1010(): void
     {
         $items = $this->tableNames->items();
+        $this->database->query("DROP TABLE IF EXISTS `{$this->tableNames->collectionMemberships()}`");
+        $this->database->query("DROP TABLE IF EXISTS `{$this->tableNames->collections()}`");
         $this->database->query("DROP TABLE IF EXISTS `{$this->tableNames->itemArchivePeriods()}`");
         if (in_array("item_version", $this->columns($items), true)) {
             $this->database->query("ALTER TABLE `{$items}` DROP INDEX items_by_library_status_location");

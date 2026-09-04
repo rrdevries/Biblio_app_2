@@ -1948,3 +1948,37 @@ guard is presently vacuous. Its check and settlement routes remain mandatory
 integration work for the separately approved lending foundation. Evidence is
 recorded in
 `docs/37-library-item-archive-lifecycle-foundation-exit-evidence.md`.
+
+## 62. Library Collection and membership foundation
+
+Schema `1013` is accepted when:
+
+- Collection identity, Library ownership, normalized active-name uniqueness,
+  optional description, lifecycle, optimistic version and manual Collection
+  order round-trip losslessly;
+- empty Collections are valid, one active Item may belong to several
+  Collections, and each Collection+Item pair has at most one active membership;
+- membership removal preserves a historical period and later explicit re-add
+  creates a new active period at the bottom rather than restoring old order;
+- composite foreign keys reject dangling and cross-Library Collection/Item
+  relations, while typed application failures do not enumerate foreign data;
+- Owner and a Manager with canonical `collections` permission can manage;
+  members, inactive/missing assignments and foreign resources cannot;
+- Collection archive/restore preserves Item lifecycle and internal membership
+  state, and archived Collections are absent from active options/reads;
+- Item archive ends active memberships with `item_archived` in the same
+  transaction; active reads/counts exclude it, restore leaves membership
+  inactive, and previous context exists only while that Item is archived;
+- Collection timestamps are unaffected by Item archive and other Item-owned
+  metadata, Location, cover or reading-status changes;
+- Library-scoped batch reads cover active Collections, Collection context,
+  membership in both directions, counts and archived-Item previous context;
+- migration 1012→1013 preserves all existing Items, creates empty Collection
+  state, handles completed and known partial retries, rejects unknown partial
+  state before version bump and passes postcondition health;
+- no visible Collection ActivityEvent, REST, frontend, Elementor, Collection
+  UI, complete catalog query, Condition, Acquisition or lending behavior is
+  added.
+
+Evidence is recorded in
+`docs/38-library-collection-membership-foundation-exit-evidence.md`.

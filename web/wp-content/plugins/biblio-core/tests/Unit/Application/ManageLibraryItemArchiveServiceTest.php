@@ -10,15 +10,17 @@ use Biblio\Core\Application\TransactionManager;
 use Biblio\Core\Audit\{ActivityActorSnapshot,ActivityEntityIdentity,ActivityEvent,ActivityEventAppender,ActivityEventFactory,ActivityEventId,ActivityEventKey,ActivityEventSource,ActivityLabel};
 use Biblio\Core\Authorization\LibraryAuthorizationPolicy;
 use Biblio\Core\Catalog\{EditionId,Item,ItemArchiveClock,ItemArchivePeriod,ItemArchiveReason,ItemArchiveStale,ItemArchiveTransitionUnavailable,ItemId,ItemStatus,ItemVersion,WritableItemArchiveRepository};
+use Biblio\Core\Collections\CollectionMembershipArchivePort;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Library\{LibraryId,LibraryMembership,LibraryMembershipAssignment,LibraryMembershipRepository,ManagementRole,MembershipStatus,UseAccess};
 use Biblio\Core\Tests\Support\ControllableAuthenticatedUser;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 
-final class ArchiveApplicationRepository implements WritableItemArchiveRepository
+final class ArchiveApplicationRepository implements WritableItemArchiveRepository, CollectionMembershipArchivePort
 {
     /** @var list<ItemArchivePeriod> */ public array $periods = [];
+    public int $collectionDeactivations = 0;
     public function __construct(public Item $item) {}
     public function findItemForUpdate(ItemId $itemId, LibraryId $libraryId): ?Item
     { return $itemId->equals($this->item->id()) && $libraryId->equals($this->item->libraryId()) ? $this->item : null; }
@@ -30,6 +32,8 @@ final class ArchiveApplicationRepository implements WritableItemArchiveRepositor
     { foreach (array_reverse($this->periods) as $period) { if ($period->isOpen()) { return $period; } } return null; }
     public function periodsForItems(LibraryId $libraryId, array $itemIds): array
     { $result = []; foreach ($itemIds as $id) { $result[$id->value()] = array_values(array_filter($this->periods, fn (ItemArchivePeriod $period): bool => $period->itemId()->equals($id) && $period->libraryId()->equals($libraryId))); } return $result; }
+    public function deactivateForArchivedItem(LibraryId $libraryId, ItemId $itemId, DateTimeImmutable $archivedAt): void
+    { ++$this->collectionDeactivations; }
 }
 
 final class ArchiveApplicationMemberships implements LibraryMembershipRepository
@@ -76,6 +80,7 @@ final class ManageLibraryItemArchiveServiceTest extends TestCase
         self::assertTrue($item->id()->equals($again->id()));
         self::assertSame(4, $again->version()->value());
         self::assertCount(2, $repository->periods);
+        self::assertSame(2, $repository->collectionDeactivations);
         self::assertFalse($repository->periods[0]->isOpen());
         self::assertSame(ItemArchiveReason::Lost, $repository->periods[1]->reason());
         self::assertCount(3, $events->events);
@@ -141,6 +146,7 @@ final class ManageLibraryItemArchiveServiceTest extends TestCase
         $service = new ManageLibraryItemArchiveService(
             new ControllableAuthenticatedUser($userId),
             new LibraryAccessService(new ArchiveApplicationMemberships(new LibraryMembershipAssignment($libraryId, $userId, $membership)), new LibraryAuthorizationPolicy()),
+            $repository,
             $repository,
             new ArchiveApplicationClock(new DateTimeImmutable("2026-09-04 10:11:12.123456+00:00")),
             new ItemArchiveActivity(new ArchiveApplicationEventFactory()),

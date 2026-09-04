@@ -74,6 +74,7 @@ final class LibraryAccessServiceTest extends TestCase
             $service->canModifyLibraryCatalogContext($context)
         );
         self::assertFalse($service->canManageClassificationTerms($context));
+        self::assertFalse($service->canManageCollections($context));
 
         $repository->add($this->assignment(
             $libraryId,

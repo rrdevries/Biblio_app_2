@@ -108,11 +108,13 @@ final class LibraryContextQueryServiceTest extends TestCase
         self::assertTrue($views[0]->isDesignatedPersonal());
         self::assertTrue($views[0]->capabilities()->canViewCollection());
         self::assertTrue($views[0]->capabilities()->canAddCatalogItem());
+        self::assertTrue($views[0]->capabilities()->canManageCollections());
         self::assertTrue($views[0]->capabilities()->canUseItemDirectly());
         self::assertSame("library-member", $views[1]->libraryId()->value());
         self::assertFalse($views[1]->isDesignatedPersonal());
         self::assertTrue($views[1]->capabilities()->canViewCollection());
         self::assertFalse($views[1]->capabilities()->canAddCatalogItem());
+        self::assertFalse($views[1]->capabilities()->canManageCollections());
         self::assertFalse($views[1]->capabilities()->canUseItemDirectly());
     }
 

@@ -1594,12 +1594,12 @@ Taal, Uitgever, Uitleenstatus, Conditie and `In bibliotheek sinds` remain in the
 broader v2.001 design as **deferred within v2.001**; they are not removed or
 future-version-only. No product decision remains for the first wave.
 
-Technical implementation remains blocked. Schemas 1009–1012 now provide the
+Technical implementation remains blocked. Schemas 1009–1013 now provide the
 central Author/Series, remaining Search-metadata and Item Location foundations.
-The Item Archive lifecycle foundation is also complete; Collection sources are
-still absent. Existing
-Leesstatus and LibraryCatalogContext classification data can be reused, but
-need query integration. Document 33 records the remaining dependency slices.
+The Item Archive lifecycle and Collection/membership foundations are also
+complete. Existing Leesstatus and LibraryCatalogContext classification data
+still need a reusable filter/read foundation before combined query composition.
+Document 33 records the remaining dependency slices.
 
 The completed technical foundations do not enable REST, UI, Elementor or new
 catalog-query behavior. The existing disabled controls and current active
@@ -1633,4 +1633,33 @@ InternalLoan persistence and lifecycle do not yet exist. Integrating that guard
 and the special loan-settlement routes remains explicitly deferred to the
 lending foundation; no lending behavior was introduced here. Evidence is in
 `docs/37-library-item-archive-lifecycle-foundation-exit-evidence.md`.
-Collection Foundation is the expected next prerequisite.
+Collection membership history now connects to this archive transition as
+described below.
+
+### Library Collection and membership foundation
+
+Status: **GO / CLOSED**
+
+Schema `1013` adds Library-owned active/archived Collections and historical
+membership periods between Collections and same-Library Items. Collections and
+their Items have explicit manual order. Active normalized names are unique per
+Library; an Item can be active at most once per Collection while a later
+explicit re-add creates a new period.
+
+`ManageLibraryCollectionsService` resolves the actor server-side and requires
+Owner authority or the canonical Beheerder permission `collections`.
+`LibraryCollectionQueryService` validates Library Context before tenant-scoped
+batch reads. Missing, foreign and unauthorized Collection resources share a
+non-enumerating availability failure.
+
+Collection archive preserves membership rows and Item state. Item archive now
+ends every active membership with reason `item_archived` in the same
+transaction; active reads/counts exclude the Item. Item restore never
+reactivates prior membership. Collection timestamps change only through
+Collection/detail/order/content management, not through Item metadata,
+Location, cover, reading status or Item archive.
+
+No REST, frontend, Elementor, Collection UI, catalog-query composition,
+Condition, Acquisition or lending behavior is introduced. Evidence is in
+`docs/38-library-collection-membership-foundation-exit-evidence.md`. The next
+prerequisite is the existing-source filter/read foundation from doc 33.
