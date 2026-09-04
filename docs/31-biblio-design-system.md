@@ -266,8 +266,10 @@ actieve Library Context twee afzonderlijke hoofdbestemmingen:
 - `Mijn Bibliotheek`: de volledige actieve catalogus; functioneel, rustig,
   scanbaar en informatiedichter.
 
-`Home` staat conceptueel naast `Mijn Bibliotheek`, `Collecties`, `Lezen` en
-andere Library-functies. Home is geen volledige catalogus en Mijn Bibliotheek
+`Home` staat conceptueel naast `Mijn Bibliotheek`, `Wat zal ik lezen?`,
+`Collecties`, `Lezen` en andere Library-functies. `Wat zal ik lezen?` krijgt
+binnen iedere Library een zelfstandige duidelijke ingang en is niet alleen een
+Home-widget. Home is geen volledige catalogus en Mijn Bibliotheek
 is geen Home-pagina. Historische mockups waarin deze functies onder één titel
 staan, zijn geen actuele IA.
 

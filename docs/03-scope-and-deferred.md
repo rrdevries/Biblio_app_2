@@ -22,6 +22,8 @@
 - completed historical ReadingRounds without a source when genuinely unknown.
 - Verlanglijst.
 - manual Hierna lezen.
+- private platform-wide `Wat zal ik lezen?` choice aid with rule-based,
+  explainable selection from currently readable Works.
 - Ratings/Reviews/Notes.
 - Reading goals.
 - personal Stats/Jaaroverzicht/Tijdlijn.
@@ -72,8 +74,17 @@
 
 ### Reading planning
 - `Wil ik lezen` broad someday marker;
-- smart Hierna-lezen availability rules;
+- smart Hierna-lezen availability rules, distinct from the v2.001 `Wat zal ik
+  lezen?` feature and without changing the manual Hierna lezen contract;
 - automatic source preference;
+
+### Recommendations beyond the v2.001 choice aid
+- external recommendations for Works the user cannot currently read;
+- external catalog discovery;
+- collaborative/social filtering and popularity based on other users;
+- ML/AI as a requirement, match percentages and black-box ranking;
+- mood taxonomy and complex long-term novelty/exposure modelling;
+- automatic suggestion-driven mutation of source data.
 
 ### Metadata/catalog
 - full institutional cataloguing workflow;

@@ -122,6 +122,12 @@ owner-scoped Undo.
 
 Supersedes `Next to read`.
 
+## Wat zal ik lezen?
+Private platform-wide personal choice aid that selects on Work level from
+sources the current user can actually read. It has three engines: `Voor mij
+gekozen`, `Herontdek` and `Verras me`; `Kies uit…` is their scope/filter layer.
+It is not a smart or automatically managed form of `Hierna lezen`.
+
 ## Geleend
 Mijn Biblio perspective of active/historical loans where the current user is borrower:
 - internal;

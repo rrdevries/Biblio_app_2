@@ -39,6 +39,7 @@ Mijn Biblio contains:
 - Geleend;
 - Verlanglijst;
 - Hierna lezen;
+- Wat zal ik lezen?;
 - Leesdoelen;
 - Statistieken;
 - Jaaroverzicht;
@@ -87,6 +88,7 @@ A v2.001 Library cannot change type.
 - external loans
 - Verlanglijst
 - Hierna lezen
+- personal suggestion results, derived preference profile and suggestion preferences
 - reading goals
 - ratings/reviews
 - notes
@@ -843,6 +845,17 @@ the first entry for the Work without preference; no match is a successful
 no-op. Failed starts consume nothing. Historical/source-free registration never
 consumes. Manual remove offers a short-lived, one-use, owner-scoped Undo of the
 same entry identity and snapshot; automatic consumption offers no Undo.
+
+## Wat zal ik lezen?
+
+`Wat zal ik lezen?` is a private, user-owned, platform-wide choice aid,
+available from Mijn Biblio and within each authorized Library context. It is
+separate from the fully manual `Hierna lezen` list and never automatically
+mutates planning, reading, collection or classification source data.
+
+Its v2.001 functional basis, three selection engines, `Kies uit…` orchestration,
+candidate semantics, explainability and personal exclusions are fixed in
+[`docs/40-what-shall-i-read-functional-design.md`](40-what-shall-i-read-functional-design.md).
 
 # 8. Borrowed and lent
 

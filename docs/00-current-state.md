@@ -58,10 +58,27 @@ Owns private:
 - reading goals;
 - wishlist (`Verlanglijst`);
 - `Hierna lezen`;
+- `Wat zal ik lezen?`, including private suggestion results and preferences;
 - ratings/reviews;
 - notes;
 - personal statistics/year overview/timeline;
 - Home configuration and personal preferences.
+
+### Wat zal ik lezen?
+
+Status: **Functionele basis v2.001 — vastgezet; nog niet geïmplementeerd**.
+
+`Wat zal ik lezen?` is een private, gebruiker-eigen en platformbrede keuzehulp
+naast het volledig handmatige `Hierna lezen`. Dezelfde drie persoonlijke
+engines zijn bereikbaar vanuit Mijn Biblio en binnen iedere Bibliotheek; alleen
+de kandidatenpool wordt in Library-context tot die geautoriseerde Library
+beperkt. De functie selecteert op Work-niveau uit bronnen die de gebruiker nu
+daadwerkelijk kan lezen en muteert nooit brondata.
+
+Het volledige contract, `Kies uit…`, persoonlijke suggestion-uitsluitingen,
+deferred onderdelen en open ontwerpvragen staan in
+`docs/40-what-shall-i-read-functional-design.md`. Er is geen productiecode,
+schema, REST- of UI-implementatie aan gekoppeld.
 
 ## Library types
 

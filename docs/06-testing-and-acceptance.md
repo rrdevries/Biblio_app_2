@@ -2011,3 +2011,34 @@ Slice 5 is accepted when:
 
 Evidence is recorded in
 `docs/39-existing-source-filter-read-foundation-exit-evidence.md`.
+
+## 64. Wat zal ik lezen? functionele acceptancebasis
+
+Bij toekomstige implementatie geldt minimaal:
+
+- resultaten, afgeleid profiel en instellingen zijn private user-owned data;
+- Library-rollen of supporttoegang geven geen toegang tot data van een ander;
+- Mijn Biblio gebruikt alle concrete bronnen die de actor nu kan lezen en een
+  Library-ingang beperkt dezelfde engines tot die geautoriseerde Library;
+- selectie/ranking en uniforme willekeur werken per Work, zonder extra gewicht
+  voor meerdere exemplaren of bronnen;
+- Works met een actieve ReadingRound zijn uitgesloten;
+- `Voor mij gekozen` is uitlegbaar met minimaal één concrete reden, zonder
+  andere gebruikers, matchpercentage of pseudo-personalisatie;
+- `Herontdek` verklaart concreet wat wordt herontdekt;
+- `Verras me` is uniform willekeurig en herhaalt binnen één sessie pas nadat
+  alle andere geldige kandidaten zijn getoond;
+- `Kies uit…` past EN tussen filtergroepen en OF binnen een groep toe en
+  versoepelt filters nooit automatisch;
+- Boeksoort, Genre en Onderwerp blijven afzonderlijke dimensies;
+- persoonlijke uitsluitingen zijn per engine, privé en platformbreed;
+  expliciete selectie in `Kies uit…` mag ze eenmalig overrulen zonder opslag te
+  muteren;
+- ontbrekende classificatiemetadata is geen automatische benadeling of
+  uitsluiting;
+- `Start lezen` gebruikt de bestaande concrete-bronlogica;
+- geen suggestion-flow muteert automatisch Hierna lezen, Verlanglijst,
+  ReadingRounds, leesstatus, Collecties, leesdoelen of classificaties.
+
+De volledige functionele basis en open punten staan in
+`docs/40-what-shall-i-read-functional-design.md`.

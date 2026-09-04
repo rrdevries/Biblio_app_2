@@ -2,7 +2,7 @@
   "project": "Biblio V2",
   "root": "Biblio_app_2",
   "version": "v2.001",
-  "status": "completed F1.1-F1.7 foundation, F2.3 catalog creation, F2.5 local classification, F2.6 ReadingRound lifecycle/history, F2.7 Private Notes, F2.8 Ratings/Reviews, corrected F2.9 Next Reading Core contract and ADR-008: GO, F2.10 Library Identity/Context, F2.11 Catalog UI Read Models, F2.12 WordPress REST Adapter Foundation, Elementor Vertical Slices 1A-1D and C7 Hierna lezen adapter/screen, B7 Ratings/Reviews public read foundation, Mijn Bibliotheek Design System implementation slice: GO with explicit deferred capabilities; Mijn Bibliotheek catalog-query product contract: PRODUCT GO and TECHNICAL SOURCE READY; Central Author and Series Relationship Foundation: GO / CLOSED; Remaining Search Metadata Foundation: GO / CLOSED; Library Item Location Foundation: GO / CLOSED; Library Item Archive Lifecycle Foundation: GO / CLOSED; Library Collection and Membership Foundation: GO / CLOSED; Existing-source Filter/Read Foundation: GO / CLOSED; Vertical Slice 1A exit: GO; Vertical Slice 1B exit: GO; Vertical Slice 1C exit: GO; Vertical Slice 1D exit: GO / CLOSED; C7 exit: GO / CLOSED; B7 exit: GO / CLOSED; schema: 1013; next prerequisite: typed catalog query composition",
+  "status": "completed F1.1-F1.7 foundation, F2.3 catalog creation, F2.5 local classification, F2.6 ReadingRound lifecycle/history, F2.7 Private Notes, F2.8 Ratings/Reviews, corrected F2.9 Next Reading Core contract and ADR-008: GO, F2.10 Library Identity/Context, F2.11 Catalog UI Read Models, F2.12 WordPress REST Adapter Foundation, Elementor Vertical Slices 1A-1D and C7 Hierna lezen adapter/screen, B7 Ratings/Reviews public read foundation, Mijn Bibliotheek Design System implementation slice: GO with explicit deferred capabilities; Mijn Bibliotheek catalog-query product contract: PRODUCT GO and TECHNICAL SOURCE READY; Central Author and Series Relationship Foundation: GO / CLOSED; Remaining Search Metadata Foundation: GO / CLOSED; Library Item Location Foundation: GO / CLOSED; Library Item Archive Lifecycle Foundation: GO / CLOSED; Library Collection and Membership Foundation: GO / CLOSED; Existing-source Filter/Read Foundation: GO / CLOSED; Wat zal ik lezen? functional basis v2.001: LOCKED / NOT IMPLEMENTED; Vertical Slice 1A exit: GO; Vertical Slice 1B exit: GO; Vertical Slice 1C exit: GO; Vertical Slice 1D exit: GO / CLOSED; C7 exit: GO / CLOSED; B7 exit: GO / CLOSED; schema: 1013; next prerequisite: typed catalog query composition",
   "files": [
     "AGENTS.md",
     "README.md",
@@ -46,6 +46,7 @@
     "docs/37-library-item-archive-lifecycle-foundation-exit-evidence.md",
     "docs/38-library-collection-membership-foundation-exit-evidence.md",
     "docs/39-existing-source-filter-read-foundation-exit-evidence.md",
+    "docs/40-what-shall-i-read-functional-design.md",
     "docs/decisions/ADR-001-single-site-tenancy.md",
     "docs/decisions/ADR-002-modular-monolith.md",
     "docs/decisions/ADR-003-biblio-core-owns-domain-logic.md",
