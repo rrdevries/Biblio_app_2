@@ -159,6 +159,31 @@ dimensions. None of those richer dimensions is inferred from the current
 decimal position or added to schema 1013 by documentation. A future runtime
 extension requires its own approved domain, authorization and migration design.
 
+The target model separates a user's decision about a suggestion from shared
+canonical verification. `user-confirmed` and `user-rejected` are private,
+user-owned state. They cannot mutate central SeriesMembership or another user's
+view. `canonical-confirmed` belongs to a trusted Biblio-wide verification
+boundary; Library roles confer no authority over it. Multiple user decisions,
+provider evidence, confidence or community consensus cannot promote a relation
+automatically in v2.001. Shared Library metrics depend only on
+`canonical-confirmed` members; private reading coverage remains actor-scoped.
+
+In the target model, core/supplemental is a canonical SeriesMembership property
+that remains unresolved until sufficient evidence exists; this does not imply a
+current schema column, a user preference or a third `unknown` content category.
+Work form and position cannot derive it. Future multiple order schemes must
+reference the same membership and attach scheme-specific positions rather than
+duplicate the Work→Series relation. The v2.001 target allows at most one primary
+confirmed order; multi-order runtime and persistence remain unimplemented.
+
+Coverage projections preserve their ownership boundaries: Library content
+coverage and acquisition gaps are calculated per authorized Library from active
+Items and contained Works; personal reading coverage is calculated platform-wide
+from the actor's completed ReadingRounds. Archived Items, wishes and acquisition
+intent are not possession. A cross-Library personal projection may combine only
+Libraries individually accessible to the actor and cannot mutate or redefine
+any single-Library metric.
+
 Both relationship repositories accept ID batches in each direction. This
 keeps later catalog projections free to load Work→Author, Author→Work,
 Work→Series and Series→Work without an inherent N+1 contract. The application
@@ -445,6 +470,13 @@ v2.001 runtime adapters. Provider-specific transport, credentials, caching and
 branding remain adapter/operations concerns and never leak into Core. Material
 conflicts are returned for explicit candidate review, not silently fused per
 field. Manual/no-ISBN entry and Biblio-owned covers remain independent paths.
+
+ADR-010 classifies conflicts by impact while retaining whole-record candidate
+selection. Identity-critical differences must remain reviewable; publication
+characteristics may be disclosed without always blocking; enrichment conflicts
+remain proposals and cannot block import. Provider identity is provenance, not
+the primary UI choice. A provider-per-field merge editor and automatic
+multi-provider fusion remain outside v2.001.
 
 ### Production composition and runtime boundary
 

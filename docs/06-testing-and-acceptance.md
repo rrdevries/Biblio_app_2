@@ -2130,6 +2130,12 @@ of the following independently testable for a later implementation:
   replaceable, and Wikidata/BookBrainz are absent from v2.001 runtime;
 - material conflicts yield a reviewable whole-record candidate rather than a
   general field-level merge;
+- sufficiently agreeing candidates use the normal review/correction screen;
+  materially different candidates expose compact relevant differences plus
+  `Gebruik deze uitgave` and an always-available manual-entry path;
+- identity-critical conflicts are reviewable, publication-characteristic
+  conflicts need not always block, and enrichment conflicts never block import;
+- provider name remains provenance rather than the primary user decision;
 - Work identity requires an explicit reliable link or confirmed local relation;
   title + author similarity cannot automatically merge Works;
 - manual/no-ISBN creation and Biblio-owned covers work without any provider;
@@ -2139,13 +2145,35 @@ of the following independently testable for a later implementation:
   caching, branding/attribution, paid-use and replacement review;
 - Series suggestions never silently mutate canonical data, and rejected
   suggestions can be retained against repeated presentation;
+- every authenticated user can keep private `user-confirmed`/`user-rejected`
+  decisions, while Library roles grant no `canonical-confirmed` authority;
+- no user count, confidence, provider evidence or community consensus promotes
+  a suggestion automatically; shared Library metrics use canonical-confirmed
+  members only;
 - membership state, group, descriptive relation, order, position, lifecycle and
   Series relationships are not collapsed into one role or inferred from the
   current decimal position;
+- core/supplemental is SeriesMembership-specific and canonical; Work form,
+  numbering and personal preference cannot derive or alter it, and insufficient
+  evidence remains unresolved rather than becoming a third group;
+- core/supplemental proposals follow official publisher/Author list, reliable
+  bibliography, multiple consistent external sources, user confirmation and
+  heuristic in that order; a heuristic alone can never canonize the group;
 - `compleet` is shown only for sufficiently verified confirmed scope; related
   Series and merely announced/upcoming members do not silently change that
   scope;
 - omnibus coverage is derived from contained Works and omnibus is never a
   Series role;
+- Library content coverage counts active possession, including an actively lent
+  Item, but excludes archived Items and wishes; acquisition gaps remain
+  per-Library and announced titles are excluded;
+- private reading coverage derives platform-wide from the actor's completed
+  ReadingRounds and is never merged into one percentage with ownership or gaps;
+- cross-Library availability includes only individually authorized Libraries
+  and never changes a single Library's completeness or acquisition gaps;
+- v2.001 uses at most one primary confirmed order; future order schemes reuse
+  membership identity and cannot change completeness solely through ordering;
+- Series goal targetsets freeze, update only explicitly, and keep Library-bound
+  collection coverage separate from platform-wide reading progress;
 - no schema, migration, REST, frontend, provider adapter, Metadata Hub or Series
   Intelligence runtime behavior is introduced by the documentation change.

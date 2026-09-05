@@ -40,8 +40,10 @@ productgedrag.
 | A-07 | Nieuwe leesbronnen | Een later nieuw source-type vereist een expliciete contract- en schema-uitbreiding; bestaande source-types worden niet stilzwijgend op digitale, audio-, provider-, pseudo- of generieke bronnen toegepast. | [`14-f2-9a-next-reading-analysis.md` §8.3](14-f2-9a-next-reading-analysis.md#83-geen-afzonderlijke-internalloan-target-in-f29b); [`ADR-004`](decisions/ADR-004-fase-0-persistence-and-reading-sources.md#internalloan) |
 | A-08 | Schema-evolutie | Toekomstige Core-schemawijzigingen zijn afzonderlijke, geordende forward migrations met expliciete preconditie, wijziging en postconditie; de targetversie wordt pas na een geslaagde postconditie vastgelegd. | [`02-architecture.md` §9](02-architecture.md#schema-management); [`ADR-005`](decisions/ADR-005-formal-core-schema-migration-baseline.md) |
 | A-09 | Architectuur / persistence | Toekomstige CPT-, CCT-, JetEngine- of andere persistencekeuzes mogen alleen bij aantoonbare nettowinst worden ingezet en mogen Core-authorization, integriteitsregels en application services niet omzeilen. | [`02-architecture.md` §9](02-architecture.md#9-persistence); [`ADR-004`](decisions/ADR-004-fase-0-persistence-and-reading-sources.md) |
+| A-10 | Series / persoonlijke doelen | Toekomstige Series-doelen blijven twee afzonderlijke concepten: een verzameldoel voor Work-level inhoudelijke dekking binnen één Library en een persoonlijk platformbreed leesdoel op afgeronde ReadingRounds. Beide kunnen core, core+supplemental of een persoonlijke selectie van bevestigde members bevriezen; die targetset wijzigt de canon niet en verandert alleen na expliciet bijwerken. | [`01-functional-design.md` §11 en §13](01-functional-design.md#11-authors-and-series) |
+| A-11 | Series / multi-order | Toekomstige alternatieve order schemes gebruiken verschillende posities voor hetzelfde SeriesMembership en dupliceren dat membership niet. Een andere order verandert completeness niet zolang de memberscope gelijk blijft, en wordt nooit zonder voldoende evidence/bevestiging verzonnen. | [`01-functional-design.md` §11](01-functional-design.md#11-authors-and-series) |
 
-**Totaal A: 9 items.**
+**Totaal A: 11 items.**
 
 ## 3. B — Richting/idee voor later
 
@@ -58,7 +60,7 @@ productgedrag.
 | B-09 | Catalogusbeheer | Een volledig institutioneel catalogiseerproces en een bredere centrale bibliografische editor voor Library-beheerders. | [`03-scope-and-deferred.md`](03-scope-and-deferred.md#metadatacatalog) |
 | B-10 | Identiteit / taxonomie | Ondersteuning voor automatische structurele Work-/Auteur-/Serie-merge en uitgebreidere alias-, merge- en taxonomiehiërarchieworkflows. | [`03-scope-and-deferred.md`](03-scope-and-deferred.md#metadatacatalog); [`08-f2-5-exit-evidence.md`](08-f2-5-exit-evidence.md#deferred-and-non-scope) |
 | B-11 | Metadata | Na de minimale v2.001 Metadata Hub: field-level evidence, confidence-/mergebeleid, record fusion, paid feeds, uitgebreidere automatische Work-resolutie en een community Metadata Graph. | [`03-scope-and-deferred.md`](03-scope-and-deferred.md#metadatacatalog); [`ADR-010`](decisions/ADR-010-provider-neutral-metadata-hub-and-evidence-governance.md) |
-| B-12 | Series | Runtime-uitwerking van multidimensionale Series Intelligence bovenop de minimale Work→Series-foundation: Edition/Publisher Series, confirmed gaps, lifecycle/release-state, Series→Series-relaties, afgeleide coverage en later eventueel meerdere orders. Externe evidence blijft voorstel en ondersteunt geen voortijdige compleetheidsclaim. | [`01-functional-design.md` §11](01-functional-design.md#11-authors-and-series); [`03-scope-and-deferred.md`](03-scope-and-deferred.md#metadatacatalog) |
+| B-12 | Series | Runtime-uitwerking van multidimensionale Series Intelligence bovenop de minimale Work→Series-foundation: Edition/Publisher Series, twee bevestigingslagen, canonical verification management, confirmed gaps, lifecycle/release-state, Series→Series-relaties, afzonderlijke coverageviews, persoonlijke targetsets en multi-order. Externe evidence blijft voorstel en ondersteunt geen voortijdige compleetheidsclaim. | [`01-functional-design.md` §11](01-functional-design.md#11-authors-and-series); [`03-scope-and-deferred.md`](03-scope-and-deferred.md#metadatacatalog) |
 | B-13 | Collecties / classificatie | Tags en slimme Collections naast handmatig samengestelde Collections. | [`03-scope-and-deferred.md`](03-scope-and-deferred.md#metadatacatalog) |
 | B-14 | Relaties | Een expliciete generieke Relationship-beheerlaag voor handmatig koppelen, bevestigen en negeren, zonder bestaande domeinrelaties te dupliceren. | [`03-scope-and-deferred.md`](03-scope-and-deferred.md#relationships); [`01-functional-design.md` §16](01-functional-design.md#relationships) |
 | B-15 | Import / export | Gebruikersdata-export, Library-export, import, uitwisselingsformaten en een migratie-UI. | [`03-scope-and-deferred.md`](03-scope-and-deferred.md#data-interchange) |
@@ -80,16 +82,16 @@ productgedrag.
 
 | ID | Domein | Nog niet besloten | Bron |
 |---|---|---|---|
-| C-01 | Series | De exacte productdefinitie van `core` versus `supplemental` en daarmee de geverifieerde teller/noemer van een formele completenessweergave zijn nog niet besloten. Alleen de terughoudende claimregels en multidimensionale scheiding staan vast. | [`01-functional-design.md` §11](01-functional-design.md#11-authors-and-series) |
+| C-01 | Series / governance | De exacte implementatie en UX van het vertrouwde Biblio-brede beheer-/verificatieproces voor `canonical-confirmed` zijn nog niet besloten. | [`01-functional-design.md` §11](01-functional-design.md#11-authors-and-series) |
 | C-02 | Collecties | Voor de optionele laag Gewenste toevoegingen zijn onder meer lifecycle/status, ordening, autorisatie, cardinaliteit van Verlanglijst-koppelingen, exacte proposal-/fulfilmentflow en UI-presentatie nog niet besloten. Alleen de grenzen uit A-02 t/m A-05 staan vast. | Goedgekeurde aanvulling 2026-09-01 |
 | C-03 | ReadingRound / InternalLoan | Bij toevoeging van `InternalLoan` als derde ReadingRound-bron moet opnieuw worden gekozen tussen een derde expliciete foreign key en migratie naar een gemeenschappelijke source-identiteit. | [`ADR-004`](decisions/ADR-004-fase-0-persistence-and-reading-sources.md#internalloan); [`03-scope-and-deferred.md`](03-scope-and-deferred.md#technical) |
 | C-04 | Persistence | De definitieve CPT/CCT/custom-table-mapping blijft per domein open totdat een concrete spike en de domeinspecifieke query-, integriteits-, lifecycle- en beheerbehoeften voldoende bewijs leveren. | [`03-scope-and-deferred.md`](03-scope-and-deferred.md#technical); [`02-architecture.md` §9](02-architecture.md#9-persistence) |
 | C-05 | Hosting / operations | De definitieve hosting- en backupproductkeuze wordt pas gemaakt wanneer de hostingcontext bekend is. | [`03-scope-and-deferred.md`](03-scope-and-deferred.md#technical) |
 | C-06 | ReadingRound | Of een gestopte ReadingRound later een redenveld krijgt, is nog een productbeslissing. | [`22-elementor-vertical-slice-1b-exit-evidence.md` §11](22-elementor-vertical-slice-1b-exit-evidence.md#11-known-non-blocking-limitations) |
-| C-07 | Series / governance | Welke gebruiker of rol binnen Household/Bibliotheek een Series-suggestie mag bevestigen of afwijzen is nog niet besloten. | [`01-functional-design.md` §11](01-functional-design.md#11-authors-and-series) |
-| C-08 | Metadata / UX | De precieze review-UI voor conflicterende metadata en correcties is nog niet besloten. | [`ADR-010`](decisions/ADR-010-provider-neutral-metadata-hub-and-evidence-governance.md) |
-| C-09 | Series | De precieze toekomstige ondersteuning en prioriteit van publication, chronological en recommended orders is nog niet besloten. | [`01-functional-design.md` §11](01-functional-design.md#11-authors-and-series) |
-| C-10 | Series / persoonlijk | Een user-defined `Mijn serie`-scope is een mogelijke toekomstige richting; contract, lifecycle en v2.001-scope zijn niet besloten. | [`01-functional-design.md` §11](01-functional-design.md#11-authors-and-series) |
+| C-07 | Series / governance | Of en hoe `user-confirmed` later automatisch naar `canonical-confirmed` kan promoveren is niet besloten; in v2.001 gebeurt dit nooit. | [`01-functional-design.md` §11](01-functional-design.md#11-authors-and-series) |
+| C-08 | Series / community | De implementatie van community moderation, stemmen en reputatie voor Series-evidence is nog niet besloten. | [`01-functional-design.md` §11](01-functional-design.md#11-authors-and-series) |
+| C-09 | Series / multi-order | De daadwerkelijke runtime-, persistence- en UI-uitwerking van meerdere order schemes blijft open; v2.001 gebruikt maximaal één primary confirmed order. | [`01-functional-design.md` §11](01-functional-design.md#11-authors-and-series) |
+| C-10 | Series / doelen | De uiteindelijke Nederlandse product-/UI-namen van het Library-gebonden serie-verzameldoel en het platformbrede serie-leesdoel zijn nog niet besloten. De twee afzonderlijke domeinbetekenissen staan wel vast. | [`01-functional-design.md` §11 en §13](01-functional-design.md#11-authors-and-series) |
 | C-11 | Metadata / commercieel | De commerciële metadata-provider die Google eventueel vervangt of opvolgt is nog niet gekozen. | [`ADR-010`](decisions/ADR-010-provider-neutral-metadata-hub-and-evidence-governance.md) |
 | C-12 | Metadata / partnerships | Eventuele samenwerking of licentiëring met CB/Bureau ISBN en NBD Biblion is nog niet besloten. | [`tools/metadata-benchmark/output/metadata-provider-comparison.md`](../tools/metadata-benchmark/output/metadata-provider-comparison.md#futurepartnership-candidates-not-benchmarked) |
 | C-13 | Metadata / community | Governance, rechten en implementatie van een community Metadata Graph zijn nog niet besloten. | [`ADR-010`](decisions/ADR-010-provider-neutral-metadata-hub-and-evidence-governance.md) |
@@ -116,10 +118,10 @@ productgedrag.
 
 ## 6. Huidige reconciliatie-uitkomst
 
-- A: **9**
+- A: **11**
 - B: **26**
 - C: **14**
-- Totaal actuele items: **49**
+- Totaal actuele items: **51**
 
 Er is geen bindend bronconflict gevonden. De echte ambiguïteiten staan onder C.
 Oudere handoverbronnen die alleen in het source register worden genoemd maar

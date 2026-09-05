@@ -75,6 +75,45 @@ membership state, group, descriptive relation, order, position, lifecycle and
 derived coverage separate. `Hoofddeel`, `novelle`, `companion`, `spin-off` and
 `omnibus` are not one universal technical role set.
 
+## SeriesMembership group
+Series-specific canonical property:
+
+- `core`: the Work belongs to the primary canon/set that constitutes the Series;
+- `supplemental`: the Work demonstrably belongs to the Series context outside
+  that primary canon.
+
+Insufficient evidence leaves the property unresolved; it creates no third group.
+
+## user-confirmed / user-rejected
+Private decision by one authenticated user about a Series suggestion for that
+own context. It never changes shared canon or Library completeness.
+
+## canonical-confirmed
+Biblio-wide verified Series truth created only through a trusted central
+verification process. Library roles do not grant this authority.
+
+## Bibliotheekdekking
+Work-level content coverage inside exactly one Library, derived from active
+Items and contained Works. It is separate from reading progress.
+
+## Leesdekking
+Private platform-wide Work-level coverage derived from the user's completed
+ReadingRounds, independently of possession or source.
+
+## Acquisition gap
+A canonical-confirmed, relevant and already released Series member that is not
+content-covered in one specific Library. Wishes do not close the gap.
+
+## Series collection-goal direction
+Working domain label for a future personal goal linked to one Library that
+measures Work-level content coverage. It remains separate from reading coverage;
+the final Dutch UI name is open.
+
+## Series reading-goal direction
+Working domain label for the personal platform-wide goal that measures
+completed ReadingRounds. It remains separate from possession; the final Dutch
+UI name is open.
+
 ## Metadata Hub
 Provider-neutral boundary that turns external metadata into reviewable evidence
 and whole-record candidates. Providers are replaceable adapters and are not

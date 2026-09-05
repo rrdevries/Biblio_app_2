@@ -105,7 +105,11 @@
 - automatic Series Intelligence and unverified external completeness claims;
 - Edition/Publisher Series and richer Series membership/group/order/lifecycle
   persistence beyond the current minimal Work→Series foundation;
-- multi-order Series support and user-defined `Mijn serie` scope;
+- canonical verification-management UI, automatic user→canonical promotion and
+  community moderation/reputation;
+- multi-order Series runtime/UI;
+- a Library-scoped Series collection goal and custom confirmed-member target
+  sets beyond the already defined Series reading-goal snapshot;
 - tags;
 - smart Collections.
 

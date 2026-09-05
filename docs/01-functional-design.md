@@ -395,6 +395,26 @@ Field-level evidence, confidence/merge logic, record fusion, OCR, community
 metadata, a Metadata Graph, paid feeds and extensive automatic Work resolution
 remain future scope.
 
+### Metadata conflict review
+
+When external candidates agree sufficiently, Biblio proposes one whole record
+in the normal review/correction screen. Only material conflicts require explicit
+candidate selection. Two materially different records are shown compactly with
+their relevant differences and actions such as `Gebruik deze uitgave` and
+`Zelf invoeren`.
+
+- Identity-critical differences — a clearly different Edition, title, Author,
+  language or ISBN relation — must be reviewable before acceptance.
+- Publication-characteristic differences — page count, publisher, publication
+  date, Binding or format — may be visible without always blocking import.
+- Intelligence/enrichment differences — Genre, subjects or Series — never block
+  book import and remain separately confirmable proposal/evidence.
+
+Provider name remains provenance/context and is not the primary selection
+criterion. Manual entry and editing are always available. v2.001 has no
+provider-per-field picker, field-level merge interface or automatic
+multi-provider field fusion.
+
 ## Publication date
 
 Edition-level and precision-preserving:
@@ -1143,21 +1163,66 @@ Series foundation. Edition/Publisher Series and the richer dimensions below do
 not silently expand the v2.001 runtime or schema; they require a separately
 approved implementation decision.
 
-In the unimplemented Series Intelligence target model, every membership has an
-explicit state:
+### Confirmation layers and rights
 
-- `proposed`;
-- `confirmed`;
-- `rejected`.
+Series Intelligence separates personal and Biblio-wide confirmation:
 
-A rejection is remembered so the same suggestion is not repeatedly presented.
-Only confirmed relationships may support canonical Series views and claims.
+- `user-confirmed`: one authenticated user accepts a proposed membership,
+  position or group for that user's own Biblio context;
+- `user-rejected`: one authenticated user rejects a suggestion for that own
+  context; the rejection is remembered so it is not repeatedly presented;
+- `canonical-confirmed`: the relationship is sufficiently verified to form
+  shared Biblio Series canon.
+
+Every authenticated user may record `user-confirmed` and `user-rejected` for
+themselves. A personal confirmation may influence that user's Series view,
+Lens intelligence and later personal Series goals. It never changes global
+canon, shared bibliographic data, another user's view or shared Library
+completeness.
+
+Library roles grant no extra global bibliographic authority. Eigenaar,
+Beheerder and Lid (the old term `Lezer`) cannot create `canonical-confirmed`
+truth merely through their Library role. In v2.001, canonical confirmation can
+arise only through an explicit trusted Biblio-wide management/verification
+process. Multiple users, confidence, external sources or community consensus
+are evidence only and never promote automatically. Shared Library metrics use
+only `canonical-confirmed` memberships. Personal-only intelligence remains
+visibly distinct.
+
+The exact canonical verification-management UX is open. Automatic promotion,
+community moderation, voting and reputation remain future scope.
 
 ### Group and descriptive relation
 
-Group is `core` or `supplemental`. It is not the literary form of a Work.
-`Hoofddeel` may be a UX label for a core member but is not a technical role.
-The exact product definition of `core` versus `supplemental` remains open.
+`core` versus `supplemental` is a Series-specific canonical property of the
+SeriesMembership, never a personal preference:
+
+- **core:** the Work belongs to the primary canon/set that constitutes the
+  Series itself;
+- **supplemental:** the Work demonstrably belongs to the Series context but
+  falls outside the primary canon and has a supporting role.
+
+The Work form does not decide the group. A `novelle`, `short story`,
+`companion`, `extra` or `tussentitel` can be core or supplemental for a
+particular Series; `novelle` therefore never means supplemental automatically.
+Numbering does not decide group either: `2.5` can be core and an unnumbered
+companion can be supplemental. Personal preferences cannot alter this canonical
+classification.
+
+When evidence is insufficient or conflicting, group remains unresolved. This
+is absence of confirmation, not a third content category; Biblio does not
+fabricate certainty.
+
+Proposals follow this evidence hierarchy:
+
+1. official publisher/Author Series list;
+2. reliable bibliographic source;
+3. multiple consistent external sources;
+4. user confirmation;
+5. heuristic.
+
+A heuristic alone can never establish canonical core/supplemental. External
+metadata remains evidence/proposal, not automatic canonical truth.
 
 Optional descriptive labels such as `novelle`, `tussentitel`, `companion`,
 `short story` or `extra` may describe a relation. They do not determine group,
@@ -1173,9 +1238,16 @@ Series order is one of:
 
 A Series number is never mandatory. Position is a separate value that may be
 numeric, fractional, textual, contextual or absent; position never determines
-`core`/`supplemental`. Publication, chronological and recommended orders may be
-supported later. A first implementation supports at most one primary confirmed
-order.
+`core`/`supplemental`. v2.001 uses at most one `primary confirmed order` per
+Series. It drives default presentation, gap positioning and labels such as
+`volgend deel`.
+
+The architecture must permit later publication, chronological/story and
+recommended order schemes without duplicating the SeriesMembership: alternate
+schemes assign different positions to the same Work. Choosing an order does not
+change completeness when member scope is unchanged. Biblio never invents an
+alternate order without sufficient evidence and confirmation. Multi-order
+runtime/UI remains future scope.
 
 ### Series relationships and lifecycle
 
@@ -1186,30 +1258,81 @@ completeness.
 
 Series lifecycle is `ongoing`, `completed` or `unknown`. A member release state
 may later distinguish `released`, `announced`, `upcoming`, `unknown` and
-`cancelled`. An announced or upcoming Work does not automatically make current
-coverage incomplete. Suitable wording is, for example: `Alle 7 verschenen
-hoofdtitels aanwezig; 1 nieuw deel aangekondigd.`
+`cancelled`. The effect of announced/upcoming Works on current coverage is
+defined under completeness below.
 
-### Omnibus and derived views
+### Completeness and coverage
+
+**Hoofdreeks compleet** means all `canonical-confirmed`, relevant and already
+released core members are content-covered within the selected Library.
+Missing supplemental members do not make the Hoofdreeks incomplete.
+
+**Volledige serie compleet** means all `canonical-confirmed`, relevant and
+already released core plus supplemental members are content-covered within the
+selected Library.
+
+Unconfirmed memberships or unresolved core/supplemental classification are not
+silently counted. Use reserved language such as `Alle momenteel bevestigde
+kerntitels aanwezig.` Use `compleet` only when the confirmed canon supports the
+claim. Announced/upcoming Works remain separate and do not break current
+completeness, for example: `Alle 7 verschenen hoofdtitels aanwezig; 1 nieuw deel
+aangekondigd.`
+
+Series Intelligence never collapses these three metrics into one percentage:
+
+1. **ownership / Bibliotheek coverage**;
+2. **reading coverage**;
+3. **acquisition gaps**.
+
+A Work is content-covered in one Library when at least one active Item of an
+Edition of that Work belongs to that Library. An active Item that is currently
+lent out still counts while it remains active Library possession. Archived
+Items do not count. Verlanglijst and Gewenste aanwinsten do not count. A
+`canonical-confirmed`, relevant, already released member without content
+coverage is an acquisition gap; wishlist/acquisition status may be shown but
+does not close the gap. Announced future titles are not current acquisition
+gaps.
+
+Reading coverage is private, personal and platform-wide. A Work counts as read
+after at least one owned completed/`uitgelezen` ReadingRound, independently of
+possession or source.
+
+### Omnibus and Edition representation
 
 An omnibus remains a container Work with contained Works; it is not a Series
-role. Series coverage is derived from those contained Works. A later coverage
-model may distinguish content covered through an omnibus from possession of a
-separate Edition.
+role. It content-covers every contained Work for Library coverage. A later view
+may separately present content coverage and separate-Edition possession, for
+example `Hoofdreeks: 7/7 inhoudelijk gedekt` and `Losse uitgaven: 5/7 aanwezig`.
+An omnibus can therefore make the Series content-complete without a separate
+Edition for every Work.
+
+### Series scopes
+
+Series views keep three scopes separate:
+
+1. **Bibliotheek:** ownership coverage, completeness, acquisition gaps and
+   Gewenste aanwinsten for exactly one authorized Library;
+2. **persoonlijk cross-Library:** content availability across all Libraries the
+   user may access, such as `In jouw Bibliotheken aanwezig: 7/7`;
+3. **persoonlijk platformbreed:** the user's private reading coverage.
+
+Cross-Library availability never changes completeness or gaps for an individual
+Library. Acquisition gaps exist only per individual Library. Within a Library,
+the UI may combine Library coverage with the current user's clearly separated
+personal reading coverage. Mijn Biblio/Home may combine cross-Library
+availability with personal reading coverage. Authorization is still evaluated
+per Library, and private reading data is never shared through Library metrics.
+
+### Derived views and personal targets
 
 `Hoofdreeks`/`Kerntitels` and `Volledige serie` are derived views, not stored
-member roles. Such views may compare ownership, reading progress, confirmed
-gaps and upcoming members. A future user-defined `Mijn serie` target is
-possible but not decided for v2.001.
-
-Use `compleet` only when confirmed data supports it. For uncertain or incomplete
-canon, use `Alle momenteel bevestigde hoofdtitels aanwezig.` For a confirmed
-completed Series with sufficiently verified members, a claim such as
-`Hoofdreeks compleet — 7/7` is permitted.
+member roles. They may compare the separate ownership, reading, confirmed-gap
+and upcoming views above. There is no generic `Mijn serie` object and no single
+combined Series percentage.
 
 External Series metadata is suggestion/evidence only. It never silently mutates
-canonical membership or classifications, and the provider benchmark does not
-support robust automatic Series Intelligence for v2.001.
+canonical membership or core/supplemental classification, and the provider
+benchmark does not support robust automatic Series Intelligence for v2.001.
 
 A Series reading goal is user-owned and Library-independent.
 
@@ -1317,9 +1440,31 @@ Variants:
 ### Serie
 Library-independent central Series.
 
-User reviews/confirms known Works and may create missing minimal Works.
+The existing Series completion goal is the personal, platform-wide reading-goal
+direction. Progress comes only from completed/`uitgelezen` ReadingRounds and is
+independent of possession.
 
-Snapshot freezes. No automatic Series sync.
+The separately deferred Series collection-goal direction belongs to exactly one
+Library and measures Work-level content coverage. It is not implemented merely
+by documenting it.
+
+Both goal directions may target:
+
+- Hoofdreeks (`core`);
+- Volledige serie (`core` + `supplemental`);
+- a custom selection of confirmed members.
+
+A custom selection is a personal target set and never changes Series canon.
+The final Dutch UI names for these two goal types remain open.
+
+User reviews/confirms known Works for personal goal selection and may create
+missing minimal Works without promoting them to canonical-confirmed membership.
+
+The target set freezes at creation. New canonical-confirmed members never alter
+an existing goal automatically. Biblio may signal `Er zijn nieuwe bevestigde
+serieleden beschikbaar.` and offer the explicit action `Doel bijwerken vanuit
+serie`. Ownership and reading progress remain separate measurements; there is
+no generic combined percentage.
 
 ### Collection
 Based on one concrete Library Collection.

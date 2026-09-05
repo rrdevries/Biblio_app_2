@@ -466,6 +466,15 @@ ook tekstueel, contextueel of afwezig zijn en wordt dus niet als verplicht
 nummer gepresenteerd. Kleine covers, status, vorm en locatie kunnen aanvullende
 context geven. Gewenste aanwinsten en Archief blijven secundair.
 
+De detailpresentatie voegt Bibliotheekdekking, persoonlijke leesdekking en
+acquisitiegaps nooit samen tot één seriepercentage. In Library-context blijft
+dekking/completeness op die ene Library gebaseerd en staat persoonlijke
+leesdekking visueel en semantisch apart. In Mijn Biblio/Home mag cross-Library
+beschikbaarheid naast persoonlijke leesdekking staan, zonder een afzonderlijke
+Librarymetric te wijzigen. Aangekondigde titels staan apart van huidige gaps en
+completeness; omnibusdekking mag `inhoudelijk gedekt` onderscheiden van `losse
+uitgaven aanwezig`.
+
 Boek-, Collectie-, Auteur- en Serie-detail delen shell, typografie, spacing,
 surfaces, interactielogica en open compositie, maar krijgen een domeinspecifieke
 hero. Er is geen universeel dashboard-detailtemplate.

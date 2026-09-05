@@ -64,6 +64,26 @@ the actual evidence strength.
 When providers materially conflict, v2.001 presents a whole-record candidate
 for review. It does not perform a general multi-provider field-level merge.
 
+The v2.001 conflict UX distinguishes impact rather than asking users to choose
+a provider per field:
+
+- when external candidates agree sufficiently, Biblio proposes one candidate
+  in the normal review/correction screen;
+- materially different candidates are shown as compact whole records with the
+  relevant differences and actions such as `Gebruik deze uitgave` and
+  `Zelf invoeren`;
+- identity-critical conflicts such as a clearly different Edition, title,
+  Author, language or ISBN relation must be reviewable before acceptance;
+- publication-characteristic differences such as page count, publisher,
+  publication date, binding or format may be visible without always blocking
+  import;
+- intelligence/enrichment conflicts such as Genre, subjects or Series never
+  block book import and remain separately confirmable proposals/evidence.
+
+Provider name is provenance/context, not the user's primary decision criterion.
+Manual entry and editing remain available throughout. Confirmed local Biblio
+metadata remains authoritative in every path.
+
 Absence of ISBN is a normal bibliographic state, not an existence failure. A
 Work, Edition and Item may be created through the manual path without ISBN.
 
@@ -106,6 +126,12 @@ merges are harder to repair than explicit unresolved candidates.
 
 Rejected because the benchmark measured material conflicts and v2.001 has no
 approved field-level provenance, confidence or adjudication model.
+
+### Provider-per-field conflict editor in v2.001
+
+Rejected because it exposes provider mechanics as the primary user decision,
+adds an unapproved field-level merge model and is unnecessary for the first
+whole-record review flow.
 
 ### ISBN-required creation
 

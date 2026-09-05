@@ -1783,10 +1783,23 @@ Series kind, membership state, group, descriptive relation, order, position,
 lifecycle, Series relationships and derived coverage remain separate. The
 existing schema-1009 Work→Series relation is only the implemented minimal
 foundation; no Series Intelligence schema, runtime, provider mutation or UI is
-added. Current product truth is in `docs/01-functional-design.md` §11; unresolved
-definitions, confirmation rights, conflict UX, multi-order, `Mijn serie`,
-commercial provider/partnership, community graph and OCR choices are in
-`docs/26-future-roadmap-decisions.md`.
+added.
+
+Post-`bdd5714` decisions now define core/supplemental evidence, private
+`user-confirmed`/`user-rejected` versus Biblio-wide `canonical-confirmed`,
+trusted central verification rights, released-member completeness, three
+separate coverage metrics and Library/cross-Library/platform-wide scopes.
+The v2.001 target permits at most one primary confirmed order. Future order
+schemes must reuse membership identity. A future Library-bound Series collection
+goal and the existing platform-wide Series reading-goal concept remain separate
+frozen targetsets; the new collection-goal runtime is not in scope here.
+
+The v2.001 Metadata conflict contract remains whole-record candidate selection:
+identity-critical differences are reviewable, publication characteristics may
+be non-blocking and enrichment conflicts never block book import. There is no
+field-level merge UI or provider fusion. Current product truth is in
+`docs/01-functional-design.md` §4 and §11. Remaining open implementation and
+governance choices are registered in `docs/26-future-roadmap-decisions.md`.
 
 `Biblio Library Intelligence` is the overarching direction, with Biblio Lens
 and Series Intelligence as its first two pillars. v2.001 promises only the

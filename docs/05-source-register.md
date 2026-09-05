@@ -235,6 +235,19 @@ measurement. The accepted decisions preserve provider neutrality, local
 canonical authority, Work/Edition/Item separation and a multidimensional Series
 Intelligence direction without implementing runtime or schema behavior.
 
+## Post-bdd5714 Series Intelligence and metadata-conflict decisions — 2026-09-05
+Status: `ACTUEEL`
+
+These approved follow-up decisions refine, rather than replace, the 2026-09-05
+Metadata Hub and Series Intelligence basis. They are canonicalized in the same
+functional, architecture, ADR-010, scope and roadmap sources listed above.
+
+They define core/supplemental, personal versus canonical confirmation,
+verification rights, completeness and separate coverage scopes, the one-order
+v2.001 boundary, distinct future Series collection/reading goals and the
+whole-record metadata-conflict UX. Runtime, schema and final open governance/UI
+implementation choices remain outside this documentation source.
+
 ## Authority rule
 
 Historical timestamps do not determine authority.
