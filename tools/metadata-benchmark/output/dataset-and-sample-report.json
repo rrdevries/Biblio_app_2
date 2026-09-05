@@ -1,0 +1,49 @@
+{
+  "book_records": 1138,
+  "copy_records": 1105,
+  "duplicate_isbn_groups": 17,
+  "generated_at": "2026-09-05T10:57:59+00:00",
+  "invalid_isbn_records": [
+    {
+      "raw_isbn": "9780008303616",
+      "title": "Girl, Forgotten"
+    },
+    {
+      "raw_isbn": "9789026112815",
+      "title": "Heksen"
+    }
+  ],
+  "package_version": "507.0.13",
+  "records_invalid_isbn": 2,
+  "records_only_isbn10": 85,
+  "records_with_isbn13": 901,
+  "records_without_isbn": 150,
+  "sample_languages": {
+    "en": 110,
+    "nl": 162,
+    "other": 1,
+    "unknown": 27
+  },
+  "sample_n": 300,
+  "sample_strata": {
+    "difficult_edge": 20,
+    "en_fiction": 60,
+    "en_nonfiction_knowledge": 30,
+    "nl_cook_travel_reference": 27,
+    "nl_fiction": 60,
+    "nl_juvenile_picture_comic": 30,
+    "nl_knowledge_nonfiction": 40,
+    "older_isbn10_or_edition": 30,
+    "proportional_shortfall_fill": 3
+  },
+  "schema_version": 29,
+  "seed": 20260905,
+  "source_file": "Biblio_v507m_actuele-data.zip",
+  "source_sha256": "b2ce31c76401ad929fe539259cb0252523f1749218df3985b4991e9f77eb298f",
+  "target_shortfalls_before_fill": {
+    "nl_cook_travel_reference": 3
+  },
+  "unique_valid_isbns": 969,
+  "valid_isbn_records": 986,
+  "wishlist_items": 41
+}

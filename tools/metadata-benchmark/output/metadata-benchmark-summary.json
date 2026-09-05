@@ -1,0 +1,1698 @@
+{
+  "benchmark_version": 1,
+  "combination_metrics": {
+    "full_free_stack": {
+      "en": {
+        "combined_correct_edition_rate": 96.36,
+        "combined_hit_rate": 100.0,
+        "conflicts_by_field": {
+          "authors": {
+            "comparable_n": 84,
+            "conflict_n": 5,
+            "conflict_rate_of_comparable": 5.95
+          },
+          "language": {
+            "comparable_n": 98,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": 0.0
+          },
+          "page_count": {
+            "comparable_n": 56,
+            "conflict_n": 36,
+            "conflict_rate_of_comparable": 64.29
+          },
+          "publication_date": {
+            "comparable_n": 98,
+            "conflict_n": 21,
+            "conflict_rate_of_comparable": 21.43
+          },
+          "publisher": {
+            "comparable_n": 88,
+            "conflict_n": 57,
+            "conflict_rate_of_comparable": 64.77
+          },
+          "series": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "series_position": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "title": {
+            "comparable_n": 98,
+            "conflict_n": 12,
+            "conflict_rate_of_comparable": 12.24
+          }
+        },
+        "cover_coverage": 95.45,
+        "incremental_hit_gain_over_open_library_google": 0.0,
+        "n": 110,
+        "provider_conflict_rate": 74.55,
+        "series_evidence_coverage": 13.33,
+        "series_subset_n": 15,
+        "work_link_coverage": 95.45
+      },
+      "nl": {
+        "combined_correct_edition_rate": 95.68,
+        "combined_hit_rate": 99.38,
+        "conflicts_by_field": {
+          "authors": {
+            "comparable_n": 22,
+            "conflict_n": 3,
+            "conflict_rate_of_comparable": 13.64
+          },
+          "language": {
+            "comparable_n": 35,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": 0.0
+          },
+          "page_count": {
+            "comparable_n": 24,
+            "conflict_n": 8,
+            "conflict_rate_of_comparable": 33.33
+          },
+          "publication_date": {
+            "comparable_n": 36,
+            "conflict_n": 8,
+            "conflict_rate_of_comparable": 22.22
+          },
+          "publisher": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "series": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "series_position": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "title": {
+            "comparable_n": 37,
+            "conflict_n": 3,
+            "conflict_rate_of_comparable": 8.11
+          }
+        },
+        "cover_coverage": 37.04,
+        "incremental_hit_gain_over_open_library_google": 0.0,
+        "n": 162,
+        "provider_conflict_rate": 9.88,
+        "series_evidence_coverage": 26.67,
+        "series_subset_n": 15,
+        "work_link_coverage": 27.16
+      },
+      "total": {
+        "combined_correct_edition_rate": 95.33,
+        "combined_hit_rate": 99.67,
+        "conflicts_by_field": {
+          "authors": {
+            "comparable_n": 118,
+            "conflict_n": 10,
+            "conflict_rate_of_comparable": 8.47
+          },
+          "language": {
+            "comparable_n": 136,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": 0.0
+          },
+          "page_count": {
+            "comparable_n": 89,
+            "conflict_n": 49,
+            "conflict_rate_of_comparable": 55.06
+          },
+          "publication_date": {
+            "comparable_n": 148,
+            "conflict_n": 31,
+            "conflict_rate_of_comparable": 20.95
+          },
+          "publisher": {
+            "comparable_n": 96,
+            "conflict_n": 61,
+            "conflict_rate_of_comparable": 63.54
+          },
+          "series": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "series_position": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "title": {
+            "comparable_n": 156,
+            "conflict_n": 17,
+            "conflict_rate_of_comparable": 10.9
+          }
+        },
+        "cover_coverage": 63.0,
+        "incremental_hit_gain_over_open_library_google": 0.0,
+        "n": 300,
+        "provider_conflict_rate": 36.33,
+        "series_evidence_coverage": 19.35,
+        "series_subset_n": 31,
+        "work_link_coverage": 57.33
+      }
+    },
+    "google_books_only": {
+      "en": {
+        "combined_correct_edition_rate": 76.36,
+        "combined_hit_rate": 96.36,
+        "conflicts_by_field": {
+          "authors": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "language": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "page_count": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "publication_date": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "publisher": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "series": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "series_position": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "title": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          }
+        },
+        "cover_coverage": 90.0,
+        "n": 110,
+        "provider_conflict_rate": 0.0,
+        "series_evidence_coverage": 0.0,
+        "series_subset_n": 15,
+        "work_link_coverage": 0.0
+      },
+      "nl": {
+        "combined_correct_edition_rate": 87.65,
+        "combined_hit_rate": 98.15,
+        "conflicts_by_field": {
+          "authors": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "language": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "page_count": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "publication_date": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "publisher": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "series": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "series_position": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "title": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          }
+        },
+        "cover_coverage": 21.6,
+        "n": 162,
+        "provider_conflict_rate": 0.0,
+        "series_evidence_coverage": 0.0,
+        "series_subset_n": 15,
+        "work_link_coverage": 0.0
+      },
+      "total": {
+        "combined_correct_edition_rate": 82.33,
+        "combined_hit_rate": 97.33,
+        "conflicts_by_field": {
+          "authors": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "language": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "page_count": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "publication_date": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "publisher": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "series": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "series_position": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "title": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          }
+        },
+        "cover_coverage": 49.33,
+        "n": 300,
+        "provider_conflict_rate": 0.0,
+        "series_evidence_coverage": 0.0,
+        "series_subset_n": 31,
+        "work_link_coverage": 0.0
+      }
+    },
+    "open_library_google_fallback": {
+      "en": {
+        "combined_correct_edition_rate": 96.36,
+        "combined_hit_rate": 100.0,
+        "conflicts_by_field": {
+          "authors": {
+            "comparable_n": 80,
+            "conflict_n": 4,
+            "conflict_rate_of_comparable": 5.0
+          },
+          "language": {
+            "comparable_n": 95,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": 0.0
+          },
+          "page_count": {
+            "comparable_n": 47,
+            "conflict_n": 31,
+            "conflict_rate_of_comparable": 65.96
+          },
+          "publication_date": {
+            "comparable_n": 95,
+            "conflict_n": 20,
+            "conflict_rate_of_comparable": 21.05
+          },
+          "publisher": {
+            "comparable_n": 84,
+            "conflict_n": 55,
+            "conflict_rate_of_comparable": 65.48
+          },
+          "series": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "series_position": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "title": {
+            "comparable_n": 95,
+            "conflict_n": 11,
+            "conflict_rate_of_comparable": 11.58
+          }
+        },
+        "cover_coverage": 95.45,
+        "incremental_hit_gain_over_open_library": 4.55,
+        "n": 110,
+        "provider_conflict_rate": 70.91,
+        "series_evidence_coverage": 13.33,
+        "series_subset_n": 15,
+        "work_link_coverage": 95.45
+      },
+      "nl": {
+        "combined_correct_edition_rate": 95.68,
+        "combined_hit_rate": 99.38,
+        "conflicts_by_field": {
+          "authors": {
+            "comparable_n": 22,
+            "conflict_n": 3,
+            "conflict_rate_of_comparable": 13.64
+          },
+          "language": {
+            "comparable_n": 35,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": 0.0
+          },
+          "page_count": {
+            "comparable_n": 24,
+            "conflict_n": 8,
+            "conflict_rate_of_comparable": 33.33
+          },
+          "publication_date": {
+            "comparable_n": 36,
+            "conflict_n": 8,
+            "conflict_rate_of_comparable": 22.22
+          },
+          "publisher": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "series": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "series_position": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "title": {
+            "comparable_n": 37,
+            "conflict_n": 3,
+            "conflict_rate_of_comparable": 8.11
+          }
+        },
+        "cover_coverage": 37.04,
+        "incremental_hit_gain_over_open_library": 71.6,
+        "n": 162,
+        "provider_conflict_rate": 9.88,
+        "series_evidence_coverage": 26.67,
+        "series_subset_n": 15,
+        "work_link_coverage": 27.16
+      },
+      "total": {
+        "combined_correct_edition_rate": 95.33,
+        "combined_hit_rate": 99.67,
+        "conflicts_by_field": {
+          "authors": {
+            "comparable_n": 113,
+            "conflict_n": 9,
+            "conflict_rate_of_comparable": 7.96
+          },
+          "language": {
+            "comparable_n": 131,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": 0.0
+          },
+          "page_count": {
+            "comparable_n": 79,
+            "conflict_n": 44,
+            "conflict_rate_of_comparable": 55.7
+          },
+          "publication_date": {
+            "comparable_n": 145,
+            "conflict_n": 30,
+            "conflict_rate_of_comparable": 20.69
+          },
+          "publisher": {
+            "comparable_n": 91,
+            "conflict_n": 58,
+            "conflict_rate_of_comparable": 63.74
+          },
+          "series": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "series_position": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "title": {
+            "comparable_n": 153,
+            "conflict_n": 16,
+            "conflict_rate_of_comparable": 10.46
+          }
+        },
+        "cover_coverage": 63.0,
+        "incremental_hit_gain_over_open_library": 42.0,
+        "n": 300,
+        "provider_conflict_rate": 35.0,
+        "series_evidence_coverage": 19.35,
+        "series_subset_n": 31,
+        "work_link_coverage": 57.33
+      }
+    },
+    "open_library_google_wikidata": {
+      "en": {
+        "combined_correct_edition_rate": 96.36,
+        "combined_hit_rate": 100.0,
+        "conflicts_by_field": {
+          "authors": {
+            "comparable_n": 82,
+            "conflict_n": 4,
+            "conflict_rate_of_comparable": 4.88
+          },
+          "language": {
+            "comparable_n": 96,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": 0.0
+          },
+          "page_count": {
+            "comparable_n": 50,
+            "conflict_n": 33,
+            "conflict_rate_of_comparable": 66.0
+          },
+          "publication_date": {
+            "comparable_n": 97,
+            "conflict_n": 21,
+            "conflict_rate_of_comparable": 21.65
+          },
+          "publisher": {
+            "comparable_n": 87,
+            "conflict_n": 56,
+            "conflict_rate_of_comparable": 64.37
+          },
+          "series": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "series_position": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "title": {
+            "comparable_n": 97,
+            "conflict_n": 11,
+            "conflict_rate_of_comparable": 11.34
+          }
+        },
+        "cover_coverage": 95.45,
+        "n": 110,
+        "provider_conflict_rate": 72.73,
+        "series_evidence_coverage": 13.33,
+        "series_subset_n": 15,
+        "work_link_coverage": 95.45
+      },
+      "nl": {
+        "combined_correct_edition_rate": 95.68,
+        "combined_hit_rate": 99.38,
+        "conflicts_by_field": {
+          "authors": {
+            "comparable_n": 22,
+            "conflict_n": 3,
+            "conflict_rate_of_comparable": 13.64
+          },
+          "language": {
+            "comparable_n": 35,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": 0.0
+          },
+          "page_count": {
+            "comparable_n": 24,
+            "conflict_n": 8,
+            "conflict_rate_of_comparable": 33.33
+          },
+          "publication_date": {
+            "comparable_n": 36,
+            "conflict_n": 8,
+            "conflict_rate_of_comparable": 22.22
+          },
+          "publisher": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "series": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "series_position": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "title": {
+            "comparable_n": 37,
+            "conflict_n": 3,
+            "conflict_rate_of_comparable": 8.11
+          }
+        },
+        "cover_coverage": 37.04,
+        "n": 162,
+        "provider_conflict_rate": 9.88,
+        "series_evidence_coverage": 26.67,
+        "series_subset_n": 15,
+        "work_link_coverage": 27.16
+      },
+      "total": {
+        "combined_correct_edition_rate": 95.33,
+        "combined_hit_rate": 99.67,
+        "conflicts_by_field": {
+          "authors": {
+            "comparable_n": 115,
+            "conflict_n": 9,
+            "conflict_rate_of_comparable": 7.83
+          },
+          "language": {
+            "comparable_n": 133,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": 0.0
+          },
+          "page_count": {
+            "comparable_n": 82,
+            "conflict_n": 46,
+            "conflict_rate_of_comparable": 56.1
+          },
+          "publication_date": {
+            "comparable_n": 147,
+            "conflict_n": 31,
+            "conflict_rate_of_comparable": 21.09
+          },
+          "publisher": {
+            "comparable_n": 95,
+            "conflict_n": 60,
+            "conflict_rate_of_comparable": 63.16
+          },
+          "series": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "series_position": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "title": {
+            "comparable_n": 155,
+            "conflict_n": 16,
+            "conflict_rate_of_comparable": 10.32
+          }
+        },
+        "cover_coverage": 63.0,
+        "n": 300,
+        "provider_conflict_rate": 35.67,
+        "series_evidence_coverage": 19.35,
+        "series_subset_n": 31,
+        "work_link_coverage": 57.33
+      }
+    },
+    "open_library_only": {
+      "en": {
+        "combined_correct_edition_rate": 90.91,
+        "combined_hit_rate": 95.45,
+        "conflicts_by_field": {
+          "authors": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "language": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "page_count": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "publication_date": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "publisher": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "series": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "series_position": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "title": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          }
+        },
+        "cover_coverage": 73.64,
+        "n": 110,
+        "provider_conflict_rate": 0.0,
+        "series_evidence_coverage": 13.33,
+        "series_subset_n": 15,
+        "work_link_coverage": 95.45
+      },
+      "nl": {
+        "combined_correct_edition_rate": 27.16,
+        "combined_hit_rate": 27.78,
+        "conflicts_by_field": {
+          "authors": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "language": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "page_count": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "publication_date": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "publisher": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "series": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "series_position": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "title": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          }
+        },
+        "cover_coverage": 19.14,
+        "n": 162,
+        "provider_conflict_rate": 0.0,
+        "series_evidence_coverage": 26.67,
+        "series_subset_n": 15,
+        "work_link_coverage": 27.16
+      },
+      "total": {
+        "combined_correct_edition_rate": 55.0,
+        "combined_hit_rate": 57.67,
+        "conflicts_by_field": {
+          "authors": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "language": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "page_count": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "publication_date": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "publisher": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "series": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "series_position": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "title": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          }
+        },
+        "cover_coverage": 43.67,
+        "n": 300,
+        "provider_conflict_rate": 0.0,
+        "series_evidence_coverage": 19.35,
+        "series_subset_n": 31,
+        "work_link_coverage": 57.33
+      }
+    },
+    "open_library_wikidata_enrichment": {
+      "en": {
+        "combined_correct_edition_rate": 90.91,
+        "combined_hit_rate": 95.45,
+        "conflicts_by_field": {
+          "authors": {
+            "comparable_n": 5,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": 0.0
+          },
+          "language": {
+            "comparable_n": 11,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": 0.0
+          },
+          "page_count": {
+            "comparable_n": 4,
+            "conflict_n": 4,
+            "conflict_rate_of_comparable": 100.0
+          },
+          "publication_date": {
+            "comparable_n": 12,
+            "conflict_n": 4,
+            "conflict_rate_of_comparable": 33.33
+          },
+          "publisher": {
+            "comparable_n": 10,
+            "conflict_n": 2,
+            "conflict_rate_of_comparable": 20.0
+          },
+          "series": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "series_position": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "title": {
+            "comparable_n": 12,
+            "conflict_n": 1,
+            "conflict_rate_of_comparable": 8.33
+          }
+        },
+        "cover_coverage": 73.64,
+        "n": 110,
+        "provider_conflict_rate": 8.18,
+        "series_evidence_coverage": 13.33,
+        "series_subset_n": 15,
+        "work_link_coverage": 95.45
+      },
+      "nl": {
+        "combined_correct_edition_rate": 27.16,
+        "combined_hit_rate": 27.78,
+        "conflicts_by_field": {
+          "authors": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "language": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "page_count": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "publication_date": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "publisher": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "series": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "series_position": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "title": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          }
+        },
+        "cover_coverage": 19.14,
+        "n": 162,
+        "provider_conflict_rate": 0.0,
+        "series_evidence_coverage": 26.67,
+        "series_subset_n": 15,
+        "work_link_coverage": 27.16
+      },
+      "total": {
+        "combined_correct_edition_rate": 55.0,
+        "combined_hit_rate": 57.67,
+        "conflicts_by_field": {
+          "authors": {
+            "comparable_n": 5,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": 0.0
+          },
+          "language": {
+            "comparable_n": 11,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": 0.0
+          },
+          "page_count": {
+            "comparable_n": 5,
+            "conflict_n": 5,
+            "conflict_rate_of_comparable": 100.0
+          },
+          "publication_date": {
+            "comparable_n": 13,
+            "conflict_n": 4,
+            "conflict_rate_of_comparable": 30.77
+          },
+          "publisher": {
+            "comparable_n": 11,
+            "conflict_n": 3,
+            "conflict_rate_of_comparable": 27.27
+          },
+          "series": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "series_position": {
+            "comparable_n": 0,
+            "conflict_n": 0,
+            "conflict_rate_of_comparable": null
+          },
+          "title": {
+            "comparable_n": 13,
+            "conflict_n": 1,
+            "conflict_rate_of_comparable": 7.69
+          }
+        },
+        "cover_coverage": 43.67,
+        "n": 300,
+        "provider_conflict_rate": 3.33,
+        "series_evidence_coverage": 19.35,
+        "series_subset_n": 31,
+        "work_link_coverage": 57.33
+      }
+    }
+  },
+  "generated_at": "2026-09-05T10:57:59+00:00",
+  "method_notes": [
+    "EXACT requires exact returned ISBN plus compatible title/author evidence.",
+    "Field accuracy denominators exclude MISSING and UNVERIFIABLE local ground truth.",
+    "Local V1 metadata is a reference, not absolute truth; divergent cases require manual review."
+  ],
+  "provider_metrics": {
+    "bookbrainz": {
+      "en": {
+        "ambiguous_rate": 0.0,
+        "api_error_rate": 0.0,
+        "authors_accuracy": 71.43,
+        "authors_coverage": 6.36,
+        "authors_verifiable_n": 7,
+        "correct_series_position_rate": 0.0,
+        "correct_series_rate": 0.0,
+        "cover_accuracy": null,
+        "cover_coverage": 0.0,
+        "cover_verifiable_n": 0,
+        "error_rate": 0.0,
+        "exact_rate": 4.55,
+        "hit_rate": 7.27,
+        "isbn_exact_accuracy": 100.0,
+        "isbn_exact_coverage": 7.27,
+        "isbn_exact_verifiable_n": 8,
+        "language_accuracy": 100.0,
+        "language_coverage": 7.27,
+        "language_verifiable_n": 8,
+        "mean_response_ms": null,
+        "median_response_ms": null,
+        "miss_rate": 92.73,
+        "n": 110,
+        "page_count_accuracy": 50.0,
+        "page_count_coverage": 6.36,
+        "page_count_verifiable_n": 6,
+        "probable_rate": 2.73,
+        "publication_date_accuracy": 85.71,
+        "publication_date_coverage": 6.36,
+        "publication_date_verifiable_n": 7,
+        "publisher_accuracy": 80.0,
+        "publisher_coverage": 4.55,
+        "publisher_verifiable_n": 5,
+        "series_accuracy": null,
+        "series_coverage": 0.0,
+        "series_position_accuracy": null,
+        "series_position_coverage": 0.0,
+        "series_position_subset_coverage": 0.0,
+        "series_position_subset_n": 11,
+        "series_position_verifiable_n": 0,
+        "series_subset_coverage": 0.0,
+        "series_subset_n": 15,
+        "series_verifiable_n": 0,
+        "subjects_accuracy": null,
+        "subjects_coverage": 0.0,
+        "subjects_verifiable_n": 0,
+        "subtitle_accuracy": null,
+        "subtitle_coverage": 0.0,
+        "subtitle_verifiable_n": 0,
+        "title_accuracy": 87.5,
+        "title_coverage": 7.27,
+        "title_verifiable_n": 8,
+        "valid_isbn_count": 110,
+        "work_link_accuracy": 100.0,
+        "work_link_coverage": 7.27,
+        "work_link_verifiable_n": 8,
+        "wrong_edition_rate": 0.0,
+        "wrong_work_rate": 0.0
+      },
+      "nl": {
+        "ambiguous_rate": 0.0,
+        "api_error_rate": 0.0,
+        "authors_accuracy": null,
+        "authors_coverage": 0.0,
+        "authors_verifiable_n": 0,
+        "correct_series_position_rate": 0.0,
+        "correct_series_rate": 0.0,
+        "cover_accuracy": null,
+        "cover_coverage": 0.0,
+        "cover_verifiable_n": 0,
+        "error_rate": 0.0,
+        "exact_rate": 0.0,
+        "hit_rate": 0.0,
+        "isbn_exact_accuracy": null,
+        "isbn_exact_coverage": 0.0,
+        "isbn_exact_verifiable_n": 0,
+        "language_accuracy": null,
+        "language_coverage": 0.0,
+        "language_verifiable_n": 0,
+        "mean_response_ms": null,
+        "median_response_ms": null,
+        "miss_rate": 100.0,
+        "n": 162,
+        "page_count_accuracy": null,
+        "page_count_coverage": 0.0,
+        "page_count_verifiable_n": 0,
+        "probable_rate": 0.0,
+        "publication_date_accuracy": null,
+        "publication_date_coverage": 0.0,
+        "publication_date_verifiable_n": 0,
+        "publisher_accuracy": null,
+        "publisher_coverage": 0.0,
+        "publisher_verifiable_n": 0,
+        "series_accuracy": null,
+        "series_coverage": 0.0,
+        "series_position_accuracy": null,
+        "series_position_coverage": 0.0,
+        "series_position_subset_coverage": 0.0,
+        "series_position_subset_n": 11,
+        "series_position_verifiable_n": 0,
+        "series_subset_coverage": 0.0,
+        "series_subset_n": 15,
+        "series_verifiable_n": 0,
+        "subjects_accuracy": null,
+        "subjects_coverage": 0.0,
+        "subjects_verifiable_n": 0,
+        "subtitle_accuracy": null,
+        "subtitle_coverage": 0.0,
+        "subtitle_verifiable_n": 0,
+        "title_accuracy": null,
+        "title_coverage": 0.0,
+        "title_verifiable_n": 0,
+        "valid_isbn_count": 162,
+        "work_link_accuracy": null,
+        "work_link_coverage": 0.0,
+        "work_link_verifiable_n": 0,
+        "wrong_edition_rate": 0.0,
+        "wrong_work_rate": 0.0
+      },
+      "total": {
+        "ambiguous_rate": 0.0,
+        "api_error_rate": 0.0,
+        "authors_accuracy": 71.43,
+        "authors_coverage": 2.67,
+        "authors_verifiable_n": 7,
+        "correct_series_position_rate": 0.0,
+        "correct_series_rate": 0.0,
+        "cover_accuracy": null,
+        "cover_coverage": 0.0,
+        "cover_verifiable_n": 0,
+        "error_rate": 0.0,
+        "exact_rate": 2.0,
+        "hit_rate": 3.0,
+        "isbn_exact_accuracy": 100.0,
+        "isbn_exact_coverage": 3.0,
+        "isbn_exact_verifiable_n": 9,
+        "language_accuracy": 100.0,
+        "language_coverage": 3.0,
+        "language_verifiable_n": 8,
+        "mean_response_ms": null,
+        "median_response_ms": null,
+        "miss_rate": 97.0,
+        "n": 300,
+        "page_count_accuracy": 50.0,
+        "page_count_coverage": 2.67,
+        "page_count_verifiable_n": 6,
+        "probable_rate": 1.0,
+        "publication_date_accuracy": 87.5,
+        "publication_date_coverage": 2.67,
+        "publication_date_verifiable_n": 8,
+        "publisher_accuracy": 83.33,
+        "publisher_coverage": 2.0,
+        "publisher_verifiable_n": 6,
+        "series_accuracy": null,
+        "series_coverage": 0.0,
+        "series_position_accuracy": null,
+        "series_position_coverage": 0.0,
+        "series_position_subset_coverage": 0.0,
+        "series_position_subset_n": 22,
+        "series_position_verifiable_n": 0,
+        "series_subset_coverage": 0.0,
+        "series_subset_n": 31,
+        "series_verifiable_n": 0,
+        "subjects_accuracy": null,
+        "subjects_coverage": 0.0,
+        "subjects_verifiable_n": 0,
+        "subtitle_accuracy": null,
+        "subtitle_coverage": 0.0,
+        "subtitle_verifiable_n": 0,
+        "title_accuracy": 88.89,
+        "title_coverage": 3.0,
+        "title_verifiable_n": 9,
+        "valid_isbn_count": 300,
+        "work_link_accuracy": 100.0,
+        "work_link_coverage": 3.0,
+        "work_link_verifiable_n": 9,
+        "wrong_edition_rate": 0.0,
+        "wrong_work_rate": 0.0
+      }
+    },
+    "google_books": {
+      "en": {
+        "ambiguous_rate": 0.0,
+        "api_error_rate": 0.0,
+        "authors_accuracy": 93.94,
+        "authors_coverage": 96.36,
+        "authors_verifiable_n": 99,
+        "correct_series_position_rate": 0.0,
+        "correct_series_rate": 0.0,
+        "cover_accuracy": 100.0,
+        "cover_coverage": 90.0,
+        "cover_verifiable_n": 99,
+        "error_rate": 0.0,
+        "exact_rate": 76.36,
+        "hit_rate": 96.36,
+        "isbn_exact_accuracy": 95.28,
+        "isbn_exact_coverage": 96.36,
+        "isbn_exact_verifiable_n": 106,
+        "language_accuracy": 100.0,
+        "language_coverage": 96.36,
+        "language_verifiable_n": 106,
+        "mean_response_ms": 684.3,
+        "median_response_ms": 814.71,
+        "miss_rate": 3.64,
+        "n": 110,
+        "page_count_accuracy": 33.33,
+        "page_count_coverage": 60.0,
+        "page_count_verifiable_n": 51,
+        "probable_rate": 14.55,
+        "publication_date_accuracy": 80.19,
+        "publication_date_coverage": 96.36,
+        "publication_date_verifiable_n": 106,
+        "publisher_accuracy": 37.63,
+        "publisher_coverage": 84.55,
+        "publisher_verifiable_n": 93,
+        "series_accuracy": null,
+        "series_coverage": 0.0,
+        "series_position_accuracy": null,
+        "series_position_coverage": 0.0,
+        "series_position_subset_coverage": 0.0,
+        "series_position_subset_n": 11,
+        "series_position_verifiable_n": 0,
+        "series_subset_coverage": 0.0,
+        "series_subset_n": 15,
+        "series_verifiable_n": 0,
+        "subjects_accuracy": 100.0,
+        "subjects_coverage": 85.45,
+        "subjects_verifiable_n": 94,
+        "subtitle_accuracy": null,
+        "subtitle_coverage": 27.27,
+        "subtitle_verifiable_n": 0,
+        "title_accuracy": 86.79,
+        "title_coverage": 96.36,
+        "title_verifiable_n": 106,
+        "valid_isbn_count": 110,
+        "work_link_accuracy": null,
+        "work_link_coverage": 0.0,
+        "work_link_verifiable_n": 0,
+        "wrong_edition_rate": 4.55,
+        "wrong_work_rate": 0.91
+      },
+      "nl": {
+        "ambiguous_rate": 0.0,
+        "api_error_rate": 0.0,
+        "authors_accuracy": 95.07,
+        "authors_coverage": 91.98,
+        "authors_verifiable_n": 142,
+        "correct_series_position_rate": 0.0,
+        "correct_series_rate": 0.0,
+        "cover_accuracy": 100.0,
+        "cover_coverage": 21.6,
+        "cover_verifiable_n": 35,
+        "error_rate": 0.0,
+        "exact_rate": 87.65,
+        "hit_rate": 98.15,
+        "isbn_exact_accuracy": 96.23,
+        "isbn_exact_coverage": 98.15,
+        "isbn_exact_verifiable_n": 159,
+        "language_accuracy": 98.74,
+        "language_coverage": 98.15,
+        "language_verifiable_n": 159,
+        "mean_response_ms": 706.38,
+        "median_response_ms": 830.57,
+        "miss_rate": 1.85,
+        "n": 162,
+        "page_count_accuracy": 89.43,
+        "page_count_coverage": 79.01,
+        "page_count_verifiable_n": 123,
+        "probable_rate": 6.79,
+        "publication_date_accuracy": 94.34,
+        "publication_date_coverage": 98.15,
+        "publication_date_verifiable_n": 159,
+        "publisher_accuracy": 87.5,
+        "publisher_coverage": 4.94,
+        "publisher_verifiable_n": 8,
+        "series_accuracy": null,
+        "series_coverage": 0.0,
+        "series_position_accuracy": null,
+        "series_position_coverage": 0.0,
+        "series_position_subset_coverage": 0.0,
+        "series_position_subset_n": 11,
+        "series_position_verifiable_n": 0,
+        "series_subset_coverage": 0.0,
+        "series_subset_n": 15,
+        "series_verifiable_n": 0,
+        "subjects_accuracy": 100.0,
+        "subjects_coverage": 17.28,
+        "subjects_verifiable_n": 28,
+        "subtitle_accuracy": null,
+        "subtitle_coverage": 33.33,
+        "subtitle_verifiable_n": 0,
+        "title_accuracy": 97.48,
+        "title_coverage": 98.15,
+        "title_verifiable_n": 159,
+        "valid_isbn_count": 162,
+        "work_link_accuracy": null,
+        "work_link_coverage": 0.0,
+        "work_link_verifiable_n": 0,
+        "wrong_edition_rate": 3.7,
+        "wrong_work_rate": 0.0
+      },
+      "total": {
+        "ambiguous_rate": 0.0,
+        "api_error_rate": 0.0,
+        "authors_accuracy": 94.25,
+        "authors_coverage": 93.33,
+        "authors_verifiable_n": 261,
+        "correct_series_position_rate": 0.0,
+        "correct_series_rate": 0.0,
+        "cover_accuracy": 100.0,
+        "cover_coverage": 49.33,
+        "cover_verifiable_n": 148,
+        "error_rate": 0.0,
+        "exact_rate": 82.33,
+        "hit_rate": 97.33,
+        "isbn_exact_accuracy": 95.89,
+        "isbn_exact_coverage": 97.33,
+        "isbn_exact_verifiable_n": 292,
+        "language_accuracy": 99.25,
+        "language_coverage": 97.33,
+        "language_verifiable_n": 265,
+        "mean_response_ms": 696.59,
+        "median_response_ms": 820.15,
+        "miss_rate": 2.67,
+        "n": 300,
+        "page_count_accuracy": 71.2,
+        "page_count_coverage": 72.67,
+        "page_count_verifiable_n": 184,
+        "probable_rate": 10.33,
+        "publication_date_accuracy": 88.42,
+        "publication_date_coverage": 97.33,
+        "publication_date_verifiable_n": 285,
+        "publisher_accuracy": 42.59,
+        "publisher_coverage": 36.0,
+        "publisher_verifiable_n": 108,
+        "series_accuracy": null,
+        "series_coverage": 0.0,
+        "series_position_accuracy": null,
+        "series_position_coverage": 0.0,
+        "series_position_subset_coverage": 0.0,
+        "series_position_subset_n": 22,
+        "series_position_verifiable_n": 0,
+        "series_subset_coverage": 0.0,
+        "series_subset_n": 31,
+        "series_verifiable_n": 0,
+        "subjects_accuracy": 100.0,
+        "subjects_coverage": 44.33,
+        "subjects_verifiable_n": 133,
+        "subtitle_accuracy": null,
+        "subtitle_coverage": 30.0,
+        "subtitle_verifiable_n": 0,
+        "title_accuracy": 92.81,
+        "title_coverage": 97.33,
+        "title_verifiable_n": 292,
+        "valid_isbn_count": 300,
+        "work_link_accuracy": null,
+        "work_link_coverage": 0.0,
+        "work_link_verifiable_n": 0,
+        "wrong_edition_rate": 4.0,
+        "wrong_work_rate": 0.67
+      }
+    },
+    "open_library": {
+      "en": {
+        "ambiguous_rate": 0.0,
+        "api_error_rate": 0.0,
+        "authors_accuracy": 98.85,
+        "authors_coverage": 80.0,
+        "authors_verifiable_n": 87,
+        "correct_series_position_rate": 0.0,
+        "correct_series_rate": 13.33,
+        "cover_accuracy": 100.0,
+        "cover_coverage": 73.64,
+        "cover_verifiable_n": 81,
+        "error_rate": 0.0,
+        "exact_rate": 90.91,
+        "hit_rate": 95.45,
+        "isbn_exact_accuracy": 100.0,
+        "isbn_exact_coverage": 95.45,
+        "isbn_exact_verifiable_n": 105,
+        "language_accuracy": 100.0,
+        "language_coverage": 95.45,
+        "language_verifiable_n": 105,
+        "mean_response_ms": 2852.46,
+        "median_response_ms": 2830.82,
+        "miss_rate": 4.55,
+        "n": 110,
+        "page_count_accuracy": 94.74,
+        "page_count_coverage": 71.82,
+        "page_count_verifiable_n": 76,
+        "probable_rate": 4.55,
+        "publication_date_accuracy": 95.24,
+        "publication_date_coverage": 95.45,
+        "publication_date_verifiable_n": 105,
+        "publisher_accuracy": 97.14,
+        "publisher_coverage": 95.45,
+        "publisher_verifiable_n": 105,
+        "series_accuracy": 40.0,
+        "series_coverage": 17.27,
+        "series_position_accuracy": null,
+        "series_position_coverage": 0.0,
+        "series_position_subset_coverage": 0.0,
+        "series_position_subset_n": 11,
+        "series_position_verifiable_n": 0,
+        "series_subset_coverage": 33.33,
+        "series_subset_n": 15,
+        "series_verifiable_n": 5,
+        "subjects_accuracy": 100.0,
+        "subjects_coverage": 56.36,
+        "subjects_verifiable_n": 62,
+        "subtitle_accuracy": null,
+        "subtitle_coverage": 20.0,
+        "subtitle_verifiable_n": 0,
+        "title_accuracy": 96.19,
+        "title_coverage": 95.45,
+        "title_verifiable_n": 105,
+        "valid_isbn_count": 110,
+        "work_link_accuracy": 100.0,
+        "work_link_coverage": 95.45,
+        "work_link_verifiable_n": 105,
+        "wrong_edition_rate": 0.0,
+        "wrong_work_rate": 0.0
+      },
+      "nl": {
+        "ambiguous_rate": 0.0,
+        "api_error_rate": 0.0,
+        "authors_accuracy": 100.0,
+        "authors_coverage": 19.14,
+        "authors_verifiable_n": 30,
+        "correct_series_position_rate": 0.0,
+        "correct_series_rate": 26.67,
+        "cover_accuracy": 100.0,
+        "cover_coverage": 19.14,
+        "cover_verifiable_n": 31,
+        "error_rate": 0.0,
+        "exact_rate": 27.16,
+        "hit_rate": 27.78,
+        "isbn_exact_accuracy": 100.0,
+        "isbn_exact_coverage": 27.78,
+        "isbn_exact_verifiable_n": 45,
+        "language_accuracy": 100.0,
+        "language_coverage": 25.93,
+        "language_verifiable_n": 42,
+        "mean_response_ms": 2559.27,
+        "median_response_ms": 2519.6,
+        "miss_rate": 72.22,
+        "n": 162,
+        "page_count_accuracy": 100.0,
+        "page_count_coverage": 22.22,
+        "page_count_verifiable_n": 35,
+        "probable_rate": 0.0,
+        "publication_date_accuracy": 100.0,
+        "publication_date_coverage": 27.16,
+        "publication_date_verifiable_n": 44,
+        "publisher_accuracy": 100.0,
+        "publisher_coverage": 27.16,
+        "publisher_verifiable_n": 41,
+        "series_accuracy": 100.0,
+        "series_coverage": 5.56,
+        "series_position_accuracy": null,
+        "series_position_coverage": 0.0,
+        "series_position_subset_coverage": 0.0,
+        "series_position_subset_n": 11,
+        "series_position_verifiable_n": 0,
+        "series_subset_coverage": 26.67,
+        "series_subset_n": 15,
+        "series_verifiable_n": 4,
+        "subjects_accuracy": 100.0,
+        "subjects_coverage": 8.02,
+        "subjects_verifiable_n": 13,
+        "subtitle_accuracy": null,
+        "subtitle_coverage": 8.64,
+        "subtitle_verifiable_n": 0,
+        "title_accuracy": 97.78,
+        "title_coverage": 27.78,
+        "title_verifiable_n": 45,
+        "valid_isbn_count": 162,
+        "work_link_accuracy": 100.0,
+        "work_link_coverage": 27.16,
+        "work_link_verifiable_n": 44,
+        "wrong_edition_rate": 0.0,
+        "wrong_work_rate": 0.62
+      },
+      "total": {
+        "ambiguous_rate": 0.0,
+        "api_error_rate": 0.0,
+        "authors_accuracy": 99.23,
+        "authors_coverage": 44.0,
+        "authors_verifiable_n": 130,
+        "correct_series_position_rate": 0.0,
+        "correct_series_rate": 19.35,
+        "cover_accuracy": 100.0,
+        "cover_coverage": 43.67,
+        "cover_verifiable_n": 131,
+        "error_rate": 0.0,
+        "exact_rate": 55.0,
+        "hit_rate": 57.67,
+        "isbn_exact_accuracy": 100.0,
+        "isbn_exact_coverage": 57.67,
+        "isbn_exact_verifiable_n": 173,
+        "language_accuracy": 100.0,
+        "language_coverage": 49.33,
+        "language_verifiable_n": 147,
+        "mean_response_ms": 2699.72,
+        "median_response_ms": 2702.56,
+        "miss_rate": 42.33,
+        "n": 300,
+        "page_count_accuracy": 95.8,
+        "page_count_coverage": 41.0,
+        "page_count_verifiable_n": 119,
+        "probable_rate": 2.33,
+        "publication_date_accuracy": 96.36,
+        "publication_date_coverage": 55.0,
+        "publication_date_verifiable_n": 165,
+        "publisher_accuracy": 97.6,
+        "publisher_coverage": 56.67,
+        "publisher_verifiable_n": 167,
+        "series_accuracy": 60.0,
+        "series_coverage": 10.0,
+        "series_position_accuracy": null,
+        "series_position_coverage": 0.0,
+        "series_position_subset_coverage": 0.0,
+        "series_position_subset_n": 22,
+        "series_position_verifiable_n": 0,
+        "series_subset_coverage": 32.26,
+        "series_subset_n": 31,
+        "series_verifiable_n": 10,
+        "subjects_accuracy": 100.0,
+        "subjects_coverage": 26.0,
+        "subjects_verifiable_n": 78,
+        "subtitle_accuracy": null,
+        "subtitle_coverage": 12.67,
+        "subtitle_verifiable_n": 0,
+        "title_accuracy": 95.95,
+        "title_coverage": 57.67,
+        "title_verifiable_n": 173,
+        "valid_isbn_count": 300,
+        "work_link_accuracy": 100.0,
+        "work_link_coverage": 57.33,
+        "work_link_verifiable_n": 172,
+        "wrong_edition_rate": 0.0,
+        "wrong_work_rate": 0.33
+      }
+    },
+    "wikidata": {
+      "en": {
+        "ambiguous_rate": 0.0,
+        "api_error_rate": 0.0,
+        "authors_accuracy": 100.0,
+        "authors_coverage": 6.36,
+        "authors_verifiable_n": 4,
+        "correct_series_position_rate": 0.0,
+        "correct_series_rate": 0.0,
+        "cover_accuracy": 100.0,
+        "cover_coverage": 0.91,
+        "cover_verifiable_n": 1,
+        "error_rate": 0.0,
+        "exact_rate": 10.0,
+        "hit_rate": 10.91,
+        "isbn_exact_accuracy": 100.0,
+        "isbn_exact_coverage": 10.91,
+        "isbn_exact_verifiable_n": 12,
+        "language_accuracy": 90.91,
+        "language_coverage": 10.0,
+        "language_verifiable_n": 11,
+        "mean_response_ms": 267.94,
+        "median_response_ms": 247.44,
+        "miss_rate": 89.09,
+        "n": 110,
+        "page_count_accuracy": 0.0,
+        "page_count_coverage": 6.36,
+        "page_count_verifiable_n": 3,
+        "probable_rate": 0.91,
+        "publication_date_accuracy": 58.33,
+        "publication_date_coverage": 10.91,
+        "publication_date_verifiable_n": 12,
+        "publisher_accuracy": 80.0,
+        "publisher_coverage": 9.09,
+        "publisher_verifiable_n": 10,
+        "series_accuracy": null,
+        "series_coverage": 0.91,
+        "series_position_accuracy": null,
+        "series_position_coverage": 0.0,
+        "series_position_subset_coverage": 0.0,
+        "series_position_subset_n": 11,
+        "series_position_verifiable_n": 0,
+        "series_subset_coverage": 0.0,
+        "series_subset_n": 15,
+        "series_verifiable_n": 0,
+        "subjects_accuracy": null,
+        "subjects_coverage": 0.0,
+        "subjects_verifiable_n": 0,
+        "subtitle_accuracy": null,
+        "subtitle_coverage": 0.0,
+        "subtitle_verifiable_n": 0,
+        "title_accuracy": 91.67,
+        "title_coverage": 10.91,
+        "title_verifiable_n": 12,
+        "valid_isbn_count": 110,
+        "work_link_accuracy": 100.0,
+        "work_link_coverage": 10.0,
+        "work_link_verifiable_n": 11,
+        "wrong_edition_rate": 0.0,
+        "wrong_work_rate": 0.0
+      },
+      "nl": {
+        "ambiguous_rate": 0.0,
+        "api_error_rate": 0.0,
+        "authors_accuracy": null,
+        "authors_coverage": 0.0,
+        "authors_verifiable_n": 0,
+        "correct_series_position_rate": 0.0,
+        "correct_series_rate": 0.0,
+        "cover_accuracy": null,
+        "cover_coverage": 0.0,
+        "cover_verifiable_n": 0,
+        "error_rate": 0.0,
+        "exact_rate": 0.0,
+        "hit_rate": 0.0,
+        "isbn_exact_accuracy": null,
+        "isbn_exact_coverage": 0.0,
+        "isbn_exact_verifiable_n": 0,
+        "language_accuracy": null,
+        "language_coverage": 0.0,
+        "language_verifiable_n": 0,
+        "mean_response_ms": 193.03,
+        "median_response_ms": 181.54,
+        "miss_rate": 100.0,
+        "n": 162,
+        "page_count_accuracy": null,
+        "page_count_coverage": 0.0,
+        "page_count_verifiable_n": 0,
+        "probable_rate": 0.0,
+        "publication_date_accuracy": null,
+        "publication_date_coverage": 0.0,
+        "publication_date_verifiable_n": 0,
+        "publisher_accuracy": null,
+        "publisher_coverage": 0.0,
+        "publisher_verifiable_n": 0,
+        "series_accuracy": null,
+        "series_coverage": 0.0,
+        "series_position_accuracy": null,
+        "series_position_coverage": 0.0,
+        "series_position_subset_coverage": 0.0,
+        "series_position_subset_n": 11,
+        "series_position_verifiable_n": 0,
+        "series_subset_coverage": 0.0,
+        "series_subset_n": 15,
+        "series_verifiable_n": 0,
+        "subjects_accuracy": null,
+        "subjects_coverage": 0.0,
+        "subjects_verifiable_n": 0,
+        "subtitle_accuracy": null,
+        "subtitle_coverage": 0.0,
+        "subtitle_verifiable_n": 0,
+        "title_accuracy": null,
+        "title_coverage": 0.0,
+        "title_verifiable_n": 0,
+        "valid_isbn_count": 162,
+        "work_link_accuracy": null,
+        "work_link_coverage": 0.0,
+        "work_link_verifiable_n": 0,
+        "wrong_edition_rate": 0.0,
+        "wrong_work_rate": 0.0
+      },
+      "total": {
+        "ambiguous_rate": 0.0,
+        "api_error_rate": 0.0,
+        "authors_accuracy": 100.0,
+        "authors_coverage": 2.33,
+        "authors_verifiable_n": 4,
+        "correct_series_position_rate": 0.0,
+        "correct_series_rate": 0.0,
+        "cover_accuracy": 100.0,
+        "cover_coverage": 0.33,
+        "cover_verifiable_n": 1,
+        "error_rate": 0.0,
+        "exact_rate": 4.0,
+        "hit_rate": 4.33,
+        "isbn_exact_accuracy": 100.0,
+        "isbn_exact_coverage": 4.33,
+        "isbn_exact_verifiable_n": 13,
+        "language_accuracy": 90.91,
+        "language_coverage": 4.0,
+        "language_verifiable_n": 11,
+        "mean_response_ms": 224.06,
+        "median_response_ms": 211.56,
+        "miss_rate": 95.67,
+        "n": 300,
+        "page_count_accuracy": 0.0,
+        "page_count_coverage": 2.67,
+        "page_count_verifiable_n": 4,
+        "probable_rate": 0.33,
+        "publication_date_accuracy": 61.54,
+        "publication_date_coverage": 4.33,
+        "publication_date_verifiable_n": 13,
+        "publisher_accuracy": 72.73,
+        "publisher_coverage": 3.67,
+        "publisher_verifiable_n": 11,
+        "series_accuracy": null,
+        "series_coverage": 0.33,
+        "series_position_accuracy": null,
+        "series_position_coverage": 0.0,
+        "series_position_subset_coverage": 0.0,
+        "series_position_subset_n": 22,
+        "series_position_verifiable_n": 0,
+        "series_subset_coverage": 0.0,
+        "series_subset_n": 31,
+        "series_verifiable_n": 0,
+        "subjects_accuracy": null,
+        "subjects_coverage": 0.0,
+        "subjects_verifiable_n": 0,
+        "subtitle_accuracy": null,
+        "subtitle_coverage": 0.0,
+        "subtitle_verifiable_n": 0,
+        "title_accuracy": 92.31,
+        "title_coverage": 4.33,
+        "title_verifiable_n": 13,
+        "valid_isbn_count": 300,
+        "work_link_accuracy": 100.0,
+        "work_link_coverage": 4.0,
+        "work_link_verifiable_n": 12,
+        "wrong_edition_rate": 0.0,
+        "wrong_work_rate": 0.0
+      }
+    }
+  },
+  "sample_n": 300,
+  "seed": 20260905,
+  "series_subset_n": 31
+}
