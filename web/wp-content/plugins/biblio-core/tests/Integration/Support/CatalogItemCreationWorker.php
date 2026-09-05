@@ -7,6 +7,7 @@ use Biblio\Core\Application\Catalog\Classification\LibraryCatalogContextInitiali
 use Biblio\Core\Catalog\Classification\ClassificationSeedKey;
 use Biblio\Core\Catalog\Classification\LibraryCatalogSelection;
 use Biblio\Core\Catalog\EditionId;
+use Biblio\Core\Catalog\IsbnCanonicalizer;
 use Biblio\Core\Catalog\ItemId;
 use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Infrastructure\WordPress\ProductionComposition;
@@ -14,7 +15,7 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\CoreTableNames;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryBookTypeRepository;
 use Biblio\Core\Library\LibraryId;
 
-if ($argc !== 7) {
+if ($argc !== 7 && $argc !== 8) {
     fwrite(
         STDERR,
         "Expected user, library, item, Work, Edition and barrier directory.\n"
@@ -31,6 +32,7 @@ if ($argc !== 7) {
     $editionValue,
     $barrierDirectory,
 ] = $argv;
+$isbnInput = $argv[7] ?? null;
 
 require dirname(__DIR__) . "/bootstrap.php";
 
@@ -68,6 +70,16 @@ try {
         throw new RuntimeException("Classification seed is missing.");
     }
 
+    $isbnMetadata = null;
+    if ($isbnInput !== null) {
+        $parsed = (new IsbnCanonicalizer())->parse($isbnInput);
+        $identity = $parsed->identity();
+        if ($identity === null) {
+            throw new RuntimeException("Worker ISBN input is invalid.");
+        }
+        $isbnMetadata = $identity->metadata();
+    }
+
     $item = (new ProductionComposition($wpdb))
         ->application()
         ->libraryItemCreation()
@@ -79,7 +91,8 @@ try {
             new EditionId($editionValue),
             new LibraryCatalogContextInitialization(
                 new LibraryCatalogSelection($bookType->id())
-            )
+            ),
+            $isbnMetadata
         );
     fwrite(STDOUT, json_encode([
         "status" => "created",

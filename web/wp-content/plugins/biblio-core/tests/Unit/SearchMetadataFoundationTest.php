@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Tests\Unit;
 
-use Biblio\Core\Catalog\{AlternateWorkTitle,ContainmentPosition,Edition,EditionId,EditionIsbnMetadata,InventoryNumber,Isbn10,Isbn13,WorkAlternateTitles,WorkContainment,WorkContainments,WorkId};
+use Biblio\Core\Catalog\{AlternateWorkTitle,CanonicalIsbnIdentity,ContainmentPosition,Edition,EditionId,EditionIsbnMetadata,InventoryNumber,Isbn10,Isbn13,IsbnCanonicalizer,IsbnInputError,WorkAlternateTitles,WorkContainment,WorkContainments,WorkId};
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
@@ -89,6 +89,60 @@ final class SearchMetadataFoundationTest extends TestCase
         self::assertTrue($without->isbnMetadata()->isExplicitlyWithoutIsbn());
         self::assertSame("0306406152", $known->isbnMetadata()->isbn10()?->value());
         self::assertSame("9780306406157", $known->isbnMetadata()->isbn13()?->value());
+    }
+
+    public function testCanonicalIsbnIdentityConvertsAliasesAndPreserves979(): void
+    {
+        $fromTen = CanonicalIsbnIdentity::fromIsbn(
+            new Isbn10("0-306-40615-2")
+        );
+        $fromThirteen = CanonicalIsbnIdentity::fromIsbn(
+            new Isbn13("9780306406157")
+        );
+        $withX = CanonicalIsbnIdentity::fromIsbn(new Isbn10("097522980X"));
+        $isbn979 = CanonicalIsbnIdentity::fromIsbn(
+            new Isbn13("9791090636071")
+        );
+
+        self::assertSame("9780306406157", $fromTen->isbn13()->value());
+        self::assertSame(
+            $fromTen->isbn13()->value(),
+            $fromThirteen->isbn13()->value()
+        );
+        self::assertSame("0306406152", $fromThirteen->isbn10()?->value());
+        self::assertSame("9780975229804", $withX->isbn13()->value());
+        self::assertNull($isbn979->isbn10());
+    }
+
+    public function testTypedParserKeepsInvalidDistinctFromMissing(): void
+    {
+        $canonicalizer = new IsbnCanonicalizer();
+        $formatted = $canonicalizer->parse(" 978-0-306-40615-7 ");
+        $invalid = $canonicalizer->parse("9780306406158");
+        $missing = EditionIsbnMetadata::withoutIsbn();
+
+        self::assertTrue($formatted->isValid());
+        self::assertSame(
+            "9780306406157",
+            $formatted->identity()?->isbn13()->value()
+        );
+        self::assertFalse($invalid->isValid());
+        self::assertSame(IsbnInputError::InvalidChecksum, $invalid->error());
+        self::assertTrue($missing->isExplicitlyWithoutIsbn());
+        self::assertNull(CanonicalIsbnIdentity::fromMetadata($missing));
+        self::assertSame(
+            IsbnInputError::UnsupportedPrefix,
+            $canonicalizer->parse("4006381333931")->error()
+        );
+    }
+
+    public function testConflictingIsbnPairIsRejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        EditionIsbnMetadata::identified(
+            new Isbn10("0306406152"),
+            new Isbn13("9780975229804")
+        );
     }
 
     public function testInventoryNumberIsOptionalMetadataWithPersistableBounds(): void

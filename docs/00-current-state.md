@@ -1803,7 +1803,7 @@ governance choices are registered in `docs/26-future-roadmap-decisions.md`.
 
 ### Metadata Hub technical readiness
 
-Status: **GO WITH CONDITIONS / READY WITH CONDITIONS — NOT IMPLEMENTED**
+Status: **SUPERSEDED BY MH-B1 IMPLEMENTATION BELOW**
 
 The concrete repository integration, schema/API impact, local-first algorithm,
 provider-neutral candidate contract, Open Library → conditional Google
@@ -1822,3 +1822,34 @@ Series hints remain out of the v2.001 Hub.
 `Biblio Library Intelligence` is the overarching direction, with Biblio Lens
 and Series Intelligence as its first two pillars. v2.001 promises only the
 first ISBN/Edition Intelligence maturity, not the full Lens roadmap.
+
+### Metadata Hub MH-B1 — ISBN identity foundation
+
+Status: **GO / FOUNDATION READY FOR PROVIDER ADAPTERS**
+
+Schema `1014` is active. ISBN-10 and ISBN-13 now share one typed normalization,
+checksum and conversion contract; a valid ISBN-10 and its 978 ISBN-13 alias map
+to one canonical ISBN-13 identity. Valid 979 identifiers remain ISBN-13-only.
+Unknown ISBN and explicit no-ISBN remain distinct valid Edition states; invalid
+input is typed validation, not no-ISBN.
+
+`biblio_edition_identifier_claims` is the database authority that permits one
+canonical ISBN-13 claim per Edition and one Edition per canonical ISBN-13.
+Migration audits existing Edition metadata before table creation, fails closed
+on invalid/conflicting/equivalent duplicates, and backfills only safe claims
+without changing Edition, Work or Item IDs. The read-only maintenance audit is
+`web/wp-content/plugins/biblio-core/scripts/isbn-integrity-audit.php`.
+
+`LocalEditionResolver` returns `local_exact`, `local_none` or legacy-only
+`local_ambiguous`. All ISBN-bearing new-Edition paths in
+`AddLibraryItemService` use this boundary. A unique-claim race rolls the losing
+compound transaction back and then adds its Item against the winner's existing
+Edition and Work. Existing-Edition, manual and no-ISBN paths remain available;
+title/author similarity is never used to merge Works.
+
+Schema 1014 also creates the empty structural provenance table with provider
+key, provider record ID, retrieval time, exact match method, queried identifier
+and confirmation state. No provider, provider request, cache, provenance write,
+REST lookup route, UI, cover or Series Intelligence runtime is implemented.
+Detailed evidence is in
+`docs/44-metadata-hub-mh-b1-isbn-identity-exit-evidence.md`.

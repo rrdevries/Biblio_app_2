@@ -1100,3 +1100,38 @@ validation. Serialization performs no repository/service lookup, so the Core
 15-call first page and 16-call continuation profiles remain unchanged. Schema
 stays 1013. The older `/items` overview remains available unchanged for current
 UI compatibility until Slice 7B migrates the browser.
+
+## 29. Metadata Hub MH-B1 identity and schema 1014
+
+ISBN identity remains Edition-owned. `IsbnRules` is the single normalization,
+checksum and ISBN-10/13 conversion implementation. `CanonicalIsbnIdentity`
+always exposes the valid 978/979 ISBN-13 database key and exposes an ISBN-10
+alias only for convertible 978 identities. `IsbnCanonicalizer` returns a typed
+parse result; no controller or future provider adapter may duplicate parsing.
+
+`LocalEditionResolver` checks the canonical claim before legacy Edition columns
+and classifies exact, none or ambiguity. A claim hit must resolve to an Edition
+with matching ISBN metadata. It never resolves a Work by title, contributor or
+provider identifier: an existing Edition retains its existing Work.
+
+Schema 1014 adds two Core-owned InnoDB tables:
+
+- `biblio_edition_identifier_claims`: non-null ASCII
+  `canonical_isbn_13` primary key, non-null binary-collated `edition_id`, unique
+  `edition_id`, and restrictive Edition foreign key. No row is created for
+  no-ISBN Editions, so any number remains valid.
+- `biblio_edition_metadata_provenance`: non-null `provenance_id` primary key,
+  restrictive `edition_id`, bounded `provider_key` and `provider_record_id`, UTC
+  `retrieved_at`, `match_method`, normalized query identifier type/value and
+  `confirmation_state`. Edition + provider + record + query is idempotently
+  unique; an Edition/time index supports later reads. No response or secret
+  column exists.
+
+Migration 1013→1014 first requires healthy schema 1013 and a blocker-free
+read-only audit. It creates absent known components, backfills only safe claims,
+verifies exact claim/Edition agreement and bumps the version after post-health.
+Unknown partial structures, invalid checksums, formatting deviations, internal
+pair conflicts and canonical collisions fail without repair. Runtime creation
+inserts Edition and claim in one transaction. A duplicate claim rolls all
+losing Work/Edition/Item/context effects back and re-resolves the winner before
+Item creation.

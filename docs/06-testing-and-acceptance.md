@@ -2177,3 +2177,34 @@ of the following independently testable for a later implementation:
   collection coverage separate from platform-wide reading progress;
 - no schema, migration, REST, frontend, provider adapter, Metadata Hub or Series
   Intelligence runtime behavior is introduced by the documentation change.
+
+## 68. Metadata Hub MH-B1 ISBN identity acceptance
+
+MH-B1 is accepted when:
+
+- the read-only audit reports total, ISBN-13, ISBN-10-only, no-ISBN, invalid,
+  exact collision, equivalence collision, internal conflict and formatting
+  state without mutation or personal data;
+- invalid or conflicting legacy rows stop 1013→1014 before version bump and are
+  never silently corrected or merged;
+- ISBN formatting, checksums, X, 978 conversion, equivalent identity, 979
+  non-conversion, missing and no-ISBN have unit coverage;
+- schema 1014 has the unique canonical claim and empty minimum provenance
+  foundation with documented columns, indexes, checks and restrictive FKs;
+- valid legacy ISBN rows retain Edition/Work identity and receive only the
+  integrity claim, while no-ISBN Editions remain valid;
+- local ISBN-10 and ISBN-13 aliases resolve the same Edition and preserve its
+  Work; missing and legacy ambiguity are typed;
+- existing Edition, new Edition for explicit existing Work and new Work plus
+  Edition paths retain authorization/context semantics, while every
+  ISBN-bearing creation uses the central identity boundary;
+- two independent processes racing on one canonical ISBN finish controlled
+  with exactly one Work, one Edition, one claim and both permitted Items;
+- equal visible titles without shared ISBN do not trigger Work fusion;
+- unit, integration, smoke, migration, manifest, PHPStan, syntax and complete
+  quality gates pass;
+- no provider, HTTP, cache, lookup REST route, UI, cover, OCR or Series runtime
+  is introduced.
+
+Evidence and the audit invocation are recorded in
+`docs/44-metadata-hub-mh-b1-isbn-identity-exit-evidence.md`.

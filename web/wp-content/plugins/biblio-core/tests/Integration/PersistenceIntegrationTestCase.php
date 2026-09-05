@@ -64,6 +64,8 @@ abstract class PersistenceIntegrationTestCase extends TestCase
         $itemArchivePeriods = $this->tableNames->itemArchivePeriods();
         $collectionMemberships = $this->tableNames->collectionMemberships();
         $collections = $this->tableNames->collections();
+        $identifierClaims = $this->tableNames->editionIdentifierClaims();
+        $metadataProvenance = $this->tableNames->editionMetadataProvenance();
         $locations = $this->tableNames->locations();
         $editions = $this->tableNames->editions();
         $works = $this->tableNames->works();
@@ -120,6 +122,12 @@ abstract class PersistenceIntegrationTestCase extends TestCase
             $this->database->query("DELETE FROM `{$collections}`");
         }
         $this->database->query("DELETE FROM `{$items}`");
+        if ($this->tableExists($metadataProvenance)) {
+            $this->database->query("DELETE FROM `{$metadataProvenance}`");
+        }
+        if ($this->tableExists($identifierClaims)) {
+            $this->database->query("DELETE FROM `{$identifierClaims}`");
+        }
         if ($this->tableExists($locations)) {
             $this->database->query("DELETE FROM `{$locations}`");
         }

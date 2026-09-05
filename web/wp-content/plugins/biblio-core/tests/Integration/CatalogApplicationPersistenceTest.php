@@ -22,6 +22,9 @@ use Biblio\Core\Catalog\Classification\LibraryCatalogSelection;
 use Biblio\Core\Catalog\Classification\LibraryGenreId;
 use Biblio\Core\Catalog\Edition;
 use Biblio\Core\Catalog\EditionId;
+use Biblio\Core\Catalog\EditionIsbnMetadata;
+use Biblio\Core\Catalog\Isbn10;
+use Biblio\Core\Catalog\Isbn13;
 use Biblio\Core\Catalog\Item;
 use Biblio\Core\Catalog\ItemId;
 use Biblio\Core\Catalog\Work;
@@ -277,6 +280,92 @@ final class CatalogApplicationPersistenceTest extends
             self::assertSame(1, $this->tableCount(
                 $this->tableNames->readingRounds()
             ));
+        } finally {
+            wp_set_current_user($previousUserId);
+        }
+    }
+
+    public function testAllItemCreationPathsShareCanonicalEditionIdentity(): void
+    {
+        $owner = $this->createWordPressUser("catalog-isbn-owner");
+        $library = new LibraryId("library-isbn");
+        $this->createOwnedLibrary($library, $owner);
+        $existingWork = new Work(
+            new WorkId("work-existing"),
+            "Same Visible Title"
+        );
+        $existingEdition = new Edition(
+            new EditionId("edition-existing"),
+            $existingWork->id()
+        );
+        $this->workRepository()->add($existingWork);
+        $this->editionRepository()->add($existingEdition);
+        $application = (new ProductionComposition($this->database))->application();
+        $previousUserId = get_current_user_id();
+
+        try {
+            wp_set_current_user($owner);
+            $application->libraryItemCreation()->addForExistingEdition(
+                $library,
+                new ItemId("item-existing"),
+                $existingEdition->id(),
+                $this->initialization($library)
+            );
+
+            $created = $application->libraryItemCreation()
+                ->addWithNewEditionForExistingWork(
+                    $library,
+                    new ItemId("item-isbn10"),
+                    new EditionId("edition-isbn"),
+                    $existingWork->id(),
+                    null,
+                    EditionIsbnMetadata::identified(
+                        new Isbn10("0306406152"),
+                        null
+                    )
+                );
+
+            $reused = $application->libraryItemCreation()
+                ->addWithNewWorkAndEdition(
+                    $library,
+                    new ItemId("item-isbn13"),
+                    new WorkId("work-must-not-be-created"),
+                    "Same Visible Title",
+                    new EditionId("edition-must-not-be-created"),
+                    null,
+                    EditionIsbnMetadata::identified(
+                        null,
+                        new Isbn13("9780306406157")
+                    )
+                );
+
+            $manual = $application->libraryItemCreation()
+                ->addWithNewWorkAndEdition(
+                    $library,
+                    new ItemId("item-manual"),
+                    new WorkId("work-manual"),
+                    "Same Visible Title",
+                    new EditionId("edition-manual"),
+                    $this->initialization($library),
+                    EditionIsbnMetadata::withoutIsbn()
+                );
+
+            self::assertSame("edition-isbn", $created->editionId()->value());
+            self::assertSame("edition-isbn", $reused->editionId()->value());
+            self::assertSame("edition-manual", $manual->editionId()->value());
+            self::assertNull($this->workRepository()->find(
+                new WorkId("work-must-not-be-created")
+            ));
+            self::assertNotNull($this->workRepository()->find(
+                new WorkId("work-manual")
+            ));
+            self::assertSame(
+                1,
+                (int) $this->database->get_var(
+                    "SELECT COUNT(*) FROM `{$this->tableNames->editionIdentifierClaims()}` "
+                        . "WHERE canonical_isbn_13='9780306406157'"
+                )
+            );
         } finally {
             wp_set_current_user($previousUserId);
         }

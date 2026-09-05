@@ -9,6 +9,7 @@ use Biblio\Core\Application\Assessments\Read\GetLibraryPublicAssessmentsService;
 
 use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
 use Biblio\Core\Application\Catalog\AddLibraryItemService;
+use Biblio\Core\Application\Catalog\LocalEditionResolver;
 use Biblio\Core\Application\Catalog\ItemArchiveActivity;
 use Biblio\Core\Application\Catalog\ManageLibraryItemArchiveService;
 use Biblio\Core\Application\Catalog\Query\{CatalogQueryCursorCodec,CatalogQueryService};
@@ -68,9 +69,11 @@ use Biblio\Core\Application\Reading\StopReadingRoundService;
 use Biblio\Core\Authorization\LibraryAuthorizationPolicy;
 use Biblio\Core\Audit\ActivityEventSource;
 use Biblio\Core\Catalog\Classification\ClassificationNameNormalizer;
+use Biblio\Core\Catalog\IsbnCanonicalizer;
 use Biblio\Core\Collections\CollectionNameNormalizer;
 use Biblio\Core\Infrastructure\Persistence\WordPress\CoreTableNames;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbEditionRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbEditionIdentifierClaimRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbActivityEventAppender;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryBookTypeRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryCatalogContextRepository;
@@ -150,12 +153,22 @@ final class ProductionComposition
         $authorRepository = new WpdbAuthorRepository($database, $tableNames);
         $seriesRepository = new WpdbSeriesRepository($database, $tableNames);
         $editionRepository = new WpdbEditionRepository($database, $tableNames);
+        $editionIdentifierClaims = new WpdbEditionIdentifierClaimRepository(
+            $database,
+            $tableNames
+        );
         $itemRepository = new WpdbItemRepository($database, $tableNames);
         $itemArchiveRepository = new WpdbItemArchiveRepository($database, $tableNames);
         $collectionRepository = new WpdbCollectionRepository($database, $tableNames);
         $locationRepository = new WpdbLocationRepository($database, $tableNames);
         $bibliographicMetadataRepository =
             new WpdbBibliographicMetadataRepository($database, $tableNames);
+        $localEditionResolver = new LocalEditionResolver(
+            new IsbnCanonicalizer(),
+            $editionIdentifierClaims,
+            $editionRepository,
+            $bibliographicMetadataRepository
+        );
         $bookTypeRepository = new WpdbLibraryBookTypeRepository(
             $database,
             $tableNames
@@ -293,7 +306,9 @@ final class ProductionComposition
             $contextInitializer,
             $contextActivity,
             $activityEvents,
-            $transactionManager
+            $transactionManager,
+            $localEditionResolver,
+            $editionIdentifierClaims
         );
         $libraryItemArchiveManagement = new ManageLibraryItemArchiveService(
             $authenticatedUser,

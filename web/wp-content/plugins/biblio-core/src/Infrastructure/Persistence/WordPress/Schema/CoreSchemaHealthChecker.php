@@ -43,6 +43,7 @@ final readonly class CoreSchemaHealthChecker
             1011 => $this->inspectTables($this->tableNames->schema1011(), true, 1011),
             1012 => $this->inspectTables($this->tableNames->schema1012(), true, 1012),
             1013 => $this->inspectTables($this->tableNames->schema1013(), true, 1013),
+            1014 => $this->inspectTables($this->tableNames->schema1014(), true, 1014),
             default => throw new CoreSchemaMigrationException(
                 "No explicit Biblio Core schema-health contract exists for "
                 . "schema version {$expectedVersion}."
@@ -167,6 +168,15 @@ final readonly class CoreSchemaHealthChecker
         return $this->inspectTables($this->tableNames->schema1013Additions(), false, 1013);
     }
 
+    public function inspectExistingSchema1014Additions(): CoreSchemaHealth
+    {
+        return $this->inspectTables(
+            $this->tableNames->schema1014Additions(),
+            false,
+            1014
+        );
+    }
+
     /** @param list<string> $tableNames */
     private function inspectTables(
         array $tableNames,
@@ -207,6 +217,14 @@ final readonly class CoreSchemaHealthChecker
 
         if ($schemaVersion >= 1007 && $this->tableExists($this->tableNames->libraries())) {
             $this->inspectLibraryIdentityData($issues);
+        }
+
+        if (
+            $schemaVersion >= 1014
+            && $missingIsError
+            && $this->tableExists($this->tableNames->editionIdentifierClaims())
+        ) {
+            $this->inspectIsbnClaimData($issues);
         }
 
         return new CoreSchemaHealth($issues);
@@ -526,6 +544,37 @@ final readonly class CoreSchemaHealthChecker
         }
     }
 
+    /** @param list<string> $issues */
+    private function inspectIsbnClaimData(array &$issues): void
+    {
+        $audit = (new WpdbIsbnIntegrityAuditor(
+            $this->database,
+            $this->tableNames
+        ))->audit();
+        if ($audit->hasBlockers()) {
+            $issues[] = "Edition ISBN integrity failed: "
+                . $audit->blockerSummary();
+            return;
+        }
+
+        $claims = $this->tableNames->editionIdentifierClaims();
+        $rows = $this->database->get_results(
+            "SELECT canonical_isbn_13,edition_id FROM `{$claims}`",
+            ARRAY_A
+        );
+        $actual = [];
+        foreach ($rows as $row) {
+            $actual[(string) $row["canonical_isbn_13"]] =
+                (string) $row["edition_id"];
+        }
+        ksort($actual);
+        $expected = $audit->canonicalClaims;
+        ksort($expected);
+        if ($actual !== $expected) {
+            $issues[] = "Canonical ISBN claims do not exactly match Edition metadata";
+        }
+    }
+
     /** @return array<string, array<string, array<string, string>>> */
     private function expectedColumns(int $schemaVersion): array
     {
@@ -545,6 +594,11 @@ final readonly class CoreSchemaHealthChecker
             "nullable" => "YES",
             "collation" => "utf8mb4_bin",
             "extra" => "STORED GENERATED",
+        ];
+        $ascii = static fn (string $type): array => [
+            "type" => $type,
+            "nullable" => "NO",
+            "collation" => "ascii_bin",
         ];
 
         $libraryColumns = [
@@ -711,6 +765,21 @@ final readonly class CoreSchemaHealthChecker
                 "active_item_id" => $generatedId + [
                     "expression" => "CASE WHEN membership_status = 'active' THEN item_id ELSE NULL END",
                 ],
+            ],
+            $this->tableNames->editionIdentifierClaims() => [
+                "canonical_isbn_13" => $ascii("char(13)"),
+                "edition_id" => $id,
+            ],
+            $this->tableNames->editionMetadataProvenance() => [
+                "provenance_id" => $id,
+                "edition_id" => $id,
+                "provider_key" => $ascii("varchar(64)"),
+                "provider_record_id" => $id,
+                "retrieved_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "match_method" => $ascii("varchar(32)"),
+                "queried_identifier_type" => $ascii("varchar(16)"),
+                "queried_identifier" => $ascii("varchar(13)"),
+                "confirmation_state" => $ascii("varchar(32)"),
             ],
             $this->tableNames->locations() => [
                 "library_id" => $id,
@@ -1104,6 +1173,15 @@ final readonly class CoreSchemaHealthChecker
                 "collection_memberships_by_item" => ["unique" => false, "columns" => ["library_id", "item_id", "membership_status"]],
                 "collection_memberships_history" => ["unique" => false, "columns" => ["library_id", "item_id", "end_reason", "ended_at"]],
             ],
+            $this->tableNames->editionIdentifierClaims() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["canonical_isbn_13"]],
+                "edition_identifier_claim_one_per_edition" => ["unique" => true, "columns" => ["edition_id"]],
+            ],
+            $this->tableNames->editionMetadataProvenance() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["provenance_id"]],
+                "edition_metadata_provenance_identity" => ["unique" => true, "columns" => ["edition_id", "provider_key", "provider_record_id", "queried_identifier"]],
+                "edition_metadata_provenance_by_time" => ["unique" => false, "columns" => ["edition_id", "retrieved_at", "provenance_id"]],
+            ],
             $this->tableNames->locations() => [
                 "PRIMARY" => [
                     "unique" => true,
@@ -1404,6 +1482,12 @@ final readonly class CoreSchemaHealthChecker
                     ["library_id", "item_id"]
                 ),
             ],
+            $this->tableNames->editionIdentifierClaims() => [
+                $restrict(["edition_id"], $this->tableNames->editions(), ["edition_id"]),
+            ],
+            $this->tableNames->editionMetadataProvenance() => [
+                $restrict(["edition_id"], $this->tableNames->editions(), ["edition_id"]),
+            ],
             $this->tableNames->locations() => [
                 $restrict(["library_id"], $this->tableNames->libraries(), ["library_id"]),
             ],
@@ -1600,6 +1684,16 @@ final readonly class CoreSchemaHealthChecker
                 "membership_status = 'active' AND ended_at IS NULL OR membership_status = 'inactive' AND ended_at IS NOT NULL",
                 "end_reason IS NULL OR end_reason IN ('removed', 'item_archived')",
                 "ended_at IS NULL OR ended_at >= added_at",
+            ],
+            $this->tableNames->editionIdentifierClaims() => [
+                "canonical_isbn_13 REGEXP '^97[89][0-9]{10}$'",
+            ],
+            $this->tableNames->editionMetadataProvenance() => [
+                "CHAR_LENGTH(TRIM(provider_key)) > 0",
+                "CHAR_LENGTH(TRIM(provider_record_id)) > 0",
+                "match_method = 'exact_isbn'",
+                "queried_identifier_type = 'isbn_10' AND queried_identifier REGEXP '^[0-9]{9}[0-9X]$' OR queried_identifier_type = 'isbn_13' AND queried_identifier REGEXP '^97[89][0-9]{10}$'",
+                "confirmation_state IN ('accepted_unchanged', 'accepted_corrected')",
             ],
             $this->tableNames->locations() => [
                 "CHAR_LENGTH(TRIM(display_name)) > 0",

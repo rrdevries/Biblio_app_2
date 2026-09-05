@@ -387,9 +387,12 @@ belongs to the build slice.
 | `edition_id` | current opaque ID shape | unique, restrictive FK to Edition |
 
 This is a concurrency/alias key, not second metadata truth. Edition still owns
-ISBN metadata; repositories verify claim and Edition agree. Existing rows are
-resolved lazily after legacy-column lookup, so no mandatory mass backfill is
-needed. Existing duplicate groups cannot be claimed until repaired.
+ISBN metadata; repositories verify claim and Edition agree. Schema 1014 first
+runs the read-only integrity audit and then creates one claim for every existing
+valid, unambiguous ISBN-bearing Edition. That integrity backfill changes no
+Edition metadata or identity and ensures the database constraint applies
+immediately. Invalid, internally conflicting or duplicate equivalence groups
+block before table creation and are never repaired or merged automatically.
 
 ### 8.2 `biblio_edition_metadata_provenance`
 
@@ -706,7 +709,8 @@ license-reviewed representative shapes and synthetic edge cases.
   schema, local-first service and race-safe claim port.
 - **Components:** ISBN types/parser; Metadata contracts; table names,
   repositories, migrator/health/composition.
-- **Schema:** 1013→1014 with section 8 tables; no rich columns/backfill.
+- **Schema:** 1013→1014 with section 8 tables; only the required canonical-claim
+  integrity backfill, no external or rich metadata backfill.
 - **Tests:** ISBN unit matrix, migration/persistence, legacy ambiguity,
   separate-process same/cross-Library claim races.
 - **Dependency:** read-only duplicate report before migration approval.
