@@ -1615,8 +1615,8 @@ Technical source readiness is complete. Schemas 1009–1013 provide the central
 Author/Series, remaining Search-metadata, Item Location, Archive and
 Collection/membership foundations. The reusable Leesstatus and
 LibraryCatalogContext filter/read boundaries are closed in Slice 5 below.
-Document 33 records Slice 6 typed query composition as the remaining Core
-implementation layer.
+Document 33 records the now-completed Slice 6 typed query composition and the
+remaining Slice 7 transport/UI boundary.
 
 The completed technical foundations do not enable REST, UI, Elementor or new
 catalog-query behavior. The existing disabled controls and current active
@@ -1701,5 +1701,27 @@ Next Reading or Goal state is changed.
 
 No schema/migration, combined catalog query, Search/filter execution, sort,
 cursor, REST, frontend or Elementor behavior is introduced. Evidence is in
-`docs/39-existing-source-filter-read-foundation-exit-evidence.md`. The next
-technical slice is Slice 6, typed catalog query composition.
+`docs/39-existing-source-filter-read-foundation-exit-evidence.md`. At Slice 5
+exit, the next technical slice was Slice 6; it is now closed below.
+
+### Mijn Bibliotheek — typed catalog query composition
+
+Status: **GO / CLOSED — READY FOR CATALOG TRANSPORT / REST INTEGRATION**
+
+`CatalogQueryService` is now the single Core application boundary for the
+server-side `Mijn Bibliotheek` result set. Its immutable typed query composes
+active/archive scope, Search, the exact first-wave filters, the three canonical
+sorts, a bounded page size and an actor-/Library-/query-bound opaque cursor.
+Primary SQL selection remains Item-based and tenant-scoped; one-to-many sources
+use semijoins and the selected page is batch-enriched with Authors, Series,
+Location, classification, active Collections and the current actor's reading
+status. Item identity therefore remains unique and ownership stays separated.
+
+Schema remains `1013`. Representative 1,000- and 10,000-Item MariaDB plans use
+the existing `items_by_library_status_location` index; no new index or
+migration was required. A fully enriched first page uses 15 database calls and
+continuation uses one additional anchor-resolution call, with no call per Item.
+REST parsing/serialization, URL/session behavior, frontend controls and
+Elementor remain Slice 7. Suggestion/recommendation engines remain a separate,
+unimplemented feature layer. Evidence is in
+`docs/41-typed-catalog-query-composition-exit-evidence.md`.

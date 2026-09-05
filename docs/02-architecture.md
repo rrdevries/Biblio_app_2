@@ -997,6 +997,33 @@ neither Library membership nor shared Item access transfers personal history.
 
 Other source boundaries remain independent: central Author/Series and Search
 metadata, Library inventory/Location/Archive/Collection, and the existing main
-catalog projection. Slice 6 may compose their typed outputs and SQL predicates,
-but central metadata never authorizes Item visibility and retained Work-level
-state cannot reintroduce an archived Item. Schema remains 1013.
+catalog projection. Slice 6 composes their typed outputs and SQL predicates in
+the boundary below, but central metadata never authorizes Item visibility and
+retained Work-level state cannot reintroduce an archived Item. Schema remains
+1013.
+
+## 27. Typed Mijn Bibliotheek catalog query composition
+
+`CatalogQueryService` is the authoritative application query boundary for the
+composed catalog. `CatalogQuery` contains only typed allowlisted filters, one of
+the three canonical sorts, bounded page size, optional Search, explicit
+active/archive scope and an opaque cursor. Library Context and actor are never
+accepted from transport query state: the service resolves and authorizes both
+through the existing application boundaries.
+
+`WpdbCatalogQueryRepository` performs tenant-scoped Item preselection and
+keyset ordering. Filter relations use `IN` semijoins/`EXISTS` rather than
+cardinality-multiplying joins; Search relevance is computed from canonical
+Work, Edition, Item and contained-Work sources. The selected Item/Work IDs are
+then enriched in bounded batches through existing Author/Series,
+classification, Location, Collection and personal-reading-status reads. This
+preserves Library-owned and user-owned truth while preventing duplicate Items
+and N+1 behavior.
+
+The HMAC-authenticated cursor carries only a version, query fingerprint and
+last Item ID. Its fingerprint binds Library, actor, Search, filters, sort, page
+size and archive scope. Continuation re-resolves the anchor inside the same
+effective query and fails closed if it is no longer valid. Search orders by
+canonical relevance, title and Item ID; browse sorts use explicit null buckets
+and title plus Item ID tie-breakers. Schema stays 1013; transport serialization
+remains outside Core and outside this slice.

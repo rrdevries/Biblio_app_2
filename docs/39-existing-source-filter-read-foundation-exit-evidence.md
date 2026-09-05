@@ -54,9 +54,9 @@ no source query. Result-map order follows first requested Work-key occurrence.
 
 ## 3. Filter, lifecycle and ownership semantics
 
-Slice 6 remains responsible for OR within a filter group, AND between groups,
-query composition, sorting and pagination. Slice 5 fixes the source semantics
-it may consume:
+At Slice 5 exit, Slice 6 remained responsible for OR within a filter group,
+AND between groups, query composition, sorting and pagination. Slice 5 fixed
+the source semantics it could consume:
 
 - classification is always restricted by `library_id` and active options never
   include inactive terms from any Library;
@@ -80,8 +80,8 @@ status batch uses one. No repository call occurs per Work or Item. Existing
 schema-1013 indexes cover `(library_id,work_id)`, reverse Boeksoort/Genre/
 Onderwerp lookups and `(user_id,work_id,round_outcome,...)`. Existing Author,
 Series, Location and Collection batches remain unchanged. Query-specific
-multi-source plans and 1k/10k optimization belong to Slice 6 after its SQL shape
-exists.
+multi-source plans and 1k/10k optimization were assigned to Slice 6 after its
+SQL shape existed.
 
 Schema/migration result: **1013 → 1013; no migration and no data rewrite**.
 
@@ -102,10 +102,12 @@ read correctness, N+1/cardinality, tests/regression and Product Guardian scope.
 No Rating/Review, Note, Next Reading, Archive or Collection product semantics
 are changed.
 
-## 6. Remaining boundary
+## 6. Downstream boundary
 
-Slice 6 owns the immutable typed catalog query, Search and ranking, filter
-composition, three sorts, active/archive composition, query-bound cursor and
-representative query-plan optimization. REST and UI remain later Slice 7 work.
+Slice 6 has now composed these sources into the immutable typed catalog query,
+Search/ranking, first-wave filters, three sorts, active/archive result,
+query-bound cursor and representative query-plan proof. Its evidence is in
+`docs/41-typed-catalog-query-composition-exit-evidence.md`.
 
-Final status: **READY FOR TYPED CATALOG QUERY COMPOSITION**.
+REST and UI remain Slice 7 work. Final downstream status:
+**READY FOR CATALOG TRANSPORT / REST INTEGRATION**.

@@ -21,7 +21,8 @@ Leesstatus, Auteur, Serie, Locatie, Boeksoort, Genre, Onderwerp, Collecties and
 Author/Series, remaining Search-metadata, Item Location, Archive and
 Collection/membership foundations. Slice 5 closes the remaining actor-private
 reading-status and Library-classification batch/read gaps without new schema.
-Only Slice 6 typed catalog-query composition remains before transport/UI work.
+Slice 6 typed catalog-query composition is now closed. Only separately scoped
+transport/REST and UI integration remain.
 
 The first technical prerequisite, the central Author/Series relationship
 foundation, is closed in
@@ -408,6 +409,7 @@ Collections, each with different ownership and migration invariants.
 ### Slice 6 — typed query model, Search, Sort, filters and cursor
 
 - **Severity:** High.
+- **Status:** **GO / CLOSED** in schema 1013; see doc 41.
 - **Dependency:** Slices 1–5.
 - **Scope:** immutable query contract, first-wave predicates/options, ranking,
   three sorts, archive context, cursor v2 and representative optimization.
@@ -509,7 +511,7 @@ deferred v2.001 metadata, automatic merge and external Series completeness.
 
 **Completed next slice:** Remaining Search Metadata Foundation; see doc 35.
 
-**Current expected next slice:** Slice 6, typed catalog query composition.
+**Current expected next slice:** Slice 7, REST, URL/session UI and E2E.
 
 ## 15. Review
 
@@ -556,9 +558,9 @@ were performed.
 | Remaining first-wave product decisions | **NONE** |
 | Product readiness | **GO** |
 | Technical source readiness | **GO** |
-| Architecture/security readiness | **READY FOR SLICE 6** |
+| Architecture/security readiness | **READY FOR CATALOG TRANSPORT / REST INTEGRATION** |
 
-All source foundations in Slices 1–5 are closed. Further implementation may
-proceed only through separately approved Slice 6 typed catalog-query
-composition. The completed foundations add no REST, frontend,
-Search/filter/sort query behavior or runtime fixture data.
+All source foundations in Slices 1–5 and typed query composition in Slice 6 are
+closed. Further implementation may proceed only through separately approved
+Slice 7 transport/UI integration. Slice 6 adds no REST, frontend, Elementor,
+suggestion/recommendation behavior or runtime fixture data.

@@ -2042,3 +2042,38 @@ Bij toekomstige implementatie geldt minimaal:
 
 De volledige functionele basis en open punten staan in
 `docs/40-what-shall-i-read-functional-design.md`.
+
+## 65. Typed Mijn Bibliotheek catalog query composition
+
+Slice 6 is accepted when:
+
+- one immutable typed Core query boundary authorizes Library Context and actor
+  server-side and never treats frontend state or cursor data as authority;
+- the result is Item-based, contains stable Item/Work/Edition identity, and
+  one-to-many Authors, Series, classifications and Collections never duplicate
+  an Item;
+- exactly Leesstatus, Auteur, Serie, Locatie, Boeksoort, Genre, Onderwerp,
+  Collecties and `Zonder collectie` are supported, with OR inside a group and
+  AND between groups;
+- active-only is the default, mixed active/archive scope follows the existing
+  lifecycle, and inactive Collections, historical memberships and inactive or
+  foreign classification terms cannot produce active matches;
+- Search is partial, case-/accent-insensitive, covers canonical direct and
+  contained sources, preserves omnibus Item identity and orders exact
+  title/ISBN, title, Author, Series and other matches deterministically;
+- the only browse sorts are title A–Z, Author A–Z and Series order with an
+  active Series filter; unknown values sort last and Item ID is the final
+  stable tie-breaker;
+- the opaque authenticated cursor is actor-, Library-, filter-, Search-, sort-
+  and archive-bound, and invalid, changed-query or stale-anchor cursors fail
+  closed;
+- page enrichment remains bounded and batch-based, a normal fully enriched
+  first page is 15 database calls, continuation is 16, and no N+1 remains;
+- 1,000-/10,000-Item plans use existing schema-1013 indexes without a blocking
+  scan or measured regression, schema remains 1013, and migration regressions,
+  unit/integration suites and the complete quality gate pass;
+- no REST, UI, Elementor, recommendation/suggestion behavior, new filter,
+  sort, permission or persistence source is introduced.
+
+Evidence is recorded in
+`docs/41-typed-catalog-query-composition-exit-evidence.md`.

@@ -11,6 +11,7 @@ use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
 use Biblio\Core\Application\Catalog\AddLibraryItemService;
 use Biblio\Core\Application\Catalog\ItemArchiveActivity;
 use Biblio\Core\Application\Catalog\ManageLibraryItemArchiveService;
+use Biblio\Core\Application\Catalog\Query\{CatalogQueryCursorCodec,CatalogQueryService};
 use Biblio\Core\Application\Catalog\Read\CatalogUiReadService;
 use Biblio\Core\Application\Catalog\Read\BibliographicRelationshipQueryService;
 use Biblio\Core\Application\Catalog\Read\BibliographicMetadataQueryService;
@@ -87,6 +88,7 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLocationRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMembershipRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbActorLibraryContextRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbCatalogUiReadRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbCatalogQueryRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPersonalLibraryRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPrivateNoteRepository;
@@ -468,6 +470,17 @@ final class ProductionComposition
             $authenticatedUser,
             $readingRoundRepository
         );
+        $catalogQuery = new CatalogQueryService(
+            $authenticatedUser,
+            $libraryContexts,
+            new WpdbCatalogQueryRepository($database, $tableNames),
+            new CatalogQueryCursorCodec(hash('sha256', wp_salt('auth') . ':catalog-query-v1')),
+            $bibliographicRelationships,
+            $libraryClassifications,
+            $libraryItemLocations,
+            $libraryCollections,
+            $personalWorkReadingStatus
+        );
         $readingSequence = new GetReadingSequenceService(
             $authenticatedUser,
             $readingRoundRepository
@@ -615,6 +628,7 @@ final class ProductionComposition
             $personalLibraries,
             $libraryContexts,
             $catalogUiReads,
+            $catalogQuery,
             $bibliographicRelationships,
             $bibliographicMetadata,
             $libraryItemMetadata,

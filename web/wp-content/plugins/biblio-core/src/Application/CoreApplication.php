@@ -10,6 +10,7 @@ use Biblio\Core\Application\Assessments\Read\GetLibraryPublicAssessmentsService;
 use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
 use Biblio\Core\Application\Catalog\AddLibraryItemService;
 use Biblio\Core\Application\Catalog\ManageLibraryItemArchiveService;
+use Biblio\Core\Application\Catalog\Query\CatalogQueryService;
 use Biblio\Core\Application\Catalog\Read\CatalogUiReadService;
 use Biblio\Core\Application\Catalog\Read\BibliographicRelationshipQueryService;
 use Biblio\Core\Application\Catalog\Read\BibliographicMetadataQueryService;
@@ -65,6 +66,7 @@ final readonly class CoreApplication
         private EnsurePersonalPrivateLibraryService $personalLibraries,
         private LibraryContextQueryService $libraryContexts,
         private CatalogUiReadService $catalogUiReads,
+        private CatalogQueryService $catalogQuery,
         private BibliographicRelationshipQueryService $bibliographicRelationships,
         private BibliographicMetadataQueryService $bibliographicMetadata,
         private LibraryItemMetadataQueryService $libraryItemMetadata,
@@ -152,6 +154,11 @@ final readonly class CoreApplication
     public function catalogUiReads(): CatalogUiReadService
     {
         return $this->catalogUiReads;
+    }
+
+    public function catalogQuery(): CatalogQueryService
+    {
+        return $this->catalogQuery;
     }
 
     public function bibliographicRelationships(): BibliographicRelationshipQueryService
