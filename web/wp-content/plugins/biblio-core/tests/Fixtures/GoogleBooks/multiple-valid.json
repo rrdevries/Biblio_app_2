@@ -1,0 +1,28 @@
+{
+  "kind": "books#volumes",
+  "totalItems": 2,
+  "items": [
+    {
+      "id": "google-volume-complete",
+      "volumeInfo": {
+        "title": "Gravitation",
+        "authors": ["Charles W. Misner"],
+        "publisher": "Example Academic Press",
+        "publishedDate": "1973",
+        "industryIdentifiers": [
+          {"type": "ISBN_13", "identifier": "9780306406157"}
+        ],
+        "language": "en"
+      }
+    },
+    {
+      "id": "google-volume-partial",
+      "volumeInfo": {
+        "title": "Gravitation: A Different Printing",
+        "industryIdentifiers": [
+          {"type": "ISBN_10", "identifier": "0306406152"}
+        ]
+      }
+    }
+  ]
+}

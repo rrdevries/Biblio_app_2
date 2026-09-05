@@ -1,0 +1,22 @@
+{
+  "kind": "books#volumes",
+  "totalItems": 1,
+  "items": [
+    {
+      "id": "google-volume-1",
+      "volumeInfo": {
+        "title": "Gravitation",
+        "subtitle": "Foundations and Frontiers",
+        "authors": ["Charles W. Misner", "Kip S. Thorne"],
+        "publisher": "Example Academic Press",
+        "publishedDate": "1973",
+        "industryIdentifiers": [
+          {"type": "ISBN_13", "identifier": "9780306406157"},
+          {"type": "ISBN_10", "identifier": "0306406152"}
+        ],
+        "pageCount": 1279,
+        "language": "en"
+      }
+    }
+  ]
+}
