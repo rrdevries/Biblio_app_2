@@ -30,7 +30,7 @@ final class Schema1009AuthorSeriesTest extends PersistenceIntegrationTestCase
 
         $this->migrator()->migrate();
 
-        self::assertSame(1013, $this->migrator()->installedVersion());
+        self::assertSame(1014, $this->migrator()->installedVersion());
         self::assertSame("Preserved title", $this->database->get_var(
             "SELECT work_title FROM `{$this->tableNames->works()}` WHERE work_id='preserved-work'"
         ));
@@ -74,7 +74,7 @@ final class Schema1009AuthorSeriesTest extends PersistenceIntegrationTestCase
 
         $this->dropFoundationTables();
         $this->migrator()->migrate();
-        self::assertSame(1013, $this->migrator()->installedVersion());
+        self::assertSame(1014, $this->migrator()->installedVersion());
         self::assertTrue($this->migrator()->healthForVersion(1009)->isHealthy());
     }
 

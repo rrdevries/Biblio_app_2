@@ -43,6 +43,16 @@ final readonly class EditionIsbnMetadata
             );
         }
 
+        if (
+            $isbn10 !== null
+            && $isbn13 !== null
+            && IsbnRules::isbn10To13($isbn10->value()) !== $isbn13->value()
+        ) {
+            throw new ValidationException(
+                "ISBN-10 and ISBN-13 do not identify the same Edition."
+            );
+        }
+
         return new self($isbn10, $isbn13, false);
     }
 

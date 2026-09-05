@@ -31,6 +31,8 @@ final class CoreTableNamesTest extends TestCase
         self::assertCount(30, $tableNames->schema1012());
         self::assertCount(2, $tableNames->schema1013Additions());
         self::assertCount(32, $tableNames->schema1013());
+        self::assertCount(2, $tableNames->schema1014Additions());
+        self::assertCount(34, $tableNames->schema1014());
         self::assertSame("wp_biblio_libraries", $tableNames->libraries());
         self::assertSame(
             "wp_biblio_reading_rounds",
@@ -64,6 +66,14 @@ final class CoreTableNamesTest extends TestCase
         self::assertSame(
             "wp_biblio_collection_memberships",
             $tableNames->collectionMemberships()
+        );
+        self::assertSame(
+            "wp_biblio_edition_identifier_claims",
+            $tableNames->editionIdentifierClaims()
+        );
+        self::assertSame(
+            "wp_biblio_edition_metadata_provenance",
+            $tableNames->editionMetadataProvenance()
         );
     }
 

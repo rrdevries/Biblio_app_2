@@ -46,6 +46,8 @@ final readonly class CoreTableNames
     private string $itemArchivePeriods;
     private string $collections;
     private string $collectionMemberships;
+    private string $editionIdentifierClaims;
+    private string $editionMetadataProvenance;
 
     public function __construct(string $prefix)
     {
@@ -91,8 +93,12 @@ final readonly class CoreTableNames
         $this->itemArchivePeriods = $prefix . "biblio_item_archive_periods";
         $this->collections = $prefix . "biblio_collections";
         $this->collectionMemberships = $prefix . "biblio_collection_memberships";
+        $this->editionIdentifierClaims = $prefix
+            . "biblio_edition_identifier_claims";
+        $this->editionMetadataProvenance = $prefix
+            . "biblio_edition_metadata_provenance";
 
-        foreach ($this->schema1013() as $tableName) {
+        foreach ($this->schema1014() as $tableName) {
             $this->assertSafe($tableName);
         }
         $this->assertSafe($this->nextReadingInsertTrigger);
@@ -210,6 +216,14 @@ final readonly class CoreTableNames
     public function itemArchivePeriods(): string { return $this->itemArchivePeriods; }
     public function collections(): string { return $this->collections; }
     public function collectionMemberships(): string { return $this->collectionMemberships; }
+    public function editionIdentifierClaims(): string
+    {
+        return $this->editionIdentifierClaims;
+    }
+    public function editionMetadataProvenance(): string
+    {
+        return $this->editionMetadataProvenance;
+    }
 
     /** @return list<string> */
     public function all(): array
@@ -348,6 +362,30 @@ final readonly class CoreTableNames
         $tables = $this->schema1012();
         $itemOffset = array_search($this->items, $tables, true);
         array_splice($tables, (int) $itemOffset + 2, 0, $this->schema1013Additions());
+        return $tables;
+    }
+
+    /** @return list<string> */
+    public function schema1014Additions(): array
+    {
+        return [
+            $this->editionIdentifierClaims,
+            $this->editionMetadataProvenance,
+        ];
+    }
+
+    /** @return list<string> */
+    public function schema1014(): array
+    {
+        $tables = $this->schema1013();
+        $editionOffset = array_search($this->editions, $tables, true);
+        array_splice(
+            $tables,
+            (int) $editionOffset + 1,
+            0,
+            $this->schema1014Additions()
+        );
+
         return $tables;
     }
 

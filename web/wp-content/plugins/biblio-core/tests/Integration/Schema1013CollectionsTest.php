@@ -31,7 +31,7 @@ final class Schema1013CollectionsTest extends PersistenceIntegrationTestCase
 
         $this->migrator()->migrate();
 
-        self::assertSame(1013, $this->migrator()->installedVersion());
+        self::assertSame(1014, $this->migrator()->installedVersion());
         self::assertSame('active', $this->database->get_var("SELECT item_status FROM `{$this->tableNames->items()}` WHERE item_id='item-a'"));
         self::assertSame(0, (int) $this->database->get_var("SELECT COUNT(*) FROM `{$this->tableNames->collections()}`"));
         self::assertSame(0, (int) $this->database->get_var("SELECT COUNT(*) FROM `{$this->tableNames->collectionMemberships()}`"));
@@ -49,7 +49,7 @@ final class Schema1013CollectionsTest extends PersistenceIntegrationTestCase
         $migration->migrate();
         $migration->assertPostcondition();
         update_option(CoreSchemaMigrator::VERSION_OPTION, '1013', false);
-
+        $this->migrator()->migrate();
         self::assertTrue($this->migrator()->health()->isHealthy());
     }
 
@@ -70,7 +70,7 @@ final class Schema1013CollectionsTest extends PersistenceIntegrationTestCase
             $this->database->query("DROP TABLE IF EXISTS `{$collections}`");
             $this->migrator()->migrate();
         }
-        self::assertSame(1013, $this->migrator()->installedVersion());
+        self::assertSame(1014, $this->migrator()->installedVersion());
     }
 
     private function restoreSchema1012(): void

@@ -13,8 +13,12 @@ use Biblio\Core\Application\Library\LibraryAccessService;
 use Biblio\Core\Application\TransactionManager;
 use Biblio\Core\Audit\ActivityEventAppender;
 use Biblio\Core\Catalog\Classification\LibraryCatalogContextRepository;
+use Biblio\Core\Catalog\CanonicalIsbnAlreadyClaimed;
+use Biblio\Core\Catalog\CanonicalIsbnIdentity;
 use Biblio\Core\Catalog\Edition;
 use Biblio\Core\Catalog\EditionId;
+use Biblio\Core\Catalog\EditionIdentifierClaimRepository;
+use Biblio\Core\Catalog\EditionIsbnMetadata;
 use Biblio\Core\Catalog\Item;
 use Biblio\Core\Catalog\ItemId;
 use Biblio\Core\Catalog\Work;
@@ -40,7 +44,9 @@ final readonly class AddLibraryItemService
         private LibraryCatalogContextInitializer $contextInitializer,
         private LibraryCatalogContextActivity $contextActivity,
         private ActivityEventAppender $activityEvents,
-        private TransactionManager $transactionManager
+        private TransactionManager $transactionManager,
+        private ?LocalEditionResolver $localEditionResolver = null,
+        private ?EditionIdentifierClaimRepository $identifierClaims = null
     ) {
     }
 
@@ -101,12 +107,28 @@ final readonly class AddLibraryItemService
         ItemId $itemId,
         EditionId $editionId,
         WorkId $workId,
-        ?LibraryCatalogContextInitialization $classification = null
+        ?LibraryCatalogContextInitialization $classification = null,
+        ?EditionIsbnMetadata $isbnMetadata = null
     ): Item {
         $context = $this->authorize($libraryId);
         $actorId = $context->userId();
-        $work = $this->workRepository->find($workId);
+        $identity = $this->canonicalIdentity($isbnMetadata);
+        if ($identity !== null) {
+            $resolved = $this->resolver()->resolveIdentity($identity);
+            if ($resolved->type() === LocalEditionResolutionType::LocalExact) {
+                return $this->addForExistingEdition(
+                    $libraryId,
+                    $itemId,
+                    $resolved->requireEdition()->id(),
+                    $classification
+                );
+            }
+            if ($resolved->type() === LocalEditionResolutionType::LocalAmbiguous) {
+                throw new AmbiguousLocalEdition();
+            }
+        }
 
+        $work = $this->workRepository->find($workId);
         if ($work === null) {
             throw new ValidationException("Work does not exist.");
         }
@@ -115,35 +137,52 @@ final readonly class AddLibraryItemService
             $libraryId,
             $workId
         ) !== null;
-        $edition = new Edition($editionId, $workId);
+        $edition = new Edition(
+            $editionId,
+            $workId,
+            $identity?->metadata() ?? $isbnMetadata ?? EditionIsbnMetadata::unknown()
+        );
         $item = Item::active($itemId, $context->libraryId(), $editionId);
 
-        return $this->transactionManager->run(function () use (
-            $actorId,
-            $libraryId,
-            $work,
-            $classification,
-            $contextExists,
-            $edition,
-            $item
-        ): Item {
-            $this->editionRepository->add($edition);
-            $initialization = $this->initializeContextWhenMissing(
-                $libraryId,
-                $work->id(),
-                $classification,
-                $contextExists
-            );
-            $this->itemRepository->add($item);
-            $this->appendContextCreatedEvent(
+        try {
+            return $this->transactionManager->run(function () use (
                 $actorId,
                 $libraryId,
                 $work,
-                $initialization
-            );
+                $classification,
+                $contextExists,
+                $edition,
+                $item,
+                $identity
+            ): Item {
+                $this->editionRepository->add($edition);
+                if ($identity !== null) {
+                    $this->claims()->claim($identity->isbn13(), $edition->id());
+                }
+                $initialization = $this->initializeContextWhenMissing(
+                    $libraryId,
+                    $work->id(),
+                    $classification,
+                    $contextExists
+                );
+                $this->itemRepository->add($item);
+                $this->appendContextCreatedEvent(
+                    $actorId,
+                    $libraryId,
+                    $work,
+                    $initialization
+                );
 
-            return $item;
-        });
+                return $item;
+            });
+        } catch (CanonicalIsbnAlreadyClaimed) {
+            return $this->reuseRaceWinner(
+                $libraryId,
+                $itemId,
+                $identity,
+                $classification
+            );
+        }
     }
 
     public function addWithNewWorkAndEdition(
@@ -152,45 +191,134 @@ final readonly class AddLibraryItemService
         WorkId $workId,
         string $workTitle,
         EditionId $editionId,
-        ?LibraryCatalogContextInitialization $classification = null
+        ?LibraryCatalogContextInitialization $classification = null,
+        ?EditionIsbnMetadata $isbnMetadata = null
     ): Item {
         $context = $this->authorize($libraryId);
         $actorId = $context->userId();
+        $identity = $this->canonicalIdentity($isbnMetadata);
+        if ($identity !== null) {
+            $resolved = $this->resolver()->resolveIdentity($identity);
+            if ($resolved->type() === LocalEditionResolutionType::LocalExact) {
+                return $this->addForExistingEdition(
+                    $libraryId,
+                    $itemId,
+                    $resolved->requireEdition()->id(),
+                    $classification
+                );
+            }
+            if ($resolved->type() === LocalEditionResolutionType::LocalAmbiguous) {
+                throw new AmbiguousLocalEdition();
+            }
+        }
+
         $work = new Work($workId, $workTitle);
-        $edition = new Edition($editionId, $workId);
+        $edition = new Edition(
+            $editionId,
+            $workId,
+            $identity?->metadata() ?? $isbnMetadata ?? EditionIsbnMetadata::unknown()
+        );
         $item = Item::active($itemId, $context->libraryId(), $editionId);
         $contextExists = $this->catalogContexts->find(
             $libraryId,
             $workId
         ) !== null;
 
-        return $this->transactionManager->run(function () use (
-            $actorId,
-            $libraryId,
-            $classification,
-            $contextExists,
-            $work,
-            $edition,
-            $item
-        ): Item {
-            $this->workRepository->add($work);
-            $this->editionRepository->add($edition);
-            $initialization = $this->initializeContextWhenMissing(
-                $libraryId,
-                $work->id(),
-                $classification,
-                $contextExists
-            );
-            $this->itemRepository->add($item);
-            $this->appendContextCreatedEvent(
+        try {
+            return $this->transactionManager->run(function () use (
                 $actorId,
                 $libraryId,
+                $classification,
+                $contextExists,
                 $work,
-                $initialization
-            );
+                $edition,
+                $item,
+                $identity
+            ): Item {
+                $this->workRepository->add($work);
+                $this->editionRepository->add($edition);
+                if ($identity !== null) {
+                    $this->claims()->claim($identity->isbn13(), $edition->id());
+                }
+                $initialization = $this->initializeContextWhenMissing(
+                    $libraryId,
+                    $work->id(),
+                    $classification,
+                    $contextExists
+                );
+                $this->itemRepository->add($item);
+                $this->appendContextCreatedEvent(
+                    $actorId,
+                    $libraryId,
+                    $work,
+                    $initialization
+                );
 
-            return $item;
-        });
+                return $item;
+            });
+        } catch (CanonicalIsbnAlreadyClaimed) {
+            return $this->reuseRaceWinner(
+                $libraryId,
+                $itemId,
+                $identity,
+                $classification
+            );
+        }
+    }
+
+    private function canonicalIdentity(
+        ?EditionIsbnMetadata $metadata
+    ): ?CanonicalIsbnIdentity {
+        return $metadata === null
+            ? null
+            : CanonicalIsbnIdentity::fromMetadata($metadata);
+    }
+
+    private function resolver(): LocalEditionResolver
+    {
+        if ($this->localEditionResolver === null) {
+            throw new ValidationException(
+                "Canonical Edition resolution is not configured."
+            );
+        }
+
+        return $this->localEditionResolver;
+    }
+
+    private function claims(): EditionIdentifierClaimRepository
+    {
+        if ($this->identifierClaims === null) {
+            throw new ValidationException(
+                "Canonical Edition identity persistence is not configured."
+            );
+        }
+
+        return $this->identifierClaims;
+    }
+
+    private function reuseRaceWinner(
+        LibraryId $libraryId,
+        ItemId $itemId,
+        ?CanonicalIsbnIdentity $identity,
+        ?LibraryCatalogContextInitialization $classification
+    ): Item {
+        if ($identity === null) {
+            throw new ValidationException(
+                "Canonical ISBN race recovery requires an ISBN identity."
+            );
+        }
+
+        $resolved = $this->resolver()->resolveIdentity($identity);
+        if ($resolved->type() !== LocalEditionResolutionType::LocalExact) {
+            throw new AmbiguousLocalEdition();
+        }
+
+        return $this->addForExistingEdition(
+            $libraryId,
+            $itemId,
+            $resolved->requireEdition()->id(),
+            $classification
+        );
     }
 
     private function initializeContextWhenMissing(

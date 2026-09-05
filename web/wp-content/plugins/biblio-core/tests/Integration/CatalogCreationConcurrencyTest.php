@@ -123,17 +123,84 @@ final class CatalogCreationConcurrencyTest extends PersistenceIntegrationTestCas
         }
     }
 
+    public function testConcurrentEquivalentIsbnCreationReusesOneEdition(): void
+    {
+        $wordpressUserId = $this->createWordPressUser("catalog-isbn-race-owner");
+        $libraryId = new LibraryId("library-isbn-race");
+        $this->createOwnedLibrary($libraryId, $wordpressUserId);
+        $temporaryDirectory = sys_get_temp_dir()
+            . "/biblio-isbn-race-" . bin2hex(random_bytes(8));
+        if (!mkdir($temporaryDirectory, 0700)) {
+            throw new RuntimeException("Could not create ISBN race directory.");
+        }
+        $workers = [];
+
+        try {
+            $workers = [
+                $this->startWorker(
+                    $wordpressUserId,
+                    $libraryId,
+                    new ItemId("item-isbn-a"),
+                    new WorkId("work-isbn-a"),
+                    new EditionId("edition-isbn-a"),
+                    $temporaryDirectory,
+                    "0-306-40615-2"
+                ),
+                $this->startWorker(
+                    $wordpressUserId,
+                    $libraryId,
+                    new ItemId("item-isbn-b"),
+                    new WorkId("work-isbn-b"),
+                    new EditionId("edition-isbn-b"),
+                    $temporaryDirectory,
+                    "9780306406157"
+                ),
+            ];
+            $this->awaitWorkers($workers, $temporaryDirectory);
+            file_put_contents($temporaryDirectory . "/release", "release");
+            $results = [
+                $this->finishWorker($workers[0]),
+                $this->finishWorker($workers[1]),
+            ];
+
+            self::assertSame(["created", "created"], array_column($results, "status"));
+            self::assertSame(1, $this->tableCount($this->tableNames->works()));
+            self::assertSame(1, $this->tableCount($this->tableNames->editions()));
+            self::assertSame(2, $this->tableCount($this->tableNames->items()));
+            self::assertSame(
+                1,
+                $this->tableCount($this->tableNames->editionIdentifierClaims())
+            );
+            self::assertSame(
+                1,
+                (int) $this->database->get_var(
+                    "SELECT COUNT(DISTINCT edition_id) FROM `{$this->tableNames->items()}`"
+                )
+            );
+        } finally {
+            foreach ($workers as $worker) {
+                $this->terminateWorkerIfRunning($worker);
+            }
+            foreach (glob($temporaryDirectory . "/*") ?: [] as $path) {
+                if (is_file($path)) {
+                    unlink($path);
+                }
+            }
+            rmdir($temporaryDirectory);
+        }
+    }
+
     private function startWorker(
         int $wordpressUserId,
         LibraryId $libraryId,
         ItemId $itemId,
         WorkId $workId,
         EditionId $editionId,
-        string $barrierDirectory
+        string $barrierDirectory,
+        ?string $isbnInput = null
     ): array {
         $pipes = [];
-        $process = proc_open(
-            [
+        $command = [
                 PHP_BINARY,
                 __DIR__ . "/Support/CatalogItemCreationWorker.php",
                 (string) $wordpressUserId,
@@ -142,7 +209,12 @@ final class CatalogCreationConcurrencyTest extends PersistenceIntegrationTestCas
                 $workId->value(),
                 $editionId->value(),
                 $barrierDirectory,
-            ],
+        ];
+        if ($isbnInput !== null) {
+            $command[] = $isbnInput;
+        }
+        $process = proc_open(
+            $command,
             [
                 1 => ["pipe", "w"],
                 2 => ["pipe", "w"],
