@@ -1801,6 +1801,24 @@ field-level merge UI or provider fusion. Current product truth is in
 `docs/01-functional-design.md` §4 and §11. Remaining open implementation and
 governance choices are registered in `docs/26-future-roadmap-decisions.md`.
 
+### Metadata Hub technical readiness
+
+Status: **GO WITH CONDITIONS / READY WITH CONDITIONS — NOT IMPLEMENTED**
+
+The concrete repository integration, schema/API impact, local-first algorithm,
+provider-neutral candidate contract, Open Library → conditional Google
+orchestration, provenance, cache/error/security policy, test matrix and five
+implementation slices are fixed in
+`docs/43-metadata-hub-technical-readiness-and-implementation-design.md`.
+
+Schema remains 1013 and no runtime behavior was added. A later implementation
+requires a minimal next schema with an Edition canonical-ISBN claim and accepted
+candidate provenance. It also requires a read-only duplicate audit before
+migration. The current repository has no metadata provider client, lookup/add
+REST flow, rich Edition/cover persistence or end-user manual/no-ISBN add flow.
+Those facts are explicit readiness conditions, not silently assumed features.
+Series hints remain out of the v2.001 Hub.
+
 `Biblio Library Intelligence` is the overarching direction, with Biblio Lens
 and Series Intelligence as its first two pillars. v2.001 promises only the
 first ISBN/Edition Intelligence maturity, not the full Lens roadmap.
