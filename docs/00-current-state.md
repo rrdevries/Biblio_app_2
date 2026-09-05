@@ -1860,3 +1860,26 @@ and confirmation state. No provider, provider request, cache, provenance write,
 REST lookup route, UI, cover or Series Intelligence runtime is implemented.
 Detailed evidence is in
 `docs/44-metadata-hub-mh-b1-isbn-identity-exit-evidence.md`.
+
+### Metadata Hub MH-B2 — Open Library adapter
+
+Status: **GO / PROVIDER ADAPTER FOUNDATION READY**
+
+Open Library is now available as the first provider adapter behind the neutral
+`MetadataProvider` boundary. The adapter accepts only the MH-B1
+`CanonicalIsbnIdentity`, performs one bounded exact canonical-ISBN Books API
+request through an injected HTTP port, requires explicit application/contact
+configuration and maps only allowlisted values to a provider-neutral whole
+record candidate. Open Library JSON keys, URLs and transport responses do not
+cross the adapter boundary.
+
+Exact match, miss, incomplete metadata, ISBN mismatch, malformed response,
+HTTP 429, HTTP 5xx and timeout behavior are covered without live networking by
+small tracked fixtures and fake transport state. Missing fields remain absent;
+ISBN mismatch and unusable payloads never become candidates. The adapter does
+not call or mutate catalog repositories, so existing local, manual and no-ISBN
+paths and confirmed values remain unchanged.
+
+Schema remains `1014`. This slice adds no Google fallback, cache/orchestration,
+REST, UI, confirmation, provenance write, cover runtime, Series Intelligence or
+DATA-01 change. MH-B3 and later Hub slices remain separate.

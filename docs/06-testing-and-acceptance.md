@@ -2208,3 +2208,28 @@ MH-B1 is accepted when:
 
 Evidence and the audit invocation are recorded in
 `docs/44-metadata-hub-mh-b1-isbn-identity-exit-evidence.md`.
+
+## 69. Metadata Hub MH-B2 Open Library adapter acceptance
+
+MH-B2 is accepted when:
+
+- `MetadataProvider` accepts the MH-B1 canonical ISBN identity and returns only
+  provider-neutral result, candidate and failure types;
+- the Open Library adapter makes one HTTPS exact canonical-ISBN Books API
+  request through an injected transport boundary with a four-second timeout,
+  bounded response size and explicit application/contact identification;
+- Open Library field names, response payloads and HTTP details do not escape
+  the adapter;
+- exact match and partial metadata map deterministically without invented
+  values, while no result is a normal typed miss;
+- returned identifiers are validated through the MH-B1 canonicalizer and every
+  returned alias must match the queried canonical ISBN;
+- malformed/unusable payloads and ISBN mismatch yield typed invalid-response
+  results, while HTTP 429, HTTP 5xx, timeout and network failure yield typed
+  controlled outcomes;
+- deterministic unit tests use only small tracked Open Library fixtures and
+  fake transport state, with no live provider request;
+- existing MH-B1 identity/local-resolution and catalog persistence/concurrency
+  checks remain green;
+- schema remains 1014 and there is no Google fallback, REST, UI, confirmation,
+  provenance write, cover runtime, Series Intelligence or DATA-01 change.
