@@ -2233,3 +2233,37 @@ MH-B2 is accepted when:
   checks remain green;
 - schema remains 1014 and there is no Google fallback, REST, UI, confirmation,
   provenance write, cover runtime, Series Intelligence or DATA-01 change.
+
+## 70. Metadata Hub MH-B3 Google Books fallback acceptance
+
+MH-B3 is accepted when:
+
+- Google Books implements `MetadataProvider`, accepts only the MH-B1 canonical
+  ISBN identity and keeps its JSON, Volume fields, URL/query and API-key
+  configuration inside its infrastructure adapter;
+- its bounded exact-ISBN request maps sufficient, incomplete, miss, ISBN
+  mismatch, malformed, multiple exact candidates, HTTP 429/5xx, timeout,
+  network and missing-key outcomes deterministically without live networking;
+- one provider-neutral classifier marks a candidate valid only when canonical
+  ISBN evidence matches and title exists, and marks it sufficient only when at
+  least one contributor, language and publisher plus a publication date are
+  also present; cover absence never changes that quality;
+- the application orchestrator calls Open Library first, skips Google after a
+  sufficient Open Library candidate, and calls Google after miss, invalid or
+  incomplete evidence and technical failure;
+- usable Open Library and Google candidates remain separate whole records with
+  their own values, evidence and `incomplete`/`sufficient` quality; no field is
+  merged, overwritten, ranked or selected;
+- multiple usable Google candidates produce `ambiguous`, preserve every
+  individual quality and select no winner;
+- miss/invalid outcomes from both providers produce `no_usable_candidate`,
+  while any technical failure with no usable candidate produces
+  `provider_failure` and retains both provider attempts;
+- an incomplete Open Library candidate remains a successful result when Google
+  is incomplete, sufficient or failed, and an Open Library failure remains
+  separately visible when Google returns a usable candidate;
+- call-count/attempt assertions prove every fallback trigger and the sufficient
+  Open Library short circuit;
+- existing MH-B1/MH-B2 and catalog paths remain green, schema remains 1014 and
+  there is no REST, UI, Add Book integration, confirmation, provenance write,
+  cache, cover runtime, Series Intelligence, DATA-01 or catalog-data change.

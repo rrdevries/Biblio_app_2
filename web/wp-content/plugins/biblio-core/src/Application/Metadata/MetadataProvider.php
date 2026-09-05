@@ -8,5 +8,7 @@ use Biblio\Core\Catalog\CanonicalIsbnIdentity;
 
 interface MetadataProvider
 {
+    public function key(): string;
+
     public function lookup(CanonicalIsbnIdentity $isbn): ProviderLookupResult;
 }

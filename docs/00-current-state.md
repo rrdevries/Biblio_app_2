@@ -1883,3 +1883,35 @@ paths and confirmed values remain unchanged.
 Schema remains `1014`. This slice adds no Google fallback, cache/orchestration,
 REST, UI, confirmation, provenance write, cover runtime, Series Intelligence or
 DATA-01 change. MH-B3 and later Hub slices remain separate.
+
+### Metadata Hub MH-B3 — Google Books first-sufficient fallback
+
+Status: **GO / PROVIDER ORCHESTRATION FOUNDATION READY**
+
+Google Books is now the second exact-ISBN provider behind the same neutral
+`MetadataProvider` boundary. Its bounded adapter uses the MH-B1 canonicalizer,
+retains every exact matching Volume as a separate whole-record candidate and
+maps miss, malformed data, ISBN mismatch, HTTP 429/5xx, timeout, network and
+missing-key conditions to the existing typed provider outcomes. Google JSON,
+Volume IDs, URL/query details and API-key configuration stay inside the
+infrastructure adapter.
+
+`FirstSufficientMetadataLookupService` owns provider order and fallback policy.
+It calls Open Library first and skips Google only when Open Library has a
+sufficient candidate: title, contributor, language, publisher and publication
+date are present and canonical ISBN evidence matches. Missing cover data does
+not affect sufficiency. Miss, invalid/incomplete evidence and technical failure
+trigger Google. Usable candidates, their provider-neutral
+`incomplete`/`sufficient` quality and each provider result/failure remain
+separate; there is no merge, overwrite, ranking or selected winner.
+
+Multiple usable Google candidates yield `ambiguous`. With no usable candidate,
+a technical provider failure yields `provider_failure`; miss/invalid outcomes
+alone yield `no_usable_candidate`. A usable incomplete candidate still makes
+the lookup successful even when the other provider fails. Deterministic tests
+prove every fixed combination and whether Google was called.
+
+Schema remains `1014`. No REST, UI, Add Book integration, confirmation,
+provenance write, cache, cover runtime, Series Intelligence, DATA-01 change or
+canonical catalog mutation is included. MH-B4 and later Hub slices remain
+separate.
