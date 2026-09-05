@@ -69,6 +69,26 @@ Central identity used for Auteur/Co-auteur relationships.
 ## Serie
 Central Series identity.
 
+Current implementation has a minimal Work→Series relationship. Series
+Intelligence distinguishes Work Series from Edition/Publisher Series and keeps
+membership state, group, descriptive relation, order, position, lifecycle and
+derived coverage separate. `Hoofddeel`, `novelle`, `companion`, `spin-off` and
+`omnibus` are not one universal technical role set.
+
+## Metadata Hub
+Provider-neutral boundary that turns external metadata into reviewable evidence
+and whole-record candidates. Providers are replaceable adapters and are not
+canonical truth.
+
+## Biblio Library Intelligence
+Overarching product direction for understanding what books mean within a
+Library and reading life. Its first two pillars are Biblio Lens and Series
+Intelligence.
+
+## Biblio Lens
+Conceptual answer to `Wat betekent dit boek voor mijn bibliotheek en
+leesleven?`, while keeping Library Fit and private Reading Fit separate.
+
 ## Set / boxset
 Commercial multi-book product containing multiple separate Editions.
 

@@ -2116,3 +2116,36 @@ Slice 7A is accepted when:
 
 Evidence is recorded in
 `docs/42-catalog-rest-transport-foundation-exit-evidence.md`.
+
+## 67. Metadata Hub and Series Intelligence decision acceptance
+
+This documentation decision is accepted when the canonical contract makes all
+of the following independently testable for a later implementation:
+
+- ISBN lookup produces Edition evidence only and local canonical lookup occurs
+  before any provider call;
+- provider response shapes, IDs and credentials do not leak into Core contracts;
+- confirmed local canonical fields are never silently overwritten;
+- Open Library and Google verdicts remain conditional, Google remains
+  replaceable, and Wikidata/BookBrainz are absent from v2.001 runtime;
+- material conflicts yield a reviewable whole-record candidate rather than a
+  general field-level merge;
+- Work identity requires an explicit reliable link or confirmed local relation;
+  title + author similarity cannot automatically merge Works;
+- manual/no-ISBN creation and Biblio-owned covers work without any provider;
+- provenance contains provider, record ID, retrieval time, match method,
+  queried identifier and confirmation state, and contains no secret;
+- commercial release cannot use Google without a then-current terms, storage,
+  caching, branding/attribution, paid-use and replacement review;
+- Series suggestions never silently mutate canonical data, and rejected
+  suggestions can be retained against repeated presentation;
+- membership state, group, descriptive relation, order, position, lifecycle and
+  Series relationships are not collapsed into one role or inferred from the
+  current decimal position;
+- `compleet` is shown only for sufficiently verified confirmed scope; related
+  Series and merely announced/upcoming members do not silently change that
+  scope;
+- omnibus coverage is derived from contained Works and omnibus is never a
+  Series role;
+- no schema, migration, REST, frontend, provider adapter, Metadata Hub or Series
+  Intelligence runtime behavior is introduced by the documentation change.

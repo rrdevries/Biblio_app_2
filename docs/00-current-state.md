@@ -1745,7 +1745,7 @@ mutation or suggestion engine is included. Evidence is in
 
 ### Metadata provider benchmark — research evidence only
 
-Status: **COMPLETED / INPUT FOR LATER PRODUCT DECISION**
+Status: **COMPLETED / DECISION EVIDENCE**
 
 A reproducible read-only benchmark against 300 unique valid ISBNs from the
 explicitly designated current Biblio V1 dataset measured Open Library, Google
@@ -1762,3 +1762,32 @@ incremental v2.001 coverage in this sample. Full methodology, normalized rows,
 machine-readable metrics, reviews and recommendation are under
 `tools/metadata-benchmark/output/`, starting with
 `metadata-benchmark-summary.md`.
+
+### Metadata Hub and Series Intelligence decisions
+
+Status: **LOCKED DESIGN / NOT RUNTIME IMPLEMENTED**
+
+The approved metadata strategy is now provider-neutral and local-first. ISBN is
+Edition evidence; confirmed canonical data is never silently overwritten.
+The v2.001 target uses conditional Open Library evidence with Google Books only
+as a temporary conditional fallback, presents whole-record candidates for
+review, preserves minimum provenance and keeps manual/no-ISBN plus Biblio-owned
+cover paths first-class. Wikidata and BookBrainz are NO-GO for v2.001 runtime.
+Google use has a mandatory current-terms and replacement review before a
+commercial release. The normative architecture is ADR-010 and the product
+contract is in `docs/01-functional-design.md` §4.
+
+Series Intelligence is now a multidimensional product model rather than one
+universal `hoofddeel`/`novelle`/`companion`/`spin-off`/`omnibus` role list.
+Series kind, membership state, group, descriptive relation, order, position,
+lifecycle, Series relationships and derived coverage remain separate. The
+existing schema-1009 Work→Series relation is only the implemented minimal
+foundation; no Series Intelligence schema, runtime, provider mutation or UI is
+added. Current product truth is in `docs/01-functional-design.md` §11; unresolved
+definitions, confirmation rights, conflict UX, multi-order, `Mijn serie`,
+commercial provider/partnership, community graph and OCR choices are in
+`docs/26-future-roadmap-decisions.md`.
+
+`Biblio Library Intelligence` is the overarching direction, with Biblio Lens
+and Series Intelligence as its first two pillars. v2.001 promises only the
+first ISBN/Edition Intelligence maturity, not the full Lens roadmap.

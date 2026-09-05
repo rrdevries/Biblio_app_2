@@ -150,6 +150,15 @@ a known non-negative decimal position from `NULL`/unknown. The decimal storage
 allows fractional numbering without claiming that an external Series is
 complete.
 
+This implemented Work→Series relation is a minimal persistence foundation, not
+the complete Series Intelligence model. The canonical product model separately
+distinguishes Work Series from Edition/Publisher Series and treats membership
+state, core/supplemental group, descriptive relation, order type, position,
+Series→Series relation, lifecycle and derived coverage as independent
+dimensions. None of those richer dimensions is inferred from the current
+decimal position or added to schema 1013 by documentation. A future runtime
+extension requires its own approved domain, authorization and migration design.
+
 Both relationship repositories accept ID batches in each direction. This
 keeps later catalog projections free to load Work→Author, Author→Work,
 Work→Series and Series→Work without an inherent N+1 contract. The application
@@ -421,6 +430,21 @@ the uncertain-outcome diagnostic is intentional.
 Abilities API may be an adapter if useful, not a Core dependency.
 
 External metadata sources are adapters and never a precondition for core data integrity.
+
+The provider-neutral Metadata Hub follows ADR-010. It is an application boundary
+that performs local canonical lookup first and receives provider-neutral
+whole-record evidence candidates from replaceable adapters. ISBN is Edition
+evidence only. Confirmed local values cannot be silently overwritten; uncertain
+Work identity cannot be resolved by title + author similarity alone. Minimum
+provenance excludes secrets and includes provider, provider record ID, retrieval
+time, match method, queried identifier and confirmation state.
+
+The approved v2.001 adapter order is conditional Open Library followed by a
+temporary conditional Google Books fallback. Wikidata and BookBrainz are not
+v2.001 runtime adapters. Provider-specific transport, credentials, caching and
+branding remain adapter/operations concerns and never leak into Core. Material
+conflicts are returned for explicit candidate review, not silently fused per
+field. Manual/no-ISBN entry and Biblio-owned covers remain independent paths.
 
 ### Production composition and runtime boundary
 

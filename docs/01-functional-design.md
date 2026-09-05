@@ -351,6 +351,50 @@ ISBN-10 and ISBN-13 are optional.
 
 Empty ISBN fields without that flag mean unknown/not entered.
 
+An ISBN identifies an Edition, never a Work or physical Item. Identifier
+availability is not an existence condition: the manual path supports Works,
+Editions and Items without an ISBN.
+
+## Metadata Hub and acquisition
+
+The Metadata Hub is a provider-neutral evidence and candidate boundary.
+External sources are replaceable adapters; they are not canonical truth and
+their response shapes do not become Core domain contracts. Confirmed local
+canonical data always wins and is never silently overwritten.
+
+The approved v2.001 build target is deliberately small:
+
+- normalize and checksum-validate ISBN-10/ISBN-13;
+- search confirmed local canonical data first;
+- use one provider-neutral Hub interface;
+- use Open Library as conditional open foundation;
+- use Google Books only as a temporary, conditional fallback, especially for
+  Dutch coverage;
+- present whole-record candidates for explicit user review and correction;
+- retain minimum provenance: provider, provider record ID, `retrieved_at`,
+  match method, queried identifier and confirmation state;
+- preserve a first-class manual/no-ISBN path;
+- support Biblio-owned or user-supplied covers without depending on provider
+  covers.
+
+Wikidata and BookBrainz are **NO-GO** runtime adapters for v2.001 based on the
+completed benchmark, but remain future evidence/relationship candidates. Google
+is not a permanent primary provider. Before commercial release its then-current
+terms, storage/caching, branding/attribution, paid-use fit and replacement path
+must be reassessed.
+
+ISBN evidence resolves an Edition candidate. Work resolution requires either a
+reliable explicit provider link or an already confirmed local relationship.
+Title + author similarity never triggers automatic Work merge. Uncertain
+resolution remains visibly `voorgesteld`/`mogelijk`, with language calibrated
+to evidence strength.
+
+Materially conflicting provider results remain reviewable whole-record
+candidates in v2.001; there is no general field-level multi-provider merge.
+Field-level evidence, confidence/merge logic, record fusion, OCR, community
+metadata, a Metadata Graph, paid feeds and extensive automatic Work resolution
+remain future scope.
+
 ## Publication date
 
 Edition-level and precision-preserving:
@@ -364,7 +408,8 @@ Biblio never fabricates a day/month.
 
 Edition may have multiple cover images and one Primary cover.
 
-If no Primary exists, a reliable external image may become Primary.
+If no Primary exists, a reviewed and permitted external image may become
+Primary, but Biblio never requires a provider cover.
 
 Once a Primary exists it is never silently replaced.
 
@@ -457,6 +502,27 @@ Structural actions such as merge/split of Works, identity merging of Authors or 
 Direct central changes receive central bibliographic audit.
 
 Local Boeksoort/Genre/Onderwerp remain directly managed by the Library.
+
+## Biblio Library Intelligence and Lens
+
+`Biblio Library Intelligence` is the overarching product direction. Its first
+two pillars are Biblio Lens and Series Intelligence, under the promise:
+`Biblio registreert je bibliotheek niet alleen. Het begrijpt haar.`
+
+Biblio Lens conceptually answers: `Wat betekent dit boek voor mijn bibliotheek
+en leesleven?` It keeps two evidence scopes separate:
+
+- **Library Fit:** exact Edition already present; the same Work in another
+  Edition when reliably resolved; wishlist/acquisition intent; next-reading
+  intent; confirmed Series/gap context; omnibus coverage; and Household
+  presence without exposing private reading data;
+- **Reading Fit:** other books by the same Author, personal Author history,
+  genre/reading profile, and the actor's own ratings and reading history.
+
+v2.001 does not promise all Lens intelligence. Its first maturity is
+ISBN/Edition Intelligence. Later maturity may add richer Edition Intelligence,
+broader Work resolution, Series Intelligence, OCR/vision, shelf/spine
+recognition and a Metadata Graph.
 
 # 5. Library
 
@@ -1058,7 +1124,92 @@ Library-scoped detail may include:
 
 A private `Mijn leesgeschiedenis` section may appear for the current user.
 
-Series combines loose Works and omnibus representation without falsely claiming external completeness.
+## Series Intelligence model
+
+The former universal book-role model `hoofddeel` / `novelle` / `companion` /
+`spin-off` / `omnibus` is not the foundation. Series Intelligence is
+multidimensional; membership, grouping, descriptive relation, ordering,
+position, lifecycle and coverage answer different questions.
+
+### Series kind and membership level
+
+- **Work Series** groups Works as content identities.
+- **Edition/Publisher Series** groups specific Editions as a publisher or
+  imprint range.
+- Item is not an intrinsic Series-membership level.
+
+The existing schema-1009 Work→Series relation is the implemented minimal Work
+Series foundation. Edition/Publisher Series and the richer dimensions below do
+not silently expand the v2.001 runtime or schema; they require a separately
+approved implementation decision.
+
+In the unimplemented Series Intelligence target model, every membership has an
+explicit state:
+
+- `proposed`;
+- `confirmed`;
+- `rejected`.
+
+A rejection is remembered so the same suggestion is not repeatedly presented.
+Only confirmed relationships may support canonical Series views and claims.
+
+### Group and descriptive relation
+
+Group is `core` or `supplemental`. It is not the literary form of a Work.
+`Hoofddeel` may be a UX label for a core member but is not a technical role.
+The exact product definition of `core` versus `supplemental` remains open.
+
+Optional descriptive labels such as `novelle`, `tussentitel`, `companion`,
+`short story` or `extra` may describe a relation. They do not determine group,
+order or completeness.
+
+### Order and position
+
+Series order is one of:
+
+- `numbered`;
+- `ordered_unnumbered`;
+- `unordered`.
+
+A Series number is never mandatory. Position is a separate value that may be
+numeric, fractional, textual, contextual or absent; position never determines
+`core`/`supplemental`. Publication, chronological and recommended orders may be
+supported later. A first implementation supports at most one primary confirmed
+order.
+
+### Series relationships and lifecycle
+
+Series may relate to Series as `subseries`, `spin-off`, `successor`, `related`
+or `shared universe`. A spin-off is therefore not by default a role of a book
+inside its parent Series. Related Series do not count toward parent-Series
+completeness.
+
+Series lifecycle is `ongoing`, `completed` or `unknown`. A member release state
+may later distinguish `released`, `announced`, `upcoming`, `unknown` and
+`cancelled`. An announced or upcoming Work does not automatically make current
+coverage incomplete. Suitable wording is, for example: `Alle 7 verschenen
+hoofdtitels aanwezig; 1 nieuw deel aangekondigd.`
+
+### Omnibus and derived views
+
+An omnibus remains a container Work with contained Works; it is not a Series
+role. Series coverage is derived from those contained Works. A later coverage
+model may distinguish content covered through an omnibus from possession of a
+separate Edition.
+
+`Hoofdreeks`/`Kerntitels` and `Volledige serie` are derived views, not stored
+member roles. Such views may compare ownership, reading progress, confirmed
+gaps and upcoming members. A future user-defined `Mijn serie` target is
+possible but not decided for v2.001.
+
+Use `compleet` only when confirmed data supports it. For uncertain or incomplete
+canon, use `Alle momenteel bevestigde hoofdtitels aanwezig.` For a confirmed
+completed Series with sufficiently verified members, a claim such as
+`Hoofdreeks compleet — 7/7` is permitted.
+
+External Series metadata is suggestion/evidence only. It never silently mutates
+canonical membership or classifications, and the provider benchmark does not
+support robust automatic Series Intelligence for v2.001.
 
 A Series reading goal is user-owned and Library-independent.
 

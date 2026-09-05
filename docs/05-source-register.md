@@ -218,6 +218,23 @@ Includes especially:
 - settings/platform administration;
 - central bibliographic identity and correction governance.
 
+## Approved Metadata Hub and Series Intelligence decisions — 2026-09-05
+Status: `ACTUEEL`
+
+Canonicalized in:
+
+- `docs/01-functional-design.md` §4 and §11;
+- `docs/02-architecture.md` §5 and §11;
+- `docs/decisions/ADR-010-provider-neutral-metadata-hub-and-evidence-governance.md`;
+- `docs/26-future-roadmap-decisions.md` for future directions and open points.
+
+The benchmark artifacts from commit
+`924e3ae657ff6139bc649563c8b4ca1dbbe14a50` are evidence for the provider
+decision, not an independent source of product truth or a universal market
+measurement. The accepted decisions preserve provider neutrality, local
+canonical authority, Work/Edition/Item separation and a multidimensional Series
+Intelligence direction without implementing runtime or schema behavior.
+
 ## Authority rule
 
 Historical timestamps do not determine authority.

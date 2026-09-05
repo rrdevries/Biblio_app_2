@@ -34,6 +34,10 @@
 - Library audit.
 - Library settings and platform administration required for v2.001.
 - lightweight central metadata correction proposal.
+- provider-neutral Metadata Hub minimum: ISBN validation, local-first lookup,
+  conditional Open Library adapter, temporary conditional Google fallback,
+  whole-record review, minimum provenance, manual/no-ISBN entry and independent
+  Biblio-owned covers; implementation requires a separately approved build task.
 
 ## Explicitly deferred
 
@@ -92,7 +96,16 @@
 - broad central bibliographic editor for all Library managers;
 - automatic structural Work/Author/Series merge;
 - publisher entity hierarchy;
-- external completeness claims for Series;
+- field-level evidence/confidence and merge policy;
+- multi-provider record fusion;
+- OCR/vision and shelf/spine recognition;
+- community metadata and Metadata Graph;
+- paid metadata feeds and licensed-provider partnerships;
+- extensive automatic Work resolution;
+- automatic Series Intelligence and unverified external completeness claims;
+- Edition/Publisher Series and richer Series membership/group/order/lifecycle
+  persistence beyond the current minimal Work→Series foundation;
+- multi-order Series support and user-defined `Mijn serie` scope;
 - tags;
 - smart Collections.
 

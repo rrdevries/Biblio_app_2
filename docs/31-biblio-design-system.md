@@ -458,10 +458,13 @@ geen generieke stockfoto. Sectiehiërarchie:
 
 ### 14.4 Serie-detail
 
-De seriehero toont titel, auteur/context en compleetheid/aanwezige delen rustig
-maar prominent. Volgorde is de primaire structuur, met positienummers, kleine
-covers, status, vorm en locatie. Gewenste aanwinsten en Archief blijven
-secundair.
+De seriehero toont titel, auteur/context en bevestigde aanwezige delen rustig
+maar prominent. Een compleetheidsclaim verschijnt alleen wanneer de bevestigde
+Series-data dit volgens het actuele functionele contract ondersteunt. Een
+bevestigde primaire volgorde is de structuur wanneer die bestaat; positie mag
+ook tekstueel, contextueel of afwezig zijn en wordt dus niet als verplicht
+nummer gepresenteerd. Kleine covers, status, vorm en locatie kunnen aanvullende
+context geven. Gewenste aanwinsten en Archief blijven secundair.
 
 Boek-, Collectie-, Auteur- en Serie-detail delen shell, typografie, spacing,
 surfaces, interactielogica en open compositie, maar krijgen een domeinspecifieke
