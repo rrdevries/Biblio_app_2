@@ -57,7 +57,20 @@
     "docs/decisions/ADR-006-f2-5-library-catalog-context-and-classification.md",
     "docs/decisions/ADR-007-f2-6-reading-round-lifecycle-and-historical-truth.md",
     "docs/decisions/ADR-008-next-reading-intent-model-and-transactional-consumption.md",
-    "docs/decisions/ADR-009-biblio-ui-theming-and-atmosphere-architecture.md"
+    "docs/decisions/ADR-009-biblio-ui-theming-and-atmosphere-architecture.md",
+    "tools/metadata-benchmark/README.md",
+    "tools/metadata-benchmark/requirements.txt",
+    "tools/metadata-benchmark/benchmark.py",
+    "tools/metadata-benchmark/output/dataset-and-sample-report.json",
+    "tools/metadata-benchmark/output/metadata-benchmark-methodology.md",
+    "tools/metadata-benchmark/output/metadata-benchmark-sample.csv",
+    "tools/metadata-benchmark/output/metadata-benchmark-results.csv",
+    "tools/metadata-benchmark/output/metadata-benchmark-field-results.csv",
+    "tools/metadata-benchmark/output/metadata-benchmark-summary.md",
+    "tools/metadata-benchmark/output/metadata-provider-comparison.md",
+    "tools/metadata-benchmark/output/metadata-v2-provider-recommendation.md",
+    "tools/metadata-benchmark/output/metadata-benchmark-summary.json",
+    "tools/metadata-benchmark/output/metadata-benchmark-review.md"
   ],
   "assumptions": [
     "For v2.001 each user has at most one designated personal Privébibliotheek, auto-created on first relevant reading/borrowing action if absent and named Mijn Bibliotheek."

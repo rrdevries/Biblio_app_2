@@ -1742,3 +1742,23 @@ Schema remains `1013`. The existing `/items` overview and all earlier REST/UI
 contracts remain unchanged. No frontend, browser URL/session state, Elementor,
 mutation or suggestion engine is included. Evidence is in
 `docs/42-catalog-rest-transport-foundation-exit-evidence.md`.
+
+### Metadata provider benchmark — research evidence only
+
+Status: **COMPLETED / INPUT FOR LATER PRODUCT DECISION**
+
+A reproducible read-only benchmark against 300 unique valid ISBNs from the
+explicitly designated current Biblio V1 dataset measured Open Library, Google
+Books, Wikidata and BookBrainz. The result is research evidence only: no
+provider, Metadata Hub behavior, adapter, schema, runtime or product choice is
+introduced by this benchmark.
+
+The minimum free evidence stack is assessed as conditional rather than approved
+for implementation. Open Library is strong for English Work/Edition evidence
+but weak for Dutch ISBN coverage; Google Books materially fills coverage but
+requires renewed legal/licensing review before commercialization and may not
+become a Core dependency. Wikidata and BookBrainz showed insufficient
+incremental v2.001 coverage in this sample. Full methodology, normalized rows,
+machine-readable metrics, reviews and recommendation are under
+`tools/metadata-benchmark/output/`, starting with
+`metadata-benchmark-summary.md`.
