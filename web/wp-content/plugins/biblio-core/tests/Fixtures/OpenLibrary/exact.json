@@ -1,0 +1,22 @@
+{
+  "ISBN:9780306406157": {
+    "bib_key": "ISBN:9780306406157",
+    "details": {
+      "key": "/books/OL7353617M",
+      "title": "Gravitation",
+      "subtitle": "Foundations and Frontiers",
+      "authors": [
+        {"key": "/authors/OL1A", "name": "Charles W. Misner"},
+        {"key": "/authors/OL2A", "name": "Kip S. Thorne"}
+      ],
+      "isbn_10": ["0306406152"],
+      "isbn_13": ["9780306406157"],
+      "publishers": ["Example Academic Press"],
+      "publish_date": "1973",
+      "number_of_pages": 1279,
+      "languages": [{"key": "/languages/eng"}],
+      "physical_format": "Hardcover",
+      "works": [{"key": "/works/OL12345W"}]
+    }
+  }
+}
