@@ -94,6 +94,7 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/works/"
                 . "(?P<work_id>[^/]+)/assessments",
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/items",
+            "/biblio/v1/libraries/(?P<library_id>[^/]+)/catalog",
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/items/(?P<item_id>[^/]+)",
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/items/"
                 . "(?P<item_id>[^/]+)/reading-rounds",
@@ -108,7 +109,7 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             }
         }
 
-        self::assertCount(16, array_filter(
+        self::assertCount(17, array_filter(
             array_keys($routes),
             static fn (string $route): bool => str_starts_with(
                 $route,
@@ -390,6 +391,301 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             $this->dispatchAsActor($foreign),
             $this->dispatchAsActor($missing)
         );
+    }
+
+    public function testCatalogQueryRouteIsTypedPaginatedPrivateAndNonEnumerating(): void
+    {
+        $this->seedLibrary("library-own", "Mijn bibliotheek", $this->actorId, "owner");
+        $this->seedLibrary("library-second", "Tweede bibliotheek", $this->actorId, "owner");
+        $this->seedLibrary("library-other", "Andere bibliotheek", $this->otherId, "owner");
+        $this->database->insert($this->tableNames->locations(), [
+            "library_id" => "library-other",
+            "location_id" => "location-foreign",
+            "display_name" => "Verborgen locatie",
+        ]);
+        $this->seedItem("item-alpha", "library-own", "work-alpha", "Alpha");
+        $this->seedItem("item-beta", "library-own", "work-beta", "Béta");
+        $this->seedItem("item-archived", "library-own", "work-archived", "Archief");
+        $this->database->insert($this->tableNames->memberships(), [
+            "library_id" => "library-own",
+            "user_id" => (string) $this->otherId,
+            "membership_status" => "active",
+            "management_role" => "member",
+            "use_access" => "view_only",
+            "additional_permissions" => "[]",
+        ]);
+        $this->seedRound(
+            "round-actor-read",
+            $this->actorId,
+            "work-alpha",
+            "item-alpha",
+            outcome: "completed"
+        );
+        $this->seedRound(
+            "round-other-reading",
+            $this->otherId,
+            "work-beta",
+            "item-beta"
+        );
+        self::assertSame(1, $this->database->update(
+            $this->tableNames->items(),
+            ["item_status" => "archived"],
+            ["item_id" => "item-archived"]
+        ));
+
+        $first = $this->dispatchAsActor($this->catalogRequest("library-own", [
+            "page_size" => "1",
+        ]));
+        $firstData = $this->successData($first);
+        self::assertSame(200, $first->get_status());
+        self::assertSame(["library", "items", "next_cursor"], array_keys($firstData));
+        self::assertSame(["item-alpha"], array_column($firstData["items"], "item_id"));
+        self::assertNotNull($firstData["next_cursor"]);
+        self::assertSame([
+            "item_id", "work_id", "edition_id", "title", "item_status",
+            "inventory_number", "authors", "series", "location",
+            "classification", "collection_ids", "reading_status",
+            "contained_match_title",
+        ], array_keys($firstData["items"][0]));
+        self::assertArrayNotHasKey("user_id", $firstData["items"][0]);
+        self::assertArrayNotHasKey("notes", $firstData["items"][0]);
+        self::assertArrayNotHasKey("version", $firstData["items"][0]);
+        self::assertSame("read", $firstData["items"][0]["reading_status"]);
+
+        $next = $this->successData($this->dispatchAsActor(
+            $this->catalogRequest("library-own", [
+                "page_size" => "1",
+                "cursor" => $firstData["next_cursor"],
+            ])
+        ));
+        self::assertSame(["item-beta"], array_column($next["items"], "item_id"));
+        self::assertSame("not_read", $next["items"][0]["reading_status"]);
+        self::assertNull($next["next_cursor"]);
+
+        $otherActor = $this->successData($this->dispatchAsUser(
+            $this->catalogRequest("library-own", ["search" => "Beta"]),
+            $this->otherId
+        ));
+        self::assertSame("reading", $otherActor["items"][0]["reading_status"]);
+
+        $search = $this->successData($this->dispatchAsActor(
+            $this->catalogRequest("library-own", ["search" => "Beta"])
+        ));
+        self::assertSame(["item-beta"], array_column($search["items"], "item_id"));
+
+        $mixed = $this->successData($this->dispatchAsActor(
+            $this->catalogRequest("library-own", [
+                "archive_scope" => "active_and_archived",
+            ])
+        ));
+        self::assertContains("item-archived", array_column($mixed["items"], "item_id"));
+        self::assertSame(
+            "archived",
+            $mixed["items"][array_search(
+                "item-archived",
+                array_column($mixed["items"], "item_id"),
+                true
+            )]["item_status"]
+        );
+
+        $empty = $this->dispatchAsActor($this->catalogRequest("library-own", [
+            "author_ids" => ["author-unknown"],
+        ]));
+        self::assertSame(200, $empty->get_status());
+        self::assertSame([], $this->successData($empty)["items"]);
+        self::assertNull($this->successData($empty)["next_cursor"]);
+
+        $foreignFilter = $this->dispatchAsActor($this->catalogRequest(
+            "library-own",
+            ["location_ids" => ["location-foreign"]]
+        ));
+        $unknownFilter = $this->dispatchAsActor($this->catalogRequest(
+            "library-own",
+            ["location_ids" => ["location-unknown"]]
+        ));
+        self::assertSame(200, $foreignFilter->get_status());
+        self::assertSame(
+            $this->successData($unknownFilter),
+            $this->successData($foreignFilter)
+        );
+
+        $foreign = $this->dispatchAsActor($this->catalogRequest("library-other"));
+        $missing = $this->dispatchAsActor($this->catalogRequest("library-missing"));
+        $this->assertEquivalentNotAvailable($foreign, $missing);
+
+        $anonymous = $this->dispatchAsUser(
+            $this->catalogRequest("library-own"),
+            0,
+            null
+        );
+        self::assertSame(401, $anonymous->get_status());
+        self::assertSame("biblio_authentication_required", $anonymous->get_data()["code"]);
+
+        $badNonce = $this->dispatchAsActor(
+            $this->catalogRequest("library-own"),
+            "invalid"
+        );
+        self::assertSame(403, $badNonce->get_status());
+        self::assertSame("rest_cookie_invalid_nonce", $badNonce->get_data()["code"]);
+
+        $changedQueryCursor = $this->dispatchAsActor($this->catalogRequest(
+            "library-own",
+            [
+                "page_size" => "1",
+                "sort" => "author",
+                "cursor" => $firstData["next_cursor"],
+            ]
+        ));
+        self::assertSame(422, $changedQueryCursor->get_status());
+        self::assertSame(
+            "biblio_validation_failed",
+            $changedQueryCursor->get_data()["code"]
+        );
+
+        $otherLibraryCursor = $this->dispatchAsActor($this->catalogRequest(
+            "library-second",
+            [
+                "page_size" => "1",
+                "cursor" => $firstData["next_cursor"],
+            ]
+        ));
+        self::assertSame(422, $otherLibraryCursor->get_status());
+
+        $otherActorCursor = $this->dispatchAsUser(
+            $this->catalogRequest("library-own", [
+                "page_size" => "1",
+                "cursor" => $firstData["next_cursor"],
+            ]),
+            $this->otherId
+        );
+        self::assertSame(422, $otherActorCursor->get_status());
+
+        $changedFilterCursor = $this->dispatchAsActor($this->catalogRequest(
+            "library-own",
+            [
+                "page_size" => "1",
+                "author_ids" => ["author-unknown"],
+                "cursor" => $firstData["next_cursor"],
+            ]
+        ));
+        self::assertSame(422, $changedFilterCursor->get_status());
+    }
+
+    public function testCatalogQueryRouteAcceptsOnlyTheCanonicalTransportSurface(): void
+    {
+        $this->seedLibrary("library-own", "Mijn bibliotheek", $this->actorId, "owner");
+        $this->seedItem("item-alpha", "library-own", "work-alpha", "Alpha");
+
+        foreach ([
+            ["reading_statuses" => ["not_read"]],
+            ["author_ids" => ["author-unknown"]],
+            ["series_ids" => ["series-unknown"]],
+            ["location_ids" => ["location-unknown"]],
+            ["book_type_ids" => ["book-unknown"]],
+            ["genre_ids" => ["genre-unknown"]],
+            ["subject_ids" => ["subject-unknown"]],
+            ["collection_ids" => ["collection-unknown"]],
+            ["without_collection" => "true"],
+            ["sort" => "title"],
+            ["sort" => "author"],
+            ["sort" => "series", "series_ids" => ["series-unknown"]],
+            ["page_size" => "1"],
+            ["page_size" => "100"],
+            ["archive_scope" => "active_only"],
+        ] as $parameters) {
+            self::assertSame(
+                200,
+                $this->dispatchAsActor(
+                    $this->catalogRequest("library-own", $parameters)
+                )->get_status(),
+                (string) wp_json_encode($parameters)
+            );
+        }
+
+        foreach ([
+            ["user_id" => (string) $this->otherId],
+            ["search" => ""],
+            ["author_ids" => "author-a"],
+            ["collection_ids" => ["collection-a"], "without_collection" => "true"],
+            ["sort" => "newest"],
+            ["sort" => "series"],
+            ["page_size" => "0"],
+            ["page_size" => "101"],
+            ["page_size" => "1.0"],
+            ["archive_scope" => "archived_only"],
+            ["cursor" => "not-a-valid-cursor"],
+        ] as $parameters) {
+            $response = $this->dispatchAsActor(
+                $this->catalogRequest("library-own", $parameters)
+            );
+            self::assertContains($response->get_status(), [400, 422]);
+            self::assertNotSame("biblio_internal_error", $response->get_data()["code"]);
+            self::assertStringNotContainsString(
+                "not-a-valid-cursor",
+                (string) wp_json_encode($response->get_data())
+            );
+        }
+    }
+
+    public function testCatalogTransportReportsBoundedWordPressAndCoreQueryCounts(): void
+    {
+        $this->seedLibrary("library-query-count", "Query count", $this->actorId, "owner");
+        $this->seedRichCatalogItem(
+            "library-query-count",
+            "item-rich-a",
+            "work-rich-a",
+            "Alpha rich",
+            "1"
+        );
+        $this->seedRichCatalogItem(
+            "library-query-count",
+            "item-rich-b",
+            "work-rich-b",
+            "Beta rich",
+            "2"
+        );
+
+        $authenticationBefore = $this->database->num_queries;
+        wp_set_current_user($this->actorId);
+        global $wp_rest_auth_cookie;
+        $wp_rest_auth_cookie = true;
+        unset($_SERVER["HTTP_X_WP_NONCE"]);
+        $_SERVER["HTTP_X_WP_NONCE"] = wp_create_nonce("wp_rest");
+        self::assertTrue(rest_cookie_check_errors(null));
+        self::assertSame(2, $this->database->num_queries - $authenticationBefore);
+
+        $before = $this->database->num_queries;
+        $first = $this->server->dispatch($this->catalogRequest(
+            "library-query-count",
+            ["page_size" => "1"]
+        ));
+        $firstCalls = $this->database->num_queries - $before;
+        $firstData = $this->successData($first);
+
+        self::assertSame(200, $first->get_status());
+        self::assertSame(15, $firstCalls);
+        self::assertSame("author-work-rich-a", $firstData["items"][0]["authors"][0]["author_id"]);
+        self::assertSame("series-work-rich-a", $firstData["items"][0]["series"][0]["series_id"]);
+        self::assertSame("location-query-count", $firstData["items"][0]["location"]["location_id"]);
+        self::assertSame("book-query-count", $firstData["items"][0]["classification"]["book_type_id"]);
+        self::assertSame(["collection-query-count"], $firstData["items"][0]["collection_ids"]);
+
+        $before = $this->database->num_queries;
+        $next = $this->server->dispatch($this->catalogRequest(
+            "library-query-count",
+            [
+                "page_size" => "1",
+                "cursor" => $firstData["next_cursor"],
+            ]
+        ));
+        $nextCalls = $this->database->num_queries - $before;
+
+        self::assertSame(200, $next->get_status());
+        self::assertSame(16, $nextCalls);
+        self::assertSame(["item-rich-b"], array_column(
+            $this->successData($next)["items"],
+            "item_id"
+        ));
     }
 
     public function testDetailPreservesUnknownMetadataAndNonEnumeration(): void
@@ -2134,6 +2430,20 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         return $request;
     }
 
+    /** @param array<string, mixed> $query */
+    private function catalogRequest(
+        string $libraryId,
+        array $query = []
+    ): WP_REST_Request {
+        $request = new WP_REST_Request(
+            "GET",
+            "/biblio/v1/libraries/{$libraryId}/catalog"
+        );
+        $request->set_query_params($query);
+
+        return $request;
+    }
+
     /** @param array<string, mixed> $body */
     private function privateNoteRequest(
         string $method,
@@ -2368,6 +2678,118 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             "edition_id" => "edition-{$itemId}",
             "item_status" => "active",
         ]);
+    }
+
+    private function seedRichCatalogItem(
+        string $libraryId,
+        string $itemId,
+        string $workId,
+        string $title,
+        string $position
+    ): void {
+        $locationId = "location-query-count";
+        $bookTypeId = "book-query-count";
+        $genreId = "genre-query-count";
+        $subjectId = "subject-query-count";
+        $collectionId = "collection-query-count";
+
+        if ((int) $this->database->get_var($this->database->prepare(
+            "SELECT COUNT(*) FROM `{$this->tableNames->locations()}` "
+                . "WHERE library_id = %s AND location_id = %s",
+            $libraryId,
+            $locationId
+        )) === 0) {
+            $this->database->insert($this->tableNames->locations(), [
+                "library_id" => $libraryId,
+                "location_id" => $locationId,
+                "display_name" => "Kast",
+            ]);
+            foreach ([
+                [$this->tableNames->libraryBookTypes(), "book_type_id", $bookTypeId],
+                [$this->tableNames->libraryGenres(), "genre_id", $genreId],
+                [$this->tableNames->librarySubjects(), "subject_id", $subjectId],
+            ] as [$table, $column, $value]) {
+                $this->database->insert($table, [
+                    "library_id" => $libraryId,
+                    $column => $value,
+                    "display_name" => $value,
+                    "normalized_name" => $value,
+                    "term_status" => "active",
+                ]);
+            }
+            $this->database->insert($this->tableNames->collections(), [
+                "library_id" => $libraryId,
+                "collection_id" => $collectionId,
+                "collection_name" => "Collectie",
+                "normalized_name" => "collectie",
+                "collection_status" => "active",
+                "collection_position" => 1,
+                "collection_version" => 1,
+                "created_at" => "2026-09-05 10:00:00.000000",
+                "updated_at" => "2026-09-05 10:00:00.000000",
+            ]);
+        }
+
+        $this->seedItem($itemId, $libraryId, $workId, $title);
+        self::assertSame(1, $this->database->update(
+            $this->tableNames->items(),
+            [
+                "inventory_number" => "INV-{$itemId}",
+                "location_id" => $locationId,
+            ],
+            ["item_id" => $itemId]
+        ));
+        $this->database->insert($this->tableNames->authors(), [
+            "author_id" => "author-{$workId}",
+            "display_name" => "Author {$position}",
+        ]);
+        $this->database->insert($this->tableNames->workContributors(), [
+            "work_id" => $workId,
+            "author_id" => "author-{$workId}",
+            "contributor_role" => "author",
+            "contributor_position" => 1,
+        ]);
+        $this->database->insert($this->tableNames->series(), [
+            "series_id" => "series-{$workId}",
+            "display_name" => "Series {$position}",
+        ]);
+        $this->database->insert($this->tableNames->workSeries(), [
+            "work_id" => $workId,
+            "series_id" => "series-{$workId}",
+            "series_position" => "{$position}.000000",
+        ]);
+        $this->database->insert($this->tableNames->libraryCatalogContexts(), [
+            "library_id" => $libraryId,
+            "work_id" => $workId,
+            "book_type_id" => $bookTypeId,
+            "context_version" => 1,
+        ]);
+        $this->database->insert($this->tableNames->libraryCatalogContextGenres(), [
+            "library_id" => $libraryId,
+            "work_id" => $workId,
+            "genre_id" => $genreId,
+        ]);
+        $this->database->insert($this->tableNames->libraryCatalogContextSubjects(), [
+            "library_id" => $libraryId,
+            "work_id" => $workId,
+            "subject_id" => $subjectId,
+        ]);
+        $this->database->insert($this->tableNames->collectionMemberships(), [
+            "library_id" => $libraryId,
+            "membership_id" => "membership-{$itemId}",
+            "collection_id" => $collectionId,
+            "item_id" => $itemId,
+            "membership_status" => "active",
+            "item_position" => (int) $position,
+            "added_at" => "2026-09-05 10:00:00.000000",
+        ]);
+        $this->seedRound(
+            "round-{$itemId}",
+            $this->actorId,
+            $workId,
+            $itemId,
+            outcome: "completed"
+        );
     }
 
     private function seedWork(string $workId, string $title): void

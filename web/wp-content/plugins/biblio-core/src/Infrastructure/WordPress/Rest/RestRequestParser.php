@@ -7,6 +7,7 @@ namespace Biblio\Core\Infrastructure\WordPress\Rest;
 use Biblio\Core\Application\Assessments\Read\{PublicAssessmentCursor,PublicAssessmentPageSize};
 use Biblio\Core\Application\Catalog\Read\CatalogOverviewCursor;
 use Biblio\Core\Application\Catalog\Read\CatalogOverviewPageSize;
+use Biblio\Core\Application\Catalog\Query\CatalogQuery;
 use Biblio\Core\Application\Reading\History\ReadingHistoryCursor;
 use Biblio\Core\Application\Reading\History\ReadingHistoryPageSize;
 use Biblio\Core\Application\NextReading\Read\{NextReadingDiscoveryLimit,NextReadingWorkCursor,NextReadingWorkSearchTerm};
@@ -34,7 +35,8 @@ final readonly class RestRequestParser
         private ReadingHistoryCursorCodec $historyCursors,
         private PrivateNoteCursorCodec $privateNoteCursors,
         private ?NextReadingWorkCursorCodec $nextReadingWorkCursors = null,
-        private ?PublicAssessmentCursorCodec $publicAssessmentCursors = null
+        private ?PublicAssessmentCursorCodec $publicAssessmentCursors = null,
+        private ?RestCatalogQueryParser $catalogQueries = null
     ) {
     }
 
@@ -44,6 +46,13 @@ final readonly class RestRequestParser
             $request->get_url_params()["library_id"] ?? null,
             "library_id",
             static fn (string $value): LibraryId => new LibraryId($value)
+        );
+    }
+
+    public function catalogQuery(WP_REST_Request $request): CatalogQuery
+    {
+        return ($this->catalogQueries ?? new RestCatalogQueryParser())->parse(
+            $request->get_query_params()
         );
     }
 

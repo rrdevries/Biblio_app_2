@@ -13,6 +13,8 @@ use Biblio\Core\Application\Catalog\Read\CatalogOverviewView;
 use Biblio\Core\Application\Catalog\Read\CatalogReadingSummary;
 use Biblio\Core\Application\Catalog\Read\CatalogTextListValue;
 use Biblio\Core\Application\Catalog\Read\CatalogTextValue;
+use Biblio\Core\Application\Catalog\Query\{CatalogQueryItem,CatalogQueryPage};
+use Biblio\Core\Application\Catalog\Query\CatalogQuerySeriesContext;
 use Biblio\Core\Application\Library\LibraryContextView;
 use Biblio\Core\Application\Notes\Read\PrivateNoteView;
 use Biblio\Core\Application\Notes\Read\PrivateNoteViewPage;
@@ -21,6 +23,9 @@ use Biblio\Core\Application\NextReading\Read\{NextReadingSourceOptionView,NextRe
 use Biblio\Core\Application\Reading\History\ReadingHistoryEntry;
 use Biblio\Core\Application\Reading\History\ReadingHistoryPage;
 use Biblio\Core\Catalog\WorkId;
+use Biblio\Core\Catalog\Author;
+use Biblio\Core\Catalog\Classification\{LibraryGenreId,LibrarySubjectId};
+use Biblio\Core\Collections\CollectionId;
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Reading\ReadingDate;
 use Biblio\Core\Reading\ReadingRound;
@@ -58,6 +63,16 @@ final readonly class RestResponseSerializer
             "next_cursor" => $overview->nextCursor() === null
                 ? null
                 : $this->cursors->encode($overview->nextCursor()),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    public function catalogQuery(CatalogQueryPage $page): array
+    {
+        return [
+            "library" => $this->library($page->library()),
+            "items" => array_map($this->catalogQueryItem(...), $page->items()),
+            "next_cursor" => $page->nextCursor()?->opaqueValue(),
         ];
     }
 
@@ -391,6 +406,58 @@ final readonly class RestResponseSerializer
             "reading_status" => $item->readingStatus()->value,
             "item_status" => $item->itemStatus()->value,
             "capabilities" => $this->itemCapabilities($item->capabilities()),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function catalogQueryItem(CatalogQueryItem $item): array
+    {
+        $classification = $item->classification();
+        $location = $item->location();
+
+        return [
+            "item_id" => $item->itemId()->value(),
+            "work_id" => $item->workId()->value(),
+            "edition_id" => $item->editionId()->value(),
+            "title" => $item->title(),
+            "item_status" => $item->itemStatus()->value,
+            "inventory_number" => $item->inventoryNumber(),
+            "authors" => array_map(
+                static fn (Author $author): array => [
+                    "author_id" => $author->id()->value(),
+                    "display_name" => $author->displayName(),
+                ],
+                $item->authors()
+            ),
+            "series" => array_map(
+                static fn (CatalogQuerySeriesContext $context): array => [
+                    "series_id" => $context->series()->id()->value(),
+                    "display_name" => $context->series()->displayName(),
+                    "position" => $context->position()->value(),
+                ],
+                $item->series()
+            ),
+            "location" => $location === null ? null : [
+                "location_id" => $location->id()->value(),
+                "display_name" => $location->displayName(),
+            ],
+            "classification" => $classification === null ? null : [
+                "book_type_id" => $classification->bookTypeId()->value(),
+                "genre_ids" => array_map(
+                    static fn (LibraryGenreId $id): string => $id->value(),
+                    $classification->genreIds()
+                ),
+                "subject_ids" => array_map(
+                    static fn (LibrarySubjectId $id): string => $id->value(),
+                    $classification->subjectIds()
+                ),
+            ],
+            "collection_ids" => array_map(
+                static fn (CollectionId $id): string => $id->value(),
+                $item->collectionIds()
+            ),
+            "reading_status" => $item->readingStatus()->value,
+            "contained_match_title" => $item->containedMatchTitle(),
         ];
     }
 
