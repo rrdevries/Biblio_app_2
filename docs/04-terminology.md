@@ -107,7 +107,7 @@ Not synonymous with "unread books".
 ## Verlanglijst
 Private platform-wide personal possession/acquisition wish list.
 
-Supersedes old generic `Wishlist` terminology.
+Supersedes the former generic terminology.
 
 ## Gewenste aanwinsten
 Shared Library-owned list of books/editions the Library wants to acquire.
@@ -124,7 +124,8 @@ Supersedes `Next to read`.
 
 ## Wat zal ik lezen?
 Private platform-wide personal choice aid that selects on Work level from
-sources the current user can actually read. It has three engines: `Voor mij
+source-context-first candidates the current user can actually read, then
+deduplicates to Works. It has three engines: `Voor mij
 gekozen`, `Herontdek` and `Verras me`; `Kies uit…` is their scope/filter layer.
 It is not a smart or automatically managed form of `Hierna lezen`.
 
@@ -184,7 +185,7 @@ Lightweight proposal to Platformbeheer to change central bibliographic metadata 
 Not current v2.001:
 - WordPress Multisite as tenant model;
 - Library role `Lezer`;
-- generic `Wishlist`;
+- former generic wish-list terminology;
 - `Next to read`;
 - `Profiel` as standalone personal environment;
 - `Gepauzeerd` ReadingRound state;

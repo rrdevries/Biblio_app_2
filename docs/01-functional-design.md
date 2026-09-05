@@ -2,7 +2,7 @@
 
 Status: canonical functional design for Biblio V2 v2.001.
 
-This document states the latest approved product behavior. Historical handovers can contain superseded models such as WordPress Multisite, the role `Lezer`, `Wishlist`, `Next to read`, `Gepauzeerd`, mandatory Library context for every ReadingRound, the old fixed Home model, or mockups that place Home content under `Mijn Bibliotheek`. Those historical variants are not current behavior unless explicitly retained here.
+This document states the latest approved product behavior. Historical handovers can contain superseded models such as WordPress Multisite, the role `Lezer`, old Verlanglijst terminology, `Next to read`, `Gepauzeerd`, mandatory Library context for every ReadingRound, the old fixed Home model, or mockups that place Home content under `Mijn Bibliotheek`. Those historical variants are not current behavior unless explicitly retained here.
 
 ---
 
@@ -854,7 +854,8 @@ separate from the fully manual `Hierna lezen` list and never automatically
 mutates planning, reading, collection or classification source data.
 
 Its v2.001 functional basis, three selection engines, `Kies uit…` orchestration,
-candidate semantics, explainability and personal exclusions are fixed in
+source-context-first candidate semantics, explainability and personal
+exclusions are fixed in
 [`docs/40-what-shall-i-read-functional-design.md`](40-what-shall-i-read-functional-design.md).
 
 # 8. Borrowed and lent
@@ -1044,7 +1045,7 @@ Library module:
 
 An Author/Series appears in a Library index only when at least one active Item in that Library represents a related Work.
 
-Personal wishlist/history/external loans/minimal central Works do not make them appear in a Library index.
+Personal Verlanglijst/history/external loans/minimal central Works do not make them appear in a Library index.
 
 Only Auteur/Co-auteur gets Author detail in v2.001.
 
@@ -1680,6 +1681,11 @@ Using the ordinary view switch does not silently rewrite that preference; a
 permanent change follows the explicit settings save behavior below.
 
 Home configuration is not duplicated here.
+
+`Algemeen` is visible when it contains the concrete platform-wide suggestion
+preferences defined for `Wat zal ik lezen?`: per selection engine excluded
+Boeksoorten and Genres. Those preferences are private and user-owned; they are
+not Library defaults or Library-managed settings.
 
 ## Library defaults
 

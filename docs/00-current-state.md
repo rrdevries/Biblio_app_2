@@ -56,7 +56,7 @@ Owns private:
 - Reading inventory view (`Leesvoorraad`);
 - external borrowing;
 - reading goals;
-- wishlist (`Verlanglijst`);
+- Verlanglijst;
 - `Hierna lezen`;
 - `Wat zal ik lezen?`, including private suggestion results and preferences;
 - ratings/reviews;
@@ -72,8 +72,9 @@ Status: **Functionele basis v2.001 — vastgezet; nog niet geïmplementeerd**.
 naast het volledig handmatige `Hierna lezen`. Dezelfde drie persoonlijke
 engines zijn bereikbaar vanuit Mijn Biblio en binnen iedere Bibliotheek; alleen
 de kandidatenpool wordt in Library-context tot die geautoriseerde Library
-beperkt. De functie selecteert op Work-niveau uit bronnen die de gebruiker nu
-daadwerkelijk kan lezen en muteert nooit brondata.
+beperkt. De functie bepaalt eerst concrete beschikbare bronkandidaten en hun
+toepasselijke Library-lokale classificatie, dedupliceert daarna per Work en
+muteert nooit brondata.
 
 Het volledige contract, `Kies uit…`, persoonlijke suggestion-uitsluitingen,
 deferred onderdelen en open ontwerpvragen staan in
@@ -645,7 +646,7 @@ Work → Edition → `Catalog\Item` model and schema:
 No schema migration, catalog table, aggregate or version change is part of
 F2.3. Product `v2.001`, plugin/package `2.1.0` and schema baseline `1000` remain
 unchanged. REST/Abilities/UI, Author/contributors, Series, extended metadata,
-search/entity resolution, taxonomy, Collections, Wishlist, Archive, lending,
+search/entity resolution, taxonomy, Collections, Verlanglijst, Archive, lending,
 ratings/notes and reading goals remain outside this slice.
 
 Last verified F2.3 quality baseline:

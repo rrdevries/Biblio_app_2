@@ -32,6 +32,11 @@ tot één Library is beperkt. Leesgeschiedenis uit Library B kan dus persoonlijk
 relevantie leveren voor kandidaten uit Library A zonder ownership over te
 dragen of Library-data buiten toegestane context te ontsluiten.
 
+Historische user-owned signalen blijven voor de eigenaar bruikbaar nadat toegang
+tot een eerdere Library is verloren. Classificaties uit die verloren
+Library-context worden daarbij niet gelezen of afgeleid: een toekomstige
+historische classificatiesnapshot vraagt een afzonderlijk besluit.
+
 ## 3. Bereikbaarheid
 
 `Wat zal ik lezen?` heeft twee bereikbare contexten:
@@ -48,19 +53,33 @@ worden overwogen, maar is niet de hoofdinteractie.
 
 ## 4. Kandidatenpool en Work-identiteit
 
-De standaardpool bevat alles wat de gebruiker binnen de actieve scope op dat
-moment daadwerkelijk kan lezen volgens bestaande Biblio-regels: direct
-toegankelijke actieve Library Items, Items die daadwerkelijk intern aan deze
-gebruiker zijn uitgeleend, actieve externe leningen en andere reeds
-ondersteunde concrete leesbronnen.
+De standaardpool start bij concrete bronkandidaten die de gebruiker binnen de
+actieve scope op dat moment daadwerkelijk kan lezen. De gesloten fysieke
+v2.001-set is: een direct toegankelijk actief Library Item, een actief intern
+geleend Item aan de huidige gebruiker en een actieve externe lening. Digitale,
+provider-, pseudo- en generieke andere bronnen horen niet bij deze basis.
+
+Beschikbaarheid wordt per concrete bron bepaald. Voor een Library-bron wordt
+daarna alleen de geautoriseerde, Library-lokale `LibraryCatalogContext`
+gebruikt voor Boeksoort, Genre en Onderwerp. Een externe lening zonder
+toepasselijke context blijft een geldige beschikbare bron, maar krijgt geen
+verzonnen of overgeërfde classificatie.
 
 Een Work met een actieve ReadingRound is geen kandidaat voor een nieuw te
-starten boek. Selectie en ranking gebeuren op Work-niveau. Meerdere geldige
+starten boek, ook wanneer voor hetzelfde Work nog een tweede geldige bron
+beschikbaar is. Dit is uitsluitend een suggestie-regel: Leesvoorraad,
+ReadingRound-model en brongebaseerde Leesvoorraad-deduplicatie veranderen niet.
+Na de bron- en contextstappen worden kandidaten per Work gegroepeerd en
+gededupliceerd. Selectie en ranking gebeuren op Work-niveau; meerdere geldige
 exemplaren of bronnen van hetzelfde Work leveren geen extra kans of gewicht.
 Hierna lezen heeft in de standaardpool geen automatische prioriteit.
 
-Bij `Start lezen` gebruikt Biblio de bestaande concrete-bronlogica. De engine
-kiest bij meerdere geldige bronnen niet automatisch een voorkeursbron.
+Een beschikbare omnibusbron maakt ieder werkelijk daarin opgenomen Work tot
+kandidaat. Het getoonde resultaat is steeds het onderliggende Work; een set of
+boxset die niet zelf als Work leesbaar is, wordt niet als zelfstandig resultaat
+getoond. Bij `Start lezen` gebruikt Biblio de bestaande concrete-bronselectie,
+die ook de omnibusbron kan kiezen. De engine kiest bij meerdere geldige bronnen
+niet automatisch een voorkeursbron.
 
 ## 5. Modussen en gemeenschappelijke pipeline
 
@@ -69,15 +88,18 @@ De gebruikersingangen zijn `Voor mij gekozen`, `Herontdek`, `Verras me` en
 engine maar een scope-, filter- en orchestratielaag die daarna één engine
 toepast.
 
-De conceptuele pipeline is:
+De conceptuele pipeline is broncontext-eerst:
 
-1. actieve context bepalen;
-2. geldige beschikbare Works bepalen;
-3. persoonlijke standaarduitsluitingen toepassen;
-4. eventuele `Kies uit…`-scope en filters toepassen;
-5. gekozen engine uitvoeren;
-6. resultaat op Work-niveau tonen;
-7. bij `Start lezen` bestaande concrete-bronselectie gebruiken.
+1. concrete bronkandidaten binnen de actieve context bepalen;
+2. per bron toegang en actuele beschikbaarheid bepalen;
+3. actieve scope toepassen;
+4. per toepasselijke Library-bron Library-lokale classificaties en persoonlijke
+   uitsluitingen toepassen;
+5. eventuele `Kies uit…`-filters toepassen;
+6. de overblijvende bronkandidaten per Work groeperen en dedupliceren;
+7. de gekozen engine op unieke Works uitvoeren;
+8. het resultaat op Work-niveau tonen;
+9. bij `Start lezen` de bestaande concrete-bronselectie gebruiken.
 
 Beschikbaarheid, filtering en recommendation-ranking blijven conceptueel
 gescheiden.
@@ -150,6 +172,10 @@ concreet uit wat wordt herontdekt. Complexe novelty-profielen, mood-logica, een
 automatische `anders-dan-normaal`-engine en externe ontdekking vallen niet in
 de eerste v2.001-versie.
 
+Een strategie gebruikt alleen tijdclaims waarvoor de betrokken bron- of
+persoonlijke historie de vereiste precisie heeft. Ontbrekende of grovere data
+wordt niet als een schijnexacte duur, datum of volgorde gepresenteerd.
+
 ## 8. Verras me
 
 Verras me kiest echt willekeurig één geldig boek. Ieder geldig Work heeft
@@ -185,7 +211,7 @@ worden filters niet automatisch versoepeld. Mood, complexe querybouw,
 automatische versoepeling en uitgebreide pagina-/lengtelogica zijn geen
 kernfilter voor deze basis.
 
-## 10. Classificaties
+## 10. Classificaties en externe bronnen
 
 Boeksoort, Genre en Onderwerp blijven strikt verschillende dimensies:
 
@@ -196,18 +222,48 @@ Boeksoort, Genre en Onderwerp blijven strikt verschillende dimensies:
 - **Onderwerp:** inhoudelijk onderwerp, zoals Tweede Wereldoorlog,
   Psychologie, Vulkanen of Geologie.
 
-## 11. Mijn voorkeuren → Suggesties
+Deze classificaties zijn Library-owned en horen bij `LibraryCatalogContext`.
+Dezelfde genormaliseerde termnaam in twee Libraries is geen gedeelde term-ID,
+merge of globale classificatie. `Thriller` impliceert bijvoorbeeld niet
+Psychologische thriller, Suspense of Crime, tenzij precies die bestaande lokale
+term is gekoppeld.
+
+Bij een externe lening zonder toepasselijke `LibraryCatalogContext` ontbreekt
+deze classificatiedata. Een expliciete filter `Genre: Fantasy` laat zo'n bron
+dus niet matchen; een uitsluiting `Genre: Horror` sluit haar niet uit wegens
+ontbrekende data. Hetzelfde geldt voor Boeksoort en Onderwerp.
+
+## 11. Mijn voorkeuren → Algemeen → Suggesties
 
 Deze instellingen zijn gebruiker-eigen, privé en platformbreed, zonder
-Librarydefault of Librarybeheer. Per echte engine kan de gebruiker Boeksoorten
-en Genres uitsluiten. `Kies uit…` heeft geen eigen uitsluitlijst. Standaard is
-niets uitgesloten.
+Librarydefault, Library-eigendom of Librarybeheer. De zichtbare structuur is:
 
-Als een Work meerdere Genres heeft, sluit minimaal één uitgesloten Genre het
-Work standaard voor die engine uit. Ontbrekende Genredata is geen
-uitsluitingsreden. Uitsluitingen gelden op dezelfde genormaliseerde term waar
-die in een Library voorkomt. Er is geen automatische semantische
-synoniemmapping.
+    Mijn voorkeuren
+    └── Algemeen
+        └── Suggesties
+            ├── Voor mij gekozen
+            │   ├── Uitgesloten Boeksoorten
+            │   └── Uitgesloten Genres
+            ├── Herontdek
+            │   ├── Uitgesloten Boeksoorten
+            │   └── Uitgesloten Genres
+            └── Verras me
+                ├── Uitgesloten Boeksoorten
+                └── Uitgesloten Genres
+
+`Algemeen` is zichtbaar zodra er ten minste één concrete instelling bestaat.
+De eerdere v2.001-regel dat een lege/beperkte set `Algemeen` verborgen houdt,
+is hiervoor bewust vervangen. `Kies uit…` heeft geen eigen uitsluitlijst.
+Standaard is niets uitgesloten.
+
+Een uitsluiting werkt per concrete kandidaatbron tegen de lokale
+genormaliseerde naam van de toepasselijke Library-classificatie. Dezelfde naam
+mag daarom in meerdere Libraries matchen zonder term-ID's te verenigen of een
+globale classificatie te vormen. Als een toepasselijke context meerdere Genres
+heeft, sluit minimaal één uitgesloten Genre die bron standaard voor de engine
+uit. Ontbrekende classificatiedata, waaronder bij een externe lening zonder
+toepasselijke context, is geen uitsluitingsreden. Er is geen automatische
+semantische synoniemmapping.
 
 De betekenis is `standaard niet suggereren`, niet `nooit tonen`. Kiest de
 gebruiker in `Kies uit…` expliciet een normaal uitgesloten Boeksoort of Genre,

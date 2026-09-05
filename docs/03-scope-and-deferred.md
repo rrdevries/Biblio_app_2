@@ -23,7 +23,8 @@
 - Verlanglijst.
 - manual Hierna lezen.
 - private platform-wide `Wat zal ik lezen?` choice aid with rule-based,
-  explainable selection from currently readable Works.
+  explainable selection from currently readable concrete sources, presented as
+  unique Works.
 - Ratings/Reviews/Notes.
 - Reading goals.
 - personal Stats/Jaaroverzicht/Tijdlijn.
