@@ -1,0 +1,684 @@
+{
+  "dataset": "DATA-01",
+  "kind": "representative-v1-build-regression-source-data",
+  "source": {
+    "archive_sha256": "b2ce31c76401ad929fe539259cb0252523f1749218df3985b4991e9f77eb298f",
+    "archive_member": "Biblio/data/books.json",
+    "selected_by": "books[].bookNumber",
+    "selected_book_numbers": [
+      "BK-000003",
+      "BK-000002",
+      "BK-000108",
+      "BK-000349",
+      "BK-000135",
+      "BK-000467",
+      "BK-000006",
+      "BK-000699",
+      "BK-000693",
+      "BK-000716",
+      "BK-000138",
+      "BK-000264",
+      "BK-000041",
+      "BK-000427",
+      "BK-000059",
+      "BK-000709",
+      "BK-000235",
+      "BK-000697",
+      "BK-000787",
+      "BK-000788",
+      "BK-000082",
+      "BK-000646",
+      "BK-000707",
+      "BK-000660",
+      "BK-000755",
+      "BK-001017",
+      "BK-000593",
+      "BK-000996",
+      "BK-000915",
+      "BK-000067",
+      "BK-001023",
+      "BK-001062",
+      "BK-000575",
+      "BK-000698",
+      "BK-000250",
+      "BK-000017",
+      "BK-000720",
+      "BK-000104",
+      "BK-000203",
+      "BK-000426",
+      "BK-000531",
+      "BK-000781",
+      "BK-000545",
+      "BK-000383",
+      "BK-000703",
+      "BK-000889",
+      "BK-000890"
+    ]
+  },
+  "cases": [
+    {
+      "case_id": "DATA-01-BK-000002",
+      "v1_book_number": "BK-000002",
+      "v1_internal_id": "1769798279407",
+      "title": "The Secret Commonwealth",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-finished",
+        "notes",
+        "author-identities"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-finished, notes, author-identities."
+    },
+    {
+      "case_id": "DATA-01-BK-000003",
+      "v1_book_number": "BK-000003",
+      "v1_internal_id": "1769798875126",
+      "title": "Dagboek van een slecht jaar",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-unread",
+        "author-identities"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-unread, author-identities."
+    },
+    {
+      "case_id": "DATA-01-BK-000006",
+      "v1_book_number": "BK-000006",
+      "v1_internal_id": "1769799399480",
+      "title": "Schipbreuk van een leven",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-unread",
+        "author-identities"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-unread, author-identities."
+    },
+    {
+      "case_id": "DATA-01-BK-000017",
+      "v1_book_number": "BK-000017",
+      "v1_internal_id": "1769799894048",
+      "title": "Slow Horses",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-unread",
+        "wishlist",
+        "author-identities"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-unread, wishlist, author-identities."
+    },
+    {
+      "case_id": "DATA-01-BK-000041",
+      "v1_book_number": "BK-000041",
+      "v1_internal_id": "1769855827160",
+      "title": "A Game of Thrones",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-finished",
+        "embedded-reading-history",
+        "variant-link",
+        "author-identities"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-finished, embedded-reading-history, variant-link, author-identities."
+    },
+    {
+      "case_id": "DATA-01-BK-000059",
+      "v1_book_number": "BK-000059",
+      "v1_internal_id": "1769864708261",
+      "title": "Het Cupcake Café",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-finished",
+        "author-identities"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-finished, author-identities."
+    },
+    {
+      "case_id": "DATA-01-BK-000067",
+      "v1_book_number": "BK-000067",
+      "v1_internal_id": "1770132103065",
+      "title": "Aardappelen",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-finished"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-finished."
+    },
+    {
+      "case_id": "DATA-01-BK-000082",
+      "v1_book_number": "BK-000082",
+      "v1_internal_id": "1770563314670",
+      "title": "Irish hearts",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-finished",
+        "embedded-reading-history",
+        "contained-works",
+        "author-identities"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-finished, embedded-reading-history, contained-works, author-identities."
+    },
+    {
+      "case_id": "DATA-01-BK-000104",
+      "v1_book_number": "BK-000104",
+      "v1_internal_id": "1770570210046",
+      "title": "Betrapt",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-finished",
+        "author-identities"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-finished, author-identities."
+    },
+    {
+      "case_id": "DATA-01-BK-000108",
+      "v1_book_number": "BK-000108",
+      "v1_internal_id": "1770570837370",
+      "title": "Hyperion",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-unread",
+        "author-identities"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-unread, author-identities."
+    },
+    {
+      "case_id": "DATA-01-BK-000135",
+      "v1_book_number": "BK-000135",
+      "v1_internal_id": "1770573667069",
+      "title": "The Rainmaker",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-unread"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-unread."
+    },
+    {
+      "case_id": "DATA-01-BK-000138",
+      "v1_book_number": "BK-000138",
+      "v1_internal_id": "1770573770189",
+      "title": "The Long Utopia: The Long Earth 4",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-finished",
+        "notes",
+        "author-identities"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-finished, notes, author-identities."
+    },
+    {
+      "case_id": "DATA-01-BK-000203",
+      "v1_book_number": "BK-000203",
+      "v1_internal_id": "1770933193144",
+      "title": "Betrapt",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-finished",
+        "author-identities"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-finished, author-identities."
+    },
+    {
+      "case_id": "DATA-01-BK-000235",
+      "v1_book_number": "BK-000235",
+      "v1_internal_id": "1770935622876",
+      "title": "Ready Player One",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-finished",
+        "author-identities"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-finished, author-identities."
+    },
+    {
+      "case_id": "DATA-01-BK-000250",
+      "v1_book_number": "BK-000250",
+      "v1_internal_id": "1770936483895",
+      "title": "Redemption of Althalus",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-stopped",
+        "embedded-reading-history",
+        "author-identities"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-stopped, embedded-reading-history, author-identities."
+    },
+    {
+      "case_id": "DATA-01-BK-000264",
+      "v1_book_number": "BK-000264",
+      "v1_internal_id": "1771010050741",
+      "title": "The Three-body problem",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-unread"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-unread."
+    },
+    {
+      "case_id": "DATA-01-BK-000349",
+      "v1_book_number": "BK-000349",
+      "v1_internal_id": "1771063770682",
+      "title": "Hyperion",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-finished",
+        "author-identities"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-finished, author-identities."
+    },
+    {
+      "case_id": "DATA-01-BK-000383",
+      "v1_book_number": "BK-000383",
+      "v1_internal_id": "1771264826165",
+      "title": "Hurricane Wars",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-finished",
+        "embedded-reading-history"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-finished, embedded-reading-history."
+    },
+    {
+      "case_id": "DATA-01-BK-000426",
+      "v1_book_number": "BK-000426",
+      "v1_internal_id": "1771265795977",
+      "title": "Onderstromen",
+      "categories": [
+        "approved-core-case",
+        "collection-status-lent",
+        "read-status-finished",
+        "embedded-circulation-history",
+        "author-identities"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-lent, read-status-finished, embedded-circulation-history, author-identities."
+    },
+    {
+      "case_id": "DATA-01-BK-000427",
+      "v1_book_number": "BK-000427",
+      "v1_internal_id": "1771265814214",
+      "title": "A Game of Thrones",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-unread",
+        "author-identities"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-unread, author-identities."
+    },
+    {
+      "case_id": "DATA-01-BK-000467",
+      "v1_book_number": "BK-000467",
+      "v1_internal_id": "1771270167416",
+      "title": "The Rainmaker",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-unread"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-unread."
+    },
+    {
+      "case_id": "DATA-01-BK-000531",
+      "v1_book_number": "BK-000531",
+      "v1_internal_id": "1771331258683",
+      "title": "De zwevende wereld",
+      "categories": [
+        "approved-core-case",
+        "collection-status-borrowed",
+        "read-status-unread",
+        "embedded-circulation-history",
+        "notes"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-borrowed, read-status-unread, embedded-circulation-history, notes."
+    },
+    {
+      "case_id": "DATA-01-BK-000545",
+      "v1_book_number": "BK-000545",
+      "v1_internal_id": "1771331558034",
+      "title": "Spares",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-finished",
+        "embedded-reading-history",
+        "reviews"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-finished, embedded-reading-history, reviews."
+    },
+    {
+      "case_id": "DATA-01-BK-000575",
+      "v1_book_number": "BK-000575",
+      "v1_internal_id": "1771331997474",
+      "title": "The Great Book of Amber",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-reading",
+        "embedded-reading-history"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-reading, embedded-reading-history."
+    },
+    {
+      "case_id": "DATA-01-BK-000593",
+      "v1_book_number": "BK-000593",
+      "v1_internal_id": "1771336523170",
+      "title": "The Waste Lands (The Dark Tower, Book 3)",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-unread",
+        "author-identities"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-unread, author-identities."
+    },
+    {
+      "case_id": "DATA-01-BK-000646",
+      "v1_book_number": "BK-000646",
+      "v1_internal_id": "1771501681196",
+      "title": "The Shadow and Bone Trilogy Boxed Set",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-finished",
+        "contained-works"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-finished, contained-works."
+    },
+    {
+      "case_id": "DATA-01-BK-000660",
+      "v1_book_number": "BK-000660",
+      "v1_internal_id": "1771502445320",
+      "title": "Mistborn Trilogy",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-finished",
+        "contained-works",
+        "author-identities"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-finished, contained-works, author-identities."
+    },
+    {
+      "case_id": "DATA-01-BK-000693",
+      "v1_book_number": "BK-000693",
+      "v1_internal_id": "1771536387096",
+      "title": "The Ultimate Guide to Rebuilding a Civilization",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-unread",
+        "wishlist"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-unread, wishlist."
+    },
+    {
+      "case_id": "DATA-01-BK-000697",
+      "v1_book_number": "BK-000697",
+      "v1_internal_id": "1772658455432",
+      "title": "Ready Player One",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-unread",
+        "wishlist",
+        "author-identities"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-unread, wishlist, author-identities."
+    },
+    {
+      "case_id": "DATA-01-BK-000698",
+      "v1_book_number": "BK-000698",
+      "v1_internal_id": "1772962357422",
+      "title": "Seveneves",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-stopped",
+        "embedded-reading-history",
+        "notes",
+        "author-identities"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-stopped, embedded-reading-history, notes, author-identities."
+    },
+    {
+      "case_id": "DATA-01-BK-000699",
+      "v1_book_number": "BK-000699",
+      "v1_internal_id": "1772963499007",
+      "title": "De Reisgenoten",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-unread",
+        "notes",
+        "author-identities"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-unread, notes, author-identities."
+    },
+    {
+      "case_id": "DATA-01-BK-000703",
+      "v1_book_number": "BK-000703",
+      "v1_internal_id": "1773311071877",
+      "title": "As in tas",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-unread",
+        "notes",
+        "author-identities"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-unread, notes, author-identities."
+    },
+    {
+      "case_id": "DATA-01-BK-000707",
+      "v1_book_number": "BK-000707",
+      "v1_internal_id": "1773311581977",
+      "title": "Daphne & Anthony",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-finished",
+        "contained-works"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-finished, contained-works."
+    },
+    {
+      "case_id": "DATA-01-BK-000709",
+      "v1_book_number": "BK-000709",
+      "v1_internal_id": "1773342015461",
+      "title": "Het Cupcake Café",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-finished",
+        "variant-link",
+        "author-identities"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-finished, variant-link, author-identities."
+    },
+    {
+      "case_id": "DATA-01-BK-000716",
+      "v1_book_number": "BK-000716",
+      "v1_internal_id": "1773395231043",
+      "title": "L.A. Confidential",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-unread",
+        "wishlist"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-unread, wishlist."
+    },
+    {
+      "case_id": "DATA-01-BK-000720",
+      "v1_book_number": "BK-000720",
+      "v1_internal_id": "1773395288916",
+      "title": "Murder Your Darlings",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-unread",
+        "wishlist"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-unread, wishlist."
+    },
+    {
+      "case_id": "DATA-01-BK-000755",
+      "v1_book_number": "BK-000755",
+      "v1_internal_id": "1774263038459",
+      "title": "Tales of Wonder",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-unread",
+        "author-identities"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-unread, author-identities."
+    },
+    {
+      "case_id": "DATA-01-BK-000781",
+      "v1_book_number": "BK-000781",
+      "v1_internal_id": "1780741573994",
+      "title": "Tyler Green komt nooit meer vrij",
+      "categories": [
+        "approved-core-case",
+        "collection-status-borrowed",
+        "read-status-finished",
+        "embedded-reading-history",
+        "embedded-circulation-history",
+        "author-identities"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-borrowed, read-status-finished, embedded-reading-history, embedded-circulation-history, author-identities."
+    },
+    {
+      "case_id": "DATA-01-BK-000787",
+      "v1_book_number": "BK-000787",
+      "v1_internal_id": "1786129044856",
+      "title": "The secret garden",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-finished",
+        "embedded-reading-history",
+        "author-identities"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-finished, embedded-reading-history, author-identities."
+    },
+    {
+      "case_id": "DATA-01-BK-000788",
+      "v1_book_number": "BK-000788",
+      "v1_internal_id": "1786132642795",
+      "title": "The Secret Garden",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-finished",
+        "embedded-reading-history"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-finished, embedded-reading-history."
+    },
+    {
+      "case_id": "DATA-01-BK-000889",
+      "v1_book_number": "BK-000889",
+      "v1_internal_id": "1787393280680",
+      "title": "Wilde bloemen & planten in Nederland",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-unknown",
+        "author-identities"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-unknown, author-identities."
+    },
+    {
+      "case_id": "DATA-01-BK-000890",
+      "v1_book_number": "BK-000890",
+      "v1_internal_id": "1787393303041",
+      "title": "Wilde bloemen & planten in Nederland",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-unknown",
+        "author-identities"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-unknown, author-identities."
+    },
+    {
+      "case_id": "DATA-01-BK-000915",
+      "v1_book_number": "BK-000915",
+      "v1_internal_id": "1787394950723",
+      "title": "Magical Greece",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-unknown"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-unknown."
+    },
+    {
+      "case_id": "DATA-01-BK-000996",
+      "v1_book_number": "BK-000996",
+      "v1_internal_id": "1788423705396",
+      "title": "Het masker (De boekenplank)",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-unknown"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-unknown."
+    },
+    {
+      "case_id": "DATA-01-BK-001017",
+      "v1_book_number": "BK-001017",
+      "v1_internal_id": "1788425723457",
+      "title": "De Griezelbus",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-unknown"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-unknown."
+    },
+    {
+      "case_id": "DATA-01-BK-001023",
+      "v1_book_number": "BK-001023",
+      "v1_internal_id": "1788426446919",
+      "title": "Guide to Japanese Grammar",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-unknown"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-unknown."
+    },
+    {
+      "case_id": "DATA-01-BK-001062",
+      "v1_book_number": "BK-001062",
+      "v1_internal_id": "1788430175864",
+      "title": "Say Hello to Black Jack",
+      "categories": [
+        "approved-core-case",
+        "collection-status-owned",
+        "read-status-unknown",
+        "author-identities"
+      ],
+      "reason": "Goedgekeurde DATA-01-case; behoudt V1-eigenschappen: approved-core-case, collection-status-owned, read-status-unknown, author-identities."
+    }
+  ]
+}

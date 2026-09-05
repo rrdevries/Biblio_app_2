@@ -11,6 +11,13 @@ The canonical living visual and UI baseline is maintained in
 architecture is accepted in
 `docs/decisions/ADR-009-biblio-ui-theming-and-atmosphere-architecture.md`.
 
+The tracked `testdata/data-01-v1/` directory contains DATA-01: a compact,
+representative V1 build/regression source dataset of 47 approved V1
+`books[].bookNumber` cases and their necessary direct V1 relations. It is
+reference data only, not a V1-to-V2 migration fixture, provider fixture,
+schema seed or V2 transformation. Its format and validation entry point are
+documented in `testdata/data-01-v1/README.md`.
+
 ## Product model
 
 Biblio is one application. Every platform user has one private, platform-wide environment: `Mijn Biblio`.
