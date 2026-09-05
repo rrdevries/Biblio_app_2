@@ -6,6 +6,7 @@ namespace Biblio\Core\Tests\Integration;
 
 use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
 use Biblio\Core\Application\Catalog\Classification\Read\LibraryClassificationQueryService;
+use Biblio\Core\Application\Catalog\Query\CatalogQueryService;
 use Biblio\Core\Application\CoreApplication;
 use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
 use Biblio\Core\Application\Library\GetAccessibleLibraryItemService;
@@ -406,6 +407,7 @@ final class ProductionLifecycleTest extends PersistenceIntegrationTestCase
             LibraryClassificationQueryService::class,
             $application->libraryClassifications()
         );
+        self::assertInstanceOf(CatalogQueryService::class, $application->catalogQuery());
         self::assertInstanceOf(
             StartReadingFromLibraryItemService::class,
             $application->libraryItemReading()
