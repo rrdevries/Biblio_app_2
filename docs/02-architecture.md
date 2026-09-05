@@ -1027,3 +1027,20 @@ effective query and fails closed if it is no longer valid. Search orders by
 canonical relevance, title and Item ID; browse sorts use explicit null buckets
 and title plus Item ID tie-breakers. Schema stays 1013; transport serialization
 remains outside Core and outside this slice.
+
+## 28. Catalog REST transport foundation
+
+`GET /biblio/v1/libraries/{library_id}/catalog` is the read-only transport
+adapter for the typed catalog query. `RestCatalogQueryParser` strictly converts
+the WordPress query-parameter map into `CatalogQuery`; it has no query or
+authorization semantics. `RestController` resolves only the route Library ID,
+calls `CatalogQueryService` once and passes the resulting `CatalogQueryPage` to
+the explicit allowlist in `RestResponseSerializer`.
+
+The route uses the existing cookie + `X-WP-Nonce` authentication and generic
+non-enumerating error mapping. Core remains the only owner of Library Context,
+actor resolution, Search/filter/sort/archive behavior and HMAC cursor
+validation. Serialization performs no repository/service lookup, so the Core
+15-call first page and 16-call continuation profiles remain unchanged. Schema
+stays 1013. The older `/items` overview remains available unchanged for current
+UI compatibility until Slice 7B migrates the browser.

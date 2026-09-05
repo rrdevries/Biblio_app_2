@@ -1726,3 +1726,19 @@ REST parsing/serialization, URL/session behavior, frontend controls and
 Elementor remain Slice 7. Suggestion/recommendation engines remain a separate,
 unimplemented feature layer. Evidence is in
 `docs/41-typed-catalog-query-composition-exit-evidence.md`.
+
+### Mijn Bibliotheek — catalog REST transport foundation
+
+Status: **GO / CLOSED — READY FOR MIJN BIBLIOTHEEK UI QUERY INTEGRATION**
+
+`GET /biblio/v1/libraries/{library_id}/catalog` now provides a strict typed
+read adapter over `CatalogQueryService`. It exposes only the canonical Search,
+nine first-wave filter groups, three sorts, Core page size, active/mixed archive
+scope and opaque query-bound cursor. Library Context and actor remain
+server-authorized; the response is explicitly allowlisted and actor-private
+reading status remains isolated.
+
+Schema remains `1013`. The existing `/items` overview and all earlier REST/UI
+contracts remain unchanged. No frontend, browser URL/session state, Elementor,
+mutation or suggestion engine is included. Evidence is in
+`docs/42-catalog-rest-transport-foundation-exit-evidence.md`.

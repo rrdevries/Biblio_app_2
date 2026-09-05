@@ -21,8 +21,8 @@ Leesstatus, Auteur, Serie, Locatie, Boeksoort, Genre, Onderwerp, Collecties and
 Author/Series, remaining Search-metadata, Item Location, Archive and
 Collection/membership foundations. Slice 5 closes the remaining actor-private
 reading-status and Library-classification batch/read gaps without new schema.
-Slice 6 typed catalog-query composition is now closed. Only separately scoped
-transport/REST and UI integration remain.
+Slice 6 typed catalog-query composition and Slice 7A REST transport are now
+closed. Only separately scoped UI query integration remains.
 
 The first technical prerequisite, the central Author/Series relationship
 foundation, is closed in
@@ -241,20 +241,23 @@ The precise visual styling of the Archive label remains UI implementation.
 
 ## 9. Current implementation delta
 
-Current flow remains:
+The legacy UI flow remains:
 
 `browser → private REST overview → CatalogUiReadService`
 `→ CatalogUiReadRepository → wpdb projection → allowlisted response`.
 
-Current limitations:
+The new typed transport is now:
 
-- Core accepts only Library ID, page size and title/Item cursor;
-- the repository supports only active title-ordered Items;
-- REST has no strict full query allowlist or typed filter/sort parser;
+`browser/client → GET /biblio/v1/libraries/{library_id}/catalog`
+`→ strict REST parser → CatalogQueryService → allowlisted response`.
+
+Current UI limitations:
+
+- the legacy UI still sends only Library ID, page size and title/Item cursor;
+- its compatibility overview still reads active title-ordered Items;
 - UI controls are disabled and route state contains only Library/Item IDs;
-- schema 1013 has every required first-wave source and Slice 5 exposes the
-  remaining reading-status/classification batches; query composition is still
-  absent by design.
+- schema 1013, source reads, query composition and REST transport are closed;
+  URL/session/browser integration remains absent by design.
 
 Required additions retain existing boundaries: Core owns query meaning,
 Library Context, authorization and actor-private reading status; REST parses
@@ -418,15 +421,27 @@ Collections, each with different ownership and migration invariants.
   duplicate-free, tenant-safe, cursor-bound and proven at 1k/10k scale.
 - **Outside scope:** deferred v2.001 filters, REST and frontend activation.
 
-### Slice 7 — REST, URL/session UI and E2E
+### Slice 7A — REST transport foundation
 
 - **Severity:** High.
+- **Status:** **GO / CLOSED** in schema 1013; see doc 42.
 - **Dependency:** Slice 6 and existing F2.10–F2.12 boundaries.
-- **Scope:** strict REST allowlist, stable URL/session state, live controls,
-  Back/Forward/copy, mixed archive presentation, accessibility and E2E.
-- **Schema impact:** none.
-- **Exit condition:** full first-wave behavior, stale-response safety,
-  non-enumeration, keyboard/focus/reflow and regression gates are green.
+- **Scope:** strict typed REST allowlist, opaque cursor transport, explicit
+  result serialization, safe error mapping and non-enumeration.
+- **Schema impact:** none; schema remains 1013.
+- **Exit condition:** the new catalog route composes `CatalogQueryService`
+  once, remains actor-/Library-safe and adds no N+1 or breaking route change.
+- **Outside scope:** URL/session state, frontend controls and E2E.
+
+### Slice 7B — UI query integration and E2E
+
+- **Severity:** High.
+- **Dependency:** Slice 7A and the existing Mijn Bibliotheek Design System.
+- **Scope:** stable URL/session state, live controls, Back/Forward/copy, mixed
+  archive presentation, stale-response safety, accessibility and E2E.
+- **Schema impact:** none expected.
+- **Exit condition:** full first-wave browser behavior, keyboard/focus/reflow
+  and regression gates are green.
 - **Outside scope:** deferred v2.001 filters and unrelated UI work.
 
 ## 14. Next technical slice implementation brief

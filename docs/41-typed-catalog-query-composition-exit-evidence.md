@@ -137,9 +137,10 @@ Independent review dimensions:
 - Product Guardian: no new filter, sort, Archive/Collection/reading-status,
   permission, UI or suggestion behavior.
 
-## 7. Remaining boundary
+## 7. Downstream boundary
 
-Slice 7 may add strict REST request parsing/serialization, safe error mapping,
-URL/session UI state, live controls, archive labels and E2E/accessibility proof
-on top of this Core contract. Deferred filters and What Shall I Read remain
-separate future scopes.
+Slice 7A now adds strict REST request parsing/serialization and safe error
+mapping without changing this Core contract; see
+`docs/42-catalog-rest-transport-foundation-exit-evidence.md`. Slice 7B may add
+URL/session UI state, live controls, archive labels and E2E/accessibility proof.
+Deferred filters and What Shall I Read remain separate future scopes.

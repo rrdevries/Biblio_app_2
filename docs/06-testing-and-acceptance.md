@@ -2093,3 +2093,26 @@ Slice 6 is accepted when:
 
 Evidence is recorded in
 `docs/41-typed-catalog-query-composition-exit-evidence.md`.
+
+## 66. Catalog REST transport foundation
+
+Slice 7A is accepted when:
+
+- `GET /biblio/v1/libraries/{library_id}/catalog` composes exactly one typed
+  `CatalogQueryService` call and preserves server-side actor/Library authority;
+- the strict parser accepts only Search, the nine canonical filter groups,
+  three canonical sorts, Core page size, active/mixed scope and an opaque cursor;
+- unknown, malformed, empty, duplicate and excessive transport values fail
+  safely without foreign-resource lookup or raw exception disclosure;
+- the response allowlists stable Item/Work/Edition identity, loaded relationship,
+  Location/classification/Collection context, actor-private reading status,
+  archive status, contained match context and `next_cursor` only;
+- empty results are 200, inaccessible Libraries remain non-enumerating 404 and
+  invalid query-bound cursors remain generic typed validation failures;
+- first and continuation pages retain 15/16 Core database calls, with zero
+  controller/serializer calls and no N+1 or total-count query;
+- existing REST/UI routes remain compatible, schema stays 1013 and no frontend,
+  browser state, mutation or suggestion behavior is introduced.
+
+Evidence is recorded in
+`docs/42-catalog-rest-transport-foundation-exit-evidence.md`.
