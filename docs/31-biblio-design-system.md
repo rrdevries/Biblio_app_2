@@ -435,6 +435,39 @@ cards. Een rechter contextkolom verschijnt alleen wanneer nuttig en gebruikt
 open groepen/dividers. Leesgeschiedenis voelt meer als tijdlijn/leesronde en
 minder als datatabel.
 
+#### D-BOOK-01 — basiscompositie
+
+Status: **Approved baseline**.
+
+De huidige visuele baseline voor Boekdetail is goedgekeurd. Zij legt de
+basiscompositie vast, zonder nieuw functioneel gedrag, nieuwe data of
+implementatiedetails te bepalen:
+
+- een compacte atmosferische hero, met op desktop een open sidebar;
+- de hero bevat cover, titel, auteur, classificatie/tags, een korte
+  introductie, primaire acties en een ondersteunende sfeerafbeelding;
+- de hero mag sfeer geven, maar inhoud en cover niet overheersen;
+- direct onder de hero staat rustige subnavigatie;
+- onder de hero volgt een tweekolomsopbouw: links de persoonlijke/
+  inhoudelijke boekervaring en rechts bibliografische, uitgave-, exemplaar- en
+  collectiegegevens;
+- de linkerinhoud bevat onder andere Overzicht, Leesgeschiedenis,
+  Beoordelingen en Mijn notities;
+- de rechterkolom gebruikt compacte informatieblokken voor Boekdetails,
+  Uitgave, Exemplaar en In collecties.
+
+Boekdetail moet primair voelen als een rijke boek-/leesomgeving, niet als een
+database-record. De visuele richting blijft **Editorial Library × Serious
+Utility**, met Soft Ivory, Ink en ingetogen messing/goud. Verdere
+ontwerpvarianten mogen details verfijnen, maar wijzigen deze basisstructuur
+niet zonder expliciete heropening van D-BOOK-01.
+
+De goedgekeurde mockup `De verborgen bibliotheek – Boekdetailpagina.png` is
+uitsluitend een visuele referentie en geen pixel-perfecte
+implementatiespecificatie. De inhoud en copy daarin zijn illustratief, tenzij
+elders al canoniek vastgelegd; de mockup introduceert geen nieuwe functionele
+besluiten. Bestaande canonieke product- en domeinbesluiten blijven leidend.
+
 ### 14.2 Collectie-detail
 
 Kijkmodus is editorial, ruim en covergericht, met een grotere collection hero
