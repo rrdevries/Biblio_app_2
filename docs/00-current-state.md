@@ -2049,7 +2049,7 @@ deferred. The canonical decision is
 
 ### D-MHB5-01 — Add Book and metadata integration
 
-Status: **DECISION CANONICALIZED / NOT IMPLEMENTED**
+Status: **MH-B5A IMPLEMENTED / MH-B5B NOT IMPLEMENTED**
 
 ADR-014 splits MH-B5 into MH-B5A, an authorized local-first metadata
 lookup/review contract without catalog mutation, and MH-B5B, the subsequent
@@ -2057,7 +2057,34 @@ transactional Add Book commit integration. B5A must be GO before B5B starts.
 The decision fixes local-first ISBN reuse, explicit candidate selection,
 non-blocking manual/retry paths, the distinction between Add Book review and
 Librarian confirmation, user-observed Edition evidence, narrow provider-to-
-catalog bindings, existing authorization, and collector boundaries. No REST,
-production code, schema, UI, queue, provider fusion or collector persistence is
-implemented. Canonical decision:
+catalog bindings, existing authorization, and collector boundaries.
+
+MH-B5A now exposes
+`POST /biblio/v1/libraries/{library_id}/metadata-lookups` with the strict JSON
+body `{ "identifier": "..." }`. Core resolves the authenticated Library
+Context and requires the existing `catalog.item_add` capability before ISBN or
+provider work. Canonical local Edition resolution runs first; an exact local
+match returns its existing Work/Edition context and makes no provider call.
+Only a local miss reaches the existing first-sufficient Metadata Hub.
+
+The allowlisted response distinguishes `existing_edition`,
+`local_ambiguous`, `single_candidate`, `multiple_candidates`,
+`no_usable_candidate` and `provider_failure`. Candidates stay separate and
+unranked. Manual availability remains explicit; retry is exposed for technical
+provider failure. Provider records and provider Work keys are not exposed.
+Field bindings encode Edition-title evidence, Edition publication fields,
+role-aware contributor targets with untyped fallback to evidence-only, and an
+empty format allowlist with evidence-only fallback. No MH-B4 review state is
+written.
+
+Production provider configuration is infrastructure-only. Open Library uses
+the optional `BIBLIO_OPEN_LIBRARY_CONTACT_EMAIL` constant and Google Books uses
+the optional `GOOGLE_BOOKS_API_KEY` constant. Missing or invalid configuration
+degrades to the controlled provider-failure/manual path and does not make Core
+unavailable.
+
+Schema remains `1016`. MH-B5A adds no Work, Edition, Item, confirmation,
+provenance or other catalog mutation; no UI, queue, provider fusion or
+collector persistence is implemented. MH-B5B remains separate. Canonical
+decision:
 `docs/decisions/ADR-014-mh-b5-add-book-metadata-integration.md`.

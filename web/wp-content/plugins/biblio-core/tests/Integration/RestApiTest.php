@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Biblio\Core\Tests\Integration;
 
 use Biblio\Core\Application\Notes\Read\PrivateNoteViewCursor;
+use Biblio\Core\Application\Metadata\{CandidateClassifier,FirstSufficientMetadataLookupService};
 use Biblio\Core\Exception\AuthorizationException;
 use Biblio\Core\Exception\ValidationException;
 use Biblio\Core\Infrastructure\WordPress\ProductionComposition;
+use Biblio\Core\Infrastructure\Metadata\ConfigurationErrorMetadataProvider;
 use Biblio\Core\Infrastructure\WordPress\Rest\CatalogCursorCodec;
 use Biblio\Core\Infrastructure\WordPress\Rest\PrivateNoteCursorCodec;
 use Biblio\Core\Infrastructure\WordPress\Rest\ReadingHistoryCursorCodec;
@@ -43,7 +45,14 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         global $wp_rest_server;
         $wp_rest_server = $this->server;
 
-        $application = (new ProductionComposition($this->database))->application();
+        $application = (new ProductionComposition(
+            $this->database,
+            metadataLookup: new FirstSufficientMetadataLookupService(
+                new CandidateClassifier(),
+                new ConfigurationErrorMetadataProvider("open_library"),
+                new ConfigurationErrorMetadataProvider("google_books")
+            )
+        ))->application();
         $this->api = new RestApi(static fn () => $application);
         $previousHook = $GLOBALS["wp_filter"]["rest_api_init"] ?? null;
         unset($GLOBALS["wp_filter"]["rest_api_init"]);
@@ -95,6 +104,7 @@ final class RestApiTest extends PersistenceIntegrationTestCase
                 . "(?P<work_id>[^/]+)/assessments",
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/items",
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/catalog",
+            "/biblio/v1/libraries/(?P<library_id>[^/]+)/metadata-lookups",
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/items/(?P<item_id>[^/]+)",
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/items/"
                 . "(?P<item_id>[^/]+)/reading-rounds",
@@ -109,7 +119,7 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             }
         }
 
-        self::assertCount(17, array_filter(
+        self::assertCount(18, array_filter(
             array_keys($routes),
             static fn (string $route): bool => str_starts_with(
                 $route,
@@ -143,6 +153,11 @@ final class RestApiTest extends PersistenceIntegrationTestCase
 
         self::assertArrayHasKey("GET", $historyMethods);
         self::assertArrayNotHasKey("POST", $historyMethods);
+
+        $metadataLookupMethods = $this->routeMethods($routes[
+            "/biblio/v1/libraries/(?P<library_id>[^/]+)/metadata-lookups"
+        ]);
+        self::assertSame(["POST"], $metadataLookupMethods);
 
         $noteCollectionMethods = $this->routeMethods(
             $routes[
@@ -307,6 +322,100 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             $this->dispatchAsActor($inactive),
             $this->dispatchAsActor($missing)
         );
+    }
+
+    public function testAddBookMetadataLookupIsLocalFirstAuthorizedAndReadOnly(): void
+    {
+        $this->seedLibrary(
+            "library-add-book",
+            "Toevoegen",
+            $this->actorId,
+            "owner"
+        );
+        $this->seedLibrary(
+            "library-view-only",
+            "Alleen bekijken",
+            $this->actorId,
+            "view_only"
+        );
+        $this->database->insert($this->tableNames->works(), [
+            "work_id" => "work-existing-isbn",
+            "work_title" => "Abstracte titel",
+            "work_title_status" => "provisional",
+        ]);
+        $this->database->insert($this->tableNames->editions(), [
+            "edition_id" => "edition-existing-isbn",
+            "work_id" => "work-existing-isbn",
+            "edition_title" => "Concrete titel",
+            "isbn_10" => "0306406152",
+            "isbn_13" => "9780306406157",
+            "explicitly_no_isbn" => 0,
+        ]);
+        $this->database->insert(
+            $this->tableNames->editionIdentifierClaims(),
+            [
+                "canonical_isbn_13" => "9780306406157",
+                "edition_id" => "edition-existing-isbn",
+            ]
+        );
+        $before = $this->addBookPersistenceCounts();
+
+        $response = $this->dispatchAsActor($this->metadataLookupRequest(
+            "library-add-book",
+            ["identifier" => "0-306-40615-2"]
+        ));
+        $data = $this->successData($response);
+
+        self::assertSame(200, $response->get_status());
+        self::assertSame("existing_edition", $data["status"]);
+        self::assertSame("9780306406157", $data["identifier"]["isbn_13"]);
+        self::assertSame("edition-existing-isbn", $data["local_matches"][0]
+            ["edition_id"]);
+        self::assertSame("work-existing-isbn", $data["local_matches"][0]
+            ["work_id"]);
+        self::assertSame([], $data["candidates"]);
+        self::assertSame($before, $this->addBookPersistenceCounts());
+
+        $providerFailure = $this->dispatchAsActor($this->metadataLookupRequest(
+            "library-add-book",
+            ["identifier" => "9780441172719"]
+        ));
+        $failureData = $this->successData($providerFailure);
+        self::assertSame(200, $providerFailure->get_status());
+        self::assertSame("provider_failure", $failureData["status"]);
+        self::assertTrue($failureData["manual_available"]);
+        self::assertTrue($failureData["retry_available"]);
+        self::assertSame($before, $this->addBookPersistenceCounts());
+
+        $viewOnly = $this->dispatchAsActor($this->metadataLookupRequest(
+            "library-view-only",
+            ["identifier" => "9780306406157"]
+        ));
+        $missing = $this->dispatchAsActor($this->metadataLookupRequest(
+            "library-missing",
+            ["identifier" => "9780306406157"]
+        ));
+        $this->assertEquivalentNotAvailable($viewOnly, $missing);
+
+        $invalid = $this->dispatchAsActor($this->metadataLookupRequest(
+            "library-add-book",
+            ["identifier" => "not-an-isbn"]
+        ));
+        self::assertSame(422, $invalid->get_status());
+        self::assertSame("biblio_validation_failed", $invalid->get_data()["code"]);
+        self::assertSame($before, $this->addBookPersistenceCounts());
+
+        foreach ([
+            [],
+            ["identifier" => 9780306406157],
+            ["identifier" => "9780306406157", "user_id" => $this->otherId],
+        ] as $body) {
+            $badRequest = $this->dispatchAsActor($this->metadataLookupRequest(
+                "library-add-book",
+                $body
+            ));
+            self::assertSame(400, $badRequest->get_status());
+        }
     }
 
     public function testOverviewIsAllowlistedPaginatedAndTenantScoped(): void
@@ -2480,6 +2589,45 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         ?string $nonce = "valid"
     ): WP_REST_Response {
         return $this->dispatchAsUser($request, $this->actorId, $nonce);
+    }
+
+    /** @param array<string, mixed> $body */
+    private function metadataLookupRequest(
+        string $libraryId,
+        array $body
+    ): WP_REST_Request {
+        $request = new WP_REST_Request(
+            "POST",
+            "/biblio/v1/libraries/{$libraryId}/metadata-lookups"
+        );
+        $request->set_header("content-type", "application/json");
+        $request->set_body((string) wp_json_encode($body));
+
+        return $request;
+    }
+
+    /** @return array<string, int> */
+    private function addBookPersistenceCounts(): array
+    {
+        $tables = [
+            "works" => $this->tableNames->works(),
+            "editions" => $this->tableNames->editions(),
+            "items" => $this->tableNames->items(),
+            "claims" => $this->tableNames->editionIdentifierClaims(),
+            "provenance" => $this->tableNames->editionMetadataProvenance(),
+            "field_states" => $this->tableNames->metadataFieldStates(),
+            "field_values" => $this->tableNames->metadataFieldValues(),
+            "field_evidence" => $this->tableNames->metadataFieldEvidence(),
+        ];
+        $counts = [];
+
+        foreach ($tables as $key => $table) {
+            $counts[$key] = (int) $this->database->get_var(
+                "SELECT COUNT(*) FROM `{$table}`"
+            );
+        }
+
+        return $counts;
     }
 
     private function dispatchAsUser(

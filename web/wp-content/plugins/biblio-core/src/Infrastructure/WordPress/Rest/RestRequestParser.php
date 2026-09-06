@@ -794,4 +794,23 @@ final readonly class RestRequestParser
             throw RestRequestException::invalid($field);
         }
     }
+
+    public function metadataLookupIdentifier(WP_REST_Request $request): string
+    {
+        $this->validateQueryFields($request, []);
+        $body = $this->jsonObject($request, "identifier");
+        $this->validateBodyFields($body, ["identifier"]);
+
+        if (
+            !is_string($body["identifier"])
+            || strlen($body["identifier"]) > 64
+        ) {
+            throw RestRequestException::wrongType(
+                "identifier",
+                "an ISBN string of at most 64 bytes"
+            );
+        }
+
+        return $body["identifier"];
+    }
 }

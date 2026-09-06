@@ -20,6 +20,8 @@ use Biblio\Core\Application\Notes\Read\PrivateNoteView;
 use Biblio\Core\Application\Notes\Read\PrivateNoteViewPage;
 use Biblio\Core\Application\NextReading\{NextReadingEntryView,NextReadingListView,NextReadingRemoval,PreferredReadingSourceState,PreferredReadingSourceView};
 use Biblio\Core\Application\NextReading\Read\{NextReadingSourceOptionView,NextReadingWorkPage,NextReadingWorkView};
+use Biblio\Core\Application\Catalog\LocalEditionResolutionType;
+use Biblio\Core\Application\Metadata\{AddBookExistingEdition,AddBookMetadataLookupResult,ClassifiedMetadataCandidate,MetadataFieldBinding,MetadataLookupStatus};
 use Biblio\Core\Application\Reading\History\ReadingHistoryEntry;
 use Biblio\Core\Application\Reading\History\ReadingHistoryPage;
 use Biblio\Core\Catalog\WorkId;
@@ -73,6 +75,121 @@ final readonly class RestResponseSerializer
             "library" => $this->library($page->library()),
             "items" => array_map($this->catalogQueryItem(...), $page->items()),
             "next_cursor" => $page->nextCursor()?->opaqueValue(),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    public function addBookMetadataLookup(
+        AddBookMetadataLookupResult $result
+    ): array {
+        $metadata = $result->metadataResult();
+        $status = match ($result->localStatus()) {
+            LocalEditionResolutionType::LocalExact => "existing_edition",
+            LocalEditionResolutionType::LocalAmbiguous => "local_ambiguous",
+            LocalEditionResolutionType::LocalNone => match ($metadata->status()) {
+                MetadataLookupStatus::Candidates,
+                MetadataLookupStatus::Ambiguous =>
+                    count($metadata->candidates()) === 1
+                        ? "single_candidate"
+                        : "multiple_candidates",
+                MetadataLookupStatus::NoUsableCandidate => "no_usable_candidate",
+                default => "provider_failure",
+            },
+        };
+
+        return [
+            "library_id" => $result->library()->libraryId()->value(),
+            "status" => $status,
+            "identifier" => [
+                "isbn_10" => $result->identifier()->isbn10()?->value(),
+                "isbn_13" => $result->identifier()->isbn13()->value(),
+            ],
+            "local_matches" => array_map(
+                $this->addBookExistingEdition(...),
+                $result->localMatches()
+            ),
+            "candidates" => array_map(
+                $this->metadataCandidate(...),
+                $metadata?->candidates() ?? []
+            ),
+            "field_bindings" => array_map(
+                $this->metadataFieldBinding(...),
+                $result->reviewPolicy()->fieldBindings()
+            ),
+            "manual_available" => true,
+            "retry_available" => $metadata?->status()
+                === MetadataLookupStatus::ProviderFailure,
+        ];
+    }
+
+    /** @return array<string, string> */
+    private function addBookExistingEdition(
+        AddBookExistingEdition $match
+    ): array {
+        return [
+            "work_id" => $match->work()->id()->value(),
+            "work_title" => $match->work()->title(),
+            "work_title_status" => $match->work()->titleStatus()->value,
+            "edition_id" => $match->edition()->id()->value(),
+            "edition_title" => $match->edition()->title(),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function metadataCandidate(
+        ClassifiedMetadataCandidate $classified
+    ): array {
+        $candidate = $classified->candidate();
+        $workLink = $candidate->workLink();
+
+        return [
+            "candidate_id" => hash("sha256", implode("\0", [
+                $candidate->providerKey(),
+                $candidate->providerRecordId(),
+                $candidate->returnedIsbn()->isbn13()->value(),
+            ])),
+            "source" => [
+                "provider_key" => $candidate->providerKey(),
+                "retrieved_at" => $candidate->retrievedAt()
+                    ->setTimezone(new DateTimeZone("UTC"))
+                    ->format("Y-m-d\\TH:i:s.u\\Z"),
+                "match_method" => $candidate->matchMethod()->value,
+            ],
+            "quality" => $classified->quality()->value,
+            "identifier" => [
+                "isbn_10" => $candidate->returnedIsbn()->isbn10()?->value(),
+                "isbn_13" => $candidate->returnedIsbn()->isbn13()->value(),
+            ],
+            "fields" => [
+                "title" => $candidate->title(),
+                "subtitle" => $candidate->subtitle(),
+                "contributors" => $candidate->contributors(),
+                "languages" => $candidate->languages(),
+                "publishers" => $candidate->publishers(),
+                "publication_date" => $candidate->publicationDate(),
+                "page_count" => $candidate->pageCount(),
+                "format" => $candidate->format(),
+            ],
+            "work_signal" => $workLink === null
+                ? null
+                : [
+                    "relation" => $workLink->relation()->value,
+                ],
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function metadataFieldBinding(
+        MetadataFieldBinding $binding
+    ): array {
+        return [
+            "field" => $binding->field()->value,
+            "target" => $binding->target()->value,
+            "explicit_mappings" => array_map(
+                static fn ($target): string => $target->value,
+                $binding->explicitMappings()
+            ),
+            "fallback_target" => $binding->fallbackTarget()?->value,
         ];
     }
 

@@ -1,0 +1,345 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Biblio\Core\Tests\Unit\Application;
+
+use Biblio\Core\Application\Catalog\LocalEditionResolutionType;
+use Biblio\Core\Application\Catalog\LocalEditionResolver;
+use Biblio\Core\Application\Identity\AuthenticatedUser;
+use Biblio\Core\Application\Library\ActorLibraryContext;
+use Biblio\Core\Application\Library\ActorLibraryContextRepository;
+use Biblio\Core\Application\Library\LibraryContextQueryService;
+use Biblio\Core\Application\Metadata\{AddBookMetadataLookupResult,AddBookMetadataLookupService,AddBookMetadataReviewPolicy,CandidateClassifier,FirstSufficientMetadataLookupService,MetadataCandidate,MetadataMatchMethod,MetadataProvider,MetadataWorkLink,ProviderFailureReason,ProviderLookupResult};
+use Biblio\Core\Authorization\LibraryAuthorizationPolicy;
+use Biblio\Core\Catalog\{BibliographicMetadataRepository,CanonicalIsbnIdentity,Edition,EditionId,EditionIdentifierClaimRepository,EditionIsbnMetadata,EditionRepository,Isbn13,IsbnCanonicalizer,Work,WorkId,WorkRepository};
+use Biblio\Core\Exception\AuthorizationException;
+use Biblio\Core\Identity\UserId;
+use Biblio\Core\Infrastructure\WordPress\Rest\{CatalogCursorCodec,PrivateNoteCursorCodec,ReadingHistoryCursorCodec,RestResponseSerializer};
+use Biblio\Core\Library\{Library,LibraryId,LibraryMembership,LibraryMembershipAssignment};
+use DateTimeImmutable;
+use PHPUnit\Framework\TestCase;
+
+final class AddBookMetadataLookupServiceTest extends TestCase
+{
+    public function testExistingEditionIsReturnedBeforeAnyProviderCall(): void
+    {
+        $identity = $this->identity();
+        $edition = new Edition(
+            new EditionId("edition-existing"),
+            new WorkId("work-existing"),
+            "Concrete titel",
+            $identity->metadata()
+        );
+        $claims = $this->createMock(EditionIdentifierClaimRepository::class);
+        $claims->expects(self::once())
+            ->method("findByCanonicalIsbn13")
+            ->willReturn($edition->id());
+        $editions = $this->createMock(EditionRepository::class);
+        $editions->expects(self::once())->method("find")->willReturn($edition);
+        $legacy = $this->createMock(BibliographicMetadataRepository::class);
+        $legacy->expects(self::never())->method("editionsForIsbns");
+        $works = $this->createMock(WorkRepository::class);
+        $works->expects(self::once())->method("find")->willReturn(
+            new Work($edition->workId(), "Abstracte titel")
+        );
+        $primary = new AddBookCountingMetadataProvider(
+            "open_library",
+            ProviderLookupResult::miss()
+        );
+        $fallback = new AddBookCountingMetadataProvider(
+            "google_books",
+            ProviderLookupResult::miss()
+        );
+        $service = $this->service(
+            LibraryMembership::owner(),
+            $claims,
+            $editions,
+            $legacy,
+            $works,
+            $primary,
+            $fallback
+        );
+
+        $result = $service->lookup(
+            new LibraryId("library-a"),
+            "0-306-40615-2"
+        );
+
+        self::assertSame(
+            LocalEditionResolutionType::LocalExact,
+            $result->localStatus()
+        );
+        self::assertNull($result->metadataResult());
+        self::assertSame("edition-existing", $result->localMatches()[0]
+            ->edition()->id()->value());
+        self::assertSame(0, $primary->calls());
+        self::assertSame(0, $fallback->calls());
+    }
+
+    public function testViewOnlyActorIsDeniedBeforeLocalOrProviderLookup(): void
+    {
+        $claims = $this->createMock(EditionIdentifierClaimRepository::class);
+        $claims->expects(self::never())->method("findByCanonicalIsbn13");
+        $editions = $this->createMock(EditionRepository::class);
+        $legacy = $this->createMock(BibliographicMetadataRepository::class);
+        $works = $this->createMock(WorkRepository::class);
+        $primary = new AddBookCountingMetadataProvider(
+            "open_library",
+            ProviderLookupResult::miss()
+        );
+        $fallback = new AddBookCountingMetadataProvider(
+            "google_books",
+            ProviderLookupResult::miss()
+        );
+        $service = $this->service(
+            LibraryMembership::safeDefault(),
+            $claims,
+            $editions,
+            $legacy,
+            $works,
+            $primary,
+            $fallback
+        );
+
+        try {
+            $service->lookup(new LibraryId("library-a"), "9780306406157");
+            self::fail("View-only Add Book lookup should be denied.");
+        } catch (AuthorizationException) {
+            self::assertSame(0, $primary->calls());
+            self::assertSame(0, $fallback->calls());
+        }
+    }
+
+    public function testNewIsbnUsesFirstSufficientHubAndSerializesReviewPolicy(): void
+    {
+        $primary = new AddBookCountingMetadataProvider(
+            "open_library",
+            ProviderLookupResult::candidates([$this->candidate("ol-record")])
+        );
+        $fallback = new AddBookCountingMetadataProvider(
+            "google_books",
+            ProviderLookupResult::miss()
+        );
+        $result = $this->newIsbnLookup($primary, $fallback);
+        $data = $this->serializer()->addBookMetadataLookup($result);
+
+        self::assertSame("single_candidate", $data["status"]);
+        self::assertSame("9780306406157", $data["identifier"]["isbn_13"]);
+        self::assertSame([], $data["local_matches"]);
+        self::assertCount(1, $data["candidates"]);
+        self::assertSame("sufficient", $data["candidates"][0]["quality"]);
+        self::assertSame("open_library", $data["candidates"][0]
+            ["source"]["provider_key"]);
+        self::assertTrue($data["manual_available"]);
+        self::assertFalse($data["retry_available"]);
+        self::assertSame(1, $primary->calls());
+        self::assertSame(0, $fallback->calls());
+
+        $bindings = array_column($data["field_bindings"], null, "field");
+        self::assertSame("edition_title_evidence", $bindings["title"]["target"]);
+        self::assertSame("edition", $bindings["subtitle"]["target"]);
+        self::assertSame("work", $bindings["contributors"]
+            ["explicit_mappings"]["author"]);
+        self::assertSame("edition", $bindings["contributors"]
+            ["explicit_mappings"]["translator"]);
+        self::assertSame("evidence_only", $bindings["contributors"]
+            ["fallback_target"]);
+        self::assertSame([], $bindings["format"]["explicit_mappings"]);
+        self::assertSame("evidence_only", $bindings["format"]
+            ["fallback_target"]);
+    }
+
+    public function testMultipleCandidatesRemainSeparateAndUnranked(): void
+    {
+        $primary = new AddBookCountingMetadataProvider(
+            "open_library",
+            ProviderLookupResult::candidates([
+                $this->candidate("record-a"),
+                $this->candidate("record-b"),
+            ])
+        );
+        $fallback = new AddBookCountingMetadataProvider(
+            "google_books",
+            ProviderLookupResult::miss()
+        );
+        $data = $this->serializer()->addBookMetadataLookup(
+            $this->newIsbnLookup($primary, $fallback)
+        );
+
+        self::assertSame("multiple_candidates", $data["status"]);
+        self::assertSame(
+            2,
+            count(array_unique(array_column($data["candidates"], "candidate_id")))
+        );
+        self::assertArrayNotHasKey("selected_candidate", $data);
+        self::assertArrayNotHasKey("ranking", $data);
+    }
+
+    public function testMissAndProviderFailureRemainDistinctManualOutcomes(): void
+    {
+        $miss = $this->serializer()->addBookMetadataLookup(
+            $this->newIsbnLookup(
+                new AddBookCountingMetadataProvider(
+                    "open_library",
+                    ProviderLookupResult::miss()
+                ),
+                new AddBookCountingMetadataProvider(
+                    "google_books",
+                    ProviderLookupResult::miss()
+                )
+            )
+        );
+        $failure = $this->serializer()->addBookMetadataLookup(
+            $this->newIsbnLookup(
+                new AddBookCountingMetadataProvider(
+                    "open_library",
+                    ProviderLookupResult::unavailable(
+                        ProviderFailureReason::Network
+                    )
+                ),
+                new AddBookCountingMetadataProvider(
+                    "google_books",
+                    ProviderLookupResult::miss()
+                )
+            )
+        );
+
+        self::assertSame("no_usable_candidate", $miss["status"]);
+        self::assertTrue($miss["manual_available"]);
+        self::assertFalse($miss["retry_available"]);
+        self::assertSame("provider_failure", $failure["status"]);
+        self::assertTrue($failure["manual_available"]);
+        self::assertTrue($failure["retry_available"]);
+    }
+
+    private function newIsbnLookup(
+        MetadataProvider $primary,
+        MetadataProvider $fallback
+    ): AddBookMetadataLookupResult {
+        $claims = $this->createMock(EditionIdentifierClaimRepository::class);
+        $claims->method("findByCanonicalIsbn13")->willReturn(null);
+        $editions = $this->createMock(EditionRepository::class);
+        $legacy = $this->createMock(BibliographicMetadataRepository::class);
+        $legacy->method("editionsForIsbns")->willReturn([]);
+        $works = $this->createMock(WorkRepository::class);
+
+        return $this->service(
+            LibraryMembership::owner(),
+            $claims,
+            $editions,
+            $legacy,
+            $works,
+            $primary,
+            $fallback
+        )->lookup(new LibraryId("library-a"), "9780306406157");
+    }
+
+    private function service(
+        LibraryMembership $membership,
+        EditionIdentifierClaimRepository $claims,
+        EditionRepository $editions,
+        BibliographicMetadataRepository $legacy,
+        WorkRepository $works,
+        MetadataProvider $primary,
+        MetadataProvider $fallback
+    ): AddBookMetadataLookupService {
+        $actor = new UserId("actor-a");
+        $libraryId = new LibraryId("library-a");
+        $authenticated = $this->createMock(AuthenticatedUser::class);
+        $authenticated->method("requireUserId")->willReturn($actor);
+        $contexts = $this->createMock(ActorLibraryContextRepository::class);
+        $contexts->method("findForActor")->willReturn(
+            new ActorLibraryContext(
+                Library::privateLibrary($libraryId),
+                new LibraryMembershipAssignment(
+                    $libraryId,
+                    $actor,
+                    $membership
+                ),
+                true
+            )
+        );
+
+        return new AddBookMetadataLookupService(
+            new LibraryContextQueryService(
+                $authenticated,
+                $contexts,
+                new LibraryAuthorizationPolicy()
+            ),
+            new LocalEditionResolver(
+                new IsbnCanonicalizer(),
+                $claims,
+                $editions,
+                $legacy
+            ),
+            $works,
+            new FirstSufficientMetadataLookupService(
+                new CandidateClassifier(),
+                $primary,
+                $fallback
+            ),
+            new AddBookMetadataReviewPolicy()
+        );
+    }
+
+    private function candidate(string $recordId): MetadataCandidate
+    {
+        $identity = $this->identity();
+
+        return new MetadataCandidate(
+            "open_library",
+            $recordId,
+            new DateTimeImmutable("2026-09-06T10:00:00+00:00"),
+            MetadataMatchMethod::ExactIsbn,
+            $identity,
+            $identity,
+            "Concrete titel",
+            "Ondertitel",
+            ["Auteur"],
+            ["nld"],
+            ["Uitgever"],
+            "2026",
+            320,
+            "Hardcover",
+            new MetadataWorkLink("work-signal")
+        );
+    }
+
+    private function identity(): CanonicalIsbnIdentity
+    {
+        return CanonicalIsbnIdentity::fromIsbn(
+            new Isbn13("9780306406157")
+        );
+    }
+
+    private function serializer(): RestResponseSerializer
+    {
+        return new RestResponseSerializer(
+            new CatalogCursorCodec(),
+            new ReadingHistoryCursorCodec(),
+            new PrivateNoteCursorCodec()
+        );
+    }
+}
+
+final class AddBookCountingMetadataProvider implements MetadataProvider
+{
+    private int $calls = 0;
+
+    public function __construct(
+        private readonly string $key,
+        private readonly ProviderLookupResult $result
+    ) {
+    }
+
+    public function key(): string { return $this->key; }
+
+    public function lookup(CanonicalIsbnIdentity $isbn): ProviderLookupResult
+    {
+        ++$this->calls;
+        return $this->result;
+    }
+
+    public function calls(): int { return $this->calls; }
+}

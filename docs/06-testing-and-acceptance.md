@@ -2368,3 +2368,33 @@ CAT-T1 is accepted when:
   syntax, smoke and repository quality gates pass;
 - no REST/UI/Add Book, automatic Work lookup, MH-B4/MH-B5 bypass, DATA-01 or
   provider behavior is introduced.
+
+## 73. Metadata Hub MH-B5A authorized lookup/review acceptance
+
+MH-B5A is accepted when:
+
+- one authenticated POST route accepts only an explicit Library ID and one
+  allowlisted ISBN identifier field in the existing REST envelope;
+- Core resolves Library Context server-side and requires the existing
+  `catalog.item_add` capability before local ISBN or provider work;
+- Owner and an explicitly permitted Beheerder can use the contract, while
+  inactive, foreign, missing, Member and `Alleen bekijken` contexts fail with
+  the same non-enumerating behavior;
+- the MH-B1 canonicalizer and `LocalEditionResolver` are reused, invalid ISBN
+  is controlled validation, and one local Edition returns its existing
+  Work/Edition context with zero provider calls;
+- only a local miss invokes the MH-B3 first-sufficient orchestration;
+- one candidate, multiple unranked candidates, no usable candidate and
+  provider failure remain distinct provider-neutral review outcomes;
+- manual entry remains contractually available and technical provider failure
+  additionally exposes retry;
+- response field bindings follow ADR-014: title is Edition-title evidence,
+  subtitle/language/publisher/publication date/page count are Edition-bound,
+  contributors are role-aware with untyped evidence-only fallback, and format
+  has only an explicit allowlist with evidence-only fallback;
+- provider record IDs, provider Work keys, HTTP details, payloads and secrets
+  do not cross the REST boundary;
+- lookup performs no Work, Edition, Item, provenance, confirmation/rejection or
+  other catalog write and schema remains 1016;
+- B5A unit/REST/integration tests, MH-B1 through MH-B4 and CAT-T1 regressions,
+  PHPStan, syntax, smoke and the complete repository quality gate pass.
