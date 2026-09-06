@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Infrastructure\Persistence\WordPress;
 
+use Biblio\Core\Application\Metadata\AddBookExistingItem;
+use Biblio\Core\Application\Metadata\AddBookExistingItemRepository;
 use Biblio\Core\Catalog\CatalogRecordAlreadyExists;
 use Biblio\Core\Catalog\EditionId;
 use Biblio\Core\Catalog\Item;
 use Biblio\Core\Catalog\ItemId;
 use Biblio\Core\Catalog\InventoryNumber;
+use Biblio\Core\Catalog\LibraryLocation;
 use Biblio\Core\Catalog\LocationId;
 use Biblio\Core\Catalog\LibraryItemMetadataRepository;
 use Biblio\Core\Catalog\WritableItemRepository;
@@ -22,7 +25,8 @@ use wpdb;
 
 final readonly class WpdbItemRepository implements
     WritableItemRepository,
-    LibraryItemMetadataRepository
+    LibraryItemMetadataRepository,
+    AddBookExistingItemRepository
 {
     public function __construct(
         private wpdb $database,
@@ -126,6 +130,69 @@ final readonly class WpdbItemRepository implements
             return $result;
         } catch (Throwable $exception) {
             throw new PersistenceException("Stored Item data is invalid.", 0, $exception, FailureReason::PersistenceReadFailed);
+        }
+    }
+
+    public function forEditionsInLibrary(
+        LibraryId $libraryId,
+        array $editionIds
+    ): array {
+        $result = [];
+        foreach ($editionIds as $editionId) {
+            $result[$editionId->value()] = [];
+        }
+        if ($editionIds === []) {
+            return $result;
+        }
+
+        $items = $this->tableNames->items();
+        $locations = $this->tableNames->locations();
+        $placeholders = implode(",", array_fill(0, count($editionIds), "%s"));
+        $rows = $this->database->get_results($this->database->prepare(
+            "SELECT i.edition_id,i.item_id,i.inventory_number,l.library_id,"
+                . "l.location_id,l.display_name FROM `{$items}` i "
+                . "LEFT JOIN `{$locations}` l "
+                . "ON l.library_id=i.library_id "
+                . "AND l.location_id=i.location_id "
+                . "WHERE i.library_id=%s "
+                . "AND i.edition_id IN ({$placeholders}) "
+                . "ORDER BY i.edition_id,i.item_id",
+            $libraryId->value(),
+            ...array_map(
+                static fn (EditionId $editionId): string =>
+                    $editionId->value(),
+                $editionIds
+            )
+        ));
+
+        try {
+            foreach ($rows as $row) {
+                $result[(string) $row->edition_id][] =
+                    new AddBookExistingItem(
+                        new ItemId((string) $row->item_id),
+                        $row->inventory_number === null
+                            ? null
+                            : new InventoryNumber(
+                                (string) $row->inventory_number
+                            ),
+                        $row->location_id === null
+                            ? null
+                            : new LibraryLocation(
+                                new LocationId((string) $row->location_id),
+                                new LibraryId((string) $row->library_id),
+                                (string) $row->display_name
+                            )
+                    );
+            }
+
+            return $result;
+        } catch (Throwable $exception) {
+            throw new PersistenceException(
+                "Stored Add Book Item context is invalid.",
+                0,
+                $exception,
+                FailureReason::PersistenceReadFailed
+            );
         }
     }
 

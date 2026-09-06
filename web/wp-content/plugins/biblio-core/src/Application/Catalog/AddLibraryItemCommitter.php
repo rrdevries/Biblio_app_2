@@ -32,4 +32,17 @@ interface AddLibraryItemCommitter
         ?LocationId $locationId = null,
         ?AddLibraryItemTransactionParticipant $participant = null
     ): Item;
+
+    public function addWithNewEditionForExistingWork(
+        LibraryId $libraryId,
+        ItemId $itemId,
+        EditionId $editionId,
+        WorkId $workId,
+        string $editionTitle,
+        ?LibraryCatalogContextInitialization $classification = null,
+        ?EditionIsbnMetadata $isbnMetadata = null,
+        ?InventoryNumber $inventoryNumber = null,
+        ?LocationId $locationId = null,
+        ?AddLibraryItemTransactionParticipant $participant = null
+    ): Item;
 }

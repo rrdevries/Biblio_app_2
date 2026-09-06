@@ -1286,3 +1286,14 @@ Biblio Librarian governance. Provider evidence/provenance and user-observed
 evidence stay distinct. No Biblio Librarian queue, UI, provider fusion,
 Expression layer, Work-match heuristic or D-COL-01 collector persistence is
 part of MH-B5B.
+
+MH-B5C extends those same boundaries without a schema change. An explicit
+existing-Edition selector is valid only when its Edition remains in the freshly
+resolved canonical-ISBN match set; the transactional existing-Edition path
+then creates only an Item. An optional Work ID belongs only to the manual
+selection and delegates to the pre-existing
+`addWithNewEditionForExistingWork()` transaction, which reauthorizes and
+requires the Work to exist. No Work search, automatic matching or central Work
+mutation is added. B5A existing-Edition context is read through a dedicated
+port whose persistence predicate contains both current Library ID and Edition
+ID and projects only Item ID, inventory number and safe Location identity/name.

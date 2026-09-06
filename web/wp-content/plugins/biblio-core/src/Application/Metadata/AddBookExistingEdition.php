@@ -9,12 +9,16 @@ use Biblio\Core\Catalog\Work;
 
 final readonly class AddBookExistingEdition
 {
+    /** @param list<AddBookExistingItem> $existingItems */
     public function __construct(
         private Work $work,
-        private Edition $edition
+        private Edition $edition,
+        private array $existingItems
     ) {
     }
 
     public function work(): Work { return $this->work; }
     public function edition(): Edition { return $this->edition; }
+    /** @return list<AddBookExistingItem> */
+    public function existingItems(): array { return $this->existingItems; }
 }

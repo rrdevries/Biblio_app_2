@@ -2434,3 +2434,30 @@ Status: **GO / CLOSED**. Schema 1017 migration/retry checks, focused service,
 REST, snapshot, evidence, rollback and same-ISBN concurrency proofs, all Core
 unit/integration regressions and the complete repository gate passed. See
 `docs/47-metadata-hub-mh-b5b-add-book-commit-exit-evidence.md`.
+
+## 75. Metadata Hub MH-B5C Add Book contract completion acceptance
+
+MH-B5C is accepted when:
+
+- `local_ambiguous` can commit one explicitly chosen current local Edition,
+  creates no Work or Edition and continues to allow multiple Library Items;
+- a stale or manipulated Edition ID is rejected without a write and without
+  exposing central existence details;
+- only a manual selection may name an existing Work; Core reauthorizes,
+  validates the Work and creates the concrete CAT-T1 Edition without mutating
+  that Work or confirming its metadata;
+- omission of the Work choice preserves new provisional Work creation and no
+  automatic title, author or other Work matching exists;
+- every local B5A match exposes the current Library's existing Item count and
+  only compact allowlisted Item/inventory/Location context;
+- the existing-copy persistence predicate contains the explicit current
+  Library ID and cross-Library Items never enter the response;
+- Owner/authorized Manager behavior, `Alleen bekijken` denial, non-enumerating
+  REST failures and B5A/B5B transaction/concurrency behavior remain intact;
+- focused unit/integration/REST tests, PHPStan, syntax and the complete Core
+  quality gate pass; and
+- no schema, UI, Librarian queue, metadata correction, provider fusion,
+  Expression layer, collector-field persistence or new capability is added.
+
+Status: **GO / CLOSED**. Schema remains `1017`. See
+`docs/49-metadata-hub-mh-b5c-add-book-contract-completion.md`.

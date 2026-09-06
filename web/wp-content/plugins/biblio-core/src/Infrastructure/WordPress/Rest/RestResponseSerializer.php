@@ -21,7 +21,7 @@ use Biblio\Core\Application\Notes\Read\PrivateNoteViewPage;
 use Biblio\Core\Application\NextReading\{NextReadingEntryView,NextReadingListView,NextReadingRemoval,PreferredReadingSourceState,PreferredReadingSourceView};
 use Biblio\Core\Application\NextReading\Read\{NextReadingSourceOptionView,NextReadingWorkPage,NextReadingWorkView};
 use Biblio\Core\Application\Catalog\LocalEditionResolutionType;
-use Biblio\Core\Application\Metadata\{AddBookCommitResult,AddBookExistingEdition,AddBookMetadataLookupResult,ClassifiedMetadataCandidate,MetadataCandidateId,MetadataFieldBinding,MetadataLookupStatus};
+use Biblio\Core\Application\Metadata\{AddBookCommitResult,AddBookExistingEdition,AddBookExistingItem,AddBookMetadataLookupResult,ClassifiedMetadataCandidate,MetadataCandidateId,MetadataFieldBinding,MetadataLookupStatus};
 use Biblio\Core\Application\Reading\History\ReadingHistoryEntry;
 use Biblio\Core\Application\Reading\History\ReadingHistoryPage;
 use Biblio\Core\Catalog\WorkId;
@@ -123,7 +123,7 @@ final readonly class RestResponseSerializer
         ];
     }
 
-    /** @return array<string, string> */
+    /** @return array<string, mixed> */
     private function addBookExistingEdition(
         AddBookExistingEdition $match
     ): array {
@@ -133,6 +133,26 @@ final readonly class RestResponseSerializer
             "work_title_status" => $match->work()->titleStatus()->value,
             "edition_id" => $match->edition()->id()->value(),
             "edition_title" => $match->edition()->title(),
+            "existing_item_count" => count($match->existingItems()),
+            "existing_items" => array_map(
+                $this->addBookExistingItem(...),
+                $match->existingItems()
+            ),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function addBookExistingItem(AddBookExistingItem $item): array
+    {
+        $location = $item->location();
+
+        return [
+            "item_id" => $item->itemId()->value(),
+            "inventory_number" => $item->inventoryNumber()?->value(),
+            "location" => $location === null ? null : [
+                "location_id" => $location->id()->value(),
+                "display_name" => $location->displayName(),
+            ],
         ];
     }
 

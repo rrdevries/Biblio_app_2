@@ -14,6 +14,7 @@ use Biblio\Core\Application\Reading\History\ReadingHistoryCursor;
 use Biblio\Core\Application\Reading\History\ReadingHistoryPageSize;
 use Biblio\Core\Application\NextReading\Read\{NextReadingDiscoveryLimit,NextReadingWorkCursor,NextReadingWorkSearchTerm};
 use Biblio\Core\Borrowing\ExternalLoanId;
+use Biblio\Core\Catalog\EditionId;
 use Biblio\Core\Catalog\ItemId;
 use Biblio\Core\Catalog\InventoryNumber;
 use Biblio\Core\Catalog\LocationId;
@@ -844,10 +845,19 @@ final readonly class RestRequestParser
         }
         $selection = $body["selection"];
         if (($selection["type"] ?? null) === "manual") {
-            if (!$this->hasExactFields($selection, ["type"])) {
+            if (
+                !$this->hasExactFields($selection, ["type"])
+                && !$this->hasExactFields($selection, ["type", "work_id"])
+            ) {
                 throw RestRequestException::invalid("selection");
             }
-            $commitSelection = AddBookCommitSelection::manual();
+            $commitSelection = AddBookCommitSelection::manual(
+                $this->optionalIdentifierValue(
+                    $selection,
+                    "work_id",
+                    static fn (string $value): WorkId => new WorkId($value)
+                )
+            );
         } elseif (($selection["type"] ?? null) === "candidate") {
             if (!$this->hasExactFields(
                 $selection,
@@ -867,6 +877,21 @@ final readonly class RestRequestParser
                     "candidate_id",
                     static fn (string $value): MetadataCandidateId =>
                         new MetadataCandidateId($value)
+                )
+            );
+        } elseif (($selection["type"] ?? null) === "existing_edition") {
+            if (!$this->hasExactFields(
+                $selection,
+                ["type", "edition_id"]
+            )) {
+                throw RestRequestException::invalid("selection");
+            }
+            $commitSelection = AddBookCommitSelection::existingEdition(
+                $this->identifier(
+                    $selection["edition_id"],
+                    "edition_id",
+                    static fn (string $value): EditionId =>
+                        new EditionId($value)
                 )
             );
         } else {

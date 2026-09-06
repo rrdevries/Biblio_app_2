@@ -424,6 +424,74 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         }
     }
 
+    public function testExistingEditionLookupReturnsOnlyCurrentLibraryItems(): void
+    {
+        $this->seedLibrary("library-context-a", "A", $this->actorId, "owner");
+        $this->seedLibrary("library-context-b", "B", $this->otherId, "owner");
+        $this->database->insert($this->tableNames->works(), [
+            "work_id" => "work-shared-context",
+            "work_title" => "Shared Work",
+        ]);
+        $this->database->insert($this->tableNames->editions(), [
+            "edition_id" => "edition-shared-context",
+            "work_id" => "work-shared-context",
+            "edition_title" => "Shared Edition",
+            "isbn_13" => "9780306406157",
+            "explicitly_no_isbn" => 0,
+        ]);
+        $this->database->insert(
+            $this->tableNames->editionIdentifierClaims(),
+            [
+                "canonical_isbn_13" => "9780306406157",
+                "edition_id" => "edition-shared-context",
+            ]
+        );
+        $this->database->insert($this->tableNames->locations(), [
+            "library_id" => "library-context-a",
+            "location_id" => "location-a",
+            "display_name" => "Kast A",
+        ]);
+        foreach ([
+            ["item-a1", "library-context-a", "INV-A1", "location-a"],
+            ["item-a2", "library-context-a", "INV-A2", null],
+            ["item-b1", "library-context-b", "INV-FOREIGN", null],
+        ] as [$itemId, $libraryId, $inventory, $locationId]) {
+            $this->database->insert($this->tableNames->items(), [
+                "item_id" => $itemId,
+                "library_id" => $libraryId,
+                "edition_id" => "edition-shared-context",
+                "item_status" => "active",
+                "inventory_number" => $inventory,
+                "location_id" => $locationId,
+            ]);
+        }
+
+        $response = $this->dispatchAsActor($this->metadataLookupRequest(
+            "library-context-a",
+            ["identifier" => "9780306406157"]
+        ));
+        $data = $this->successData($response);
+        $match = $data["local_matches"][0];
+
+        self::assertSame(200, $response->get_status());
+        self::assertSame(2, $match["existing_item_count"]);
+        self::assertSame(
+            ["item-a1", "item-a2"],
+            array_column($match["existing_items"], "item_id")
+        );
+        self::assertSame("INV-A1", $match["existing_items"][0]
+            ["inventory_number"]);
+        self::assertSame("location-a", $match["existing_items"][0]
+            ["location"]["location_id"]);
+        self::assertSame("Kast A", $match["existing_items"][0]
+            ["location"]["display_name"]);
+        self::assertNull($match["existing_items"][1]["location"]);
+        self::assertStringNotContainsString(
+            "INV-FOREIGN",
+            (string) wp_json_encode($data)
+        );
+    }
+
     public function testAddBookCommitCreatesThenReusesEditionAndRetainsDifference(): void
     {
         $this->seedLibrary("library-commit", "Commit", $this->actorId, "owner");
@@ -512,6 +580,177 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             ]
         ));
         self::assertSame(404, $denied->get_status());
+        self::assertSame(2, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->items()}`"
+        ));
+    }
+
+    public function testAmbiguousLocalEditionRequiresAndRevalidatesExplicitChoice(): void
+    {
+        $this->seedLibrary("library-ambiguous", "Ambiguous", $this->actorId, "owner");
+        $this->seedBookType("library-ambiguous", "book-ambiguous");
+        foreach (["a", "b"] as $suffix) {
+            $this->database->insert($this->tableNames->works(), [
+                "work_id" => "work-ambiguous-{$suffix}",
+                "work_title" => "Work {$suffix}",
+            ]);
+        }
+        $this->database->insert($this->tableNames->editions(), [
+            "edition_id" => "edition-ambiguous-a",
+            "work_id" => "work-ambiguous-a",
+            "edition_title" => "Edition A",
+            "isbn_10" => "0306406152",
+            "explicitly_no_isbn" => 0,
+        ]);
+        $this->database->insert($this->tableNames->editions(), [
+            "edition_id" => "edition-ambiguous-b",
+            "work_id" => "work-ambiguous-b",
+            "edition_title" => "Edition B",
+            "isbn_13" => "9780306406157",
+            "explicitly_no_isbn" => 0,
+        ]);
+
+        $lookup = $this->dispatchAsActor($this->metadataLookupRequest(
+            "library-ambiguous",
+            ["identifier" => "9780306406157"]
+        ));
+        self::assertSame("local_ambiguous", $this->successData($lookup)["status"]);
+
+        $body = [
+            "identifier" => "9780306406157",
+            "selection" => [
+                "type" => "existing_edition",
+                "edition_id" => "edition-ambiguous-b",
+            ],
+            "observed_fields" => [],
+            "classification" => [
+                "book_type_id" => "book-ambiguous",
+                "genre_ids" => [],
+                "subject_ids" => [],
+            ],
+            "item" => [],
+        ];
+        $unselectedBody = $body;
+        $unselectedBody["selection"] = ["type" => "manual"];
+        $unselected = $this->dispatchAsActor($this->addBookCommitRequest(
+            "library-ambiguous",
+            $unselectedBody
+        ));
+        self::assertSame(422, $unselected->get_status());
+        self::assertSame(0, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->items()}`"
+        ));
+
+        $first = $this->dispatchAsActor($this->addBookCommitRequest(
+            "library-ambiguous",
+            $body
+        ));
+        $second = $this->dispatchAsActor($this->addBookCommitRequest(
+            "library-ambiguous",
+            $body
+        ));
+
+        self::assertSame(201, $first->get_status());
+        self::assertSame(201, $second->get_status());
+        self::assertSame(
+            "edition-ambiguous-b",
+            $this->successData($first)["edition_id"]
+        );
+        self::assertSame(2, (int) $this->database->get_var(
+            $this->database->prepare(
+                "SELECT COUNT(*) FROM `{$this->tableNames->items()}` "
+                    . "WHERE library_id=%s AND edition_id=%s",
+                "library-ambiguous",
+                "edition-ambiguous-b"
+            )
+        ));
+        self::assertSame(0, (int) $this->database->get_var(
+            $this->database->prepare(
+                "SELECT COUNT(*) FROM `{$this->tableNames->items()}` "
+                    . "WHERE library_id=%s AND edition_id=%s",
+                "library-ambiguous",
+                "edition-ambiguous-a"
+            )
+        ));
+        self::assertSame(2, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->editions()}`"
+        ));
+
+        $body["selection"]["edition_id"] = "edition-manipulated";
+        $invalid = $this->dispatchAsActor($this->addBookCommitRequest(
+            "library-ambiguous",
+            $body
+        ));
+        self::assertSame(422, $invalid->get_status());
+        self::assertSame("biblio_validation_failed", $invalid->get_data()["code"]);
+        self::assertSame(2, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->items()}`"
+        ));
+    }
+
+    public function testManualAddBookCanChooseExistingWorkOrCreateProvisionalWork(): void
+    {
+        $this->seedLibrary("library-work-choice", "Work", $this->actorId, "owner");
+        $this->seedBookType("library-work-choice", "book-work-choice");
+        $this->database->insert($this->tableNames->works(), [
+            "work_id" => "work-explicit",
+            "work_title" => "Existing central title",
+            "work_title_status" => "librarian_confirmed",
+        ]);
+        $baseBody = [
+            "identifier" => null,
+            "observed_fields" => ["title" => "Concrete Edition title"],
+            "classification" => [
+                "book_type_id" => "book-work-choice",
+                "genre_ids" => [],
+                "subject_ids" => [],
+            ],
+            "item" => [],
+        ];
+
+        $linkedBody = $baseBody;
+        $linkedBody["selection"] = [
+            "type" => "manual",
+            "work_id" => "work-explicit",
+        ];
+        $linked = $this->dispatchAsActor($this->addBookCommitRequest(
+            "library-work-choice",
+            $linkedBody
+        ));
+        $linkedData = $this->successData($linked);
+
+        self::assertSame(201, $linked->get_status());
+        self::assertSame("work-explicit", $linkedData["work_id"]);
+        self::assertSame("Concrete Edition title", $linkedData["edition_title"]);
+        self::assertSame("librarian_confirmed", $linkedData["work_title_status"]);
+        self::assertSame("Existing central title", $this->database->get_var(
+            "SELECT work_title FROM `{$this->tableNames->works()}` "
+                . "WHERE work_id='work-explicit'"
+        ));
+
+        $unlinkedBody = $baseBody;
+        $unlinkedBody["observed_fields"]["title"] = "Another Edition";
+        $unlinkedBody["selection"] = ["type" => "manual"];
+        $unlinked = $this->dispatchAsActor($this->addBookCommitRequest(
+            "library-work-choice",
+            $unlinkedBody
+        ));
+        $unlinkedData = $this->successData($unlinked);
+
+        self::assertSame(201, $unlinked->get_status());
+        self::assertNotSame("work-explicit", $unlinkedData["work_id"]);
+        self::assertSame("provisional", $unlinkedData["work_title_status"]);
+
+        $invalidBody = $baseBody;
+        $invalidBody["selection"] = [
+            "type" => "manual",
+            "work_id" => "work-missing",
+        ];
+        $invalid = $this->dispatchAsActor($this->addBookCommitRequest(
+            "library-work-choice",
+            $invalidBody
+        ));
+        self::assertSame(422, $invalid->get_status());
         self::assertSame(2, (int) $this->database->get_var(
             "SELECT COUNT(*) FROM `{$this->tableNames->items()}`"
         ));

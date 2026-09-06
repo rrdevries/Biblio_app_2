@@ -671,6 +671,7 @@ final class ProductionComposition
             $libraryContexts,
             $localEditionResolver,
             $workRepository,
+            $itemRepository,
             $metadataLookup,
             new AddBookMetadataReviewPolicy(),
             $authenticatedUser,

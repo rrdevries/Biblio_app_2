@@ -2049,7 +2049,7 @@ deferred. The canonical decision is
 
 ### D-MHB5-01 — Add Book and metadata integration
 
-Status: **MH-B5A IMPLEMENTED / MH-B5B GO / CLOSED**
+Status: **MH-B5A IMPLEMENTED / MH-B5B GO / MH-B5C GO / CLOSED**
 
 ADR-014 splits MH-B5 into MH-B5A, an authorized local-first metadata
 lookup/review contract without catalog mutation, and MH-B5B, the subsequent
@@ -2127,6 +2127,22 @@ classification, audit and required evidence commit or roll back together.
 Existing central Work/Edition data is never overwritten by B5B and no operation
 becomes `librarian_confirmed`. Detailed evidence:
 `docs/47-metadata-hub-mh-b5b-add-book-commit-exit-evidence.md`.
+
+MH-B5C completes the three Add Book server-contract gaps identified by the
+canonical wizard design. A `local_ambiguous` lookup choice can be committed as
+`{ "type": "existing_edition", "edition_id": "..." }`; Core reauthorizes,
+reruns local ISBN resolution and accepts the ID only while it is one of the
+current matches. It creates only the new Item. The manual selection may
+optionally contain `work_id`; Core then uses the existing transactional
+new-Edition-under-existing-Work path, validates that Work server-side and never
+mutates it. Omitting `work_id` preserves provisional Work creation.
+
+Each B5A local match now also contains `existing_item_count` and a compact
+`existing_items` list with Item ID, optional inventory number and optional
+Location ID/display name. The persistence query is constrained by the explicit
+current Library ID and Edition ID, so no cross-Library Item context enters the
+response. Schema remains `1017`. Detailed evidence:
+`docs/49-metadata-hub-mh-b5c-add-book-contract-completion.md`.
 
 ### D-ADD-01 — Add Book Wizard UX canonicalization
 
