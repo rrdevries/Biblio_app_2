@@ -48,6 +48,9 @@ final readonly class CoreTableNames
     private string $collectionMemberships;
     private string $editionIdentifierClaims;
     private string $editionMetadataProvenance;
+    private string $metadataFieldStates;
+    private string $metadataFieldValues;
+    private string $metadataFieldEvidence;
 
     public function __construct(string $prefix)
     {
@@ -97,8 +100,11 @@ final readonly class CoreTableNames
             . "biblio_edition_identifier_claims";
         $this->editionMetadataProvenance = $prefix
             . "biblio_edition_metadata_provenance";
+        $this->metadataFieldStates = $prefix . "biblio_metadata_field_states";
+        $this->metadataFieldValues = $prefix . "biblio_metadata_field_values";
+        $this->metadataFieldEvidence = $prefix . "biblio_metadata_field_evidence";
 
-        foreach ($this->schema1014() as $tableName) {
+        foreach ($this->schema1015() as $tableName) {
             $this->assertSafe($tableName);
         }
         $this->assertSafe($this->nextReadingInsertTrigger);
@@ -224,6 +230,9 @@ final readonly class CoreTableNames
     {
         return $this->editionMetadataProvenance;
     }
+    public function metadataFieldStates(): string { return $this->metadataFieldStates; }
+    public function metadataFieldValues(): string { return $this->metadataFieldValues; }
+    public function metadataFieldEvidence(): string { return $this->metadataFieldEvidence; }
 
     /** @return list<string> */
     public function all(): array
@@ -387,6 +396,22 @@ final readonly class CoreTableNames
         );
 
         return $tables;
+    }
+
+    /** @return list<string> */
+    public function schema1015Additions(): array
+    {
+        return [
+            $this->metadataFieldStates,
+            $this->metadataFieldValues,
+            $this->metadataFieldEvidence,
+        ];
+    }
+
+    /** @return list<string> */
+    public function schema1015(): array
+    {
+        return [...$this->schema1014(), ...$this->schema1015Additions()];
     }
 
     private function assertSafe(string $tableName): void
