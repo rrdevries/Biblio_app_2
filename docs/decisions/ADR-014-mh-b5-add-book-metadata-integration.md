@@ -69,9 +69,16 @@ canonical or `librarian_confirmed` Work title.
 
 ### User-observed Edition evidence
 
-Data the user directly checks against the physical book may be retained as
-strong user-observed/user-verified Edition evidence without prior Librarian
-review. In v2.001 this is limited to:
+Data an authorized user directly checks against the physical book is first-class
+`user-observed evidence`, not provider evidence. It is conceptually traceable
+to the actor, the authorized Library Context, one metadata field, the observed
+value, observation time and source context such as `physical_copy` / Add Book.
+Its technical storage form is intentionally not decided here.
+
+User-observed evidence is neither `user_confirmed` canonical metadata nor
+`librarian_confirmed` metadata. It is also not provider evidence. It may be
+retained without prior Librarian review. In v2.001 directly checked Edition
+data is limited to:
 
 - Edition title and subtitle;
 - ISBN;
@@ -83,8 +90,44 @@ review. In v2.001 this is limited to:
 - page count;
 - Edition-specific contributors such as translator or illustrator.
 
-This evidence does not itself make the Edition `librarian_confirmed`. Provider
-data may not silently replace directly checked user data.
+This evidence does not itself make the Edition `librarian_confirmed` or a
+field `user_confirmed`. Provider data may not silently replace directly checked
+user data.
+
+When B5B reuses an Edition that has become existing, Item addition continues
+even when the directly observed metadata differs. That observation is retained
+as user-observed evidence and may be retained as a correction proposal for
+Biblio Librarian governance; B5B does not automatically overwrite central
+Work/Edition data. The difference therefore does not become an Add Book gate.
+
+For a new provisional Edition, the directly checked Edition data may be used
+when creating that Edition under the already defined Add Book bindings. This
+does not make the Edition librarian-confirmed.
+
+### Candidate snapshot and B5B handoff
+
+MH-B5A may retain a temporary server-side snapshot of the candidates actually
+shown to the user. The client receives only opaque identifiers, conceptually
+`lookup_id` and `candidate_id`; provider record identifiers and other internal
+provider details do not need to cross that boundary.
+
+The snapshot is temporary rather than permanent catalog data. It is server-side,
+opaque to the client, bound to the actor and Library Context, and has a bounded
+validity period. Its identifiers are never authorization evidence. Exact TTL
+and technical storage form remain implementation choices unless a later
+repository decision fixes them.
+
+At B5B commit, Core authorizes again, validates Library Context again and
+performs local-first Edition resolution again. The selected candidate is
+reconstructed from the earlier server-side snapshot, so B5B need not contact a
+provider again to obtain the metadata the user reviewed. Current provider
+availability cannot block that commit. If the snapshot has expired, B5B must
+not silently refetch and commit changed metadata: a new lookup and review are
+required.
+
+B5B commits its necessary catalog mutations and associated evidence retention
+as one consistent commit. This decision does not prescribe the technical
+transaction mechanism.
 
 ### Metadata Hub to catalog bindings
 
@@ -136,8 +179,9 @@ specialist rare-books feature.
 MH-B5A can expose an authorized, local-first review contract without catalog
 mutation. After it is GO, MH-B5B can use an explicit confirmed/manual Edition
 choice to create or reuse the minimum central identity and add the Library Item
-transactionally, while provider outages and ordinary Librarian governance do
-not prevent a normal addition.
+transactionally. Its reviewed-candidate handoff remains stable across provider
+outages, while user-observed differences on an existing Edition become retained
+governed evidence rather than a normal-addition blocker.
 
 ADR-010 and ADR-011 continue to govern provider evidence and field review;
 CAT-T1 governs title authority; ADR-012 governs provisional creation and

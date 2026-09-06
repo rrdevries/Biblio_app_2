@@ -2398,3 +2398,34 @@ MH-B5A is accepted when:
   other catalog write and schema remains 1016;
 - B5A unit/REST/integration tests, MH-B1 through MH-B4 and CAT-T1 regressions,
   PHPStan, syntax, smoke and the complete repository quality gate pass.
+
+## 74. Metadata Hub MH-B5B Add Book commit acceptance
+
+MH-B5B is accepted when:
+
+- directly physical-book-checked data is retained as first-class
+  `user-observed evidence`, distinct from provider evidence, `user_confirmed`
+  canonical metadata and `librarian_confirmed` metadata, and is traceable to
+  actor, authorized Library Context, field, observed value, observation time
+  and source context;
+- on reuse of an Edition that is already existing at commit, Item addition
+  continues, a differing user observation is retained as evidence and eligible
+  Biblio Librarian correction input, and shared Work/Edition data is not
+  automatically overwritten;
+- directly checked Edition data may create a new provisional Edition without
+  making it librarian-confirmed;
+- B5A retains the candidates actually shown to the user in a temporary
+  server-side snapshot; the client receives only opaque `lookup_id` and
+  `candidate_id`, bound to actor and Library Context and unusable as
+  authorization evidence;
+- B5B authorizes again, validates Library Context again and reruns local-first
+  Edition resolution before reconstructing the selected candidate from the
+  earlier valid snapshot;
+- B5B does not need current provider availability to commit the reviewed
+  metadata; a snapshot expiry requires a new lookup/review and never silently
+  refetches metadata for commit;
+- required catalog mutations and evidence retention commit consistently as one
+  B5B operation; and
+- tests cover these boundaries, including authorization/context rebinding,
+  expiry, no-refetch commit behavior, existing-Edition difference retention,
+  central-metadata non-overwrite and commit consistency.

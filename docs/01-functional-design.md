@@ -505,12 +505,34 @@ missing or failed provider results, and provider trouble never blocks Add Book.
 Add Book review means only that the user identifies the correct concrete
 Edition for the physical book being added. It neither makes a Work/Edition
 `librarian_confirmed` nor treats all provider values as platform-wide curated.
-New records may remain immediately usable provisional records. Directly checked
-physical-book data may be strong user-observed/user-verified Edition evidence:
-Edition title/subtitle, ISBN, Edition language, publisher/imprint,
-publication year/date, printing/edition statement, binding/physical form, page
-count and Edition-specific contributors. Provider data may not silently replace
-that evidence.
+New records may remain immediately usable provisional records.
+
+Directly checked physical-book data is first-class `user-observed evidence`,
+not provider evidence, `user_confirmed` canonical metadata or
+`librarian_confirmed` metadata. It remains conceptually traceable to actor,
+Library Context, field, observed value, observation time and source context
+such as `physical_copy` / Add Book. It may cover Edition title/subtitle, ISBN,
+Edition language, publisher/imprint, publication year/date,
+printing/edition statement, binding/physical form, page count and
+Edition-specific contributors. Provider data may not silently replace it.
+
+When an Edition is now existing at commit, its Item may still be added even if
+the observed data differs. Biblio retains that difference as user-observed
+evidence and, where applicable, as a correction proposal for Biblio Librarian;
+it does not overwrite shared Work/Edition data. For a new provisional Edition,
+directly checked Edition data may be used on creation without making the
+Edition librarian-confirmed.
+
+MH-B5A may hold the candidates actually shown for review in a temporary
+server-side snapshot bound to actor and Library Context. The client uses only
+opaque `lookup_id` / `candidate_id` references. B5B reauthorizes, rechecks
+Library Context and reruns local-first Edition resolution, then reconstructs
+the selected candidate from that snapshot; those identifiers are never
+authorization proof. A valid snapshot lets commit use precisely the reviewed
+metadata without a provider refetch, so current provider availability cannot
+block it. Expiry requires a fresh lookup and review, never a silent refetch.
+Catalog mutation and associated evidence retention form one consistent B5B
+commit; storage, TTL and transaction mechanics remain technical choices.
 
 Provider `title`, `subtitle`, `languages`, `publishers`, `publication_date` and
 `page_count` bind only to the Edition as specified in ADR-014. Clear

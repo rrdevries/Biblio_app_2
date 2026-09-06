@@ -2057,7 +2057,9 @@ transactional Add Book commit integration. B5A must be GO before B5B starts.
 The decision fixes local-first ISBN reuse, explicit candidate selection,
 non-blocking manual/retry paths, the distinction between Add Book review and
 Librarian confirmation, user-observed Edition evidence, narrow provider-to-
-catalog bindings, existing authorization, and collector boundaries.
+catalog bindings, existing authorization, and collector boundaries. It also
+fixes B5B's non-blocking existing-Edition difference handling and the temporary
+server-side reviewed-candidate handoff.
 
 MH-B5A now exposes
 `POST /biblio/v1/libraries/{library_id}/metadata-lookups` with the strict JSON
@@ -2088,3 +2090,23 @@ provenance or other catalog mutation; no UI, queue, provider fusion or
 collector persistence is implemented. MH-B5B remains separate. Canonical
 decision:
 `docs/decisions/ADR-014-mh-b5-add-book-metadata-integration.md`.
+
+For MH-B5B, directly physical-book-checked data is first-class
+`user-observed evidence`, distinct from provider evidence, `user_confirmed`
+canonical metadata and `librarian_confirmed` metadata. It is traceable to the
+authorized actor, Library Context, field, value, observation time and source
+context. Existing-Edition reuse never discards a differing observation or
+silently overwrites shared metadata: Item addition continues and the retained
+observation may feed the established Biblio Librarian correction governance.
+New provisional Editions may use directly checked Edition data without becoming
+librarian-confirmed.
+
+B5A's reviewed candidates may be retained temporarily server-side, bound to
+actor and Library Context and referenced client-side only through opaque
+`lookup_id` / `candidate_id`. B5B reauthorizes, rechecks context and resolves
+local-first again; the identifiers are not authorization proof. It reconstructs
+the reviewed candidate from a still-valid snapshot and does not need a provider
+refetch, so an outage cannot block commit. An expired snapshot requires a new
+lookup/review rather than silent refetch. The B5B catalog mutation and required
+evidence retention must be one consistent commit; storage, TTL and transaction
+mechanics remain unimplemented technical choices.
