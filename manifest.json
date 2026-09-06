@@ -66,6 +66,7 @@
     "docs/decisions/ADR-011-field-level-metadata-confirmation-and-provenance.md",
     "docs/decisions/ADR-012-provisional-catalog-and-librarian-review-governance.md",
     "docs/decisions/ADR-013-collector-local-overrides.md",
+    "docs/decisions/ADR-014-mh-b5-add-book-metadata-integration.md",
     "tools/metadata-benchmark/README.md",
     "tools/metadata-benchmark/requirements.txt",
     "tools/metadata-benchmark/benchmark.py",
@@ -88,6 +89,6 @@
     "Mijn Bibliotheek search, filter values, active filter chips and alternate sort remain disabled until separately approved UI activation exists; typed catalog-query composition, REST transport and all source foundations are closed; Bookshelf remains an explicit placeholder while cover-ratio and spine rendering stay open."
   ],
   "next_vertical_slice": [
-    "MH-B5 authorized REST and Add Book integration is the next Metadata Hub slice; it must define Library/user ownership and authorization, bind the opaque review identity, preserve explicit field decisions, and requires separate approval."
+    "MH-B5 is canonically split: MH-B5A authorized local-first metadata lookup/review must be GO before MH-B5B transactional Add Book commit integration. Both require separate approval."
   ]
 }
