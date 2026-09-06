@@ -143,6 +143,7 @@ final class ProductionApplicationBoundaryTest extends TestCase
         self::assertSame([
             "__construct",
             "accessibleLibraryItems",
+            "addBookMetadataLookup",
             "assessmentQueries",
             "bibliographicMetadata",
             "bibliographicRelationships",

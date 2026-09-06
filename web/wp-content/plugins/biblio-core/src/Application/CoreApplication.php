@@ -28,6 +28,7 @@ use Biblio\Core\Application\Collections\Read\LibraryCollectionQueryService;
 use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
 use Biblio\Core\Application\Library\GetAccessibleLibraryItemService;
 use Biblio\Core\Application\Library\LibraryContextQueryService;
+use Biblio\Core\Application\Metadata\AddBookMetadataLookupService;
 use Biblio\Core\Application\Notes\CorrectPrivateNoteReadingRoundService;
 use Biblio\Core\Application\Notes\CreatePrivateNoteService;
 use Biblio\Core\Application\Notes\DeletePrivateNoteService;
@@ -74,6 +75,7 @@ final readonly class CoreApplication
         private LibraryItemArchiveQueryService $libraryItemArchives,
         private LibraryCollectionQueryService $libraryCollections,
         private LibraryClassificationQueryService $libraryClassifications,
+        private AddBookMetadataLookupService $addBookMetadataLookup,
         private AddLibraryItemService $libraryItemCreation,
         private ManageLibraryItemArchiveService $libraryItemArchiveManagement,
         private ManageLibraryCollectionsService $libraryCollectionManagement,
@@ -199,6 +201,11 @@ final readonly class CoreApplication
     public function libraryClassifications(): LibraryClassificationQueryService
     {
         return $this->libraryClassifications;
+    }
+
+    public function addBookMetadataLookup(): AddBookMetadataLookupService
+    {
+        return $this->addBookMetadataLookup;
     }
 
     public function libraryCollectionManagement(): ManageLibraryCollectionsService

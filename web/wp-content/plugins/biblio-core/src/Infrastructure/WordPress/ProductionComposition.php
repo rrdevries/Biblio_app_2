@@ -37,6 +37,7 @@ use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
 use Biblio\Core\Application\Library\GetAccessibleLibraryItemService;
 use Biblio\Core\Application\Library\LibraryAccessService;
 use Biblio\Core\Application\Library\LibraryContextQueryService;
+use Biblio\Core\Application\Metadata\{AddBookMetadataLookupService,AddBookMetadataReviewPolicy,CandidateClassifier,FirstSufficientMetadataLookupService};
 use Biblio\Core\Application\Notes\CorrectPrivateNoteReadingRoundService;
 use Biblio\Core\Application\Notes\CreatePrivateNoteService;
 use Biblio\Core\Application\Notes\DeletePrivateNoteService;
@@ -110,6 +111,11 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbSeriesRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbBibliographicMetadataRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrationRegistry;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrator;
+use Biblio\Core\Infrastructure\Metadata\ConfigurationErrorMetadataProvider;
+use Biblio\Core\Infrastructure\Metadata\GoogleBooks\{GoogleBooksConfiguration,GoogleBooksMetadataProvider};
+use Biblio\Core\Infrastructure\Metadata\OpenLibrary\{OpenLibraryConfiguration,OpenLibraryMetadataProvider};
+use Biblio\Core\Infrastructure\Metadata\SystemMetadataClock;
+use Biblio\Core\Infrastructure\Metadata\WordPressProviderHttpClient;
 use Biblio\Core\Infrastructure\WordPress\Lifecycle\CoreLifecycleCoordinator;
 use Biblio\Core\Infrastructure\WordPress\Lifecycle\LifecycleStateStore;
 use Biblio\Core\Infrastructure\WordPress\Lifecycle\WpTransientLifecycleStateStore;
@@ -125,7 +131,8 @@ final class ProductionComposition
     public function __construct(
         wpdb $database,
         ?LifecycleStateStore $lifecycleState = null,
-        ?CoreSchemaMigrationRegistry $migrationRegistry = null
+        ?CoreSchemaMigrationRegistry $migrationRegistry = null,
+        ?FirstSufficientMetadataLookupService $metadataLookup = null
     ) {
         $tableNames = new CoreTableNames($database->prefix);
         $migrationRegistry ??= CoreSchemaMigrationRegistry::production(
@@ -169,6 +176,7 @@ final class ProductionComposition
             $editionRepository,
             $bibliographicMetadataRepository
         );
+        $metadataLookup ??= $this->metadataLookup();
         $bookTypeRepository = new WpdbLibraryBookTypeRepository(
             $database,
             $tableNames
@@ -638,6 +646,13 @@ final class ProductionComposition
             $libraryContexts,
             new WpdbNextReadingDiscoveryRepository($database, $tableNames)
         );
+        $addBookMetadataLookup = new AddBookMetadataLookupService(
+            $libraryContexts,
+            $localEditionResolver,
+            $workRepository,
+            $metadataLookup,
+            new AddBookMetadataReviewPolicy()
+        );
 
         $this->application = new CoreApplication(
             $personalLibraries,
@@ -651,6 +666,7 @@ final class ProductionComposition
             $libraryItemArchives,
             $libraryCollections,
             $libraryClassifications,
+            $addBookMetadataLookup,
             $libraryItemCreation,
             $libraryItemArchiveManagement,
             $libraryCollectionManagement,
@@ -732,5 +748,52 @@ final class ProductionComposition
     public function application(): CoreApplication
     {
         return $this->application;
+    }
+
+    private function metadataLookup(): FirstSufficientMetadataLookupService
+    {
+        $http = new WordPressProviderHttpClient();
+        $clock = new SystemMetadataClock();
+        $openLibrary = new ConfigurationErrorMetadataProvider("open_library");
+        $contact = defined("BIBLIO_OPEN_LIBRARY_CONTACT_EMAIL")
+            ? constant("BIBLIO_OPEN_LIBRARY_CONTACT_EMAIL")
+            : null;
+
+        if (is_string($contact)) {
+            try {
+                $openLibrary = new OpenLibraryMetadataProvider(
+                    $http,
+                    $clock,
+                    new IsbnCanonicalizer(),
+                    new OpenLibraryConfiguration("Biblio", "2.001", $contact)
+                );
+            } catch (\InvalidArgumentException) {
+                // Invalid operational config degrades to a controlled result.
+            }
+        }
+
+        $google = new ConfigurationErrorMetadataProvider("google_books");
+        $apiKey = defined("GOOGLE_BOOKS_API_KEY")
+            ? constant("GOOGLE_BOOKS_API_KEY")
+            : null;
+
+        if ($apiKey === null || is_string($apiKey)) {
+            try {
+                $google = new GoogleBooksMetadataProvider(
+                    $http,
+                    $clock,
+                    new IsbnCanonicalizer(),
+                    new GoogleBooksConfiguration($apiKey)
+                );
+            } catch (\InvalidArgumentException) {
+                // Invalid operational config degrades to a controlled result.
+            }
+        }
+
+        return new FirstSufficientMetadataLookupService(
+            new CandidateClassifier(),
+            $openLibrary,
+            $google
+        );
     }
 }
