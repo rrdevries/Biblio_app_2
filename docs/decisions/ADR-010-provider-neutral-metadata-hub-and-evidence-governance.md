@@ -38,6 +38,14 @@ The Metadata Hub never silently overwrites confirmed fields and never makes an
 external provider a precondition for Core data integrity. Secrets and API keys
 are operational configuration and are never stored as provenance.
 
+Work and Edition metadata remain platform-wide shared, as does their provider
+evidence. Every change to that metadata is a correction proposal for the
+separate `Biblio Librarian` capability, regardless of how many Libraries use
+the record. A Library Eigenaar or authorized Beheerder may submit a proposal,
+but cannot directly mutate the central metadata. `Admin` and `Super admin` do
+not automatically have the Biblio Librarian capability, and no new override is
+defined by this ADR.
+
 ### v2.001 implementation scope
 
 The approved v2.001 build target is limited to:

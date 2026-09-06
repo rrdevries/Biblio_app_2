@@ -20,13 +20,22 @@ For v2.001, at most one designated Privébibliotheek per user that acts as the u
 ## Uitleenbibliotheek
 Future institutional lending-oriented Library type. Visible but disabled in v2.001 creation flow.
 
+## Platformrol
+Platform-level role: `Super admin`, `Admin` or `Biblio Librarian`.
+
+`Biblio Librarian` is the separate content/capability role for platform-wide
+bibliographic catalog curation, including assessment of Work/Edition metadata
+correction proposals. It is not automatically implied by `Admin` or `Super
+admin`, and does not imply either role.
+
 ## Beheerrol
 Administrative membership role:
 - Eigenaar
 - Beheerder
 - Lid
 
-Supersedes the old Library role name `Lezer`.
+`Lezer` is not a technical core role: it is the UI preset `Lid` with normal
+participation access.
 
 ## Gebruikstoegang
 Physical-use level on a Library membership:
@@ -43,14 +52,22 @@ May directly use an administratively available Item without an internal loan.
 May use a Library Item only after an internal loan is created.
 
 ## Alleen bekijken
-May view/search Library collection, but cannot directly use or receive an internal loan.
+Broad read-only participation boundary. May search, browse and view permitted
+shared Library content in an authorized Library Context, but may not directly
+use or receive an internal loan, register ReadingRounds, add private Notes or
+Ratings/Reviews, submit loan requests, perform other personal participation
+actions, mutate catalog data or perform Library management. It is not anonymous
+or public access.
+
+## Kijker
+UI preset, not a technical core role: `Lid` + `Alleen bekijken`.
 
 ## Work
 Platform-wide identity of the intellectual/content work.
 
 Its title is explicitly either `provisional` or `librarian_confirmed`. A title
-seeded while creating a first Edition is provisional until a librarian confirms
-it.
+seeded while creating a first Edition is provisional until a `Biblio Librarian`
+confirms it.
 
 Dutch UI wording may use `Werk` where appropriate; canonical data concept remains Work.
 
@@ -245,7 +262,10 @@ Explicit Library-controlled support access:
 Never grants access to private user-owned data.
 
 ## Correctie voorstellen
-Lightweight proposal to Platformbeheer to change central bibliographic metadata once the record is shared by multiple Libraries.
+Proposal to a `Biblio Librarian` to change platform-wide Work/Edition metadata.
+It is required for every such change, whether one or multiple Libraries use the
+record. An authorized Eigenaar or Beheerder may submit it, but does not directly
+mutate the central metadata.
 
 ## Superseded terms/concepts
 

@@ -12,10 +12,11 @@ candidates, but schema 1014 can retain only accepted Edition-level provenance.
 It cannot represent durable field proposals, multiple sources for one value,
 content rejection or intentionally blank state.
 
-MH-B4 supplies a later explicit product decision: metadata proposes and the
-user determines canonical values per field. This amends only ADR-010's earlier
-field-evidence deferral; it does not authorize automatic fusion or a
-provider-per-field UI.
+MH-B4 supplies the persistent proposal/evidence foundation. For platform-wide
+Work/Edition metadata, every future canonical change remains a correction
+proposal assessed by `Biblio Librarian`; submission by a Library actor is not a
+direct canonical mutation. This amends only ADR-010's earlier field-evidence
+deferral; it does not authorize automatic fusion or a provider-per-field UI.
 
 ## Decision
 
@@ -33,10 +34,11 @@ state is not Work-title governance: confirming or ingesting it cannot mark a
 Work title `librarian_confirmed` or overwrite a Work title.
 
 Rejection applies to content across providers and is not undone by repeated
-evidence. Confirmation is explicit, makes the chosen value canonical and
-user-confirmed, and supersedes other active values without deleting their
-evidence. Manual correction remains authoritative. Later genuinely new content
-may be proposed but never overwrites confirmed content.
+evidence. A future authorized binding must route confirmation or manual
+correction for Work/Edition metadata as a proposal to Biblio Librarian; the
+persisted field-review foundation itself grants no actor that authority. The
+decision supersedes other active values without deleting their evidence. Later
+genuinely new content may be proposed but never overwrites confirmed content.
 
 Intentionally blank is a first-class persistent state, distinct from unknown.
 Provider evidence is retained but inactive while that state holds. Only an
@@ -53,7 +55,9 @@ This decision adds no REST/UI/Add Book integration, provider priority,
 confidence scoring, semantic equality, partial list merge, automatic canonical
 catalog mutation, Series Intelligence, cover runtime, DATA-01 change or V1
 migration. Authorization and binding an opaque review record to catalog creation
-belong to a later explicitly approved integration slice.
+belong to a later explicitly approved integration slice. That slice must
+preserve the Biblio Librarian proposal/assessment boundary and may not grant
+direct central metadata mutation through Library roles.
 
 ## Consequences
 

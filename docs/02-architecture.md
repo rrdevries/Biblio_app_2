@@ -136,9 +136,15 @@ Central identity governance:
 - an authorized Library Item-add flow may create missing Work/Edition identity;
 - the Eigenaar of the designated personal Privébibliotheek may create minimum Work/Edition/Auteur/Serie identity needed by a valid personal reading/borrowing flow;
 - existing central records are searched before new identity creation;
-- direct ordinary correction while record is used by one Library;
-- shared records require correction proposal;
+- every Work/Edition metadata change is a correction proposal for a separate
+  platform-wide `Biblio Librarian` capability, regardless of the number of
+  Libraries using the record;
+- Eigenaar/Beheerder may submit an authorized proposal but cannot directly
+  mutate that central metadata;
 - structural merges/splits remain central administration.
+
+`Biblio Librarian` is separate from `Admin` and `Super admin`; neither role
+automatically grants the other. No new technical override is defined here.
 
 The schema-1009 Author/Series foundation represents this identity with
 separate central Author and Series records and explicit Work relationships.
@@ -1151,11 +1157,13 @@ Ordered lists remain one atomic value. Exact typed equality is used; Core does
 not invent semantic normalization, confidence, provider precedence or partial
 list merging.
 
-The aggregate owns transitions between unknown, unconfirmed, user-confirmed
-and intentionally blank canonical field state. Content proposals are active,
-supporting, rejected, superseded, confirmed or blocked by intentionally blank.
-Only explicit confirm/manual-correction commands can create user-confirmed
-state. A transaction plus a locked field-state row serializes every mutation.
+The aggregate retains transitions between unknown, unconfirmed, user-confirmed
+and intentionally blank field state. Content proposals are active, supporting,
+rejected, superseded, confirmed or blocked by intentionally blank. Its
+currently unbound technical transition does not itself authorize a catalog
+write: a future integration must make every Work/Edition metadata change a
+correction proposal assessed by `Biblio Librarian`. A transaction plus a locked
+field-state row serializes every mutation.
 
 Schema 1015 adds three Core-owned InnoDB tables:
 
@@ -1179,8 +1187,9 @@ post-health succeeds.
 `Catalog\Edition` owns one required concrete title. `Catalog\Work` owns its
 separate title plus the closed `WorkTitleStatus` values `provisional` and
 `librarian_confirmed`. The default and every newly seeded Work title are
-provisional; only a later explicit librarian command may construct confirmed
-state. Provider evidence and MH-B4 field review cannot perform that transition.
+provisional; only a later explicit `Biblio Librarian` command may construct
+confirmed state. Provider evidence and MH-B4 field review cannot perform that
+transition.
 
 `AddLibraryItemService` requires a title when it creates an Edition. On the
 new-Work path it uses the same input to seed a provisional Work, without title

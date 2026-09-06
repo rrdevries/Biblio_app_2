@@ -103,10 +103,17 @@ A Library reference on user-owned data is context only and never transfers owner
 
 - `Super admin`
 - `Admin`
+- `Biblio Librarian`
 
 Super admin has platform recovery responsibilities but does not receive automatic access to private Library/user content.
 
 Admin is delegated through explicit platform permissions.
+
+`Biblio Librarian` is a separate platform-wide bibliographic catalog-curation
+capability. It is responsible for assessing correction proposals for shared
+Work/Edition metadata. It is not automatically granted by `Admin` or `Super
+admin`, and it grants neither of those roles; no additional technical override
+is implied here.
 
 `Gebruikersbeheer` is an explicit platform permission. Super admin has it; Admin only when assigned.
 
@@ -160,6 +167,10 @@ For a v2.001 Privébibliotheek, Eigenaar always has Directe toegang.
 
 For any other membership the safe default is Alleen bekijken.
 
+`Lezer` and `Kijker` are UI presets, not additional technical membership
+roles. `Lezer` means `Lid` with normal participation access. `Kijker` means
+`Lid` + `Alleen bekijken`.
+
 ### Meaning
 
 `Directe toegang`
@@ -173,8 +184,16 @@ For any other membership the safe default is Alleen bekijken.
 
 `Alleen bekijken`
 - may view and search the active collection;
-- cannot directly use a Library Item as personal source;
-- cannot receive an internal loan.
+- may browse and view permitted details in the authorized Library Context;
+- cannot directly use a Library Item as personal source or receive an
+  internal loan;
+- cannot register ReadingRounds, add private Notes, add Ratings/Reviews, make
+  loan requests or perform other personal participation actions in that
+  Library Context;
+- cannot mutate catalog data or perform Library management.
+
+`Alleen bekijken` is a read-only participation boundary, not anonymous or
+public access.
 
 ## Beheerder baseline and additional permissions
 
@@ -364,7 +383,7 @@ Edition always receives its own required title. When the same input creates a
 new Work, that Edition title may seed the Work title, but the Work title starts
 as `provisional`; creation never confirms it as canonical.
 
-Only an explicit librarian decision may mark a Work title
+Only an explicit `Biblio Librarian` decision may mark a Work title
 `librarian_confirmed`. Provider title evidence remains Edition-level evidence
 and cannot automatically confirm or overwrite a Work title. Search may match
 both the concrete Edition title and the Work title; normal catalog display,
@@ -413,8 +432,10 @@ extensive automatic Work resolution remain future scope.
 
 ### Field confirmation and provenance
 
-Metadata proposes; the user determines canonical values. Confirmation is
-field-level and explicit:
+Metadata proposes. Every change to platform-wide Work/Edition metadata is a
+correction proposal for a `Biblio Librarian`; a submitting Library actor does
+not directly determine or mutate canonical values. The field review is
+explicit:
 
 - a missing or differing provider value becomes a proposal and never silently
   replaces a canonical value;
@@ -425,14 +446,16 @@ field-level and explicit:
 - rejection applies to the proposed content value, not one provider; repeated
   evidence for that rejected value remains historical and does not reactivate
   it, while a different value may be proposed later;
-- confirming one value makes it canonical and user-confirmed and removes other
-  current values for that field from active review without deleting evidence;
+- a Biblio Librarian's explicit decision is required before a proposed value
+  becomes canonical; it removes other current values for that field from
+  active review without deleting evidence;
 - a later genuinely new differing value may become a new proposal, but cannot
-  overwrite a user-confirmed or manually corrected value;
+  overwrite an already confirmed or manually corrected value;
 - ordered multiple values such as contributors are one atomic field value and
   are never partially merged;
 - intentionally blank is persistent and distinct from unknown. Provider
-  evidence remains non-active until the user explicitly allows proposals again.
+  evidence remains non-active until an explicit authorized reopen allows
+  proposals again.
 
 The supported MH-B4 field keys follow the provider-neutral MH-B2/MH-B3
 candidate contract: title, subtitle, contributors, languages, publishers,
@@ -553,17 +576,18 @@ This personal-flow authority exists because the user has a personal Privébiblio
 
 Before creating a new central identity, Biblio first searches for an existing appropriate record to reduce duplicates.
 
-When a central Work/Edition is used by only one Library, an authorized administrator of that Library may directly correct ordinary bibliographic fields.
+Work and Edition are platform-wide shared bibliographic entities, irrespective
+of whether one or multiple Libraries currently use them. Provider evidence for
+them is also platform-wide shared. Every change to their metadata is therefore
+always a `Correctie voorstellen` proposal for a `Biblio Librarian`.
 
-Once the central record is used by multiple Libraries:
-- no one Library owns it;
-- a Library administrator uses `Correctie voorstellen`;
-- proposal contains proposed value and optional explanation;
-- Platformbeheer can approve/reject in a lightweight workflow.
+An Eigenaar or authorized Beheerder may submit a proposal where authorized,
+with a proposed value and optional explanation, but may not directly mutate
+central Work/Edition metadata. A Biblio Librarian assesses the proposal
+platform-wide. This explicitly replaces the older rule that allowed direct
+ordinary correction while one Library was the sole user of a central record.
 
 Structural actions such as merge/split of Works, identity merging of Authors or major Series restructuring remain platform/bibliographic administration.
-
-Direct central changes receive central bibliographic audit.
 
 Local Boeksoort/Genre/Onderwerp remain directly managed by the Library.
 

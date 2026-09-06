@@ -43,6 +43,11 @@ Owns:
 - central bibliographic identity;
 - platform administration and recovery.
 
+Platformrollen zijn `Super admin`, `Admin` en `Biblio Librarian`. `Biblio
+Librarian` is een afzonderlijke inhoudelijke cataloguscapability voor
+platformbrede bibliografische curatie; zij volgt niet automatisch uit `Admin`
+of `Super admin`, en verleent die rollen ook niet.
+
 ### Bibliotheek
 
 Owns:
@@ -112,6 +117,10 @@ Membership has two independent dimensions.
 - Lenen
 - Alleen bekijken
 
+`Lezer` en `Kijker` zijn uitsluitend gebruiksvriendelijke UI-presets, geen
+extra technische kernrollen: Lezer is `Lid` met normale
+participatietoegang; Kijker is `Lid` + `Alleen bekijken`.
+
 For a v2.001 Privébibliotheek the Eigenaar always has `Directe toegang`.
 
 A non-owner membership defaults to:
@@ -122,6 +131,14 @@ A non-owner membership defaults to:
 A `Beheerder` has baseline rights to manage the shared catalog/books and physical Exemplaren in the current Bibliotheek. Other management domains require explicit additional permissions.
 
 Additional management permissions are explicit and only active while the user is a `Beheerder`.
+
+`Alleen bekijken` is de brede read-only participatiegrens: binnen de
+geautoriseerde Library Context mag de gebruiker gedeelde inhoud zoeken,
+bladeren en toegestane details bekijken, maar geen leesrondes,
+privénotities, beoordelingen/recensies, leenverzoeken of andere persoonlijke
+participatieacties registreren. Ook cataloguswijziging en
+bibliotheekbeheer zijn niet toegestaan. Dit is geen anonieme of publieke
+toegang.
 
 ## Accounts
 
@@ -154,7 +171,13 @@ Library-local:
 User-owned:
 - ReadingRound and all private reading activity.
 
-Central identity does not mean unrestricted editing. When a central record is used by multiple Libraries, ordinary Library administrators propose corrections instead of directly changing the shared record.
+Central identity does not mean unrestricted editing. Elke wijziging aan
+platformbrede Work- of Edition-metadata is een correctievoorstel voor een
+`Biblio Librarian`, ongeacht hoeveel Bibliotheken het record gebruiken.
+Eigenaar en Beheerder kunnen zo'n voorstel indienen wanneer zij daar bevoegd
+toe zijn, maar wijzigen de centrale metadata niet rechtstreeks. Dit vervangt
+de oudere één-Bibliotheek-uitzondering voor directe correctie. Provider-evidence
+voor Work/Edition blijft eveneens platformbreed gedeeld.
 
 The technical central bibliographic baseline is schema `1009`. It persists
 stable Author and Series identities plus typed Work relationships. Work
@@ -1938,12 +1961,12 @@ publishers, publication date, page count and format.
 Identical provider values share one content proposal with multiple evidence
 sources. Evidence matching an existing canonical value is supporting only and
 does not auto-confirm it. Rejected content remains rejected when the same or a
-second provider repeats it; different content can still be proposed. Explicit
-confirmation makes one value canonical and user-confirmed, supersedes other
-active values and retains all value/evidence history. Manual correction has the
-same canonical precedence. Ordered contributors and other lists remain atomic.
-Intentionally blank is persistent, blocks active proposals and can be reopened
-only explicitly.
+second provider repeats it; different content can still be proposed. In een
+toekomstige geautoriseerde binding blijft ieder voorstel voor Work/Edition-
+metadata aan een `Biblio Librarian` ter beoordeling; inzending door een
+Library-actor is geen directe canonieke mutatie. Ordered contributors and
+other lists remain atomic. Intentionally blank is persistent, blocks active
+proposals and can be reopened only explicitly.
 
 The implementation is deliberately not exposed through REST, UI, Add Book or
 `CoreApplication` until the next authorized integration supplies ownership and

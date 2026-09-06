@@ -35,6 +35,8 @@ Test matrix must cover:
 
 Acceptance:
 - management role and physical use access operate independently;
+- `Lezer` and `Kijker` are UI presets rather than additional technical roles:
+  Lezer = Lid with normal participation access; Kijker = Lid + Alleen bekijken;
 - non-owner initial membership is Lid · Alleen bekijken;
 - Beheerder has baseline shared catalog/Item management but no automatic rights in additional management domains;
 - Beheerder cannot self-escalate;
@@ -43,6 +45,10 @@ Acceptance:
 - Beheerder permission loss occurs on demotion;
 - re-promotion does not silently restore old permissions;
 - Eigenaar transfer sets new Eigenaar direct access and explicitly resolves former Eigenaar access.
+- Alleen bekijken permits only authorized shared-content search, browse and
+  permitted detail reads; it denies ReadingRound, private Note,
+  Rating/Review, loan-request and other personal participation actions, catalog
+  mutation and Library management, and is never anonymous/public access.
 
 ## 4. Platform account vs membership
 
@@ -147,9 +153,12 @@ Acceptance:
 - local Boeksoort/Genre/Onderwerp do not mutate central Work/Edition.
 
 Governance:
-- one-Library central record can be directly ordinarily corrected by authorized admin;
-- once shared across multiple Libraries, ordinary Library admin cannot directly mutate central record;
-- correction proposal can be submitted;
+- every Work/Edition metadata change, including for a record used by one
+  Library only, is a correction proposal for Biblio Librarian;
+- Eigenaar/Beheerder may submit an authorized proposal but cannot directly
+  mutate central Work/Edition metadata;
+- Biblio Librarian is distinct from Admin/Super admin and assesses proposals
+  platform-wide;
 - structural merge/split remains platform-managed.
 
 ## 12. Search
@@ -286,7 +295,8 @@ Minimum E2E candidates:
 - Platformbeheer links existing account to another Library;
 - Eigenaar changes member access/role;
 - add physical book/Edition/Item;
-- central metadata correction direct vs proposal when shared;
+- central Work/Edition metadata correction proposal and Biblio Librarian
+  assessment, including for a one-Library record;
 - Library search and temporary archive search;
 - Start/finish/stop ReadingRound;
 - two simultaneous rounds same Work on different sources;
@@ -2280,8 +2290,9 @@ MH-B4 is accepted when:
 - evidence equal to an existing canonical value remains supporting and never
   auto-confirms it;
 - differing values remain independent and conflicts select no winner;
-- only explicit confirmation or manual correction can create user-confirmed
-  canonical state and provider ingestion never overwrites it;
+- provider ingestion never overwrites canonical state; future authorized
+  Work/Edition binding makes confirmation or manual correction a proposal for
+  Biblio Librarian rather than a direct Library-actor mutation;
 - rejection targets content, survives repeated evidence from any provider and
   does not block later different content;
 - confirmation supersedes other active values while preserving all inactive

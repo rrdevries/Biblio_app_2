@@ -26,8 +26,11 @@ deterministic JSON and SHA-256 content identity; ordered lists remain atomic.
 - matching canonical evidence is supporting only and never auto-confirms;
 - rejection is content-specific, survives repeated evidence and leaves later
   different content independently proposable;
-- explicit confirmation/manual correction is the only route to
-  `user_confirmed`, supersedes other live proposals and preserves history;
+- the unbound foundation retains explicit confirmation/manual-correction
+  transitions to `user_confirmed`, supersedes other live proposals and
+  preserves history; a future Work/Edition binding must route every such
+  catalog change as a correction proposal to Biblio Librarian rather than
+  authorize a Library actor directly;
 - provider ingestion and unconfirmed seeding cannot downgrade explicit user
   decisions;
 - intentionally blank persists, blocks proposals and needs an explicit reopen
@@ -69,8 +72,9 @@ No REST route, frontend, Elementor behavior, Add Book integration,
 `CoreApplication` composition, Series Intelligence, provider cover flow,
 DATA-01 change or V1 migration is included. `MetadataRecordId` is deliberately
 opaque. MH-B5 must define and enforce authorized ownership/binding before this
-foundation can be exposed; Core authorization may not be delegated to UI or
-transport.
+foundation can be exposed, including the Biblio Librarian proposal/assessment
+boundary for Work/Edition metadata; Core authorization may not be delegated to
+UI or transport.
 
 ## 6. Review verdict
 
