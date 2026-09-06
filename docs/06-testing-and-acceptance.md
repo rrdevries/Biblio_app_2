@@ -182,6 +182,21 @@ Governance:
   platform-wide;
 - structural merge/split remains platform-managed.
 
+MH-B5 Add Book acceptance, when separately implemented:
+
+- canonical ISBN lookup is local-first; a local Edition reuse makes no provider
+  call for that addition;
+- one usable provider candidate is reviewable, multiple candidates require an
+  explicit concrete-Edition choice, and no automatic winner is selected;
+- provider absence/failure leaves retry and manual entry available and never
+  blocks Add Book;
+- Add Book review and user-observed Edition evidence do not make a record or
+  Work title `librarian_confirmed`, and provider data cannot silently replace
+  directly checked user evidence;
+- provider field binding follows ADR-014, including no generic `format` mapping;
+- an authorized writable Library Context is required; `Alleen bekijken` cannot
+  add; and the B5B commit is transactional.
+
 ## 12. Search
 
 Mijn Biblio:

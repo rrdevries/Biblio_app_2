@@ -488,6 +488,39 @@ candidate contract: title, subtitle, contributors, languages, publishers,
 publication date, page count and format. This foundation defines no REST/UI or
 Add Book behavior and performs no automatic Work/Edition/Item mutation.
 
+### MH-B5 Add Book integration
+
+ADR-014 splits MH-B5 into MH-B5A, the authorized local-first metadata
+lookup/review contract without catalog mutation, and MH-B5B, the later Add Book
+commit integration. MH-B5A must be GO before MH-B5B starts.
+
+Add Book first checks a scanned or entered canonical ISBN locally. An existing
+Edition is reused and does not cause a provider lookup for that addition;
+central metadata correction/enrichment remains separate. For a new ISBN, the
+Metadata Hub supplies candidates: one usable candidate is shown for review,
+multiple usable candidates require explicit concrete-Edition selection and
+never receive an automatic winner. Manual entry remains available for multiple,
+missing or failed provider results, and provider trouble never blocks Add Book.
+
+Add Book review means only that the user identifies the correct concrete
+Edition for the physical book being added. It neither makes a Work/Edition
+`librarian_confirmed` nor treats all provider values as platform-wide curated.
+New records may remain immediately usable provisional records. Directly checked
+physical-book data may be strong user-observed/user-verified Edition evidence:
+Edition title/subtitle, ISBN, Edition language, publisher/imprint,
+publication year/date, printing/edition statement, binding/physical form, page
+count and Edition-specific contributors. Provider data may not silently replace
+that evidence.
+
+Provider `title`, `subtitle`, `languages`, `publishers`, `publication_date` and
+`page_count` bind only to the Edition as specified in ADR-014. Clear
+author/co-author contributors bind to Work; clear edition-bound roles such as
+translator bind to Edition; illustrator and editor/compiler are Edition in
+v2.001; unknown/untyped contributors remain evidence only. `format` has no
+generic automatic mapping: only an explicit allowlist may bind an unambiguous
+value to `Edition.Binding`; other values remain evidence. No Expression entity
+exists in v2.001.
+
 ### Metadata conflict review
 
 When external candidates agree sufficiently, Biblio proposes one whole record

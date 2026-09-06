@@ -39,7 +39,8 @@
   conditional Open Library adapter, temporary conditional Google fallback,
   whole-record candidate acquisition, persistent field-level confirmation and
   evidence history, manual/no-ISBN entry and independent Biblio-owned covers;
-  REST/UI/Add Book integration requires a separately approved build task.
+  ADR-014 defines MH-B5A authorized lookup/review before MH-B5B Add Book commit
+  integration, each requiring a separately approved build task.
 
 ## Explicitly deferred
 

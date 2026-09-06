@@ -1234,3 +1234,23 @@ title. Search reads both Edition and Work title, plus the already approved
 sources. The opaque cursor payload version remains stable although its title
 component now means Edition title. No REST shape, UI, Add Book, MH-B4 review
 binding, DATA-01 or provider behavior changes in this slice.
+
+## 32. MH-B5 authorized Add Book integration boundary
+
+ADR-014 divides the next Metadata Hub integration into MH-B5A and MH-B5B.
+MH-B5A is the server-authorized, local-first lookup/review contract and has no
+catalog mutation. MH-B5B starts only after MH-B5A is GO and is the transactionally
+safe Add Book commit path: it reuses the local Edition or creates a provisional
+Work/Edition from an explicit chosen/manual concrete Edition, then creates the
+Item in the already authorized Library Context.
+
+Neither provider candidate review nor direct user checking of a physical book
+grants Biblio Librarian authority or auto-confirms a Work title. Provider field
+bindings are intentionally narrow: provider titles/subtitles and publication
+facts are Edition evidence; contributor binding is role-aware; and `format`
+remains evidence except for a future explicit binding allowlist. Existing
+Library Context, Core authorization, CAT-T1, ADR-011 field review, ADR-012
+provisional governance and ADR-013 collector boundaries remain mandatory.
+
+No REST shape, schema, UI detail, queue, provider fusion or implementation is
+added by this architecture decision.

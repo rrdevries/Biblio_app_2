@@ -2046,3 +2046,18 @@ remain governed by the Biblio Librarian flow. No schema, REST, UI, MH-B5 or
 collector workflow is implemented. Specialist antiquarian fields remain
 deferred. The canonical decision is
 `docs/decisions/ADR-013-collector-local-overrides.md`.
+
+### D-MHB5-01 — Add Book and metadata integration
+
+Status: **DECISION CANONICALIZED / NOT IMPLEMENTED**
+
+ADR-014 splits MH-B5 into MH-B5A, an authorized local-first metadata
+lookup/review contract without catalog mutation, and MH-B5B, the subsequent
+transactional Add Book commit integration. B5A must be GO before B5B starts.
+The decision fixes local-first ISBN reuse, explicit candidate selection,
+non-blocking manual/retry paths, the distinction between Add Book review and
+Librarian confirmation, user-observed Edition evidence, narrow provider-to-
+catalog bindings, existing authorization, and collector boundaries. No REST,
+production code, schema, UI, queue, provider fusion or collector persistence is
+implemented. Canonical decision:
+`docs/decisions/ADR-014-mh-b5-add-book-metadata-integration.md`.
