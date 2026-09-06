@@ -151,7 +151,7 @@ final class LibraryItemAccessPersistenceTest extends
         ?LibraryId $libraryB = null
     ): array {
         $work = new Work(new WorkId("work-w"), "Shared Work");
-        $edition = new Edition(new EditionId("edition-e"), $work->id());
+        $edition = new Edition(new EditionId("edition-e"), $work->id(), "Shared Edition");
         (new WpdbWorkRepository(
             $this->database,
             $this->tableNames

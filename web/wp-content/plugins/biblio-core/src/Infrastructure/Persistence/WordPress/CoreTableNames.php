@@ -104,7 +104,7 @@ final readonly class CoreTableNames
         $this->metadataFieldValues = $prefix . "biblio_metadata_field_values";
         $this->metadataFieldEvidence = $prefix . "biblio_metadata_field_evidence";
 
-        foreach ($this->schema1015() as $tableName) {
+        foreach ($this->schema1016() as $tableName) {
             $this->assertSafe($tableName);
         }
         $this->assertSafe($this->nextReadingInsertTrigger);
@@ -412,6 +412,12 @@ final readonly class CoreTableNames
     public function schema1015(): array
     {
         return [...$this->schema1014(), ...$this->schema1015Additions()];
+    }
+
+    /** @return list<string> */
+    public function schema1016(): array
+    {
+        return $this->schema1015();
     }
 
     private function assertSafe(string $tableName): void

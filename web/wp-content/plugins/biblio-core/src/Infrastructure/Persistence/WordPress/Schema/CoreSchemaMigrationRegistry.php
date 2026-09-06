@@ -63,6 +63,7 @@ final readonly class CoreSchemaMigrationRegistry
             new CoreSchema1013Migration($database, $tableNames),
             new CoreSchema1014Migration($database, $tableNames),
             new CoreSchema1015Migration($database, $tableNames),
+            new CoreSchema1016Migration($database, $tableNames),
         ];
     }
 

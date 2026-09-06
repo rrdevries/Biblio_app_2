@@ -97,7 +97,7 @@ final class LocationPersistenceTest extends PersistenceIntegrationTestCase
         $libraries->add(Library::privateLibrary($libraryB));
         $work = new Work(new WorkId("work-a"), "Work");
         (new WpdbWorkRepository($this->database, $this->tableNames))->add($work);
-        $edition = new Edition(new EditionId("edition-a"), $work->id());
+        $edition = new Edition(new EditionId("edition-a"), $work->id(), "Edition A");
         (new WpdbEditionRepository($this->database, $this->tableNames))->add($edition);
         return [$libraryA, $libraryB, $edition->id()];
     }

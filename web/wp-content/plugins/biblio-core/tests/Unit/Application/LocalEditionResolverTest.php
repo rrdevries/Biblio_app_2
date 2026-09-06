@@ -25,6 +25,7 @@ final class LocalEditionResolverTest extends TestCase
         $edition = new Edition(
             new EditionId("edition-existing"),
             new WorkId("work-preserved"),
+            "Preserved Edition",
             EditionIsbnMetadata::identified(
                 new Isbn10("0306406152"),
                 new Isbn13("9780306406157")
@@ -85,8 +86,16 @@ final class LocalEditionResolverTest extends TestCase
 
     public function testMultipleLegacyAliasesAreTypedAmbiguous(): void
     {
-        $first = new Edition(new EditionId("edition-a"), new WorkId("work-a"));
-        $second = new Edition(new EditionId("edition-b"), new WorkId("work-b"));
+        $first = new Edition(
+            new EditionId("edition-a"),
+            new WorkId("work-a"),
+            "Edition A"
+        );
+        $second = new Edition(
+            new EditionId("edition-b"),
+            new WorkId("work-b"),
+            "Edition B"
+        );
         $claims = $this->createMock(EditionIdentifierClaimRepository::class);
         $claims->method("findByCanonicalIsbn13")->willReturn(null);
         $editions = $this->createMock(EditionRepository::class);

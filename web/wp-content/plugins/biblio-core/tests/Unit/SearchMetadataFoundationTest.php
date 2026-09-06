@@ -69,15 +69,21 @@ final class SearchMetadataFoundationTest extends TestCase
 
     public function testEditionDistinguishesUnknownNoIsbnAndKnownIsbn(): void
     {
-        $unknown = new Edition(new EditionId("edition-1"), new WorkId("work-1"));
+        $unknown = new Edition(
+            new EditionId("edition-1"),
+            new WorkId("work-1"),
+            "Unknown ISBN Edition"
+        );
         $without = new Edition(
             new EditionId("edition-2"),
             new WorkId("work-1"),
+            "No ISBN Edition",
             EditionIsbnMetadata::withoutIsbn()
         );
         $known = new Edition(
             new EditionId("edition-3"),
             new WorkId("work-1"),
+            "Known ISBN Edition",
             EditionIsbnMetadata::identified(
                 new Isbn10("0306406152"),
                 new Isbn13("9780306406157")

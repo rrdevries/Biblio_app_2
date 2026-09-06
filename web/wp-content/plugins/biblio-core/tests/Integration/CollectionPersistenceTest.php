@@ -147,7 +147,7 @@ final class CollectionPersistenceTest extends PersistenceIntegrationTestCase
         foreach ($suffixes as $suffix) {
             $work = new Work(new WorkId("work-{$libraryId->value()}-{$suffix}"), "Work {$suffix}");
             (new WpdbWorkRepository($this->database, $this->tableNames))->add($work);
-            $edition = new Edition(new EditionId("edition-{$libraryId->value()}-{$suffix}"), $work->id());
+            $edition = new Edition(new EditionId("edition-{$libraryId->value()}-{$suffix}"), $work->id(), "Edition {$suffix}");
             (new WpdbEditionRepository($this->database, $this->tableNames))->add($edition);
             $item = Item::active(new ItemId("item-{$suffix}"), $libraryId, $edition->id());
             (new WpdbItemRepository($this->database, $this->tableNames))->add($item);

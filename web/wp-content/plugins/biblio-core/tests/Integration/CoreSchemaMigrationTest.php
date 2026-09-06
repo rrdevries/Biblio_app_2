@@ -186,8 +186,8 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
         try {
             $migrator->migrate();
 
-            self::assertSame(1016, $migrator->installedVersion());
-            self::assertSame(1016, $migrator->expectedVersion());
+            self::assertSame(1017, $migrator->installedVersion());
+            self::assertSame(1017, $migrator->expectedVersion());
             self::assertTrue($migrator->health()->isHealthy());
             self::assertSame(37, $this->existingCurrentTableCount());
             self::assertSame(1, $this->indexCount(
@@ -211,7 +211,7 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
             "No explicit Biblio Core schema-health contract exists"
         );
 
-        $this->migrator()->healthForVersion(1016);
+        $this->migrator()->healthForVersion(1017);
     }
 
     public function testHealthyCurrentRunIsSchemaAndDataNoOp(): void
@@ -524,6 +524,7 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
         $this->database->insert($this->tableNames->editions(), [
             "edition_id" => "sentinel-edition",
             "work_id" => "sentinel-work",
+            "edition_title" => "Sentinel Edition",
         ]);
         $this->database->insert($this->tableNames->items(), [
             "item_id" => "sentinel-item",
@@ -578,7 +579,7 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
     {
         $snapshot = [];
 
-        foreach ($this->tableNames->schema1015() as $tableName) {
+        foreach ($this->tableNames->schema1016() as $tableName) {
             $snapshot[$tableName] = $this->showCreateTable($tableName);
         }
 
@@ -590,7 +591,7 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
     {
         $snapshot = [];
 
-        foreach ($this->tableNames->schema1015() as $tableName) {
+        foreach ($this->tableNames->schema1016() as $tableName) {
             $snapshot[$tableName] = $this->database->get_results(
                 "SELECT * FROM `{$tableName}`",
                 ARRAY_A
@@ -602,7 +603,7 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
 
     private function dropCoreSchema(): void
     {
-        foreach (array_reverse($this->tableNames->schema1015()) as $tableName) {
+        foreach (array_reverse($this->tableNames->schema1016()) as $tableName) {
             $this->database->query("DROP TABLE IF EXISTS `{$tableName}`");
         }
 
@@ -625,7 +626,7 @@ final class CoreSchemaMigrationTest extends PersistenceIntegrationTestCase
     {
         $count = 0;
 
-        foreach ($this->tableNames->schema1015() as $tableName) {
+        foreach ($this->tableNames->schema1016() as $tableName) {
             $count += $this->tableExists($tableName) ? 1 : 0;
         }
 

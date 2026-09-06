@@ -125,7 +125,7 @@ final class Schema1008NextReadingContractCorrectionTest extends PersistenceInteg
 
         $this->migrator()->migrate();
 
-        self::assertSame(1015, $this->migrator()->installedVersion());
+        self::assertSame(1016, $this->migrator()->installedVersion());
         $rows = $this->database->get_results(
             "SELECT entry_id,work_id,preferred_source_type,preferred_source_id_snapshot,"
             . "preferred_source_library_id_snapshot,item_id,external_loan_id,position,created_at "
@@ -184,7 +184,7 @@ final class Schema1008NextReadingContractCorrectionTest extends PersistenceInteg
             "library_type" => "private_library",
             "library_status" => "active",
         ]);
-        $this->database->insert($this->tableNames->editions(), ["edition_id" => "schema-edition", "work_id" => "schema-work"]);
+        $this->database->insert($this->tableNames->editions(), ["edition_id" => "schema-edition", "work_id" => "schema-work", "edition_title" => "Schema Work"]);
         $this->database->insert($this->tableNames->items(), [
             "item_id" => "schema-item",
             "library_id" => "schema-library",

@@ -2671,6 +2671,7 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         $this->database->insert($this->tableNames->editions(), [
             "edition_id" => "edition-{$itemId}",
             "work_id" => $workId,
+            "edition_title" => $title,
         ]);
         $this->database->insert($this->tableNames->items(), [
             "item_id" => $itemId,

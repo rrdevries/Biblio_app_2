@@ -46,17 +46,17 @@ final readonly class WpdbCatalogUiReadRepository implements CatalogUiReadReposit
         ];
 
         if ($cursor !== null) {
-            $where .= " AND (w.work_title > %s OR "
-                . "(w.work_title = %s AND i.item_id > %s))";
-            $parameters[] = $cursor->workTitle();
-            $parameters[] = $cursor->workTitle();
+            $where .= " AND (e.edition_title > %s OR "
+                . "(e.edition_title = %s AND i.item_id > %s))";
+            $parameters[] = $cursor->editionTitle();
+            $parameters[] = $cursor->editionTitle();
             $parameters[] = $cursor->itemId()->value();
         }
 
         $parameters[] = $pageSize->value() + 1;
         $rows = $this->database->get_results($this->database->prepare(
             $this->selectSql(true) . " WHERE {$where} "
-            . "ORDER BY w.work_title ASC, i.item_id ASC LIMIT %d",
+            . "ORDER BY e.edition_title ASC, i.item_id ASC LIMIT %d",
             ...$parameters
         ));
         $records = array_map($this->hydrate(...), $rows);
@@ -104,7 +104,7 @@ final readonly class WpdbCatalogUiReadRepository implements CatalogUiReadReposit
         $itemIndex = $overview ? " FORCE INDEX (items_by_library)" : "";
 
         return "SELECT i.item_id, i.edition_id, i.item_status, "
-            . "w.work_id, w.work_title, "
+            . "w.work_id, e.edition_title, "
             . "COALESCE(rs.active_rounds, 0) AS active_rounds, "
             . "COALESCE(rs.completed_rounds, 0) AS completed_rounds, "
             . "COALESCE(rs.stopped_rounds, 0) AS stopped_rounds, "
@@ -139,7 +139,7 @@ final readonly class WpdbCatalogUiReadRepository implements CatalogUiReadReposit
                 new ItemId((string) $row->item_id),
                 new WorkId((string) $row->work_id),
                 new EditionId((string) $row->edition_id),
-                (string) $row->work_title,
+                (string) $row->edition_title,
                 ItemStatus::from((string) $row->item_status),
                 (int) $row->active_rounds,
                 (int) $row->completed_rounds,

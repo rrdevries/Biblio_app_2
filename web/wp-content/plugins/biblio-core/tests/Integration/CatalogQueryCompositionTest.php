@@ -124,6 +124,64 @@ final class CatalogQueryCompositionTest extends PersistenceIntegrationTestCase
         self::assertSame('Contained Jewel', $omnibus->containedMatchTitle());
     }
 
+    public function testSearchMatchesEditionAndWorkTitlesButProjectsEditionTitle(): void
+    {
+        $this->seedItem('item-title-split', 'library-a', 'work-title-split', 'Concrete Edition Title');
+        $this->database->update(
+            $this->tableNames->works(),
+            ['work_title' => 'Provisional Work Title'],
+            ['work_id' => 'work-title-split']
+        );
+
+        foreach (['Concrete Edition', 'Provisional Work'] as $term) {
+            $page = $this->repository->page(
+                $this->library,
+                $this->actor,
+                new CatalogQuery(search: new CatalogSearchTerm($term)),
+                null
+            );
+            self::assertSame(['item-title-split'], $this->ids($page));
+            self::assertSame('Concrete Edition Title', $page->records()[0]->title());
+        }
+    }
+
+    public function testTitleSortAndKeysetUseEditionTitleInsteadOfWorkTitle(): void
+    {
+        $this->seedItem('item-zulu-edition', 'library-a', 'work-alpha', 'Zulu Edition');
+        $this->seedItem('item-alpha-edition', 'library-a', 'work-zulu', 'Alpha Edition');
+        $this->database->update(
+            $this->tableNames->works(),
+            ['work_title' => 'Alpha Work'],
+            ['work_id' => 'work-alpha']
+        );
+        $this->database->update(
+            $this->tableNames->works(),
+            ['work_title' => 'Zulu Work'],
+            ['work_id' => 'work-zulu']
+        );
+        $query = new CatalogQuery(pageSize: new CatalogOverviewPageSize(1));
+
+        $first = $this->repository->page(
+            $this->library,
+            $this->actor,
+            $query,
+            null
+        );
+        self::assertSame(['item-alpha-edition'], $this->ids($first));
+        self::assertSame('Alpha Edition', $first->records()[0]->title());
+        self::assertTrue($first->hasMore());
+
+        $second = $this->repository->page(
+            $this->library,
+            $this->actor,
+            $query,
+            new ItemId('item-alpha-edition')
+        );
+        self::assertSame(['item-zulu-edition'], $this->ids($second));
+        self::assertSame('Zulu Edition', $second->records()[0]->title());
+        self::assertFalse($second->hasMore());
+    }
+
     public function testSearchRanksExactTitleBeforePartialTitleAndPaginatesWithoutDuplicates(): void
     {
         $this->seedItem('item-exact', 'library-a', 'work-exact', 'Shared title');
@@ -457,7 +515,7 @@ final class CatalogQueryCompositionTest extends PersistenceIntegrationTestCase
             $this->database->insert($this->tableNames->works(), ['work_id' => $work, 'work_title' => $title]);
         }
         $edition = 'edition-' . $item;
-        $this->database->insert($this->tableNames->editions(), ['edition_id' => $edition, 'work_id' => $work, 'isbn_13' => $isbn13]);
+        $this->database->insert($this->tableNames->editions(), ['edition_id' => $edition, 'work_id' => $work, 'edition_title' => $title, 'isbn_13' => $isbn13]);
         $this->database->insert($this->tableNames->items(), [
             'item_id' => $item, 'library_id' => $library, 'edition_id' => $edition, 'item_status' => $status,
             'inventory_number' => $inventory, 'location_id' => $location,

@@ -288,7 +288,7 @@ final class ReadingRoundConcurrencyTest extends PersistenceIntegrationTestCase
             $this->database,
             $this->tableNames
         ))->add($work);
-        $edition = new Edition(new EditionId("edition-e"), $work->id());
+        $edition = new Edition(new EditionId("edition-e"), $work->id(), "Edition E");
         (new WpdbEditionRepository(
             $this->database,
             $this->tableNames

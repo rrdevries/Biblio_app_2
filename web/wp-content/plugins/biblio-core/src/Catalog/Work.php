@@ -12,7 +12,8 @@ final readonly class Work
 
     public function __construct(
         private WorkId $id,
-        private string $title
+        private string $title,
+        private WorkTitleStatus $titleStatus = WorkTitleStatus::Provisional
     ) {
         $titleLength = preg_match_all('/./us', $this->title);
 
@@ -40,5 +41,10 @@ final readonly class Work
     public function title(): string
     {
         return $this->title;
+    }
+
+    public function titleStatus(): WorkTitleStatus
+    {
+        return $this->titleStatus;
     }
 }

@@ -28,13 +28,13 @@ final class Schema1011LocationTest extends PersistenceIntegrationTestCase
     {
         $this->restoreSchema1010();
         $this->database->insert($this->tableNames->works(), ["work_id" => "preserved-work", "work_title" => "Preserved"]);
-        $this->database->insert($this->tableNames->editions(), ["edition_id" => "preserved-edition", "work_id" => "preserved-work", "explicitly_no_isbn" => 0]);
+        $this->database->insert($this->tableNames->editions(), ["edition_id" => "preserved-edition", "work_id" => "preserved-work", "edition_title" => "Preserved", "explicitly_no_isbn" => 0]);
         $this->database->insert($this->tableNames->libraries(), ["library_id" => "preserved-library", "library_name" => "Preserved", "library_type" => "private_library", "library_status" => "active"]);
         $this->database->insert($this->tableNames->items(), ["item_id" => "preserved-item", "library_id" => "preserved-library", "edition_id" => "preserved-edition", "item_status" => "active"]);
 
         $this->migrator()->migrate();
 
-        self::assertSame(1015, $this->migrator()->installedVersion());
+        self::assertSame(1016, $this->migrator()->installedVersion());
         self::assertNull($this->database->get_var(
             "SELECT location_id FROM `{$this->tableNames->items()}` WHERE item_id='preserved-item'"
         ));

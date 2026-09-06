@@ -231,7 +231,8 @@ final class StartReadingServicesTest extends TestCase
         $library = new LibraryId("library-a");
         $edition = new Edition(
             new EditionId("edition-e"),
-            new WorkId("work-from-item")
+            new WorkId("work-from-item"),
+            "Source Edition"
         );
         $item = Item::active(new ItemId("item-a"), $library, $edition->id());
         $items->add($item);
@@ -260,7 +261,11 @@ final class StartReadingServicesTest extends TestCase
             $this->libraryFixture($user);
         $libraryA = new LibraryId("library-a");
         $libraryB = new LibraryId("library-b");
-        $edition = new Edition(new EditionId("edition-e"), new WorkId("work-w"));
+        $edition = new Edition(
+            new EditionId("edition-e"),
+            new WorkId("work-w"),
+            "Source Edition"
+        );
         $item = Item::active(new ItemId("item-a"), $libraryA, $edition->id());
         $items->add($item);
         $editions->add($edition);
@@ -329,7 +334,8 @@ final class StartReadingServicesTest extends TestCase
         );
         $wrongEdition = new Edition(
             new EditionId("edition-b"),
-            new WorkId("work-b")
+            new WorkId("work-b"),
+            "Wrong Edition"
         );
 
         try {

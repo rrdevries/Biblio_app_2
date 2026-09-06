@@ -118,7 +118,7 @@ final readonly class WpdbCatalogQueryRepository implements CatalogQueryRepositor
                 . "WHEN ({$groups[1]}) THEN 2 "
                 . "WHEN ({$groups[2]}) THEN 3 "
                 . "WHEN ({$groups[3]}) THEN 4 ELSE 5 END";
-            array_push($selectParameters, ...array_slice($groupParameters, 0, 14));
+            array_push($selectParameters, ...array_slice($groupParameters, 0, 16));
             [$containedTitle, $containedParameters] = $this->containedMatchTitle($query->search()->value());
             array_push($selectParameters, ...$containedParameters);
         }
@@ -136,7 +136,7 @@ final readonly class WpdbCatalogQueryRepository implements CatalogQueryRepositor
         }
 
         $sql = 'SELECT i.item_id,i.edition_id,i.item_status,i.inventory_number,'
-            . 'e.work_id,w.work_title,'
+            . 'e.work_id,e.edition_title AS title,w.work_title,'
             . "{$relevance} AS relevance_rank,"
             . "{$authorSort} AS sort_author,"
             . "{$seriesNameSort} AS sort_series_name,"
@@ -269,11 +269,13 @@ final readonly class WpdbCatalogQueryRepository implements CatalogQueryRepositor
         $series = $this->tables->series();
         $containments = $this->tables->workContainments();
         $works = $this->tables->works();
-        $exact = "CONVERT(w.work_title USING utf8mb4) COLLATE {$collation}=%s OR e.isbn_10=%s OR e.isbn_13=%s "
+        $exact = "CONVERT(e.edition_title USING utf8mb4) COLLATE {$collation}=%s "
+            . "OR CONVERT(w.work_title USING utf8mb4) COLLATE {$collation}=%s OR e.isbn_10=%s OR e.isbn_13=%s "
             . "OR EXISTS (SELECT 1 FROM `{$titles}` ae_f WHERE ae_f.work_id=w.work_id AND CONVERT(ae_f.alternate_title USING utf8mb4) COLLATE {$collation}=%s) "
             . "OR EXISTS (SELECT 1 FROM `{$containments}` ce_f INNER JOIN `{$works}` cwe_f ON cwe_f.work_id=ce_f.contained_work_id WHERE ce_f.parent_work_id=w.work_id AND CONVERT(cwe_f.work_title USING utf8mb4) COLLATE {$collation}=%s) "
             . "OR EXISTS (SELECT 1 FROM `{$containments}` cae_f INNER JOIN `{$titles}` cate_f ON cate_f.work_id=cae_f.contained_work_id WHERE cae_f.parent_work_id=w.work_id AND CONVERT(cate_f.alternate_title USING utf8mb4) COLLATE {$collation}=%s)";
-        $title = "CONVERT(w.work_title USING utf8mb4) COLLATE {$collation} LIKE %s "
+        $title = "CONVERT(e.edition_title USING utf8mb4) COLLATE {$collation} LIKE %s "
+            . "OR CONVERT(w.work_title USING utf8mb4) COLLATE {$collation} LIKE %s "
             . "OR EXISTS (SELECT 1 FROM `{$titles}` at_f WHERE at_f.work_id=w.work_id AND CONVERT(at_f.alternate_title USING utf8mb4) COLLATE {$collation} LIKE %s) "
             . "OR EXISTS (SELECT 1 FROM `{$containments}` ct_f INNER JOIN `{$works}` cw_f ON cw_f.work_id=ct_f.contained_work_id WHERE ct_f.parent_work_id=w.work_id AND CONVERT(cw_f.work_title USING utf8mb4) COLLATE {$collation} LIKE %s) "
             . "OR EXISTS (SELECT 1 FROM `{$containments}` cat_f INNER JOIN `{$titles}` catt_f ON catt_f.work_id=cat_f.contained_work_id WHERE cat_f.parent_work_id=w.work_id AND CONVERT(catt_f.alternate_title USING utf8mb4) COLLATE {$collation} LIKE %s)";
@@ -283,8 +285,8 @@ final readonly class WpdbCatalogQueryRepository implements CatalogQueryRepositor
             . "OR EXISTS (SELECT 1 FROM `{$containments}` cs_s INNER JOIN `{$workSeries}` cws_s ON cws_s.work_id=cs_s.contained_work_id INNER JOIN `{$series}` ss_s ON ss_s.series_id=cws_s.series_id WHERE cs_s.parent_work_id=w.work_id AND CONVERT(ss_s.display_name USING utf8mb4) COLLATE {$collation} LIKE %s)";
         $other = 'CONVERT(i.inventory_number USING utf8mb4) COLLATE ' . $collation . ' LIKE %s';
         return [[$exact, $title, $author, $seriesSql, $other], [
-            $term, $term, $term, $term, $term, $term,
-            $like, $like, $like, $like,
+            $term, $term, $term, $term, $term, $term, $term,
+            $like, $like, $like, $like, $like,
             $like, $like,
             $like, $like,
             $like,
@@ -316,40 +318,40 @@ final readonly class WpdbCatalogQueryRepository implements CatalogQueryRepositor
     {
         if ($query->search() !== null) {
             return [
-                'WHERE (relevance_rank>%d OR (relevance_rank=%d AND (work_title>%s OR (work_title=%s AND item_id>%s))))',
-                [(int) $anchor->relevance_rank, (int) $anchor->relevance_rank, (string) $anchor->work_title, (string) $anchor->work_title, (string) $anchor->item_id],
+                'WHERE (relevance_rank>%d OR (relevance_rank=%d AND (title>%s OR (title=%s AND item_id>%s))))',
+                [(int) $anchor->relevance_rank, (int) $anchor->relevance_rank, (string) $anchor->title, (string) $anchor->title, (string) $anchor->item_id],
             ];
         }
         if ($query->sort() === CatalogQuerySort::Author) {
             $missing = $anchor->sort_author === null ? 1 : 0;
             return [
-                'WHERE (sort_author IS NULL>%d OR (sort_author IS NULL=%d AND (COALESCE(sort_author,\'\')>%s OR (COALESCE(sort_author,\'\')=%s AND (work_title>%s OR (work_title=%s AND item_id>%s))))))',
-                [$missing, $missing, (string) ($anchor->sort_author ?? ''), (string) ($anchor->sort_author ?? ''), (string) $anchor->work_title, (string) $anchor->work_title, (string) $anchor->item_id],
+                'WHERE (sort_author IS NULL>%d OR (sort_author IS NULL=%d AND (COALESCE(sort_author,\'\')>%s OR (COALESCE(sort_author,\'\')=%s AND (title>%s OR (title=%s AND item_id>%s))))))',
+                [$missing, $missing, (string) ($anchor->sort_author ?? ''), (string) ($anchor->sort_author ?? ''), (string) $anchor->title, (string) $anchor->title, (string) $anchor->item_id],
             ];
         }
         if ($query->sort() === CatalogQuerySort::Series) {
             $seriesMissing = $anchor->sort_series_name === null ? 1 : 0;
             $positionMissing = $anchor->sort_series_position === null ? 1 : 0;
             return [
-                'WHERE (sort_series_name IS NULL>%d OR (sort_series_name IS NULL=%d AND (COALESCE(sort_series_name,\'\')>%s OR (COALESCE(sort_series_name,\'\')=%s AND (sort_series_position IS NULL>%d OR (sort_series_position IS NULL=%d AND (COALESCE(sort_series_position,0)>%s OR (COALESCE(sort_series_position,0)=%s AND (work_title>%s OR (work_title=%s AND item_id>%s))))))))))',
-                [$seriesMissing, $seriesMissing, (string) ($anchor->sort_series_name ?? ''), (string) ($anchor->sort_series_name ?? ''), $positionMissing, $positionMissing, (string) ($anchor->sort_series_position ?? '0'), (string) ($anchor->sort_series_position ?? '0'), (string) $anchor->work_title, (string) $anchor->work_title, (string) $anchor->item_id],
+                'WHERE (sort_series_name IS NULL>%d OR (sort_series_name IS NULL=%d AND (COALESCE(sort_series_name,\'\')>%s OR (COALESCE(sort_series_name,\'\')=%s AND (sort_series_position IS NULL>%d OR (sort_series_position IS NULL=%d AND (COALESCE(sort_series_position,0)>%s OR (COALESCE(sort_series_position,0)=%s AND (title>%s OR (title=%s AND item_id>%s))))))))))',
+                [$seriesMissing, $seriesMissing, (string) ($anchor->sort_series_name ?? ''), (string) ($anchor->sort_series_name ?? ''), $positionMissing, $positionMissing, (string) ($anchor->sort_series_position ?? '0'), (string) ($anchor->sort_series_position ?? '0'), (string) $anchor->title, (string) $anchor->title, (string) $anchor->item_id],
             ];
         }
         return [
-            'WHERE (work_title>%s OR (work_title=%s AND item_id>%s))',
-            [(string) $anchor->work_title, (string) $anchor->work_title, (string) $anchor->item_id],
+            'WHERE (title>%s OR (title=%s AND item_id>%s))',
+            [(string) $anchor->title, (string) $anchor->title, (string) $anchor->item_id],
         ];
     }
 
     private function orderBy(CatalogQuery $query): string
     {
         if ($query->search() !== null) {
-            return 'ORDER BY relevance_rank,work_title,item_id';
+            return 'ORDER BY relevance_rank,title,item_id';
         }
         return match ($query->sort()) {
-            CatalogQuerySort::Title => 'ORDER BY work_title,item_id',
-            CatalogQuerySort::Author => 'ORDER BY sort_author IS NULL,sort_author,work_title,item_id',
-            CatalogQuerySort::Series => 'ORDER BY sort_series_name IS NULL,sort_series_name,sort_series_position IS NULL,sort_series_position,work_title,item_id',
+            CatalogQuerySort::Title => 'ORDER BY title,item_id',
+            CatalogQuerySort::Author => 'ORDER BY sort_author IS NULL,sort_author,title,item_id',
+            CatalogQuerySort::Series => 'ORDER BY sort_series_name IS NULL,sort_series_name,sort_series_position IS NULL,sort_series_position,title,item_id',
         };
     }
 
@@ -359,7 +361,7 @@ final readonly class WpdbCatalogQueryRepository implements CatalogQueryRepositor
             new ItemId((string) $row->item_id),
             new WorkId((string) $row->work_id),
             new EditionId((string) $row->edition_id),
-            (string) $row->work_title,
+            (string) $row->title,
             ItemStatus::from((string) $row->item_status),
             $row->inventory_number === null ? null : (string) $row->inventory_number,
             $row->contained_match_title === null ? null : (string) $row->contained_match_title

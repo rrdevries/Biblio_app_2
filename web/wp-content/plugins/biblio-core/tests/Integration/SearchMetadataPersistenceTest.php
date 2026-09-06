@@ -84,10 +84,10 @@ final class SearchMetadataPersistenceTest extends PersistenceIntegrationTestCase
         $this->seedWorks("work-1", "work-2");
         $editions = new WpdbEditionRepository($this->database, $this->tableNames);
         $metadata = new WpdbBibliographicMetadataRepository($this->database, $this->tableNames);
-        $editions->add(new Edition(new EditionId("unknown"), new WorkId("work-1")));
-        $editions->add(new Edition(new EditionId("none"), new WorkId("work-1"), EditionIsbnMetadata::withoutIsbn()));
+        $editions->add(new Edition(new EditionId("unknown"), new WorkId("work-1"), "Unknown ISBN Edition"));
+        $editions->add(new Edition(new EditionId("none"), new WorkId("work-1"), "No ISBN Edition", EditionIsbnMetadata::withoutIsbn()));
         foreach (["known-1", "known-2"] as $id) {
-            $editions->add(new Edition(new EditionId($id), new WorkId("work-2"), EditionIsbnMetadata::identified(new Isbn10("0306406152"), new Isbn13("9780306406157"))));
+            $editions->add(new Edition(new EditionId($id), new WorkId("work-2"), "Known ISBN Edition", EditionIsbnMetadata::identified(new Isbn10("0306406152"), new Isbn13("9780306406157"))));
         }
 
         self::assertFalse($editions->find(new EditionId("unknown"))?->isbnMetadata()->isExplicitlyWithoutIsbn());
@@ -106,7 +106,7 @@ final class SearchMetadataPersistenceTest extends PersistenceIntegrationTestCase
     public function testInventoryNumberIsUniqueWithinLibraryAndReadsStayScoped(): void
     {
         $this->seedWorks("work-1");
-        $edition = new Edition(new EditionId("edition-1"), new WorkId("work-1"));
+        $edition = new Edition(new EditionId("edition-1"), new WorkId("work-1"), "Inventory Edition");
         (new WpdbEditionRepository($this->database, $this->tableNames))->add($edition);
         $libraries = new WpdbLibraryRepository($this->database, $this->tableNames);
         $libraryA = new LibraryId("library-a");

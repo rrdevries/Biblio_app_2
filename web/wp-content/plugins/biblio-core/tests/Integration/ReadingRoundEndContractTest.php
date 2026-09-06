@@ -89,7 +89,7 @@ final class ReadingRoundEndContractTest extends PersistenceIntegrationTestCase
         (new WpdbEditionRepository(
             $this->database,
             $this->tableNames
-        ))->add(new Edition(new EditionId("end-contract-edition"), $this->work));
+        ))->add(new Edition(new EditionId("end-contract-edition"), $this->work, "End contract edition"));
 
         $end = new ReadingRoundEnd(
             new ControllableAuthenticatedUser($this->user),

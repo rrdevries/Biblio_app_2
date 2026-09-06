@@ -107,6 +107,7 @@ final readonly class AddLibraryItemService
         ItemId $itemId,
         EditionId $editionId,
         WorkId $workId,
+        string $editionTitle,
         ?LibraryCatalogContextInitialization $classification = null,
         ?EditionIsbnMetadata $isbnMetadata = null
     ): Item {
@@ -140,6 +141,7 @@ final readonly class AddLibraryItemService
         $edition = new Edition(
             $editionId,
             $workId,
+            $editionTitle,
             $identity?->metadata() ?? $isbnMetadata ?? EditionIsbnMetadata::unknown()
         );
         $item = Item::active($itemId, $context->libraryId(), $editionId);
@@ -189,7 +191,7 @@ final readonly class AddLibraryItemService
         LibraryId $libraryId,
         ItemId $itemId,
         WorkId $workId,
-        string $workTitle,
+        string $editionTitle,
         EditionId $editionId,
         ?LibraryCatalogContextInitialization $classification = null,
         ?EditionIsbnMetadata $isbnMetadata = null
@@ -212,10 +214,11 @@ final readonly class AddLibraryItemService
             }
         }
 
-        $work = new Work($workId, $workTitle);
+        $work = new Work($workId, $editionTitle);
         $edition = new Edition(
             $editionId,
             $workId,
+            $editionTitle,
             $identity?->metadata() ?? $isbnMetadata ?? EditionIsbnMetadata::unknown()
         );
         $item = Item::active($itemId, $context->libraryId(), $editionId);

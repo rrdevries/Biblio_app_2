@@ -118,6 +118,54 @@ final class CatalogUiReadModelsTest extends PersistenceIntegrationTestCase
         self::assertNull($detail->activeReadingRound());
     }
 
+    public function testOverviewSortCursorAndDetailUseTheConcreteEditionTitle(): void
+    {
+        $actor = new UserId("509");
+        $library = new LibraryId("title-library");
+        $this->seedLibrary($library->value(), "Titelbibliotheek", $actor, "direct");
+        $this->seedItem("title-zulu-item", $library->value(), "title-alpha-work", "Zulu Edition Title");
+        $this->seedItem("title-alpha-item", $library->value(), "title-zulu-work", "Alpha Edition Title");
+        $this->database->update(
+            $this->tableNames->works(),
+            ["work_title" => "Alpha Work Title"],
+            ["work_id" => "title-alpha-work"]
+        );
+        $this->database->update(
+            $this->tableNames->works(),
+            ["work_title" => "Zulu Work Title"],
+            ["work_id" => "title-zulu-work"]
+        );
+
+        $service = $this->service($actor);
+        $first = $service->activeOverview(
+            $library,
+            null,
+            new CatalogOverviewPageSize(1)
+        );
+        self::assertSame(["title-alpha-item"], array_map(
+            static fn ($item): string => $item->itemId()->value(),
+            $first->items()
+        ));
+        self::assertSame("Alpha Edition Title", $first->items()[0]->title());
+        self::assertNotNull($first->nextCursor());
+
+        $second = $service->activeOverview(
+            $library,
+            $first->nextCursor(),
+            new CatalogOverviewPageSize(1)
+        );
+        self::assertSame(["title-zulu-item"], array_map(
+            static fn ($item): string => $item->itemId()->value(),
+            $second->items()
+        ));
+        self::assertSame("Zulu Edition Title", $second->items()[0]->title());
+        self::assertNull($second->nextCursor());
+
+        $detail = $service->itemDetail($library, new ItemId("title-alpha-item"));
+
+        self::assertSame("Alpha Edition Title", $detail->title());
+    }
+
     public function testDetailActiveRoundIsActorAndExactItemScoped(): void
     {
         $actor = new UserId("507");
@@ -330,6 +378,7 @@ final class CatalogUiReadModelsTest extends PersistenceIntegrationTestCase
         $this->database->insert($this->tableNames->editions(), [
             "edition_id" => "edition-{$itemId}",
             "work_id" => $workId,
+            "edition_title" => $title,
         ]);
         $this->database->insert($this->tableNames->items(), [
             "item_id" => $itemId,

@@ -343,7 +343,7 @@ final class NextReadingConcurrencyTest extends PersistenceIntegrationTestCase
                 "management_role" => "member", "use_access" => "direct", "additional_permissions" => "[]",
             ], ["%s", "%s", "%s", "%s", "%s", "%s"]);
             $this->database->insert($this->tableNames->editions(), [
-                "edition_id" => "race-edition", "work_id" => "race-work-1",
+                "edition_id" => "race-edition", "work_id" => "race-work-1", "edition_title" => "Race Edition",
             ]);
         }
         $this->database->insert($this->tableNames->items(), [

@@ -14,6 +14,7 @@ use Biblio\Core\Catalog\LocationId;
 use Biblio\Core\Catalog\{ItemArchivePeriod,ItemArchiveReason,ItemArchiveTransitionUnavailable,ItemVersion};
 use Biblio\Core\Catalog\Work;
 use Biblio\Core\Catalog\WorkId;
+use Biblio\Core\Catalog\WorkTitleStatus;
 use Biblio\Core\Library\LibraryId;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
@@ -93,6 +94,79 @@ final class CatalogEntitiesTest extends TestCase
         new Work(new WorkId("work-w"), "   ");
     }
 
+    public function testWorkTitleIsProvisionalUnlessLibrarianConfirmed(): void
+    {
+        $provisional = new Work(new WorkId("work-p"), "Provisional");
+        $confirmed = new Work(
+            new WorkId("work-c"),
+            "Canonical",
+            WorkTitleStatus::LibrarianConfirmed
+        );
+
+        self::assertSame(WorkTitleStatus::Provisional, $provisional->titleStatus());
+        self::assertSame(
+            WorkTitleStatus::LibrarianConfirmed,
+            $confirmed->titleStatus()
+        );
+    }
+
+    public function testEditionOwnsValidatedTitle(): void
+    {
+        $edition = new Edition(
+            new EditionId("edition-e"),
+            new WorkId("work-w"),
+            "Harry Potter en de Steen der Wijzen"
+        );
+
+        self::assertSame(
+            "Harry Potter en de Steen der Wijzen",
+            $edition->title()
+        );
+    }
+
+    public function testEditionAcceptsMaximumPersistedTitleLength(): void
+    {
+        $title = str_repeat("é", Edition::MAX_TITLE_LENGTH);
+
+        self::assertSame(
+            $title,
+            (new Edition(
+                new EditionId("edition-e"),
+                new WorkId("work-w"),
+                $title
+            ))->title()
+        );
+    }
+
+    public function testEditionRejectsEmptyTitle(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        new Edition(new EditionId("edition-e"), new WorkId("work-w"), "   ");
+    }
+
+    public function testEditionRejectsOverlongTitle(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        new Edition(
+            new EditionId("edition-e"),
+            new WorkId("work-w"),
+            str_repeat("é", Edition::MAX_TITLE_LENGTH + 1)
+        );
+    }
+
+    public function testEditionRejectsInvalidUtf8Title(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        new Edition(
+            new EditionId("edition-e"),
+            new WorkId("work-w"),
+            "invalid-\xFF"
+        );
+    }
+
     public function testWorkAcceptsMaximumPersistedTitleLength(): void
     {
         $title = str_repeat("é", Work::MAX_TITLE_LENGTH);
@@ -135,7 +209,7 @@ final class CatalogEntitiesTest extends TestCase
     public function testItemCarriesOneLibraryAndPlatformEdition(): void
     {
         $workId = new WorkId("work-w");
-        $edition = new Edition(new EditionId("edition-e"), $workId);
+        $edition = new Edition(new EditionId("edition-e"), $workId, "Edition");
         $libraryId = new LibraryId("library-a");
         $item = Item::active(
             new ItemId("item-a"),

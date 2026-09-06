@@ -24,13 +24,13 @@ final class Schema1010SearchMetadataTest extends PersistenceIntegrationTestCase
     {
         $this->restoreSchema1009();
         $this->database->insert($this->tableNames->works(), ["work_id" => "preserved-work", "work_title" => "Preserved"]);
-        $this->database->insert($this->tableNames->editions(), ["edition_id" => "preserved-edition", "work_id" => "preserved-work"]);
+        $this->database->insert($this->tableNames->editions(), ["edition_id" => "preserved-edition", "work_id" => "preserved-work", "edition_title" => "Preserved"]);
         $this->database->insert($this->tableNames->libraries(), ["library_id" => "preserved-library", "library_name" => "Preserved", "library_type" => "private_library", "library_status" => "active"]);
         $this->database->insert($this->tableNames->items(), ["item_id" => "preserved-item", "library_id" => "preserved-library", "edition_id" => "preserved-edition", "item_status" => "active"]);
 
         $this->migrator()->migrate();
 
-        self::assertSame(1015, $this->migrator()->installedVersion());
+        self::assertSame(1016, $this->migrator()->installedVersion());
         self::assertSame("Preserved", $this->database->get_var("SELECT work_title FROM `{$this->tableNames->works()}` WHERE work_id='preserved-work'"));
         self::assertNull($this->database->get_var("SELECT isbn_10 FROM `{$this->tableNames->editions()}` WHERE edition_id='preserved-edition'"));
         self::assertSame("0", (string) $this->database->get_var("SELECT explicitly_no_isbn FROM `{$this->tableNames->editions()}` WHERE edition_id='preserved-edition'"));
@@ -66,7 +66,7 @@ final class Schema1010SearchMetadataTest extends PersistenceIntegrationTestCase
 
         $this->database->query("ALTER TABLE `{$this->tableNames->editions()}` DROP COLUMN isbn_10");
         $this->migrator()->migrate();
-        self::assertSame(1015, $this->migrator()->installedVersion());
+        self::assertSame(1016, $this->migrator()->installedVersion());
     }
 
     private function migrator(): CoreSchemaMigrator

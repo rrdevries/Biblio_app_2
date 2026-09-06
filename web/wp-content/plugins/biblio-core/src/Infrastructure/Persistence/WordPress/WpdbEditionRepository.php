@@ -35,12 +35,13 @@ final readonly class WpdbEditionRepository implements WritableEditionRepository
                 [
                     "edition_id" => $edition->id()->value(),
                     "work_id" => $edition->workId()->value(),
+                    "edition_title" => $edition->title(),
                     "isbn_10" => $edition->isbnMetadata()->isbn10()?->value(),
                     "isbn_13" => $edition->isbnMetadata()->isbn13()?->value(),
                     "explicitly_no_isbn" => $edition->isbnMetadata()
                         ->isExplicitlyWithoutIsbn() ? 1 : 0,
                 ],
-                ["%s", "%s", "%s", "%s", "%d"]
+                ["%s", "%s", "%s", "%s", "%s", "%d"]
             );
         } finally {
             $this->database->suppress_errors($previousSuppression);
@@ -71,7 +72,8 @@ final readonly class WpdbEditionRepository implements WritableEditionRepository
     {
         $table = $this->tableNames->editions();
         $row = $this->database->get_row($this->database->prepare(
-            "SELECT edition_id, work_id, isbn_10, isbn_13, explicitly_no_isbn "
+            "SELECT edition_id, work_id, edition_title, isbn_10, isbn_13, "
+                . "explicitly_no_isbn "
             . "FROM `{$table}` WHERE edition_id = %s",
             $editionId->value()
         ));
@@ -109,6 +111,7 @@ final readonly class WpdbEditionRepository implements WritableEditionRepository
         return new Edition(
             new EditionId((string) $row->edition_id),
             new WorkId((string) $row->work_id),
+            (string) $row->edition_title,
             $metadata
         );
     }

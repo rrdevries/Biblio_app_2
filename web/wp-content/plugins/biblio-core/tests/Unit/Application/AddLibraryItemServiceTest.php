@@ -350,7 +350,8 @@ final class AddLibraryItemServiceTest extends TestCase
         [$service, , $store, , $transaction] = $this->fixture();
         $edition = new Edition(
             new EditionId("edition-existing"),
-            new WorkId("work-existing")
+            new WorkId("work-existing"),
+            "Existing Edition"
         );
         $store->editions[$edition->id()->value()] = $edition;
         $store->works["work-existing"] = new Work(
@@ -397,6 +398,7 @@ final class AddLibraryItemServiceTest extends TestCase
             new ItemId("item-new"),
             new EditionId("edition-new"),
             $work->id(),
+            "Dutch Edition",
             $this->initialization()
         );
 
@@ -410,6 +412,10 @@ final class AddLibraryItemServiceTest extends TestCase
         self::assertSame(
             "work-existing",
             $store->editions["edition-new"]->workId()->value()
+        );
+        self::assertSame(
+            "Dutch Edition",
+            $store->editions["edition-new"]->title()
         );
     }
 
@@ -431,6 +437,12 @@ final class AddLibraryItemServiceTest extends TestCase
             $store->operations
         );
         self::assertSame("work-new", $store->works["work-new"]->id()->value());
+        self::assertSame("New Work", $store->works["work-new"]->title());
+        self::assertSame(
+            \Biblio\Core\Catalog\WorkTitleStatus::Provisional,
+            $store->works["work-new"]->titleStatus()
+        );
+        self::assertSame("New Work", $store->editions["edition-new"]->title());
         self::assertSame(
             "work-new",
             $store->editions["edition-new"]->workId()->value()
@@ -458,7 +470,11 @@ final class AddLibraryItemServiceTest extends TestCase
     {
         [$service, , $store] = $this->fixture();
         $work = new Work(new WorkId("work-existing"), "Existing Work");
-        $edition = new Edition(new EditionId("edition-existing"), $work->id());
+        $edition = new Edition(
+            new EditionId("edition-existing"),
+            $work->id(),
+            "Existing Edition"
+        );
         $store->works[$work->id()->value()] = $work;
         $store->editions[$edition->id()->value()] = $edition;
 
@@ -487,7 +503,11 @@ final class AddLibraryItemServiceTest extends TestCase
         [$service, , $store] = $this->fixture();
         $libraryId = new LibraryId("library-a");
         $work = new Work(new WorkId("work-existing"), "Existing Work");
-        $edition = new Edition(new EditionId("edition-existing"), $work->id());
+        $edition = new Edition(
+            new EditionId("edition-existing"),
+            $work->id(),
+            "Existing Edition"
+        );
         $existing = LibraryCatalogContext::create(
             $libraryId,
             $work->id(),
@@ -552,7 +572,8 @@ final class AddLibraryItemServiceTest extends TestCase
                 new LibraryId("library-a"),
                 new ItemId("item-new"),
                 new EditionId("edition-new"),
-                new WorkId("work-secret")
+                new WorkId("work-secret"),
+                "Secret Edition"
             );
             self::fail("Member was allowed to manage the catalog.");
         } catch (AuthorizationException $exception) {
@@ -637,7 +658,8 @@ final class AddLibraryItemServiceTest extends TestCase
                 new LibraryId("library-a"),
                 new ItemId("item-b"),
                 new EditionId("edition-b"),
-                new WorkId("missing-work")
+                new WorkId("missing-work"),
+                "Missing Work Edition"
             );
             self::fail("Missing Work was accepted.");
         } catch (ValidationException $exception) {
@@ -668,6 +690,7 @@ final class AddLibraryItemServiceTest extends TestCase
                     new ItemId("item-new"),
                     new EditionId("edition-new"),
                     new WorkId("work-existing"),
+                    "New Edition",
                     $this->initialization()
                 );
             } else {
