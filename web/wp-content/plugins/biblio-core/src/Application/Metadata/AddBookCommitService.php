@@ -54,7 +54,14 @@ final readonly class AddBookCommitService
         $local = $request->identifier() === null
             ? null
             : $this->localEditions->resolveInput($request->identifier());
-        if ($local?->type() === LocalEditionResolutionType::LocalAmbiguous) {
+        $selectedExistingEdition = $this->selectedExistingEdition(
+            $request,
+            $local
+        );
+        if (
+            $local?->type() === LocalEditionResolutionType::LocalAmbiguous
+            && $selectedExistingEdition === null
+        ) {
             throw new AmbiguousLocalEdition();
         }
 
@@ -92,15 +99,32 @@ final readonly class AddBookCommitService
         $itemId = $this->ids->nextItemId();
         $newWorkId = $this->ids->nextWorkId();
         $newEditionId = $this->ids->nextEditionId();
-        $existingEdition = $local?->type()
-            === LocalEditionResolutionType::LocalExact;
+        $existingEdition = $selectedExistingEdition
+            ?? ($local?->type() === LocalEditionResolutionType::LocalExact
+                ? $local->requireEdition()
+                : null);
 
-        if ($existingEdition) {
+        if ($existingEdition !== null) {
             $item = $this->items->addForExistingEdition(
                 $libraryId,
                 $itemId,
-                $local->requireEdition()->id(),
+                $existingEdition->id(),
                 $request->classification(),
+                inventoryNumber: $request->inventoryNumber(),
+                locationId: $request->locationId(),
+                participant: $participant
+            );
+        } elseif ($request->selection()->workId() !== null) {
+            $title = $this->effectiveTitle($request, $candidate);
+            $item = $this->items->addWithNewEditionForExistingWork(
+                $libraryId,
+                $itemId,
+                $newEditionId,
+                $request->selection()->workId(),
+                $title,
+                $request->classification(),
+                isbnMetadata: $local?->identity()->metadata()
+                    ?? EditionIsbnMetadata::withoutIsbn(),
                 inventoryNumber: $request->inventoryNumber(),
                 locationId: $request->locationId(),
                 participant: $participant
@@ -124,14 +148,34 @@ final readonly class AddBookCommitService
 
         $edition = $this->requireEdition($item->editionId());
         $work = $this->requireWork($edition);
-        $raceReusedEdition = !$existingEdition
+        $raceReusedEdition = $existingEdition === null
             && !$edition->id()->equals($newEditionId);
 
         return new AddBookCommitResult(
             $work,
             $edition,
             $item,
-            $existingEdition || $raceReusedEdition
+            $existingEdition !== null || $raceReusedEdition
+        );
+    }
+
+    private function selectedExistingEdition(
+        AddBookCommitRequest $request,
+        ?LocalEditionResolution $local
+    ): ?Edition {
+        $selectedId = $request->selection()->editionId();
+        if ($selectedId === null) {
+            return null;
+        }
+
+        foreach ($local?->editions() ?? [] as $edition) {
+            if ($edition->id()->equals($selectedId)) {
+                return $edition;
+            }
+        }
+
+        throw new ValidationException(
+            "Selected Edition is not available for this Add Book request."
         );
     }
 
@@ -142,7 +186,7 @@ final readonly class AddBookCommitService
         \DateTimeImmutable $at
     ): ?MetadataCandidate {
         $selection = $request->selection();
-        if ($selection->type() === AddBookSelectionType::Manual) {
+        if ($selection->type() !== AddBookSelectionType::Candidate) {
             return null;
         }
 

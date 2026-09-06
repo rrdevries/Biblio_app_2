@@ -22,6 +22,7 @@ final readonly class AddBookMetadataLookupService
         private LibraryContextQueryService $libraryContexts,
         private LocalEditionResolver $localEditions,
         private WorkRepository $works,
+        private AddBookExistingItemRepository $existingItems,
         private FirstSufficientMetadataLookupService $metadata,
         private AddBookMetadataReviewPolicy $reviewPolicy,
         private AuthenticatedUser $authenticatedUser,
@@ -79,13 +80,23 @@ final readonly class AddBookMetadataLookupService
             );
         }
 
+        $localEditions = $local->editions();
+        $existingItems = $this->existingItems->forEditionsInLibrary(
+            $libraryId,
+            array_map(
+                static fn (Edition $edition): \Biblio\Core\Catalog\EditionId =>
+                    $edition->id(),
+                $localEditions
+            )
+        );
         $matches = array_map(
             fn (Edition $edition): AddBookExistingEdition =>
                 new AddBookExistingEdition(
                     $this->requireWork($edition),
-                    $edition
+                    $edition,
+                    $existingItems[$edition->id()->value()] ?? []
                 ),
-            $local->editions()
+            $localEditions
         );
 
         return AddBookMetadataLookupResult::local(

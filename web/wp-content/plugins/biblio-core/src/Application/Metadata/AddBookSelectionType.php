@@ -8,4 +8,5 @@ enum AddBookSelectionType: string
 {
     case Manual = "manual";
     case Candidate = "candidate";
+    case ExistingEdition = "existing_edition";
 }

@@ -26,11 +26,14 @@ final readonly class AddBookCommitRequest
             throw new InvalidArgumentException("Invalid Add Book identifier.");
         }
         if (
-            $selection->type() === AddBookSelectionType::Candidate
+            in_array($selection->type(), [
+                AddBookSelectionType::Candidate,
+                AddBookSelectionType::ExistingEdition,
+            ], true)
             && $identifier === null
         ) {
             throw new InvalidArgumentException(
-                "A reviewed candidate requires an ISBN identifier."
+                "The Add Book selection requires an ISBN identifier."
             );
         }
         if (
