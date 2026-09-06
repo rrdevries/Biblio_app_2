@@ -2429,3 +2429,8 @@ MH-B5B is accepted when:
 - tests cover these boundaries, including authorization/context rebinding,
   expiry, no-refetch commit behavior, existing-Edition difference retention,
   central-metadata non-overwrite and commit consistency.
+
+Status: **GO / CLOSED**. Schema 1017 migration/retry checks, focused service,
+REST, snapshot, evidence, rollback and same-ISBN concurrency proofs, all Core
+unit/integration regressions and the complete repository gate passed. See
+`docs/47-metadata-hub-mh-b5b-add-book-commit-exit-evidence.md`.

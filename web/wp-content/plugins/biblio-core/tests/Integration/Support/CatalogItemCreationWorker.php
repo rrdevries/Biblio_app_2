@@ -3,11 +3,11 @@
 declare(strict_types=1);
 
 use Biblio\Core\Catalog\CatalogRecordAlreadyExists;
+use Biblio\Core\Application\Metadata\{AddBookCommitRequest,AddBookCommitSelection,AddBookObservedMetadata,MetadataFieldValue};
 use Biblio\Core\Application\Catalog\Classification\LibraryCatalogContextInitialization;
 use Biblio\Core\Catalog\Classification\ClassificationSeedKey;
 use Biblio\Core\Catalog\Classification\LibraryCatalogSelection;
 use Biblio\Core\Catalog\EditionId;
-use Biblio\Core\Catalog\IsbnCanonicalizer;
 use Biblio\Core\Catalog\ItemId;
 use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Infrastructure\WordPress\ProductionComposition;
@@ -70,20 +70,23 @@ try {
         throw new RuntimeException("Classification seed is missing.");
     }
 
-    $isbnMetadata = null;
+    $application = (new ProductionComposition($wpdb))->application();
     if ($isbnInput !== null) {
-        $parsed = (new IsbnCanonicalizer())->parse($isbnInput);
-        $identity = $parsed->identity();
-        if ($identity === null) {
-            throw new RuntimeException("Worker ISBN input is invalid.");
-        }
-        $isbnMetadata = $identity->metadata();
-    }
-
-    $item = (new ProductionComposition($wpdb))
-        ->application()
-        ->libraryItemCreation()
-        ->addWithNewWorkAndEdition(
+        $item = $application->addBookCommit()->commit(
+            $libraryId,
+            new AddBookCommitRequest(
+                $isbnInput,
+                AddBookCommitSelection::manual(),
+                new AddBookObservedMetadata([
+                    "title" => new MetadataFieldValue("Concurrent Work"),
+                ]),
+                new LibraryCatalogContextInitialization(
+                    new LibraryCatalogSelection($bookType->id())
+                )
+            )
+        )->item();
+    } else {
+        $item = $application->libraryItemCreation()->addWithNewWorkAndEdition(
             $libraryId,
             new ItemId($itemValue),
             new WorkId($workValue),
@@ -92,8 +95,9 @@ try {
             new LibraryCatalogContextInitialization(
                 new LibraryCatalogSelection($bookType->id())
             ),
-            $isbnMetadata
+            null
         );
+    }
     fwrite(STDOUT, json_encode([
         "status" => "created",
         "itemId" => $item->id()->value(),

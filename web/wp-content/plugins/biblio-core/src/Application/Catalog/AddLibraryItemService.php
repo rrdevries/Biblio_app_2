@@ -21,6 +21,8 @@ use Biblio\Core\Catalog\EditionIdentifierClaimRepository;
 use Biblio\Core\Catalog\EditionIsbnMetadata;
 use Biblio\Core\Catalog\Item;
 use Biblio\Core\Catalog\ItemId;
+use Biblio\Core\Catalog\InventoryNumber;
+use Biblio\Core\Catalog\LocationId;
 use Biblio\Core\Catalog\Work;
 use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Catalog\WritableEditionRepository;
@@ -32,7 +34,7 @@ use Biblio\Core\Identity\UserId;
 use Biblio\Core\Library\LibraryContext;
 use Biblio\Core\Library\LibraryId;
 
-final readonly class AddLibraryItemService
+final readonly class AddLibraryItemService implements AddLibraryItemCommitter
 {
     public function __construct(
         private AuthenticatedUser $authenticatedUser,
@@ -54,7 +56,10 @@ final readonly class AddLibraryItemService
         LibraryId $libraryId,
         ItemId $itemId,
         EditionId $editionId,
-        ?LibraryCatalogContextInitialization $classification = null
+        ?LibraryCatalogContextInitialization $classification = null,
+        ?InventoryNumber $inventoryNumber = null,
+        ?LocationId $locationId = null,
+        ?AddLibraryItemTransactionParticipant $participant = null
     ): Item {
         $context = $this->authorize($libraryId);
         $actorId = $context->userId();
@@ -74,7 +79,13 @@ final readonly class AddLibraryItemService
             $libraryId,
             $work->id()
         ) !== null;
-        $item = Item::active($itemId, $context->libraryId(), $editionId);
+        $item = Item::active(
+            $itemId,
+            $context->libraryId(),
+            $editionId,
+            $inventoryNumber,
+            $locationId
+        );
 
         return $this->transactionManager->run(function () use (
             $actorId,
@@ -82,7 +93,9 @@ final readonly class AddLibraryItemService
             $work,
             $classification,
             $contextExists,
-            $item
+            $item,
+            $edition,
+            $participant
         ): Item {
             $initialization = $this->initializeContextWhenMissing(
                 $libraryId,
@@ -91,6 +104,7 @@ final readonly class AddLibraryItemService
                 $contextExists
             );
             $this->itemRepository->add($item);
+            $participant?->apply($work, $edition, $item, true);
             $this->appendContextCreatedEvent(
                 $actorId,
                 $libraryId,
@@ -109,7 +123,10 @@ final readonly class AddLibraryItemService
         WorkId $workId,
         string $editionTitle,
         ?LibraryCatalogContextInitialization $classification = null,
-        ?EditionIsbnMetadata $isbnMetadata = null
+        ?EditionIsbnMetadata $isbnMetadata = null,
+        ?InventoryNumber $inventoryNumber = null,
+        ?LocationId $locationId = null,
+        ?AddLibraryItemTransactionParticipant $participant = null
     ): Item {
         $context = $this->authorize($libraryId);
         $actorId = $context->userId();
@@ -121,7 +138,10 @@ final readonly class AddLibraryItemService
                     $libraryId,
                     $itemId,
                     $resolved->requireEdition()->id(),
-                    $classification
+                    $classification,
+                    $inventoryNumber,
+                    $locationId,
+                    $participant
                 );
             }
             if ($resolved->type() === LocalEditionResolutionType::LocalAmbiguous) {
@@ -144,7 +164,13 @@ final readonly class AddLibraryItemService
             $editionTitle,
             $identity?->metadata() ?? $isbnMetadata ?? EditionIsbnMetadata::unknown()
         );
-        $item = Item::active($itemId, $context->libraryId(), $editionId);
+        $item = Item::active(
+            $itemId,
+            $context->libraryId(),
+            $editionId,
+            $inventoryNumber,
+            $locationId
+        );
 
         try {
             return $this->transactionManager->run(function () use (
@@ -155,7 +181,8 @@ final readonly class AddLibraryItemService
                 $contextExists,
                 $edition,
                 $item,
-                $identity
+                $identity,
+                $participant
             ): Item {
                 $this->editionRepository->add($edition);
                 if ($identity !== null) {
@@ -168,6 +195,7 @@ final readonly class AddLibraryItemService
                     $contextExists
                 );
                 $this->itemRepository->add($item);
+                $participant?->apply($work, $edition, $item, false);
                 $this->appendContextCreatedEvent(
                     $actorId,
                     $libraryId,
@@ -182,7 +210,10 @@ final readonly class AddLibraryItemService
                 $libraryId,
                 $itemId,
                 $identity,
-                $classification
+                $classification,
+                $inventoryNumber,
+                $locationId,
+                $participant
             );
         }
     }
@@ -194,7 +225,10 @@ final readonly class AddLibraryItemService
         string $editionTitle,
         EditionId $editionId,
         ?LibraryCatalogContextInitialization $classification = null,
-        ?EditionIsbnMetadata $isbnMetadata = null
+        ?EditionIsbnMetadata $isbnMetadata = null,
+        ?InventoryNumber $inventoryNumber = null,
+        ?LocationId $locationId = null,
+        ?AddLibraryItemTransactionParticipant $participant = null
     ): Item {
         $context = $this->authorize($libraryId);
         $actorId = $context->userId();
@@ -206,7 +240,10 @@ final readonly class AddLibraryItemService
                     $libraryId,
                     $itemId,
                     $resolved->requireEdition()->id(),
-                    $classification
+                    $classification,
+                    $inventoryNumber,
+                    $locationId,
+                    $participant
                 );
             }
             if ($resolved->type() === LocalEditionResolutionType::LocalAmbiguous) {
@@ -221,7 +258,13 @@ final readonly class AddLibraryItemService
             $editionTitle,
             $identity?->metadata() ?? $isbnMetadata ?? EditionIsbnMetadata::unknown()
         );
-        $item = Item::active($itemId, $context->libraryId(), $editionId);
+        $item = Item::active(
+            $itemId,
+            $context->libraryId(),
+            $editionId,
+            $inventoryNumber,
+            $locationId
+        );
         $contextExists = $this->catalogContexts->find(
             $libraryId,
             $workId
@@ -236,7 +279,8 @@ final readonly class AddLibraryItemService
                 $work,
                 $edition,
                 $item,
-                $identity
+                $identity,
+                $participant
             ): Item {
                 $this->workRepository->add($work);
                 $this->editionRepository->add($edition);
@@ -250,6 +294,7 @@ final readonly class AddLibraryItemService
                     $contextExists
                 );
                 $this->itemRepository->add($item);
+                $participant?->apply($work, $edition, $item, false);
                 $this->appendContextCreatedEvent(
                     $actorId,
                     $libraryId,
@@ -264,7 +309,10 @@ final readonly class AddLibraryItemService
                 $libraryId,
                 $itemId,
                 $identity,
-                $classification
+                $classification,
+                $inventoryNumber,
+                $locationId,
+                $participant
             );
         }
     }
@@ -303,7 +351,10 @@ final readonly class AddLibraryItemService
         LibraryId $libraryId,
         ItemId $itemId,
         ?CanonicalIsbnIdentity $identity,
-        ?LibraryCatalogContextInitialization $classification
+        ?LibraryCatalogContextInitialization $classification,
+        ?InventoryNumber $inventoryNumber,
+        ?LocationId $locationId,
+        ?AddLibraryItemTransactionParticipant $participant
     ): Item {
         if ($identity === null) {
             throw new ValidationException(
@@ -320,7 +371,10 @@ final readonly class AddLibraryItemService
             $libraryId,
             $itemId,
             $resolved->requireEdition()->id(),
-            $classification
+            $classification,
+            $inventoryNumber,
+            $locationId,
+            $participant
         );
     }
 

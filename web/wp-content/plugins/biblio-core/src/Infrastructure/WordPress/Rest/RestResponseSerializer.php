@@ -21,7 +21,7 @@ use Biblio\Core\Application\Notes\Read\PrivateNoteViewPage;
 use Biblio\Core\Application\NextReading\{NextReadingEntryView,NextReadingListView,NextReadingRemoval,PreferredReadingSourceState,PreferredReadingSourceView};
 use Biblio\Core\Application\NextReading\Read\{NextReadingSourceOptionView,NextReadingWorkPage,NextReadingWorkView};
 use Biblio\Core\Application\Catalog\LocalEditionResolutionType;
-use Biblio\Core\Application\Metadata\{AddBookExistingEdition,AddBookMetadataLookupResult,ClassifiedMetadataCandidate,MetadataFieldBinding,MetadataLookupStatus};
+use Biblio\Core\Application\Metadata\{AddBookCommitResult,AddBookExistingEdition,AddBookMetadataLookupResult,ClassifiedMetadataCandidate,MetadataCandidateId,MetadataFieldBinding,MetadataLookupStatus};
 use Biblio\Core\Application\Reading\History\ReadingHistoryEntry;
 use Biblio\Core\Application\Reading\History\ReadingHistoryPage;
 use Biblio\Core\Catalog\WorkId;
@@ -104,6 +104,7 @@ final readonly class RestResponseSerializer
                 "isbn_10" => $result->identifier()->isbn10()?->value(),
                 "isbn_13" => $result->identifier()->isbn13()->value(),
             ],
+            "lookup_id" => $result->lookupId()?->value(),
             "local_matches" => array_map(
                 $this->addBookExistingEdition(...),
                 $result->localMatches()
@@ -143,11 +144,8 @@ final readonly class RestResponseSerializer
         $workLink = $candidate->workLink();
 
         return [
-            "candidate_id" => hash("sha256", implode("\0", [
-                $candidate->providerKey(),
-                $candidate->providerRecordId(),
-                $candidate->returnedIsbn()->isbn13()->value(),
-            ])),
+            "candidate_id" => MetadataCandidateId::fromCandidate($candidate)
+                ->value(),
             "source" => [
                 "provider_key" => $candidate->providerKey(),
                 "retrieved_at" => $candidate->retrievedAt()
@@ -175,6 +173,19 @@ final readonly class RestResponseSerializer
                 : [
                     "relation" => $workLink->relation()->value,
                 ],
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    public function addBookCommit(AddBookCommitResult $result): array
+    {
+        return [
+            "item_id" => $result->item()->id()->value(),
+            "edition_id" => $result->edition()->id()->value(),
+            "work_id" => $result->work()->id()->value(),
+            "edition_title" => $result->edition()->title(),
+            "work_title_status" => $result->work()->titleStatus()->value,
+            "existing_edition" => $result->existingEdition(),
         ];
     }
 

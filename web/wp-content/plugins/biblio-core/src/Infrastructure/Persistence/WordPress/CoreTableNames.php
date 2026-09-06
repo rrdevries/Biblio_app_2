@@ -51,6 +51,9 @@ final readonly class CoreTableNames
     private string $metadataFieldStates;
     private string $metadataFieldValues;
     private string $metadataFieldEvidence;
+    private string $metadataLookupSnapshots;
+    private string $metadataLookupCandidates;
+    private string $metadataUserObservations;
 
     public function __construct(string $prefix)
     {
@@ -103,8 +106,11 @@ final readonly class CoreTableNames
         $this->metadataFieldStates = $prefix . "biblio_metadata_field_states";
         $this->metadataFieldValues = $prefix . "biblio_metadata_field_values";
         $this->metadataFieldEvidence = $prefix . "biblio_metadata_field_evidence";
+        $this->metadataLookupSnapshots = $prefix . "biblio_metadata_lookup_snapshots";
+        $this->metadataLookupCandidates = $prefix . "biblio_metadata_lookup_candidates";
+        $this->metadataUserObservations = $prefix . "biblio_metadata_user_observations";
 
-        foreach ($this->schema1016() as $tableName) {
+        foreach ($this->schema1017() as $tableName) {
             $this->assertSafe($tableName);
         }
         $this->assertSafe($this->nextReadingInsertTrigger);
@@ -418,6 +424,37 @@ final readonly class CoreTableNames
     public function schema1016(): array
     {
         return $this->schema1015();
+    }
+
+    public function metadataLookupSnapshots(): string
+    {
+        return $this->metadataLookupSnapshots;
+    }
+
+    public function metadataLookupCandidates(): string
+    {
+        return $this->metadataLookupCandidates;
+    }
+
+    public function metadataUserObservations(): string
+    {
+        return $this->metadataUserObservations;
+    }
+
+    /** @return list<string> */
+    public function schema1017Additions(): array
+    {
+        return [
+            $this->metadataLookupSnapshots,
+            $this->metadataLookupCandidates,
+            $this->metadataUserObservations,
+        ];
+    }
+
+    /** @return list<string> */
+    public function schema1017(): array
+    {
+        return [...$this->schema1016(), ...$this->schema1017Additions()];
     }
 
     private function assertSafe(string $tableName): void

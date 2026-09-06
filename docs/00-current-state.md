@@ -2049,11 +2049,11 @@ deferred. The canonical decision is
 
 ### D-MHB5-01 — Add Book and metadata integration
 
-Status: **MH-B5A IMPLEMENTED / MH-B5B NOT IMPLEMENTED**
+Status: **MH-B5A IMPLEMENTED / MH-B5B GO / CLOSED**
 
 ADR-014 splits MH-B5 into MH-B5A, an authorized local-first metadata
 lookup/review contract without catalog mutation, and MH-B5B, the subsequent
-transactional Add Book commit integration. B5A must be GO before B5B starts.
+transactional Add Book commit integration. B5A closed before B5B started.
 The decision fixes local-first ISBN reuse, explicit candidate selection,
 non-blocking manual/retry paths, the distinction between Add Book review and
 Librarian confirmation, user-observed Edition evidence, narrow provider-to-
@@ -2085,10 +2085,10 @@ the optional `GOOGLE_BOOKS_API_KEY` constant. Missing or invalid configuration
 degrades to the controlled provider-failure/manual path and does not make Core
 unavailable.
 
-Schema remains `1016`. MH-B5A adds no Work, Edition, Item, confirmation,
-provenance or other catalog mutation; no UI, queue, provider fusion or
-collector persistence is implemented. MH-B5B remains separate. Canonical
-decision:
+MH-B5A itself added no Work, Edition, Item, confirmation, provenance or other
+catalog mutation and left schema at `1016`. MH-B5B now supplies the separately
+authorized write operation without adding UI, a queue, provider fusion or
+collector-field persistence. Canonical decision:
 `docs/decisions/ADR-014-mh-b5-add-book-metadata-integration.md`.
 
 For MH-B5B, directly physical-book-checked data is first-class
@@ -2107,6 +2107,23 @@ actor and Library Context and referenced client-side only through opaque
 local-first again; the identifiers are not authorization proof. It reconstructs
 the reviewed candidate from a still-valid snapshot and does not need a provider
 refetch, so an outage cannot block commit. An expired snapshot requires a new
-lookup/review rather than silent refetch. The B5B catalog mutation and required
-evidence retention must be one consistent commit; storage, TTL and transaction
-mechanics remain unimplemented technical choices.
+lookup/review rather than silent refetch.
+
+MH-B5B now exposes `POST /biblio/v1/libraries/{library_id}/items`. The strict
+request selects `manual` or a reviewed opaque `lookup_id` / `candidate_id`,
+contains allowlisted physical-book observations, the existing required CAT-T1
+classification initialization and only already-supported Item inventory/location
+input. Core reauthorizes, re-resolves canonical ISBN local-first and then either
+reuses the current Edition or creates one provisional Work, concrete Edition and
+Library-owned Item. No Work-match heuristic is introduced.
+
+Schema `1017` adds temporary actor+Library-scoped lookup/candidate snapshots
+with a 30-minute TTL and first-class user-observed evidence linked to actor,
+Library, Item, Edition, field, exact JSON value, observation time and physical
+Add Book source. Reviewed provider provenance and MH-B4 proposals remain
+separate. AddLibraryItemService hosts the evidence participant inside its
+existing transaction, including canonical-ISBN race recovery, so catalog,
+classification, audit and required evidence commit or roll back together.
+Existing central Work/Edition data is never overwritten by B5B and no operation
+becomes `librarian_confirmed`. Detailed evidence:
+`docs/47-metadata-hub-mh-b5b-add-book-commit-exit-evidence.md`.

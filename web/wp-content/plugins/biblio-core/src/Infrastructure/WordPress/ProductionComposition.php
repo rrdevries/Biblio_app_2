@@ -37,7 +37,7 @@ use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
 use Biblio\Core\Application\Library\GetAccessibleLibraryItemService;
 use Biblio\Core\Application\Library\LibraryAccessService;
 use Biblio\Core\Application\Library\LibraryContextQueryService;
-use Biblio\Core\Application\Metadata\{AddBookMetadataLookupService,AddBookMetadataReviewPolicy,CandidateClassifier,FirstSufficientMetadataLookupService};
+use Biblio\Core\Application\Metadata\{AddBookCommitService,AddBookMetadataLookupService,AddBookMetadataReviewPolicy,CandidateClassifier,FirstSufficientMetadataLookupService};
 use Biblio\Core\Application\Notes\CorrectPrivateNoteReadingRoundService;
 use Biblio\Core\Application\Notes\CreatePrivateNoteService;
 use Biblio\Core\Application\Notes\DeletePrivateNoteService;
@@ -87,6 +87,10 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbClassificationSeedEvolu
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbExternalLoanRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbItemRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbItemArchiveRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbEditionMetadataProvenanceRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbMetadataFieldReviewRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbMetadataLookupSnapshotRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbUserObservedMetadataEvidenceRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbCollectionRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLocationRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMembershipRepository;
@@ -164,6 +168,23 @@ final class ProductionComposition
             $database,
             $tableNames
         );
+        $metadataSnapshots = new WpdbMetadataLookupSnapshotRepository(
+            $database,
+            $tableNames
+        );
+        $metadataFieldReviews = new WpdbMetadataFieldReviewRepository(
+            $database,
+            $tableNames
+        );
+        $metadataObservations = new WpdbUserObservedMetadataEvidenceRepository(
+            $database,
+            $tableNames
+        );
+        $editionMetadataProvenance = new WpdbEditionMetadataProvenanceRepository(
+            $database,
+            $tableNames
+        );
+        $metadataClock = new SystemMetadataClock();
         $itemRepository = new WpdbItemRepository($database, $tableNames);
         $itemArchiveRepository = new WpdbItemArchiveRepository($database, $tableNames);
         $collectionRepository = new WpdbCollectionRepository($database, $tableNames);
@@ -651,7 +672,26 @@ final class ProductionComposition
             $localEditionResolver,
             $workRepository,
             $metadataLookup,
-            new AddBookMetadataReviewPolicy()
+            new AddBookMetadataReviewPolicy(),
+            $authenticatedUser,
+            $metadataSnapshots,
+            new OpaqueMetadataLookupIdGenerator(),
+            $transactionManager,
+            $metadataClock
+        );
+        $addBookCommit = new AddBookCommitService(
+            $authenticatedUser,
+            $libraryContexts,
+            $localEditionResolver,
+            $metadataSnapshots,
+            $libraryItemCreation,
+            new OpaqueAddBookRecordIdGenerator(),
+            $metadataClock,
+            $editionRepository,
+            $workRepository,
+            $metadataFieldReviews,
+            $metadataObservations,
+            $editionMetadataProvenance
         );
 
         $this->application = new CoreApplication(
@@ -667,6 +707,7 @@ final class ProductionComposition
             $libraryCollections,
             $libraryClassifications,
             $addBookMetadataLookup,
+            $addBookCommit,
             $libraryItemCreation,
             $libraryItemArchiveManagement,
             $libraryCollectionManagement,

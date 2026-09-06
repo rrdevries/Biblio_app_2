@@ -93,6 +93,7 @@ final readonly class RestErrorMapper
             FailureReason::PublicationAlreadyActive,
             FailureReason::PublicationStale,
             FailureReason::AssessmentIdCollisionExhausted,
+            FailureReason::MetadataLookupSnapshotUnavailable,
         ], true)) {
             return $this->error(
                 "biblio_{$reason->value}",

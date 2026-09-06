@@ -123,7 +123,7 @@ final class CatalogCreationConcurrencyTest extends PersistenceIntegrationTestCas
         }
     }
 
-    public function testConcurrentEquivalentIsbnCreationReusesOneEdition(): void
+    public function testConcurrentB5bEquivalentIsbnCommitsReuseOneEdition(): void
     {
         $wordpressUserId = $this->createWordPressUser("catalog-isbn-race-owner");
         $libraryId = new LibraryId("library-isbn-race");
@@ -175,6 +175,17 @@ final class CatalogCreationConcurrencyTest extends PersistenceIntegrationTestCas
                 1,
                 (int) $this->database->get_var(
                     "SELECT COUNT(DISTINCT edition_id) FROM `{$this->tableNames->items()}`"
+                )
+            );
+            self::assertSame(
+                4,
+                $this->tableCount($this->tableNames->metadataUserObservations())
+            );
+            self::assertSame(
+                2,
+                (int) $this->database->get_var(
+                    "SELECT COUNT(*) FROM `{$this->tableNames->metadataUserObservations()}` "
+                        . "WHERE field_key='isbn'"
                 )
             );
         } finally {

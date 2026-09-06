@@ -69,6 +69,9 @@ abstract class PersistenceIntegrationTestCase extends TestCase
         $metadataFieldEvidence = $this->tableNames->metadataFieldEvidence();
         $metadataFieldValues = $this->tableNames->metadataFieldValues();
         $metadataFieldStates = $this->tableNames->metadataFieldStates();
+        $metadataLookupCandidates = $this->tableNames->metadataLookupCandidates();
+        $metadataLookupSnapshots = $this->tableNames->metadataLookupSnapshots();
+        $metadataUserObservations = $this->tableNames->metadataUserObservations();
         $locations = $this->tableNames->locations();
         $editions = $this->tableNames->editions();
         $works = $this->tableNames->works();
@@ -124,6 +127,9 @@ abstract class PersistenceIntegrationTestCase extends TestCase
         if ($this->tableExists($collections)) {
             $this->database->query("DELETE FROM `{$collections}`");
         }
+        if ($this->tableExists($metadataUserObservations)) {
+            $this->database->query("DELETE FROM `{$metadataUserObservations}`");
+        }
         $this->database->query("DELETE FROM `{$items}`");
         if ($this->tableExists($metadataProvenance)) {
             $this->database->query("DELETE FROM `{$metadataProvenance}`");
@@ -136,6 +142,12 @@ abstract class PersistenceIntegrationTestCase extends TestCase
         }
         if ($this->tableExists($metadataFieldStates)) {
             $this->database->query("DELETE FROM `{$metadataFieldStates}`");
+        }
+        if ($this->tableExists($metadataLookupCandidates)) {
+            $this->database->query("DELETE FROM `{$metadataLookupCandidates}`");
+        }
+        if ($this->tableExists($metadataLookupSnapshots)) {
+            $this->database->query("DELETE FROM `{$metadataLookupSnapshots}`");
         }
         if ($this->tableExists($identifierClaims)) {
             $this->database->query("DELETE FROM `{$identifierClaims}`");

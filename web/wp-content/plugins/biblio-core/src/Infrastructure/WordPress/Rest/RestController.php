@@ -49,9 +49,16 @@ final class RestController
             self::NAMESPACE,
             "/libraries/(?P<library_id>[^/]+)/items",
             [
-                "methods" => WP_REST_Server::READABLE,
-                "callback" => [$this, "overview"],
-                "permission_callback" => [$this, "authenticated"],
+                [
+                    "methods" => WP_REST_Server::READABLE,
+                    "callback" => [$this, "overview"],
+                    "permission_callback" => [$this, "authenticated"],
+                ],
+                [
+                    "methods" => WP_REST_Server::CREATABLE,
+                    "callback" => [$this, "commitAddBook"],
+                    "permission_callback" => [$this, "authenticated"],
+                ],
             ]
         );
         register_rest_route(
@@ -276,6 +283,24 @@ final class RestController
 
             return $this->success(
                 $this->responses->addBookMetadataLookup($result)
+            );
+        });
+    }
+
+    public function commitAddBook(
+        WP_REST_Request $request
+    ): WP_REST_Response|WP_Error {
+        return $this->execute(function (
+            CoreApplication $application
+        ) use ($request): WP_REST_Response {
+            $result = $application->addBookCommit()->commit(
+                $this->requests->libraryId($request),
+                $this->requests->addBookCommit($request)
+            );
+
+            return $this->success(
+                $this->responses->addBookCommit($result),
+                201
             );
         });
     }

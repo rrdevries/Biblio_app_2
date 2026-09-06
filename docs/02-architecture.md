@@ -1235,9 +1235,9 @@ sources. The opaque cursor payload version remains stable although its title
 component now means Edition title. No REST shape, UI, Add Book, MH-B4 review
 binding, DATA-01 or provider behavior changes in this slice.
 
-## 32. MH-B5 authorized Add Book integration boundary
+## 32. MH-B5 authorized Add Book integration
 
-ADR-014 divides the next Metadata Hub integration into MH-B5A and MH-B5B.
+ADR-014 divides Metadata Hub integration into MH-B5A and MH-B5B.
 MH-B5A is the server-authorized, local-first lookup/review contract and has no
 catalog mutation. MH-B5B starts only after MH-B5A is GO and is the transactionally
 safe Add Book commit path: it reuses the local Edition or creates a provisional
@@ -1252,5 +1252,37 @@ remains evidence except for a future explicit binding allowlist. Existing
 Library Context, Core authorization, CAT-T1, ADR-011 field review, ADR-012
 provisional governance and ADR-013 collector boundaries remain mandatory.
 
-No REST shape, schema, UI detail, queue, provider fusion or implementation is
-added by this architecture decision.
+MH-B5B reuses the existing `POST /biblio/v1/libraries/{library_id}/items`
+surface and `AddLibraryItemService` transaction boundary. The application
+service reauthenticates, resolves current Library Context/capability, validates
+the strict request and reruns canonical ISBN local-first before writing. A
+reviewed candidate is reconstructed only from the earlier server snapshot by
+opaque IDs; commit never calls a provider. Manual and candidate paths share the
+same mutation service.
+
+Schema 1017 adds three narrowly scoped tables:
+
+- `metadata_lookup_snapshots` binds an opaque lookup to actor, Library,
+  canonical ISBN and a 30-minute expiry;
+- `metadata_lookup_candidates` stores the exact reviewed provider candidate as
+  bounded deterministic JSON with content hash and cascades with its snapshot;
+- `metadata_user_observations` retains physical Add Book evidence with actor,
+  Library, Item, Edition, field, exact JSON value/hash, time, source context and
+  correction-proposal marker.
+
+The lookup snapshot is a handoff artifact, never authorization. Expiry, actor
+or Library mismatch fails closed with a controlled conflict and no refetch.
+The Add Book evidence participant runs after Item persistence but inside the
+same catalog transaction. New Work/Edition/Item, classification context, ISBN
+claim, audit and all required evidence therefore commit or roll back together.
+The canonical ISBN uniqueness conflict is recovered only after rollback by
+re-resolving and adding the independent Item to the winning Edition, with the
+same evidence participant now treating that Edition as existing.
+
+Existing Edition reuse never mutates shared Work/Edition values. A differing
+physical observation is retained as distinct user-observed evidence and, for
+fields already supported by MH-B4, as a non-confirming proposal available to
+Biblio Librarian governance. Provider evidence/provenance and user-observed
+evidence stay distinct. No Biblio Librarian queue, UI, provider fusion,
+Expression layer, Work-match heuristic or D-COL-01 collector persistence is
+part of MH-B5B.

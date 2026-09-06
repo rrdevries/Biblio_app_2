@@ -46,6 +46,7 @@ final readonly class CoreSchemaHealthChecker
             1014 => $this->inspectTables($this->tableNames->schema1014(), true, 1014),
             1015 => $this->inspectTables($this->tableNames->schema1015(), true, 1015),
             1016 => $this->inspectTables($this->tableNames->schema1016(), true, 1016),
+            1017 => $this->inspectTables($this->tableNames->schema1017(), true, 1017),
             default => throw new CoreSchemaMigrationException(
                 "No explicit Biblio Core schema-health contract exists for "
                 . "schema version {$expectedVersion}."
@@ -185,6 +186,15 @@ final readonly class CoreSchemaHealthChecker
             $this->tableNames->schema1015Additions(),
             false,
             1015
+        );
+    }
+
+    public function inspectExistingSchema1017Additions(): CoreSchemaHealth
+    {
+        return $this->inspectTables(
+            $this->tableNames->schema1017Additions(),
+            false,
+            1017
         );
     }
 
@@ -863,6 +873,34 @@ final readonly class CoreSchemaHealthChecker
                 "queried_identifier_type" => $ascii("varchar(16)"),
                 "queried_identifier" => $ascii("varchar(13)"),
             ],
+            $this->tableNames->metadataLookupSnapshots() => [
+                "lookup_id" => $id,
+                "actor_user_id" => $id,
+                "library_id" => $id,
+                "canonical_isbn_13" => $ascii("char(13)"),
+                "created_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "expires_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+            ],
+            $this->tableNames->metadataLookupCandidates() => [
+                "lookup_id" => $id,
+                "candidate_id" => $ascii("char(64)"),
+                "candidate_json" => ["type" => "longtext", "nullable" => "NO"],
+                "candidate_hash" => $ascii("char(64)"),
+            ],
+            $this->tableNames->metadataUserObservations() => [
+                "observation_id" => $ascii("char(64)"),
+                "metadata_record_id" => $id,
+                "field_key" => $ascii("varchar(64)"),
+                "value_hash" => $ascii("char(64)"),
+                "value_json" => ["type" => "longtext", "nullable" => "NO"],
+                "edition_id" => $id,
+                "library_id" => $id,
+                "item_id" => $id,
+                "actor_user_id" => $id,
+                "observed_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "source_context" => $ascii("varchar(64)"),
+                "correction_proposal" => ["type" => "tinyint(3) unsigned", "nullable" => "NO"],
+            ],
             $this->tableNames->locations() => [
                 "library_id" => $id,
                 "location_id" => $id,
@@ -1276,6 +1314,18 @@ final readonly class CoreSchemaHealthChecker
                 "PRIMARY" => ["unique" => true, "columns" => ["evidence_id"]],
                 "metadata_field_evidence_by_value" => ["unique" => false, "columns" => ["metadata_record_id", "field_key", "value_hash", "first_retrieved_at", "evidence_id"]],
             ],
+            $this->tableNames->metadataLookupSnapshots() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["lookup_id"]],
+                "metadata_lookup_by_scope_expiry" => ["unique" => false, "columns" => ["actor_user_id", "library_id", "expires_at", "lookup_id"]],
+            ],
+            $this->tableNames->metadataLookupCandidates() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["lookup_id", "candidate_id"]],
+            ],
+            $this->tableNames->metadataUserObservations() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["observation_id"]],
+                "metadata_user_observations_by_edition" => ["unique" => false, "columns" => ["edition_id", "field_key", "observed_at", "observation_id"]],
+                "metadata_user_observations_by_scope" => ["unique" => false, "columns" => ["library_id", "item_id", "observed_at", "observation_id"]],
+            ],
             $this->tableNames->locations() => [
                 "PRIMARY" => [
                     "unique" => true,
@@ -1596,6 +1646,16 @@ final readonly class CoreSchemaHealthChecker
                     ["metadata_record_id", "field_key", "value_hash"]
                 ),
             ],
+            $this->tableNames->metadataLookupSnapshots() => [
+                $restrict(["library_id"], $this->tableNames->libraries(), ["library_id"]),
+            ],
+            $this->tableNames->metadataLookupCandidates() => [
+                $cascade(["lookup_id"], $this->tableNames->metadataLookupSnapshots(), ["lookup_id"]),
+            ],
+            $this->tableNames->metadataUserObservations() => [
+                $restrict(["edition_id"], $this->tableNames->editions(), ["edition_id"]),
+                $restrict(["library_id", "item_id"], $this->tableNames->items(), ["library_id", "item_id"]),
+            ],
             $this->tableNames->locations() => [
                 $restrict(["library_id"], $this->tableNames->libraries(), ["library_id"]),
             ],
@@ -1837,6 +1897,28 @@ final readonly class CoreSchemaHealthChecker
                 "observation_count >= 1",
                 "match_method = 'exact_isbn'",
                 "queried_identifier_type = 'isbn_10' AND queried_identifier REGEXP '^[0-9]{9}[0-9X]$' OR queried_identifier_type = 'isbn_13' AND queried_identifier REGEXP '^97[89][0-9]{10}$'",
+            ],
+            $this->tableNames->metadataLookupSnapshots() => [
+                "lookup_id REGEXP '^lookup-[0-9a-f]{32}$'",
+                "CHAR_LENGTH(TRIM(actor_user_id)) > 0",
+                "canonical_isbn_13 REGEXP '^97[89][0-9]{10}$'",
+                "expires_at > created_at",
+            ],
+            $this->tableNames->metadataLookupCandidates() => [
+                "candidate_id REGEXP '^[0-9a-f]{64}$'",
+                "JSON_VALID(candidate_json) AND CHAR_LENGTH(candidate_json) <= 32768",
+                "candidate_hash REGEXP '^[0-9a-f]{64}$'",
+                "CAST(candidate_hash AS CHAR CHARSET binary) = CAST(SHA2(candidate_json, 256) AS CHAR CHARSET binary)",
+            ],
+            $this->tableNames->metadataUserObservations() => [
+                "observation_id REGEXP '^[0-9a-f]{64}$'",
+                "field_key IN ('isbn', 'title', 'subtitle', 'contributors', 'languages', 'publishers', 'publication_date', 'edition_statement', 'format', 'page_count')",
+                "JSON_VALID(value_json)",
+                "value_hash REGEXP '^[0-9a-f]{64}$'",
+                "CAST(value_hash AS CHAR CHARSET binary) = CAST(SHA2(value_json, 256) AS CHAR CHARSET binary)",
+                "CHAR_LENGTH(TRIM(actor_user_id)) > 0",
+                "source_context = 'physical_copy_add_book'",
+                "correction_proposal IN (0, 1)",
             ],
             $this->tableNames->locations() => [
                 "CHAR_LENGTH(TRIM(display_name)) > 0",

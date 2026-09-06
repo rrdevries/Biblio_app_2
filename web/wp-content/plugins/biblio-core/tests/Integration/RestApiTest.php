@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace Biblio\Core\Tests\Integration;
 
 use Biblio\Core\Application\Notes\Read\PrivateNoteViewCursor;
-use Biblio\Core\Application\Metadata\{CandidateClassifier,FirstSufficientMetadataLookupService};
+use Biblio\Core\Application\Metadata\{CandidateClassifier,FirstSufficientMetadataLookupService,MetadataCandidate,MetadataCandidateId,MetadataLookupId,MetadataLookupSnapshot,MetadataMatchMethod};
+use Biblio\Core\Catalog\{CanonicalIsbnIdentity,Isbn13};
+use Biblio\Core\Identity\UserId;
 use Biblio\Core\Exception\AuthorizationException;
 use Biblio\Core\Exception\ValidationException;
 use Biblio\Core\Infrastructure\WordPress\ProductionComposition;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbMetadataLookupSnapshotRepository;
 use Biblio\Core\Infrastructure\Metadata\ConfigurationErrorMetadataProvider;
 use Biblio\Core\Infrastructure\WordPress\Rest\CatalogCursorCodec;
 use Biblio\Core\Infrastructure\WordPress\Rest\PrivateNoteCursorCodec;
@@ -158,6 +161,9 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/metadata-lookups"
         ]);
         self::assertSame(["POST"], $metadataLookupMethods);
+        self::assertSame(["GET", "POST"], $this->routeMethods($routes[
+            "/biblio/v1/libraries/(?P<library_id>[^/]+)/items"
+        ]));
 
         $noteCollectionMethods = $this->routeMethods(
             $routes[
@@ -415,6 +421,292 @@ final class RestApiTest extends PersistenceIntegrationTestCase
                 $body
             ));
             self::assertSame(400, $badRequest->get_status());
+        }
+    }
+
+    public function testAddBookCommitCreatesThenReusesEditionAndRetainsDifference(): void
+    {
+        $this->seedLibrary("library-commit", "Commit", $this->actorId, "owner");
+        $this->seedBookType("library-commit", "book-commit");
+
+        $first = $this->dispatchAsActor($this->addBookCommitRequest(
+            "library-commit",
+            [
+                "identifier" => "0-306-40615-2",
+                "selection" => ["type" => "manual"],
+                "observed_fields" => [
+                    "title" => "Concrete titel",
+                    "subtitle" => "Fysiek gecontroleerd",
+                ],
+                "classification" => [
+                    "book_type_id" => "book-commit",
+                    "genre_ids" => [],
+                    "subject_ids" => [],
+                ],
+                "item" => ["inventory_number" => "INV-1"],
+            ]
+        ));
+        $firstData = $this->successData($first);
+
+        self::assertSame(201, $first->get_status());
+        self::assertFalse($firstData["existing_edition"]);
+        self::assertSame("Concrete titel", $firstData["edition_title"]);
+        self::assertSame("provisional", $firstData["work_title_status"]);
+
+        $second = $this->dispatchAsActor($this->addBookCommitRequest(
+            "library-commit",
+            [
+                "identifier" => "9780306406157",
+                "selection" => ["type" => "manual"],
+                "observed_fields" => ["title" => "Afwijkende boektitel"],
+                "classification" => [
+                    "book_type_id" => "book-commit",
+                    "genre_ids" => [],
+                    "subject_ids" => [],
+                ],
+                "item" => ["inventory_number" => "INV-2"],
+            ]
+        ));
+        $secondData = $this->successData($second);
+
+        self::assertSame(201, $second->get_status());
+        self::assertTrue($secondData["existing_edition"]);
+        self::assertSame($firstData["edition_id"], $secondData["edition_id"]);
+        self::assertSame($firstData["work_id"], $secondData["work_id"]);
+        self::assertSame(1, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->editions()}`"
+        ));
+        self::assertSame(2, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->items()}`"
+        ));
+        self::assertSame("Concrete titel", $this->database->get_var(
+            "SELECT edition_title FROM `{$this->tableNames->editions()}`"
+        ));
+        self::assertSame(1, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->metadataUserObservations()}` "
+                . "WHERE correction_proposal=1"
+        ));
+        self::assertSame((string) $this->actorId, $this->database->get_var(
+            "SELECT actor_user_id FROM `{$this->tableNames->metadataUserObservations()}` "
+                . "WHERE correction_proposal=1"
+        ));
+
+        $this->seedLibrary(
+            "library-commit-view-only",
+            "Alleen bekijken",
+            $this->actorId,
+            "view_only"
+        );
+        $denied = $this->dispatchAsActor($this->addBookCommitRequest(
+            "library-commit-view-only",
+            [
+                "identifier" => "9780140328721",
+                "selection" => ["type" => "manual"],
+                "observed_fields" => ["title" => "Denied"],
+                "classification" => [
+                    "book_type_id" => "not-resolved",
+                    "genre_ids" => [],
+                    "subject_ids" => [],
+                ],
+                "item" => [],
+            ]
+        ));
+        self::assertSame(404, $denied->get_status());
+        self::assertSame(2, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->items()}`"
+        ));
+    }
+
+    public function testReviewedSnapshotCommitsWithoutProviderAndIsScopedAndExpiring(): void
+    {
+        $this->seedLibrary("library-snapshot", "Snapshot", $this->actorId, "owner");
+        $this->seedBookType("library-snapshot", "book-snapshot");
+        $identity = CanonicalIsbnIdentity::fromIsbn(new Isbn13("9780441172719"));
+        $candidate = new MetadataCandidate(
+            "open_library",
+            "record-reviewed",
+            new DateTimeImmutable("2026-09-06T10:00:00+00:00"),
+            MetadataMatchMethod::ExactIsbn,
+            $identity,
+            $identity,
+            "Dune",
+            null,
+            ["Frank Herbert"],
+            ["eng"],
+            ["Publisher"],
+            "1965",
+            412,
+            "Hardcover",
+            null
+        );
+        $lookupId = new MetadataLookupId(
+            "lookup-11111111111111111111111111111111"
+        );
+        $snapshots = new WpdbMetadataLookupSnapshotRepository(
+            $this->database,
+            $this->tableNames
+        );
+        $snapshots->save(new MetadataLookupSnapshot(
+            $lookupId,
+            new UserId((string) $this->actorId),
+            new \Biblio\Core\Library\LibraryId("library-snapshot"),
+            $identity,
+            new DateTimeImmutable("2026-09-06T10:00:00+00:00"),
+            new DateTimeImmutable("2030-09-06T10:30:00+00:00"),
+            [$candidate]
+        ));
+
+        $body = [
+            "identifier" => "9780441172719",
+            "selection" => [
+                "type" => "candidate",
+                "lookup_id" => $lookupId->value(),
+                "candidate_id" => MetadataCandidateId::fromCandidate($candidate)->value(),
+            ],
+            "observed_fields" => [],
+            "classification" => [
+                "book_type_id" => "book-snapshot",
+                "genre_ids" => [],
+                "subject_ids" => [],
+            ],
+            "item" => [],
+        ];
+        $response = $this->dispatchAsActor(
+            $this->addBookCommitRequest("library-snapshot", $body)
+        );
+
+        self::assertSame(201, $response->get_status());
+        self::assertSame("Dune", $this->successData($response)["edition_title"]);
+        self::assertSame(1, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->editionMetadataProvenance()}`"
+        ));
+        self::assertSame("accepted_unchanged", $this->database->get_var(
+            "SELECT confirmation_state FROM `{$this->tableNames->editionMetadataProvenance()}`"
+        ));
+        self::assertGreaterThan(0, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->metadataFieldEvidence()}`"
+        ));
+        self::assertSame(2, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->metadataFieldStates()}` "
+                . "WHERE metadata_record_id LIKE 'edition-evidence:%'"
+        ));
+
+        $expiredLookup = new MetadataLookupId(
+            "lookup-33333333333333333333333333333333"
+        );
+        $snapshots->save(new MetadataLookupSnapshot(
+            $expiredLookup,
+            new UserId((string) $this->actorId),
+            new \Biblio\Core\Library\LibraryId("library-snapshot"),
+            $identity,
+            new DateTimeImmutable("2020-09-06T10:00:00+00:00"),
+            new DateTimeImmutable("2020-09-06T10:30:00+00:00"),
+            [$candidate]
+        ));
+        $body["selection"]["lookup_id"] = $expiredLookup->value();
+        $expired = $this->dispatchAsActor(
+            $this->addBookCommitRequest("library-snapshot", $body)
+        );
+        self::assertSame(409, $expired->get_status());
+        self::assertSame(
+            "biblio_metadata_lookup_snapshot_unavailable",
+            $expired->get_data()["code"]
+        );
+
+        $otherActorLookup = new MetadataLookupId(
+            "lookup-44444444444444444444444444444444"
+        );
+        $snapshots->save(new MetadataLookupSnapshot(
+            $otherActorLookup,
+            new UserId((string) $this->otherId),
+            new \Biblio\Core\Library\LibraryId("library-snapshot"),
+            $identity,
+            new DateTimeImmutable("2026-09-06T10:00:00+00:00"),
+            new DateTimeImmutable("2030-09-06T10:30:00+00:00"),
+            [$candidate]
+        ));
+        $body["selection"]["lookup_id"] = $otherActorLookup->value();
+        self::assertSame(409, $this->dispatchAsActor(
+            $this->addBookCommitRequest("library-snapshot", $body)
+        )->get_status());
+
+        $this->seedLibrary(
+            "library-snapshot-other",
+            "Andere context",
+            $this->actorId,
+            "owner"
+        );
+        $otherLibraryLookup = new MetadataLookupId(
+            "lookup-55555555555555555555555555555555"
+        );
+        $snapshots->save(new MetadataLookupSnapshot(
+            $otherLibraryLookup,
+            new UserId((string) $this->actorId),
+            new \Biblio\Core\Library\LibraryId("library-snapshot-other"),
+            $identity,
+            new DateTimeImmutable("2026-09-06T10:00:00+00:00"),
+            new DateTimeImmutable("2030-09-06T10:30:00+00:00"),
+            [$candidate]
+        ));
+        $body["selection"]["lookup_id"] = $otherLibraryLookup->value();
+        self::assertSame(409, $this->dispatchAsActor(
+            $this->addBookCommitRequest("library-snapshot", $body)
+        )->get_status());
+
+        $body["selection"]["lookup_id"] = $lookupId->value();
+        $body["identifier"] = "9780140328721";
+        self::assertSame(409, $this->dispatchAsActor(
+            $this->addBookCommitRequest("library-snapshot", $body)
+        )->get_status()
+        );
+    }
+
+    public function testAddBookEvidenceFailureRollsBackEntireCatalogMutation(): void
+    {
+        $this->seedLibrary("library-rollback", "Rollback", $this->actorId, "owner");
+        $this->seedBookType("library-rollback", "book-rollback");
+        $trigger = $this->database->prefix . "biblio_mh_b5b_observation_fail";
+        $observations = $this->tableNames->metadataUserObservations();
+        self::assertNotFalse($this->database->query(
+            "CREATE TRIGGER `{$trigger}` BEFORE INSERT ON `{$observations}` "
+                . "FOR EACH ROW SIGNAL SQLSTATE '45000' "
+                . "SET MESSAGE_TEXT='forced MH-B5B evidence failure'"
+        ));
+
+        try {
+            $response = $this->dispatchAsActor($this->addBookCommitRequest(
+                "library-rollback",
+                [
+                    "identifier" => "9780306406157",
+                    "selection" => ["type" => "manual"],
+                    "observed_fields" => ["title" => "Rollback title"],
+                    "classification" => [
+                        "book_type_id" => "book-rollback",
+                        "genre_ids" => [],
+                        "subject_ids" => [],
+                    ],
+                    "item" => [],
+                ]
+            ));
+
+            self::assertSame(500, $response->get_status());
+            foreach ([
+                $this->tableNames->works(),
+                $this->tableNames->editions(),
+                $this->tableNames->items(),
+                $this->tableNames->editionIdentifierClaims(),
+                $this->tableNames->metadataFieldStates(),
+                $this->tableNames->metadataFieldValues(),
+                $this->tableNames->metadataUserObservations(),
+                $this->tableNames->libraryCatalogContexts(),
+                $this->tableNames->libraryActivityEvents(),
+            ] as $table) {
+                self::assertSame(0, (int) $this->database->get_var(
+                    "SELECT COUNT(*) FROM `{$table}`"
+                ), $table);
+            }
+        } finally {
+            $this->database->query("DROP TRIGGER IF EXISTS `{$trigger}`");
         }
     }
 
@@ -2606,6 +2898,20 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         return $request;
     }
 
+    /** @param array<string, mixed> $body */
+    private function addBookCommitRequest(
+        string $libraryId,
+        array $body
+    ): WP_REST_Request {
+        $request = new WP_REST_Request(
+            "POST",
+            "/biblio/v1/libraries/{$libraryId}/items"
+        );
+        $request->set_header("content-type", "application/json");
+        $request->set_body((string) wp_json_encode($body));
+        return $request;
+    }
+
     /** @return array<string, int> */
     private function addBookPersistenceCounts(): array
     {
@@ -2799,6 +3105,20 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             "use_access" => $access === "view_only" ? "view_only" : "direct",
             "additional_permissions" => "[]",
         ]);
+    }
+
+    private function seedBookType(string $libraryId, string $bookTypeId): void
+    {
+        self::assertSame(1, $this->database->insert(
+            $this->tableNames->libraryBookTypes(),
+            [
+                "library_id" => $libraryId,
+                "book_type_id" => $bookTypeId,
+                "display_name" => "Leesboek",
+                "normalized_name" => "leesboek",
+                "term_status" => "active",
+            ]
+        ));
     }
 
     private function seedItem(
