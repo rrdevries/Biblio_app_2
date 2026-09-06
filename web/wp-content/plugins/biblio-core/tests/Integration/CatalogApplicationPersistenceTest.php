@@ -125,7 +125,7 @@ final class CatalogApplicationPersistenceTest extends
             )
         );
         $work = new Work(new WorkId("work-existing"), "Existing Work");
-        $edition = new Edition(new EditionId("edition-existing"), $work->id());
+        $edition = new Edition(new EditionId("edition-existing"), $work->id(), "Existing Edition");
         $this->workRepository()->add($work);
         $this->editionRepository()->add($edition);
         $application = (new ProductionComposition($this->database))
@@ -225,6 +225,7 @@ final class CatalogApplicationPersistenceTest extends
                     new ItemId("item-a"),
                     new EditionId("edition-shared"),
                     $existingWork->id(),
+                    "Shared Edition",
                     $this->initialization($libraryA)
                 );
             $itemB = $application->libraryItemCreation()
@@ -296,7 +297,8 @@ final class CatalogApplicationPersistenceTest extends
         );
         $existingEdition = new Edition(
             new EditionId("edition-existing"),
-            $existingWork->id()
+            $existingWork->id(),
+            "Existing Edition"
         );
         $this->workRepository()->add($existingWork);
         $this->editionRepository()->add($existingEdition);
@@ -318,6 +320,7 @@ final class CatalogApplicationPersistenceTest extends
                     new ItemId("item-isbn10"),
                     new EditionId("edition-isbn"),
                     $existingWork->id(),
+                    "ISBN Edition",
                     null,
                     EditionIsbnMetadata::identified(
                         new Isbn10("0306406152"),
@@ -379,7 +382,7 @@ final class CatalogApplicationPersistenceTest extends
         $this->createOwnedLibrary($libraryA, $owner);
         $this->createOwnedLibrary($libraryB, $owner);
         $work = new Work(new WorkId("work-context"), "Context Work");
-        $edition = new Edition(new EditionId("edition-context"), $work->id());
+        $edition = new Edition(new EditionId("edition-context"), $work->id(), "Context Edition");
         $this->workRepository()->add($work);
         $this->editionRepository()->add($edition);
         $book = $this->seedBookType($libraryA, "book_type.reading_book");
@@ -586,14 +589,16 @@ final class CatalogApplicationPersistenceTest extends
             $editionId = new EditionId("edition-conflict");
             $editionRepository->add(new Edition(
                 $editionId,
-                $existingWork->id()
+                $existingWork->id(),
+                "Conflicting Edition"
             ));
         }
 
         if ($failedStep === "item") {
             $seedEdition = new Edition(
                 new EditionId("edition-seed"),
-                $existingWork->id()
+                $existingWork->id(),
+                "Seed Edition"
             );
             $editionRepository->add($seedEdition);
             $itemId = new ItemId("item-conflict");
@@ -620,6 +625,7 @@ final class CatalogApplicationPersistenceTest extends
                             $itemId,
                             $editionId,
                             $existingWork->id(),
+                            "New Edition",
                             $this->initialization($library)
                         );
                 } else {

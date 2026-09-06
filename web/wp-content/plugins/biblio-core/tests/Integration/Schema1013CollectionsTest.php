@@ -25,13 +25,13 @@ final class Schema1013CollectionsTest extends PersistenceIntegrationTestCase
     {
         $this->restoreSchema1012();
         $this->database->insert($this->tableNames->works(), ['work_id' => 'work-a', 'work_title' => 'Preserved']);
-        $this->database->insert($this->tableNames->editions(), ['edition_id' => 'edition-a', 'work_id' => 'work-a', 'explicitly_no_isbn' => 0]);
+        $this->database->insert($this->tableNames->editions(), ['edition_id' => 'edition-a', 'work_id' => 'work-a', 'edition_title' => 'Preserved', 'explicitly_no_isbn' => 0]);
         $this->database->insert($this->tableNames->libraries(), ['library_id' => 'library-a', 'library_name' => 'Library', 'library_type' => 'private_library', 'library_status' => 'active']);
         $this->database->insert($this->tableNames->items(), ['item_id' => 'item-a', 'library_id' => 'library-a', 'edition_id' => 'edition-a', 'item_status' => 'active', 'item_version' => 1]);
 
         $this->migrator()->migrate();
 
-        self::assertSame(1015, $this->migrator()->installedVersion());
+        self::assertSame(1016, $this->migrator()->installedVersion());
         self::assertSame('active', $this->database->get_var("SELECT item_status FROM `{$this->tableNames->items()}` WHERE item_id='item-a'"));
         self::assertSame(0, (int) $this->database->get_var("SELECT COUNT(*) FROM `{$this->tableNames->collections()}`"));
         self::assertSame(0, (int) $this->database->get_var("SELECT COUNT(*) FROM `{$this->tableNames->collectionMemberships()}`"));
@@ -70,7 +70,7 @@ final class Schema1013CollectionsTest extends PersistenceIntegrationTestCase
             $this->database->query("DROP TABLE IF EXISTS `{$collections}`");
             $this->migrator()->migrate();
         }
-        self::assertSame(1015, $this->migrator()->installedVersion());
+        self::assertSame(1016, $this->migrator()->installedVersion());
     }
 
     private function restoreSchema1012(): void

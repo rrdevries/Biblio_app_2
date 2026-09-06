@@ -118,7 +118,7 @@ final readonly class WpdbBibliographicMetadataRepository implements
 
         $table = $this->tables->editions();
         $rows = $this->database->get_results($this->database->prepare(
-            "SELECT edition_id, work_id, isbn_10, isbn_13, "
+            "SELECT edition_id, work_id, edition_title, isbn_10, isbn_13, "
                 . "explicitly_no_isbn FROM `{$table}` WHERE work_id IN ("
                 . $this->placeholders(count($workIds)) . ") "
                 . "ORDER BY work_id, edition_id",
@@ -175,7 +175,7 @@ final readonly class WpdbBibliographicMetadataRepository implements
 
         $table = $this->tables->editions();
         $rows = $this->database->get_results($this->database->prepare(
-            "SELECT edition_id, work_id, isbn_10, isbn_13, "
+            "SELECT edition_id, work_id, edition_title, isbn_10, isbn_13, "
                 . "explicitly_no_isbn FROM `{$table}` WHERE "
                 . implode(" OR ", $predicates)
                 . " ORDER BY edition_id",
@@ -321,6 +321,7 @@ final readonly class WpdbBibliographicMetadataRepository implements
         return new Edition(
             new EditionId((string) $row->edition_id),
             new WorkId((string) $row->work_id),
+            (string) $row->edition_title,
             $metadata
         );
     }

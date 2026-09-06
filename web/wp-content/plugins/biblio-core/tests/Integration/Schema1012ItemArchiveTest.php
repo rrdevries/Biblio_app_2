@@ -22,7 +22,7 @@ final class Schema1012ItemArchiveTest extends PersistenceIntegrationTestCase
     {
         $this->restoreSchema1011();
         $this->database->insert($this->tableNames->works(), ["work_id" => "work-a", "work_title" => "Work"]);
-        $this->database->insert($this->tableNames->editions(), ["edition_id" => "edition-a", "work_id" => "work-a", "explicitly_no_isbn" => 0]);
+        $this->database->insert($this->tableNames->editions(), ["edition_id" => "edition-a", "work_id" => "work-a", "edition_title" => "Work", "explicitly_no_isbn" => 0]);
         $this->database->insert($this->tableNames->libraries(), ["library_id" => "library-a", "library_name" => "Library", "library_type" => "private_library", "library_status" => "active"]);
         $this->database->insert($this->tableNames->locations(), ["library_id" => "library-a", "location_id" => "location-a", "display_name" => "Kast"]);
         $this->database->insert($this->tableNames->items(), ["item_id" => "item-a", "library_id" => "library-a", "edition_id" => "edition-a", "item_status" => "active", "location_id" => "location-a"]);
@@ -47,7 +47,7 @@ final class Schema1012ItemArchiveTest extends PersistenceIntegrationTestCase
         $migration->assertPrecondition();
         $migration->assertPostcondition();
         $this->migrator()->migrate();
-        self::assertSame(1015, $this->migrator()->installedVersion());
+        self::assertSame(1016, $this->migrator()->installedVersion());
     }
 
     public function testUnknownPartialStateFailsBeforeVersionBump(): void

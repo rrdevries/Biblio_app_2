@@ -100,7 +100,7 @@ final class ItemArchivePersistenceTest extends PersistenceIntegrationTestCase
         (new WpdbLibraryRepository($this->database, $this->tableNames))->add(Library::privateLibrary($libraryId));
         $work = new Work(new WorkId("work-{$suffix}"), "Work {$suffix}");
         (new WpdbWorkRepository($this->database, $this->tableNames))->add($work);
-        $edition = new Edition(new EditionId("edition-{$suffix}"), $work->id());
+        $edition = new Edition(new EditionId("edition-{$suffix}"), $work->id(), "Edition {$suffix}");
         (new WpdbEditionRepository($this->database, $this->tableNames))->add($edition);
         $location = new LibraryLocation(new LocationId("location-{$suffix}"), $libraryId, "Kast {$suffix}");
         (new WpdbLocationRepository($this->database, $this->tableNames))->save($location);

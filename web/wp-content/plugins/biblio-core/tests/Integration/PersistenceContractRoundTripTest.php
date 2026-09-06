@@ -63,7 +63,7 @@ final class PersistenceContractRoundTripTest extends
             )
         );
         $work = new Work($workId, str_repeat("é", Work::MAX_TITLE_LENGTH));
-        $edition = new Edition($editionId, $workId);
+        $edition = new Edition($editionId, $workId, "Edition title");
         $item = Item::active($itemId, $libraryId, $editionId);
         $loan = ExternalLoan::active(
             $loanId,
@@ -121,6 +121,11 @@ final class PersistenceContractRoundTripTest extends
         $loanWriter->add($loan);
         $rounds->addForUser($userId, $round);
 
+        $storedWork = $works->find($workId);
+        $storedEdition = $editions->find($editionId);
+        self::assertNotNull($storedWork, $this->database->last_error);
+        self::assertNotNull($storedEdition, $this->database->last_error);
+
         self::assertSame(
             $libraryId->value(),
             $libraries->find($libraryId)?->id()->value()
@@ -132,11 +137,15 @@ final class PersistenceContractRoundTripTest extends
         );
         self::assertSame(
             $work->title(),
-            $works->find($workId)?->title()
+            $storedWork->title()
         );
         self::assertSame(
             $workId->value(),
-            $editions->find($editionId)?->workId()->value()
+            $storedEdition->workId()->value()
+        );
+        self::assertSame(
+            $edition->title(),
+            $storedEdition->title()
         );
         self::assertSame(
             $editionId->value(),

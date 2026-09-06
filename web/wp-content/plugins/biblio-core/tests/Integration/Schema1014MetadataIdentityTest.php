@@ -61,18 +61,20 @@ final class Schema1014MetadataIdentityTest extends PersistenceIntegrationTestCas
         $this->database->insert($editions, [
             "edition_id" => "edition-isbn10",
             "work_id" => "work-isbn10",
+            "edition_title" => "Preserved ISBN-10",
             "isbn_10" => "0306406152",
             "explicitly_no_isbn" => 0,
         ]);
         $this->database->insert($editions, [
             "edition_id" => "edition-none",
             "work_id" => "work-none",
+            "edition_title" => "Preserved no ISBN",
             "explicitly_no_isbn" => 1,
         ]);
 
         $this->migrator()->migrate();
 
-        self::assertSame(1015, $this->migrator()->installedVersion());
+        self::assertSame(1016, $this->migrator()->installedVersion());
         self::assertSame(
             "edition-isbn10",
             $this->database->get_var(
@@ -127,6 +129,7 @@ final class Schema1014MetadataIdentityTest extends PersistenceIntegrationTestCas
                 [
                     "edition_id" => "edition-none-{$suffix}",
                     "work_id" => "work-none-{$suffix}",
+                    "edition_title" => "No ISBN {$suffix}",
                     "explicitly_no_isbn" => 1,
                 ]
             ));
@@ -220,6 +223,7 @@ final class Schema1014MetadataIdentityTest extends PersistenceIntegrationTestCas
         $this->database->insert($this->tableNames->editions(), [
             "edition_id" => $editionId,
             "work_id" => $workId,
+            "edition_title" => "Title",
             "isbn_13" => $isbn13,
             "explicitly_no_isbn" => 0,
         ]);

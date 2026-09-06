@@ -591,7 +591,7 @@ final class ClassificationManagementApplicationTest extends
         (new WpdbEditionRepository(
             $this->database,
             $this->tableNames
-        ))->add(new Edition($editionId, $workId));
+        ))->add(new Edition($editionId, $workId, "Classification edition"));
         (new WpdbItemRepository(
             $this->database,
             $this->tableNames

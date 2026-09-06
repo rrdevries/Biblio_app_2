@@ -94,6 +94,7 @@ try {
                 new ItemId($payload["item_id"]),
                 new EditionId($payload["edition_id"]),
                 new WorkId($payload["work_id"]),
+                "Worker Edition",
                 new LibraryCatalogContextInitialization(selection($payload))
             ),
         default => throw new RuntimeException("Unknown worker operation."),

@@ -45,6 +45,7 @@ final readonly class CoreSchemaHealthChecker
             1013 => $this->inspectTables($this->tableNames->schema1013(), true, 1013),
             1014 => $this->inspectTables($this->tableNames->schema1014(), true, 1014),
             1015 => $this->inspectTables($this->tableNames->schema1015(), true, 1015),
+            1016 => $this->inspectTables($this->tableNames->schema1016(), true, 1016),
             default => throw new CoreSchemaMigrationException(
                 "No explicit Biblio Core schema-health contract exists for "
                 . "schema version {$expectedVersion}."
@@ -251,7 +252,8 @@ final readonly class CoreSchemaHealthChecker
         $rows = $this->database->get_results($this->database->prepare(
             "SELECT COLUMN_NAME AS column_name, COLUMN_TYPE AS column_type, "
             . "IS_NULLABLE AS is_nullable, COLLATION_NAME AS collation_name, "
-            . "EXTRA AS extra, GENERATION_EXPRESSION AS generation_expression "
+            . "COLUMN_DEFAULT AS column_default, EXTRA AS extra, "
+            . "GENERATION_EXPRESSION AS generation_expression "
             . "FROM information_schema.COLUMNS "
             . "WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s",
             DB_NAME,
@@ -292,6 +294,21 @@ final readonly class CoreSchemaHealthChecker
                 $issues[] = "Column {$tableName}.{$columnName} expected "
                     . "collation {$expected['collation']}; found "
                     . ((string) $actual["collation_name"] ?: "none");
+            }
+
+            if (array_key_exists("default", $expected)) {
+                $actualDefault = $actual["column_default"] === null
+                    || $actual["column_default"] === "NULL"
+                    ? null
+                    : trim((string) $actual["column_default"], "'");
+
+                if ($actualDefault !== $expected["default"]) {
+                    $issues[] = "Column {$tableName}.{$columnName} expected "
+                        . "default "
+                        . ($expected["default"] ?? "no default")
+                        . "; found "
+                        . ($actualDefault ?? "no default");
+                }
             }
 
             if (isset($expected["extra"])) {
@@ -585,7 +602,7 @@ final readonly class CoreSchemaHealthChecker
         }
     }
 
-    /** @return array<string, array<string, array<string, string>>> */
+    /** @return array<string, array<string, array<string, string|null>>> */
     private function expectedColumns(int $schemaVersion): array
     {
         $id = [
@@ -648,6 +665,14 @@ final readonly class CoreSchemaHealthChecker
             $this->tableNames->works() => [
                 "work_id" => $id,
                 "work_title" => ["type" => "varchar(512)", "nullable" => "NO"],
+                ...($schemaVersion >= 1016 ? [
+                    "work_title_status" => [
+                        "type" => "varchar(32)",
+                        "nullable" => "NO",
+                        "collation" => "utf8mb4_bin",
+                        "default" => "provisional",
+                    ],
+                ] : []),
             ],
             $this->tableNames->authors() => [
                 "author_id" => $id,
@@ -703,6 +728,14 @@ final readonly class CoreSchemaHealthChecker
             $this->tableNames->editions() => [
                 "edition_id" => $id,
                 "work_id" => $id,
+                ...($schemaVersion >= 1016 ? [
+                    "edition_title" => [
+                        "type" => "varchar(512)",
+                        "nullable" => "NO",
+                        "collation" => "utf8mb4_bin",
+                        "default" => null,
+                    ],
+                ] : []),
                 ...($schemaVersion >= 1010 ? [
                     "isbn_10" => [
                         "type" => "varchar(10)",
@@ -1703,6 +1736,9 @@ final readonly class CoreSchemaHealthChecker
             ],
             $this->tableNames->works() => [
                 "CHAR_LENGTH(TRIM(work_title)) > 0",
+                ...($schemaVersion >= 1016 ? [
+                    "work_title_status IN ('provisional', 'librarian_confirmed')",
+                ] : []),
             ],
             $this->tableNames->authors() => [
                 "CHAR_LENGTH(TRIM(display_name)) > 0",
@@ -1723,6 +1759,9 @@ final readonly class CoreSchemaHealthChecker
                 "contained_position >= 1",
             ],
             $this->tableNames->editions() => $schemaVersion >= 1010 ? [
+                ...($schemaVersion >= 1016 ? [
+                    "CHAR_LENGTH(TRIM(edition_title)) > 0",
+                ] : []),
                 "explicitly_no_isbn IN (0, 1)",
                 "explicitly_no_isbn = 0 OR isbn_10 IS NULL AND isbn_13 IS NULL",
                 "isbn_10 IS NULL OR isbn_10 REGEXP '^[0-9]{9}[0-9X]$'",

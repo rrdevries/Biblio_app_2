@@ -48,10 +48,18 @@ May view/search Library collection, but cannot directly use or receive an intern
 ## Work
 Platform-wide identity of the intellectual/content work.
 
+Its title is explicitly either `provisional` or `librarian_confirmed`. A title
+seeded while creating a first Edition is provisional until a librarian confirms
+it.
+
 Dutch UI wording may use `Werk` where appropriate; canonical data concept remains Work.
 
 ## Edition
 Platform-wide identity of a publication edition.
+
+Owns one required concrete Edition title used for Item display and catalog
+ordering. Provider title evidence belongs here and does not automatically
+canonicalize the related Work title.
 
 Dutch UI: `Uitgave`.
 

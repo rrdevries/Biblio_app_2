@@ -541,6 +541,9 @@ Status: **Implemented**
   maximum of 191 characters, matching the actual `VARCHAR(191)` columns;
 - Work title is valid UTF-8 and at most 512 characters, matching
   `work_title VARCHAR(512)`;
+- Edition title is independently required, valid UTF-8 and at most 512
+  characters; Work title state is closed to `provisional` or
+  `librarian_confirmed`;
 - ExternalLoan and ReadingRound dates must fall inside MariaDB `DATETIME(6)`'s
   supported UTC year range 1000–9999 before persistence;
 - the non-persistable `ExternalLoanStatus::Inactive` state is removed; the
@@ -625,6 +628,8 @@ Work → Edition → `Catalog\Item` model and schema:
 
 - `AddLibraryItemService` exposes separate operations for an existing Edition,
   a new Edition under an existing Work, and a new Work plus Edition;
+- every new Edition path receives a concrete Edition title; the new-Work path
+  seeds the Work with that value as `provisional` and never auto-confirms it;
 - the current actor is resolved server-side for every operation and the caller
   selects only the target Library and catalog identifiers/data;
 - catalog Item-add requires an active Owner or an active Manager with
@@ -1946,3 +1951,20 @@ authorization. It performs no automatic Work/Edition/Item mutation, provider
 priority, confidence scoring, merge/fusion, Series Intelligence, cover runtime,
 DATA-01 or V1 migration. Detailed evidence is in
 `docs/45-metadata-hub-mh-b4-field-confirmation-exit-evidence.md`.
+
+### CAT-T1 — Work/Edition title separation
+
+Status: **GO / CLOSED**
+
+Schema `1016` is active. Edition now owns a required concrete title, while Work
+title state is explicitly `provisional` or `librarian_confirmed`. Existing Work
+titles remain unchanged, are copied byte-for-byte to every related Edition and
+are marked provisional. New Work+Edition creation uses the Edition title as a
+provisional Work seed only; no creation or provider path confirms a Work title.
+
+Catalog overview/detail projections, search result titles, alphabetical sort
+and cursor tie-breakers use Edition title. Search still matches both Edition
+and Work titles. MH-B4 evidence remains provider-neutral and Edition-oriented;
+CAT-T1 adds no REST/UI/Add Book integration and does not bypass MH-B5. Detailed
+evidence is in
+`docs/46-catalog-cat-t1-work-edition-title-separation-exit-evidence.md`.

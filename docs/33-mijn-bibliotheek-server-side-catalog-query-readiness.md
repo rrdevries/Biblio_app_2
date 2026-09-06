@@ -59,11 +59,11 @@ Authority order:
 | Onderwerp | Status vóór finalization | Definitief contract | Status nu |
 |---|---|---|---|
 | Library scope, authorization and physical Item identity | CANONICAL | Strict current-Library scope; every matching Item remains reachable; no virtual Item | CANONICAL |
-| Search fields | CANONICAL | Work/alternative/contained title, Auteur/Co-auteur, Serie, relevant ISBN and inventory number | CANONICAL |
+| Search fields | CANONICAL | Edition title, Work/alternative/contained title, Auteur/Co-auteur, Serie, relevant ISBN and inventory number | CANONICAL |
 | Live Search | OPEN | Starts automatically from two characters; debounce/submit support technical; newest valid result wins | CANONICAL |
 | Text matching | OPEN | Partial, case-insensitive and accent/diacritic-tolerant; exact identifiers may rank higher | CANONICAL |
 | Empty query | CANONICAL | Normal browse result | CANONICAL |
-| Ranking | CANONICAL/PARTIAL | Exact title/ISBN, title, Auteur/Co-auteur, Serie, other context; title inside equal relevance | CANONICAL |
+| Ranking | CANONICAL/PARTIAL | Exact Edition/Work title or ISBN, title, Auteur/Co-auteur, Serie, other context; Edition title inside equal relevance | CANONICAL |
 | Omnibus contained-title/metadata match | OPEN | Omnibus Item is result with `Bevat:` context; no virtual contained Item | CANONICAL |
 | Set result inclusion | OPEN | Not decided by the supplied final decisions | OPEN; outside current scope |
 | General filter operators | OPEN | OR within one group; AND between groups unless explicitly excepted | CANONICAL |
@@ -101,7 +101,7 @@ later implementation explicitly proposes Set results here.
 
 - strict current-Library scope and server-authorized Library Context;
 - active Items by default, expanded by the archive rules in section 8;
-- Work title and alternative title;
+- Edition title, Work title and alternative Work title;
 - Auteur/Co-auteur;
 - Serie;
 - ISBN relevant to represented Library Items;

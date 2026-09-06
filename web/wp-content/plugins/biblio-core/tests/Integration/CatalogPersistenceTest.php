@@ -12,6 +12,7 @@ use Biblio\Core\Catalog\ItemId;
 use Biblio\Core\Catalog\ItemStatus;
 use Biblio\Core\Catalog\Work;
 use Biblio\Core\Catalog\WorkId;
+use Biblio\Core\Catalog\WorkTitleStatus;
 use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Infrastructure\Persistence\PersistenceException;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbEditionRepository;
@@ -26,7 +27,7 @@ final class CatalogPersistenceTest extends PersistenceIntegrationTestCase
     public function testWorkAndEditionRoundTripPlatformWide(): void
     {
         $work = new Work(new WorkId("work-w"), "Platform-wide Work");
-        $edition = new Edition(new EditionId("edition-e"), $work->id());
+        $edition = new Edition(new EditionId("edition-e"), $work->id(), "Platform-wide Edition");
 
         $this->workRepository()->add($work);
         $this->editionRepository()->add($edition);
@@ -36,9 +37,11 @@ final class CatalogPersistenceTest extends PersistenceIntegrationTestCase
         self::assertNotNull($storedWork);
         self::assertTrue($work->id()->equals($storedWork->id()));
         self::assertSame("Platform-wide Work", $storedWork->title());
+        self::assertSame(WorkTitleStatus::Provisional, $storedWork->titleStatus());
         self::assertNotNull($storedEdition);
         self::assertTrue($edition->id()->equals($storedEdition->id()));
         self::assertTrue($work->id()->equals($storedEdition->workId()));
+        self::assertSame("Platform-wide Edition", $storedEdition->title());
     }
 
     public function testTwoLibrariesCanUseSamePlatformEdition(): void
@@ -67,12 +70,29 @@ final class CatalogPersistenceTest extends PersistenceIntegrationTestCase
         self::assertSame(2, $this->tableCount($this->tableNames->items()));
     }
 
+    public function testLibrarianConfirmedWorkTitleStatusRoundTrips(): void
+    {
+        $work = new Work(
+            new WorkId("work-confirmed"),
+            "Confirmed Work",
+            WorkTitleStatus::LibrarianConfirmed
+        );
+
+        $this->workRepository()->add($work);
+
+        self::assertSame(
+            WorkTitleStatus::LibrarianConfirmed,
+            $this->workRepository()->find($work->id())?->titleStatus()
+        );
+    }
+
     public function testEditionWithUnknownWorkIsRejected(): void
     {
         try {
             $this->editionRepository()->add(new Edition(
                 new EditionId("edition-e"),
-                new WorkId("missing-work")
+                new WorkId("missing-work"),
+                "Missing Work Edition"
             ));
             self::fail("Edition without Work was accepted.");
         } catch (PersistenceException) {
@@ -102,7 +122,7 @@ final class CatalogPersistenceTest extends PersistenceIntegrationTestCase
     public function testItemWithUnknownLibraryIsRejected(): void
     {
         $work = new Work(new WorkId("work-w"), "Work");
-        $edition = new Edition(new EditionId("edition-e"), $work->id());
+        $edition = new Edition(new EditionId("edition-e"), $work->id(), "Edition E");
         $this->workRepository()->add($work);
         $this->editionRepository()->add($edition);
 
@@ -140,7 +160,8 @@ final class CatalogPersistenceTest extends PersistenceIntegrationTestCase
         try {
             $this->editionRepository()->add(new Edition(
                 new EditionId("edition-e"),
-                new WorkId("work-w")
+                new WorkId("work-w"),
+                "Duplicate Edition"
             ));
             self::fail("Duplicate Edition ID was accepted.");
         } catch (CatalogRecordAlreadyExists $exception) {
@@ -185,7 +206,7 @@ final class CatalogPersistenceTest extends PersistenceIntegrationTestCase
         $this->libraryRepository()->add(Library::privateLibrary($libraryA));
         $this->libraryRepository()->add(Library::privateLibrary($libraryB));
         $work = new Work(new WorkId("work-w"), "Shared Work");
-        $edition = new Edition(new EditionId("edition-e"), $work->id());
+        $edition = new Edition(new EditionId("edition-e"), $work->id(), "Shared Edition");
         $this->workRepository()->add($work);
         $this->editionRepository()->add($edition);
 

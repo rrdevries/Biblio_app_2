@@ -64,6 +64,8 @@ work.
 
 An ISBN lookup yields Edition evidence. Work resolution is accepted only from a
 reliable explicit provider link or an already confirmed local relationship.
+Provider title values are Edition evidence and never by themselves confirm or
+overwrite the related Work title.
 Title + author similarity is never sufficient for automatic Work merge.
 Uncertain matches remain visibly proposed or maybe; UX language must reflect
 the actual evidence strength.

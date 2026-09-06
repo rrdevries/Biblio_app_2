@@ -1127,7 +1127,7 @@ final class ReadingRoundPersistenceTest extends PersistenceIntegrationTestCase
         string $itemId
     ): Item {
         $work = $this->persistWork($workId);
-        $edition = new Edition(new EditionId($editionId), $work->id());
+        $edition = new Edition(new EditionId($editionId), $work->id(), "Edition {$editionId}");
         (new WpdbEditionRepository(
             $this->database,
             $this->tableNames

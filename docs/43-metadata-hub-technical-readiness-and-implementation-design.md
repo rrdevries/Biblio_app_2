@@ -748,6 +748,11 @@ license-reviewed representative shapes and synthetic edge cases.
 
 ### MH-B4 — whole-record confirmation and provenance
 
+Historical planning label: the implemented MH-B4 contract is the field-level
+review foundation in ADR-011 and docs/45. Its `title` field is Edition-level
+evidence. CAT-T1 does not let that evidence confirm, overwrite or otherwise
+canonicalize a Work title; MH-B5 must preserve this boundary.
+
 - **Goal:** classification, signed evidence, explicit Work resolution and one
   transactional confirmation service.
 - **Components:** classifier/differences/token; confirmation; catalog creation

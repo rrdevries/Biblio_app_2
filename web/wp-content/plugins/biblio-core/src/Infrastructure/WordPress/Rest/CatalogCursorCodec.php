@@ -15,7 +15,7 @@ final readonly class CatalogCursorCodec
         $json = json_encode(
             [
                 "v" => 1,
-                "title" => $cursor->workTitle(),
+                "title" => $cursor->editionTitle(),
                 "item_id" => $cursor->itemId()->value(),
             ],
             JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE

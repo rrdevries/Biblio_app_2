@@ -7,6 +7,7 @@ namespace Biblio\Core\Infrastructure\Persistence\WordPress;
 use Biblio\Core\Catalog\CatalogRecordAlreadyExists;
 use Biblio\Core\Catalog\Work;
 use Biblio\Core\Catalog\WorkId;
+use Biblio\Core\Catalog\WorkTitleStatus;
 use Biblio\Core\Catalog\WritableWorkRepository;
 use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Infrastructure\Persistence\PersistenceException;
@@ -31,8 +32,9 @@ final readonly class WpdbWorkRepository implements WritableWorkRepository
                 [
                     "work_id" => $work->id()->value(),
                     "work_title" => $work->title(),
+                    "work_title_status" => $work->titleStatus()->value,
                 ],
-                ["%s", "%s"]
+                ["%s", "%s", "%s"]
             );
         } finally {
             $this->database->suppress_errors($previousSuppression);
@@ -63,7 +65,8 @@ final readonly class WpdbWorkRepository implements WritableWorkRepository
     {
         $table = $this->tableNames->works();
         $row = $this->database->get_row($this->database->prepare(
-            "SELECT work_id, work_title FROM `{$table}` WHERE work_id = %s",
+            "SELECT work_id, work_title, work_title_status "
+                . "FROM `{$table}` WHERE work_id = %s",
             $workId->value()
         ));
 
@@ -74,7 +77,8 @@ final readonly class WpdbWorkRepository implements WritableWorkRepository
         try {
             return new Work(
                 new WorkId($row->work_id),
-                $row->work_title
+                $row->work_title,
+                WorkTitleStatus::from((string) $row->work_title_status)
             );
         } catch (Throwable $exception) {
             throw new PersistenceException(

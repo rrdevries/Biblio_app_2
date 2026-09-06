@@ -28,6 +28,10 @@ supporting evidence without automatic confirmation. A differing value remains
 an independent proposal/conflict. Multiple providers supporting identical
 content share one value and retain separate source evidence.
 
+The supported `title` field represents Edition-level title evidence. Its review
+state is not Work-title governance: confirming or ingesting it cannot mark a
+Work title `librarian_confirmed` or overwrite a Work title.
+
 Rejection applies to content across providers and is not undone by repeated
 evidence. Confirmation is explicit, makes the chosen value canonical and
 user-confirmed, and supersedes other active values without deleting their

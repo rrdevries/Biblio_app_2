@@ -495,6 +495,7 @@ final class ReadingHistoryReadModelTest extends PersistenceIntegrationTestCase
         self::assertSame(1, $this->database->insert($this->tableNames->editions(), [
             "edition_id" => $editionId,
             "work_id" => $workId,
+            "edition_title" => "History Edition",
         ]), $this->database->last_error);
         self::assertSame(1, $this->database->insert($this->tableNames->items(), [
             "item_id" => $itemId,

@@ -2295,3 +2295,26 @@ MH-B4 is accepted when:
   PHPStan and the repository quality gates are green;
 - there is no REST, UI, Add Book, Series Intelligence, cover runtime, DATA-01,
   V1 migration or automatic canonical catalog mutation.
+
+## 72. CAT-T1 Work/Edition title separation acceptance
+
+CAT-T1 is accepted when:
+
+- Edition has one independently validated required title and Work has an
+  explicit `provisional` or `librarian_confirmed` title status;
+- new Edition creation requires and persists its concrete title;
+- new Work+Edition creation seeds the Work title as provisional and cannot
+  silently create librarian-confirmed state;
+- schema 1015→1016 preserves every existing Work title, copies it exactly to
+  each related Edition and marks every migrated Work provisional;
+- the migration is retry-safe for absent and known derived partial state,
+  fails closed on divergent unknown partial data and records 1016 only after
+  healthy postconditions;
+- repository round trips preserve Edition title and both Work title states;
+- overview, detail, catalog result title, alphabetical ordering and cursor
+  tie-breakers use Edition title, while search matches Edition and Work title;
+- provider evidence remains Edition-level and cannot confirm a Work title;
+- unit, complete MariaDB integration/migration, catalog performance, PHPStan,
+  syntax, smoke and repository quality gates pass;
+- no REST/UI/Add Book, automatic Work lookup, MH-B4/MH-B5 bypass, DATA-01 or
+  provider behavior is introduced.

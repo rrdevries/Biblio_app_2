@@ -673,7 +673,7 @@ final class NextReadingRestApiTest extends PersistenceIntegrationTestCase
     ): void {
         self::assertSame(1, $this->database->insert(
             $this->tableNames->editions(),
-            ["edition_id" => "edition-{$itemId}", "work_id" => $workId]
+            ["edition_id" => "edition-{$itemId}", "work_id" => $workId, "edition_title" => "Edition {$itemId}"]
         ), $this->database->last_error);
         self::assertSame(1, $this->database->insert(
             $this->tableNames->items(),

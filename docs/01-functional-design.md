@@ -272,7 +272,8 @@ May exist without Edition or Item.
 Central/platform-wide.
 
 Includes, where applicable:
-- title and known alternative titles;
+- one Work title with explicit `provisional` or `librarian_confirmed` status,
+  plus known alternative titles;
 - Author/Co-author relationships;
 - original language(s);
 - Series/content relationships;
@@ -285,6 +286,7 @@ Specific publication edition.
 Central/platform-wide.
 
 Includes:
+- one required concrete Edition title;
 - ISBN-10;
 - ISBN-13;
 - explicit `Geen ISBN`;
@@ -354,6 +356,19 @@ Empty ISBN fields without that flag mean unknown/not entered.
 An ISBN identifies an Edition, never a Work or physical Item. Identifier
 availability is not an existence condition: the manual path supports Works,
 Editions and Items without an ISBN.
+
+## Work and Edition title authority
+
+The title shown for a concrete catalog Item is the title of its Edition. A new
+Edition always receives its own required title. When the same input creates a
+new Work, that Edition title may seed the Work title, but the Work title starts
+as `provisional`; creation never confirms it as canonical.
+
+Only an explicit librarian decision may mark a Work title
+`librarian_confirmed`. Provider title evidence remains Edition-level evidence
+and cannot automatically confirm or overwrite a Work title. Search may match
+both the concrete Edition title and the Work title; normal catalog display,
+alphabetical ordering and title tie-breakers use the Edition title.
 
 ## Metadata Hub and acquisition
 
@@ -653,7 +668,7 @@ Tags deferred.
 Strictly scoped to the current Library.
 
 Searchable via:
-- Work title / alternative title;
+- Edition title, Work title and alternative Work title;
 - Auteur/Co-auteur;
 - Serie;
 - ISBN relevant to Library Items;
@@ -675,7 +690,7 @@ normal result.
 Default search includes only active Items.
 
 Without an active search or an explicitly selected alternate order, the
-Library overview is ordered by Work title ascending. A technical stable
+Library overview is ordered by Edition title ascending. A technical stable
 tie-breaker may be added without becoming a separate user-facing sort choice.
 
 v2.001 sort choices are:

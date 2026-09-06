@@ -1173,3 +1173,31 @@ timestamps, exact-ISBN query provenance and positive versions/counts. Migration
 1014→1015 is additive, changes no existing catalog or DATA-01 row, recognizes
 only absent or structurally healthy retry state and records 1015 only after full
 post-health succeeds.
+
+## 31. CAT-T1 Work/Edition title separation and schema 1016
+
+`Catalog\Edition` owns one required concrete title. `Catalog\Work` owns its
+separate title plus the closed `WorkTitleStatus` values `provisional` and
+`librarian_confirmed`. The default and every newly seeded Work title are
+provisional; only a later explicit librarian command may construct confirmed
+state. Provider evidence and MH-B4 field review cannot perform that transition.
+
+`AddLibraryItemService` requires a title when it creates an Edition. On the
+new-Work path it uses the same input to seed a provisional Work, without title
+matching, automatic Work lookup or canonicalization. Existing-Edition reuse
+does not change either title.
+
+Schema 1016 adds `editions.edition_title VARCHAR(512) NOT NULL` and
+`works.work_title_status VARCHAR(32) NOT NULL DEFAULT 'provisional'`, with
+binary UTF-8 collations and checks for non-empty Edition titles and the closed
+Work status vocabulary. Migration 1015→1016 first adds nullable staging
+columns, marks every existing Work provisional and copies each related Work
+title byte-for-byte to Edition, then installs the final constraints. Known
+derived partial states are retryable; divergent pre-version-bump data fails
+closed.
+
+Catalog Item projections, title ordering and cursor tie-breakers read Edition
+title. Search reads both Edition and Work title, plus the already approved
+sources. The opaque cursor payload version remains stable although its title
+component now means Edition title. No REST shape, UI, Add Book, MH-B4 review
+binding, DATA-01 or provider behavior changes in this slice.

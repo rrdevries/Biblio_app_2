@@ -266,6 +266,7 @@ final class NextReadingPersistenceTest extends PersistenceIntegrationTestCase
         $this->database->insert($this->tableNames->editions(), [
             "edition_id" => "next-edition",
             "work_id" => "next-work-1",
+            "edition_title" => "Next Edition",
         ]);
         $this->database->insert($this->tableNames->items(), [
             "item_id" => "next-item",
@@ -290,6 +291,7 @@ final class NextReadingPersistenceTest extends PersistenceIntegrationTestCase
         $this->database->insert($this->tableNames->editions(), [
             "edition_id" => "foreign-edition",
             "work_id" => "next-work-1",
+            "edition_title" => "Foreign Edition",
         ]);
         $this->database->insert($this->tableNames->items(), [
             "item_id" => "foreign-item",

@@ -478,7 +478,7 @@ final class AssessmentConcurrencyTest extends PersistenceIntegrationTestCase
             1,
             $this->database->insert(
                 $this->tableNames->editions(),
-                ['edition_id' => $editionId, 'work_id' => 'assessment-work']
+                ['edition_id' => $editionId, 'work_id' => 'assessment-work', 'edition_title' => 'Assessment Edition']
             )
         );
         self::assertSame(

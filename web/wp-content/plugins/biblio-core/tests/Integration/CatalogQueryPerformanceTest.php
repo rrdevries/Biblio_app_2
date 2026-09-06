@@ -133,7 +133,7 @@ final class CatalogQueryPerformanceTest extends PersistenceIntegrationTestCase
             for ($number = $start; $number <= $end; ++$number) {
                 $id = str_pad((string) $number, 5, '0', STR_PAD_LEFT);
                 $works[] = "('perf-work-{$id}','Title {$id}')";
-                $editions[] = "('perf-edition-{$id}','perf-work-{$id}',NULL,NULL,0)";
+                $editions[] = "('perf-edition-{$id}','perf-work-{$id}','Title {$id}',NULL,NULL,0)";
                 $location = $number % 2 === 0 ? "'location-a'" : 'NULL';
                 $items[] = "('perf-item-{$id}','performance-library','perf-edition-{$id}','active',NULL,{$location},1)";
                 if ($number % 10 === 0) {
@@ -145,7 +145,7 @@ final class CatalogQueryPerformanceTest extends PersistenceIntegrationTestCase
                 }
             }
             $this->insertSql($this->tableNames->works(), '(work_id,work_title)', $works);
-            $this->insertSql($this->tableNames->editions(), '(edition_id,work_id,isbn_10,isbn_13,explicitly_no_isbn)', $editions);
+            $this->insertSql($this->tableNames->editions(), '(edition_id,work_id,edition_title,isbn_10,isbn_13,explicitly_no_isbn)', $editions);
             $this->insertSql($this->tableNames->items(), '(item_id,library_id,edition_id,item_status,inventory_number,location_id,item_version)', $items);
             $this->insertSql($this->tableNames->workContributors(), '(work_id,author_id,contributor_role,contributor_position)', $contributors);
             $this->insertSql($this->tableNames->workSeries(), '(work_id,series_id,series_position)', $series);

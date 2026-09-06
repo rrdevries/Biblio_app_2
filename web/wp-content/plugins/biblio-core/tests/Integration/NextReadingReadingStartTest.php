@@ -172,6 +172,7 @@ final class NextReadingReadingStartTest extends PersistenceIntegrationTestCase
             $this->database->insert($this->tableNames->editions(), [
                 "edition_id" => "start-edition-{$suffix}",
                 "work_id" => "start-work",
+                "edition_title" => "Start Edition {$suffix}",
             ]);
             $this->database->insert($this->tableNames->items(), [
                 "item_id" => "start-item-{$suffix}",
