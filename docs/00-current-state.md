@@ -2127,3 +2127,16 @@ classification, audit and required evidence commit or roll back together.
 Existing central Work/Edition data is never overwritten by B5B and no operation
 becomes `librarian_confirmed`. Detailed evidence:
 `docs/47-metadata-hub-mh-b5b-add-book-commit-exit-evidence.md`.
+
+### D-ADD-01 — Add Book Wizard UX canonicalization
+
+Status: **DECISION CANONICALIZED / NOT IMPLEMENTED**
+
+There is one local-first Add Book Wizard: ISBN scan/entry and `Geen ISBN`,
+existing Edition control/reuse, local ambiguity, reviewed single or multiple
+metadata candidates, manual Edition input, provider failure and expired review
+are paths within one flow. It preserves manual, optional `Koppel aan bestaand
+werk`, non-blocking extra-copy addition, conditional summary and a calm success
+state. The UX adds no provider fusion, automatic Work matching, central
+metadata override, Librarian UI or collector-detail design. Canonical design:
+`docs/48-add-book-wizard-ux-canonical-design.md`.

@@ -54,6 +54,7 @@
     "docs/45-metadata-hub-mh-b4-field-confirmation-exit-evidence.md",
     "docs/46-catalog-cat-t1-work-edition-title-separation-exit-evidence.md",
     "docs/47-metadata-hub-mh-b5b-add-book-commit-exit-evidence.md",
+    "docs/48-add-book-wizard-ux-canonical-design.md",
     "docs/decisions/ADR-001-single-site-tenancy.md",
     "docs/decisions/ADR-002-modular-monolith.md",
     "docs/decisions/ADR-003-biblio-core-owns-domain-logic.md",
@@ -90,6 +91,6 @@
     "Mijn Bibliotheek search, filter values, active filter chips and alternate sort remain disabled until separately approved UI activation exists; typed catalog-query composition, REST transport and all source foundations are closed; Bookshelf remains an explicit placeholder while cover-ratio and spine rendering stay open."
   ],
   "next_vertical_slice": [
-    "MH-B5B transactional Add Book commit integration is GO / CLOSED; no subsequent implementation slice is approved by this closeout."
+    "D-ADD-01 Add Book Wizard UX is canonicalized; ADD-UI-01 implementation requires separate approval."
   ]
 }
