@@ -46,7 +46,7 @@ final class Schema1007LibraryIdentityTest extends PersistenceIntegrationTestCase
         try {
             $this->migrator()->migrate();
 
-            self::assertSame(1016, $this->migrator()->installedVersion());
+            self::assertSame(1017, $this->migrator()->installedVersion());
             self::assertSame(
                 "Mijn Bibliotheek",
                 $this->database->get_var(

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Application\Metadata;
 
+use Biblio\Core\Application\Identity\AuthenticatedUser;
+use Biblio\Core\Application\TransactionManager;
 use Biblio\Core\Application\Catalog\LocalEditionResolutionType;
 use Biblio\Core\Application\Catalog\LocalEditionResolver;
 use Biblio\Core\Application\Library\LibraryContextQueryService;
@@ -21,7 +23,12 @@ final readonly class AddBookMetadataLookupService
         private LocalEditionResolver $localEditions,
         private WorkRepository $works,
         private FirstSufficientMetadataLookupService $metadata,
-        private AddBookMetadataReviewPolicy $reviewPolicy
+        private AddBookMetadataReviewPolicy $reviewPolicy,
+        private AuthenticatedUser $authenticatedUser,
+        private MetadataLookupSnapshotRepository $snapshots,
+        private MetadataLookupIdGenerator $lookupIds,
+        private TransactionManager $transactionManager,
+        private MetadataClock $clock
     ) {
     }
 
@@ -40,11 +47,35 @@ final readonly class AddBookMetadataLookupService
         $local = $this->localEditions->resolveInput($identifier);
 
         if ($local->type() === LocalEditionResolutionType::LocalNone) {
+            $metadata = $this->metadata->lookup($local->identity());
+            $lookupId = null;
+            if ($metadata->candidates() !== []) {
+                $now = $this->clock->now();
+                $lookupId = $this->lookupIds->next();
+                $snapshot = new MetadataLookupSnapshot(
+                    $lookupId,
+                    $this->authenticatedUser->requireUserId(),
+                    $libraryId,
+                    $local->identity(),
+                    $now,
+                    $now->modify("+30 minutes"),
+                    array_map(
+                        static fn (ClassifiedMetadataCandidate $candidate): MetadataCandidate =>
+                            $candidate->candidate(),
+                        $metadata->candidates()
+                    )
+                );
+                $this->transactionManager->run(function () use ($snapshot): void {
+                    $this->snapshots->save($snapshot);
+                });
+            }
+
             return AddBookMetadataLookupResult::fromMetadata(
                 $library,
                 $local->identity(),
-                $this->metadata->lookup($local->identity()),
-                $this->reviewPolicy
+                $metadata,
+                $this->reviewPolicy,
+                $lookupId
             );
         }
 

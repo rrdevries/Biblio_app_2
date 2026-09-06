@@ -20,7 +20,8 @@ final readonly class AddBookMetadataLookupResult
         private LocalEditionResolutionType $localStatus,
         private array $localMatches,
         private ?FirstSufficientMetadataLookupResult $metadata,
-        private AddBookMetadataReviewPolicy $reviewPolicy
+        private AddBookMetadataReviewPolicy $reviewPolicy,
+        private ?MetadataLookupId $lookupId
     ) {
         if (
             ($localStatus === LocalEditionResolutionType::LocalNone)
@@ -28,6 +29,14 @@ final readonly class AddBookMetadataLookupResult
         ) {
             throw new LogicException(
                 "Only a local miss may contain a provider lookup result."
+            );
+        }
+
+        $hasProviderCandidates = $metadata !== null
+            && $metadata->candidates() !== [];
+        if (($lookupId !== null) !== $hasProviderCandidates) {
+            throw new LogicException(
+                "Only provider candidates may have a lookup snapshot."
             );
         }
 
@@ -59,7 +68,8 @@ final readonly class AddBookMetadataLookupResult
             $status,
             $matches,
             null,
-            $reviewPolicy
+            $reviewPolicy,
+            null
         );
     }
 
@@ -67,7 +77,8 @@ final readonly class AddBookMetadataLookupResult
         LibraryContextView $library,
         CanonicalIsbnIdentity $identifier,
         FirstSufficientMetadataLookupResult $metadata,
-        AddBookMetadataReviewPolicy $reviewPolicy
+        AddBookMetadataReviewPolicy $reviewPolicy,
+        ?MetadataLookupId $lookupId
     ): self {
         return new self(
             $library,
@@ -75,7 +86,8 @@ final readonly class AddBookMetadataLookupResult
             LocalEditionResolutionType::LocalNone,
             [],
             $metadata,
-            $reviewPolicy
+            $reviewPolicy,
+            $lookupId
         );
     }
 
@@ -95,4 +107,6 @@ final readonly class AddBookMetadataLookupResult
     {
         return $this->reviewPolicy;
     }
+
+    public function lookupId(): ?MetadataLookupId { return $this->lookupId; }
 }

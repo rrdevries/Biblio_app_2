@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Application\Metadata;
 
+use Biblio\Core\Catalog\EditionId;
 use InvalidArgumentException;
 
 final readonly class MetadataRecordId
@@ -18,6 +19,16 @@ final readonly class MetadataRecordId
         ) {
             throw new InvalidArgumentException("Invalid metadata record ID.");
         }
+    }
+
+    public static function forEdition(EditionId $editionId): self
+    {
+        return new self("edition:" . $editionId->value());
+    }
+
+    public static function forEditionEvidence(EditionId $editionId): self
+    {
+        return new self("edition-evidence:" . $editionId->value());
     }
 
     public function value(): string { return $this->value; }

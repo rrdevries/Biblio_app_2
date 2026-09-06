@@ -8,12 +8,17 @@ use Biblio\Core\Application\Assessments\Read\{PublicAssessmentCursor,PublicAsses
 use Biblio\Core\Application\Catalog\Read\CatalogOverviewCursor;
 use Biblio\Core\Application\Catalog\Read\CatalogOverviewPageSize;
 use Biblio\Core\Application\Catalog\Query\CatalogQuery;
+use Biblio\Core\Application\Catalog\Classification\LibraryCatalogContextInitialization;
+use Biblio\Core\Application\Metadata\{AddBookCommitRequest,AddBookCommitSelection,AddBookObservedMetadata,MetadataCandidateId,MetadataFieldValue,MetadataLookupId,UserObservedMetadataField};
 use Biblio\Core\Application\Reading\History\ReadingHistoryCursor;
 use Biblio\Core\Application\Reading\History\ReadingHistoryPageSize;
 use Biblio\Core\Application\NextReading\Read\{NextReadingDiscoveryLimit,NextReadingWorkCursor,NextReadingWorkSearchTerm};
 use Biblio\Core\Borrowing\ExternalLoanId;
 use Biblio\Core\Catalog\ItemId;
+use Biblio\Core\Catalog\InventoryNumber;
+use Biblio\Core\Catalog\LocationId;
 use Biblio\Core\Catalog\WorkId;
+use Biblio\Core\Catalog\Classification\{LibraryBookTypeId,LibraryCatalogSelection,LibraryGenreId,LibrarySubjectId};
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Notes\PrivateNoteId;
 use Biblio\Core\Notes\PrivateNotePageRequest;
@@ -812,5 +817,203 @@ final readonly class RestRequestParser
         }
 
         return $body["identifier"];
+    }
+
+    public function addBookCommit(WP_REST_Request $request): AddBookCommitRequest
+    {
+        $this->validateQueryFields($request, []);
+        $body = $this->jsonObject($request, "selection");
+        $this->validateBodyFields(
+            $body,
+            ["identifier", "selection", "observed_fields", "classification", "item"]
+        );
+
+        $identifier = $body["identifier"];
+        if (
+            $identifier !== null
+            && (!is_string($identifier) || strlen($identifier) > 64)
+        ) {
+            throw RestRequestException::wrongType(
+                "identifier",
+                "null or an ISBN string of at most 64 bytes"
+            );
+        }
+
+        if (!is_array($body["selection"]) || array_is_list($body["selection"])) {
+            throw RestRequestException::wrongType("selection", "a JSON object");
+        }
+        $selection = $body["selection"];
+        if (($selection["type"] ?? null) === "manual") {
+            if (!$this->hasExactFields($selection, ["type"])) {
+                throw RestRequestException::invalid("selection");
+            }
+            $commitSelection = AddBookCommitSelection::manual();
+        } elseif (($selection["type"] ?? null) === "candidate") {
+            if (!$this->hasExactFields(
+                $selection,
+                ["type", "lookup_id", "candidate_id"]
+            )) {
+                throw RestRequestException::invalid("selection");
+            }
+            $commitSelection = AddBookCommitSelection::candidate(
+                $this->identifier(
+                    $selection["lookup_id"],
+                    "lookup_id",
+                    static fn (string $value): MetadataLookupId =>
+                        new MetadataLookupId($value)
+                ),
+                $this->identifier(
+                    $selection["candidate_id"],
+                    "candidate_id",
+                    static fn (string $value): MetadataCandidateId =>
+                        new MetadataCandidateId($value)
+                )
+            );
+        } else {
+            throw RestRequestException::invalid("selection");
+        }
+
+        $observed = $this->observedMetadata($body["observed_fields"]);
+        if (
+            !is_array($body["item"])
+            || ($body["item"] !== [] && array_is_list($body["item"]))
+        ) {
+            throw RestRequestException::wrongType("item", "a JSON object");
+        }
+        $item = $body["item"];
+        if (array_diff(array_keys($item), ["inventory_number", "location_id"]) !== []) {
+            throw RestRequestException::unknownFields();
+        }
+
+        try {
+            return new AddBookCommitRequest(
+                $identifier,
+                $commitSelection,
+                $observed,
+                $this->addBookClassification($body["classification"]),
+                $this->optionalIdentifierValue(
+                    $item,
+                    "inventory_number",
+                    static fn (string $value): InventoryNumber =>
+                        new InventoryNumber($value)
+                ),
+                $this->optionalIdentifierValue(
+                    $item,
+                    "location_id",
+                    static fn (string $value): LocationId => new LocationId($value)
+                )
+            );
+        } catch (RestRequestException $exception) {
+            throw $exception;
+        } catch (Throwable) {
+            throw RestRequestException::invalid("body");
+        }
+    }
+
+    private function addBookClassification(
+        mixed $raw
+    ): LibraryCatalogContextInitialization {
+        if (!is_array($raw) || array_is_list($raw) || !$this->hasExactFields(
+            $raw,
+            ["book_type_id", "genre_ids", "subject_ids"]
+        )) {
+            throw RestRequestException::invalid("classification");
+        }
+        if (
+            !is_array($raw["genre_ids"])
+            || !array_is_list($raw["genre_ids"])
+            || !is_array($raw["subject_ids"])
+            || !array_is_list($raw["subject_ids"])
+        ) {
+            throw RestRequestException::invalid("classification");
+        }
+
+        $genreIds = [];
+        foreach ($raw["genre_ids"] as $id) {
+            $genreIds[] = $this->identifier(
+                $id,
+                "genre_ids",
+                static fn (string $value): LibraryGenreId =>
+                    new LibraryGenreId($value)
+            );
+        }
+        $subjectIds = [];
+        foreach ($raw["subject_ids"] as $id) {
+            $subjectIds[] = $this->identifier(
+                $id,
+                "subject_ids",
+                static fn (string $value): LibrarySubjectId =>
+                    new LibrarySubjectId($value)
+            );
+        }
+
+        return new LibraryCatalogContextInitialization(
+            new LibraryCatalogSelection(
+                $this->identifier(
+                    $raw["book_type_id"],
+                    "book_type_id",
+                    static fn (string $value): LibraryBookTypeId =>
+                        new LibraryBookTypeId($value)
+                ),
+                $genreIds,
+                $subjectIds
+            )
+        );
+    }
+
+    private function observedMetadata(mixed $raw): AddBookObservedMetadata
+    {
+        if (!is_array($raw) || ($raw !== [] && array_is_list($raw))) {
+            throw RestRequestException::wrongType(
+                "observed_fields",
+                "a JSON object"
+            );
+        }
+        $values = [];
+        foreach ($raw as $fieldKey => $value) {
+            $field = UserObservedMetadataField::tryFrom((string) $fieldKey);
+            if ($field === null || !$this->validObservedValue($field, $value)) {
+                throw RestRequestException::invalid("observed_fields");
+            }
+            try {
+                $values[$field->value] = new MetadataFieldValue($value);
+            } catch (Throwable) {
+                throw RestRequestException::invalid("observed_fields");
+            }
+        }
+        return new AddBookObservedMetadata($values);
+    }
+
+    private function validObservedValue(
+        UserObservedMetadataField $field,
+        mixed $value
+    ): bool
+    {
+        return match ($field) {
+            UserObservedMetadataField::Contributors,
+            UserObservedMetadataField::Languages,
+            UserObservedMetadataField::Publishers => is_array($value)
+                && array_is_list($value)
+                && count(array_filter($value, "is_string")) === count($value),
+            UserObservedMetadataField::PageCount => is_int($value),
+            default => is_string($value),
+        };
+    }
+
+    /**
+     * @template T
+     * @param array<string, mixed> $values
+     * @param callable(string): T $create
+     * @return ?T
+     */
+    private function optionalIdentifierValue(
+        array $values,
+        string $field,
+        callable $create
+    ): mixed {
+        if (!array_key_exists($field, $values) || $values[$field] === null) {
+            return null;
+        }
+        return $this->identifier($values[$field], $field, $create);
     }
 }

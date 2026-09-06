@@ -97,6 +97,42 @@ final class MetadataFieldReview
         );
     }
 
+    public function observeUserValue(
+        MetadataFieldValue $value,
+        DateTimeImmutable $at
+    ): void {
+        $hash = $value->hash();
+        $proposal = $this->proposals[$hash] ?? null;
+        $isCanonical = $this->canonicalValue?->equals($value) ?? false;
+
+        if ($proposal === null) {
+            $state = match (true) {
+                $isCanonical => MetadataFieldProposalState::Supporting,
+                $this->confirmationState ===
+                    MetadataFieldConfirmationState::IntentionallyBlank =>
+                    MetadataFieldProposalState::BlockedByIntentionalBlank,
+                default => MetadataFieldProposalState::Active,
+            };
+            $this->proposals[$hash] = new MetadataFieldProposal(
+                $value,
+                $state,
+                $at,
+                $at
+            );
+        } elseif (
+            $isCanonical
+            && $proposal->state() !== MetadataFieldProposalState::Confirmed
+        ) {
+            $proposal->transition(
+                MetadataFieldProposalState::Supporting,
+                null,
+                $at
+            );
+        }
+
+        $this->touch($at);
+    }
+
     public function correctManually(
         MetadataFieldValue $value,
         UserId $actor,

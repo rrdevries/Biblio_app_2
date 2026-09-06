@@ -10,7 +10,8 @@ use Biblio\Core\Application\Identity\AuthenticatedUser;
 use Biblio\Core\Application\Library\ActorLibraryContext;
 use Biblio\Core\Application\Library\ActorLibraryContextRepository;
 use Biblio\Core\Application\Library\LibraryContextQueryService;
-use Biblio\Core\Application\Metadata\{AddBookMetadataLookupResult,AddBookMetadataLookupService,AddBookMetadataReviewPolicy,CandidateClassifier,FirstSufficientMetadataLookupService,MetadataCandidate,MetadataMatchMethod,MetadataProvider,MetadataWorkLink,ProviderFailureReason,ProviderLookupResult};
+use Biblio\Core\Application\Metadata\{AddBookMetadataLookupResult,AddBookMetadataLookupService,AddBookMetadataReviewPolicy,CandidateClassifier,FirstSufficientMetadataLookupService,MetadataCandidate,MetadataCandidateId,MetadataClock,MetadataLookupId,MetadataLookupIdGenerator,MetadataLookupSnapshot,MetadataLookupSnapshotRepository,MetadataMatchMethod,MetadataProvider,MetadataWorkLink,ProviderFailureReason,ProviderLookupResult};
+use Biblio\Core\Application\TransactionManager;
 use Biblio\Core\Authorization\LibraryAuthorizationPolicy;
 use Biblio\Core\Catalog\{BibliographicMetadataRepository,CanonicalIsbnIdentity,Edition,EditionId,EditionIdentifierClaimRepository,EditionIsbnMetadata,EditionRepository,Isbn13,IsbnCanonicalizer,Work,WorkId,WorkRepository};
 use Biblio\Core\Exception\AuthorizationException;
@@ -22,6 +23,8 @@ use PHPUnit\Framework\TestCase;
 
 final class AddBookMetadataLookupServiceTest extends TestCase
 {
+    private AddBookRecordingSnapshotRepository $snapshots;
+
     public function testExistingEditionIsReturnedBeforeAnyProviderCall(): void
     {
         $identity = $this->identity();
@@ -81,9 +84,9 @@ final class AddBookMetadataLookupServiceTest extends TestCase
     {
         $claims = $this->createMock(EditionIdentifierClaimRepository::class);
         $claims->expects(self::never())->method("findByCanonicalIsbn13");
-        $editions = $this->createMock(EditionRepository::class);
-        $legacy = $this->createMock(BibliographicMetadataRepository::class);
-        $works = $this->createMock(WorkRepository::class);
+        $editions = $this->createStub(EditionRepository::class);
+        $legacy = $this->createStub(BibliographicMetadataRepository::class);
+        $works = $this->createStub(WorkRepository::class);
         $primary = new AddBookCountingMetadataProvider(
             "open_library",
             ProviderLookupResult::miss()
@@ -126,6 +129,12 @@ final class AddBookMetadataLookupServiceTest extends TestCase
 
         self::assertSame("single_candidate", $data["status"]);
         self::assertSame("9780306406157", $data["identifier"]["isbn_13"]);
+        self::assertSame("lookup-00000000000000000000000000000001", $data["lookup_id"]);
+        self::assertCount(1, $this->snapshots->saved);
+        self::assertSame(
+            "2026-09-06T10:30:00+00:00",
+            $this->snapshots->saved[0]->expiresAt()->format("c")
+        );
         self::assertSame([], $data["local_matches"]);
         self::assertCount(1, $data["candidates"]);
         self::assertSame("sufficient", $data["candidates"][0]["quality"]);
@@ -217,12 +226,12 @@ final class AddBookMetadataLookupServiceTest extends TestCase
         MetadataProvider $primary,
         MetadataProvider $fallback
     ): AddBookMetadataLookupResult {
-        $claims = $this->createMock(EditionIdentifierClaimRepository::class);
+        $claims = $this->createStub(EditionIdentifierClaimRepository::class);
         $claims->method("findByCanonicalIsbn13")->willReturn(null);
-        $editions = $this->createMock(EditionRepository::class);
-        $legacy = $this->createMock(BibliographicMetadataRepository::class);
+        $editions = $this->createStub(EditionRepository::class);
+        $legacy = $this->createStub(BibliographicMetadataRepository::class);
         $legacy->method("editionsForIsbns")->willReturn([]);
-        $works = $this->createMock(WorkRepository::class);
+        $works = $this->createStub(WorkRepository::class);
 
         return $this->service(
             LibraryMembership::owner(),
@@ -246,9 +255,9 @@ final class AddBookMetadataLookupServiceTest extends TestCase
     ): AddBookMetadataLookupService {
         $actor = new UserId("actor-a");
         $libraryId = new LibraryId("library-a");
-        $authenticated = $this->createMock(AuthenticatedUser::class);
+        $authenticated = $this->createStub(AuthenticatedUser::class);
         $authenticated->method("requireUserId")->willReturn($actor);
-        $contexts = $this->createMock(ActorLibraryContextRepository::class);
+        $contexts = $this->createStub(ActorLibraryContextRepository::class);
         $contexts->method("findForActor")->willReturn(
             new ActorLibraryContext(
                 Library::privateLibrary($libraryId),
@@ -259,6 +268,20 @@ final class AddBookMetadataLookupServiceTest extends TestCase
                 ),
                 true
             )
+        );
+        $snapshots = new AddBookRecordingSnapshotRepository();
+        $this->snapshots = $snapshots;
+        $lookupIds = $this->createStub(MetadataLookupIdGenerator::class);
+        $lookupIds->method("next")->willReturn(
+            new MetadataLookupId("lookup-00000000000000000000000000000001")
+        );
+        $transactions = $this->createStub(TransactionManager::class);
+        $transactions->method("run")->willReturnCallback(
+            static fn (callable $operation): mixed => $operation()
+        );
+        $clock = $this->createStub(MetadataClock::class);
+        $clock->method("now")->willReturn(
+            new DateTimeImmutable("2026-09-06T10:00:00+00:00")
         );
 
         return new AddBookMetadataLookupService(
@@ -279,7 +302,12 @@ final class AddBookMetadataLookupServiceTest extends TestCase
                 $primary,
                 $fallback
             ),
-            new AddBookMetadataReviewPolicy()
+            new AddBookMetadataReviewPolicy(),
+            $authenticated,
+            $snapshots,
+            $lookupIds,
+            $transactions,
+            $clock
         );
     }
 
@@ -320,6 +348,28 @@ final class AddBookMetadataLookupServiceTest extends TestCase
             new ReadingHistoryCursorCodec(),
             new PrivateNoteCursorCodec()
         );
+    }
+}
+
+final class AddBookRecordingSnapshotRepository implements
+    MetadataLookupSnapshotRepository
+{
+    /** @var list<MetadataLookupSnapshot> */
+    public array $saved = [];
+
+    public function save(MetadataLookupSnapshot $snapshot): void
+    {
+        $this->saved[] = $snapshot;
+    }
+
+    public function candidateForCommit(
+        MetadataLookupId $lookupId,
+        MetadataCandidateId $candidateId,
+        UserId $actorId,
+        LibraryId $libraryId,
+        DateTimeImmutable $at
+    ): ?MetadataCandidate {
+        return null;
     }
 }
 

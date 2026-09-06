@@ -49,6 +49,8 @@ enum FailureReason: string
         "personal_library_designation_conflict";
     case CatalogRecordAlreadyExists = "catalog_record_already_exists";
     case CatalogItemNotAvailable = "catalog_item_not_available";
+    case MetadataLookupSnapshotUnavailable =
+        "metadata_lookup_snapshot_unavailable";
     case ItemArchiveTransitionUnavailable =
         "item_archive_transition_unavailable";
     case ItemArchiveStale = "item_archive_stale";
