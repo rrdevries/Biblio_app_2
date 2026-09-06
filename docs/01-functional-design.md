@@ -390,10 +390,39 @@ resolution remains visibly `voorgesteld`/`mogelijk`, with language calibrated
 to evidence strength.
 
 Materially conflicting provider results remain reviewable whole-record
-candidates in v2.001; there is no general field-level multi-provider merge.
-Field-level evidence, confidence/merge logic, record fusion, OCR, community
-metadata, a Metadata Graph, paid feeds and extensive automatic Work resolution
-remain future scope.
+candidates in v2.001; there is no automatic multi-provider merge. After a
+candidate is selected for review, its supported values may exist as independent
+field proposals with provider-neutral evidence. Field-level confidence/merge
+logic, record fusion, OCR, community metadata, a Metadata Graph, paid feeds and
+extensive automatic Work resolution remain future scope.
+
+### Field confirmation and provenance
+
+Metadata proposes; the user determines canonical values. Confirmation is
+field-level and explicit:
+
+- a missing or differing provider value becomes a proposal and never silently
+  replaces a canonical value;
+- an identical provider value creates no active proposal or conflict, retains
+  supporting evidence and does not become user-confirmed automatically;
+- identical values from multiple providers share one content proposal while
+  retaining separate provider/source evidence;
+- rejection applies to the proposed content value, not one provider; repeated
+  evidence for that rejected value remains historical and does not reactivate
+  it, while a different value may be proposed later;
+- confirming one value makes it canonical and user-confirmed and removes other
+  current values for that field from active review without deleting evidence;
+- a later genuinely new differing value may become a new proposal, but cannot
+  overwrite a user-confirmed or manually corrected value;
+- ordered multiple values such as contributors are one atomic field value and
+  are never partially merged;
+- intentionally blank is persistent and distinct from unknown. Provider
+  evidence remains non-active until the user explicitly allows proposals again.
+
+The supported MH-B4 field keys follow the provider-neutral MH-B2/MH-B3
+candidate contract: title, subtitle, contributors, languages, publishers,
+publication date, page count and format. This foundation defines no REST/UI or
+Add Book behavior and performs no automatic Work/Edition/Item mutation.
 
 ### Metadata conflict review
 
@@ -412,8 +441,8 @@ their relevant differences and actions such as `Gebruik deze uitgave` and
 
 Provider name remains provenance/context and is not the primary selection
 criterion. Manual entry and editing are always available. v2.001 has no
-provider-per-field picker, field-level merge interface or automatic
-multi-provider field fusion.
+provider-per-field picker, automatic field merge or multi-provider field
+fusion. Field confirmation is a content choice; it is not a provider choice.
 
 ## Publication date
 

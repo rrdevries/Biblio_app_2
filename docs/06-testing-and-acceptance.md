@@ -2267,3 +2267,31 @@ MH-B3 is accepted when:
 - existing MH-B1/MH-B2 and catalog paths remain green, schema remains 1014 and
   there is no REST, UI, Add Book integration, confirmation, provenance write,
   cache, cover runtime, Series Intelligence, DATA-01 or catalog-data change.
+
+## 71. Metadata Hub MH-B4 field confirmation and provenance acceptance
+
+MH-B4 is accepted when:
+
+- exact provider-neutral values can persist per metadata record and field with
+  typed JSON content identity;
+- identical values share one proposal and retain distinct provider/source
+  evidence; repeated identical source evidence increments its observation
+  history rather than duplicating or losing provenance;
+- evidence equal to an existing canonical value remains supporting and never
+  auto-confirms it;
+- differing values remain independent and conflicts select no winner;
+- only explicit confirmation or manual correction can create user-confirmed
+  canonical state and provider ingestion never overwrites it;
+- rejection targets content, survives repeated evidence from any provider and
+  does not block later different content;
+- confirmation supersedes other active values while preserving all inactive
+  values and evidence; genuinely new later content can be proposed;
+- list values such as contributors remain ordered and atomic;
+- intentionally blank is persistent, suppresses active proposals and becomes
+  proposable again only after an explicit reopen command;
+- schema 1015 is additive, backward-safe, healthy, retry-safe and fails closed
+  on unknown partial structures;
+- unit rules, MariaDB persistence/migration, MH-B1/MH-B2/MH-B3 regressions,
+  PHPStan and the repository quality gates are green;
+- there is no REST, UI, Add Book, Series Intelligence, cover runtime, DATA-01,
+  V1 migration or automatic canonical catalog mutation.

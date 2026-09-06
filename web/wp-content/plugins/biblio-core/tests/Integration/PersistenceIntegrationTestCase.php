@@ -66,6 +66,9 @@ abstract class PersistenceIntegrationTestCase extends TestCase
         $collections = $this->tableNames->collections();
         $identifierClaims = $this->tableNames->editionIdentifierClaims();
         $metadataProvenance = $this->tableNames->editionMetadataProvenance();
+        $metadataFieldEvidence = $this->tableNames->metadataFieldEvidence();
+        $metadataFieldValues = $this->tableNames->metadataFieldValues();
+        $metadataFieldStates = $this->tableNames->metadataFieldStates();
         $locations = $this->tableNames->locations();
         $editions = $this->tableNames->editions();
         $works = $this->tableNames->works();
@@ -124,6 +127,15 @@ abstract class PersistenceIntegrationTestCase extends TestCase
         $this->database->query("DELETE FROM `{$items}`");
         if ($this->tableExists($metadataProvenance)) {
             $this->database->query("DELETE FROM `{$metadataProvenance}`");
+        }
+        if ($this->tableExists($metadataFieldEvidence)) {
+            $this->database->query("DELETE FROM `{$metadataFieldEvidence}`");
+        }
+        if ($this->tableExists($metadataFieldValues)) {
+            $this->database->query("DELETE FROM `{$metadataFieldValues}`");
+        }
+        if ($this->tableExists($metadataFieldStates)) {
+            $this->database->query("DELETE FROM `{$metadataFieldStates}`");
         }
         if ($this->tableExists($identifierClaims)) {
             $this->database->query("DELETE FROM `{$identifierClaims}`");

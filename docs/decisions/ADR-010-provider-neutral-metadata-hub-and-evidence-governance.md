@@ -2,6 +2,10 @@
 
 Status: Accepted
 
+Amended by ADR-011 for field-level proposal, confirmation, rejection,
+intentionally blank and evidence-history persistence. Automatic field fusion,
+confidence scoring and provider priority remain excluded.
+
 Scope: Biblio v2.001 metadata acquisition and canonical bibliographic truth
 
 ## Context
@@ -49,9 +53,12 @@ The approved v2.001 build target is limited to:
 - a first-class manual/no-ISBN path;
 - Biblio-owned or user-supplied covers, without provider-cover dependency.
 
-This ADR approves that target contract; it does not implement it. Field-level
-evidence storage, confidence scoring, merge policy and record fusion remain
-future work.
+This ADR approved that target contract before implementation. MH-B1 through
+MH-B4 now implement the identity, provider-adapter, fallback-orchestration and
+field-review foundations described in the current-state document. ADR-011
+authorizes field-level proposal/evidence persistence and explicit adjudication;
+confidence scoring, automatic merge policy and record fusion remain future
+work.
 
 ### Identity and matching
 
@@ -122,10 +129,11 @@ provider conditions can change, and provider lock-in would leak into Core.
 Rejected because similarity is insufficient evidence for identity and false
 merges are harder to repair than explicit unresolved candidates.
 
-### General field-level provider fusion in v2.001
+### General automatic field-level provider fusion in v2.001
 
-Rejected because the benchmark measured material conflicts and v2.001 has no
-approved field-level provenance, confidence or adjudication model.
+Rejected because the benchmark measured material conflicts. ADR-011 adds an
+explicit field-level provenance and adjudication model, but does not authorize
+automatic fusion, confidence or provider-priority behavior.
 
 ### Provider-per-field conflict editor in v2.001
 

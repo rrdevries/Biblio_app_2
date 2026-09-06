@@ -3,6 +3,11 @@
 Status: **GO WITH CONDITIONS — READY WITH CONDITIONS FOR METADATA HUB
 IMPLEMENTATION**.
 
+Historical readiness note: MH-B1 through MH-B4 subsequently implemented the
+identity, provider adapter, fallback orchestration and persistent field-review
+foundations. ADR-011 and the current-state document supersede this readiness
+snapshot where it described field-level persistence as future work.
+
 Date: 2026-09-05.
 
 Task severity: **High**.

@@ -1772,7 +1772,7 @@ machine-readable metrics, reviews and recommendation are under
 
 ### Metadata Hub and Series Intelligence decisions
 
-Status: **LOCKED DESIGN / NOT RUNTIME IMPLEMENTED**
+Status: **LOCKED DESIGN / PARTIALLY IMPLEMENTED THROUGH MH-B4**
 
 The approved metadata strategy is now provider-neutral and local-first. ISBN is
 Edition evidence; confirmed canonical data is never silently overwritten.
@@ -1801,12 +1801,15 @@ schemes must reuse membership identity. A future Library-bound Series collection
 goal and the existing platform-wide Series reading-goal concept remain separate
 frozen targetsets; the new collection-goal runtime is not in scope here.
 
-The v2.001 Metadata conflict contract remains whole-record candidate selection:
-identity-critical differences are reviewable, publication characteristics may
+The v2.001 Metadata conflict contract retains whole-record candidate selection
+at the user-facing acquisition boundary, while MH-B4 now provides persistent
+field-level review state and provenance beneath that future integration.
+Identity-critical differences are reviewable, publication characteristics may
 be non-blocking and enrichment conflicts never block book import. There is no
-field-level merge UI or provider fusion. Current product truth is in
-`docs/01-functional-design.md` §4 and §11. Remaining open implementation and
-governance choices are registered in `docs/26-future-roadmap-decisions.md`.
+field-level merge UI, automatic merge or provider fusion. Current product truth
+is in `docs/01-functional-design.md` §4 and §11. Remaining open implementation
+and governance choices are registered in
+`docs/26-future-roadmap-decisions.md`.
 
 ### Metadata Hub technical readiness
 
@@ -1915,3 +1918,31 @@ Schema remains `1014`. No REST, UI, Add Book integration, confirmation,
 provenance write, cache, cover runtime, Series Intelligence, DATA-01 change or
 canonical catalog mutation is included. MH-B4 and later Hub slices remain
 separate.
+
+### Metadata Hub MH-B4 — field-level confirmation and provenance
+
+Status: **GO / PERSISTENT FIELD-REVIEW FOUNDATION READY**
+
+Schema `1015` is active. The provider-neutral field-review Core now persists
+unknown, unconfirmed, user-confirmed and intentionally blank canonical field
+state; exact content proposals; and deduplicated provider/source evidence with
+first/last retrieval times and observation counts. The supported fields are the
+existing MH-B2/MH-B3 candidate values: title, subtitle, contributors, languages,
+publishers, publication date, page count and format.
+
+Identical provider values share one content proposal with multiple evidence
+sources. Evidence matching an existing canonical value is supporting only and
+does not auto-confirm it. Rejected content remains rejected when the same or a
+second provider repeats it; different content can still be proposed. Explicit
+confirmation makes one value canonical and user-confirmed, supersedes other
+active values and retains all value/evidence history. Manual correction has the
+same canonical precedence. Ordered contributors and other lists remain atomic.
+Intentionally blank is persistent, blocks active proposals and can be reopened
+only explicitly.
+
+The implementation is deliberately not exposed through REST, UI, Add Book or
+`CoreApplication` until the next authorized integration supplies ownership and
+authorization. It performs no automatic Work/Edition/Item mutation, provider
+priority, confidence scoring, merge/fusion, Series Intelligence, cover runtime,
+DATA-01 or V1 migration. Detailed evidence is in
+`docs/45-metadata-hub-mh-b4-field-confirmation-exit-evidence.md`.

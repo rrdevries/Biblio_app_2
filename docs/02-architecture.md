@@ -1135,3 +1135,41 @@ pair conflicts and canonical collisions fail without repair. Runtime creation
 inserts Edition and claim in one transaction. A duplicate claim rolls all
 losing Work/Edition/Item/context effects back and re-resolves the winner before
 Item creation.
+
+## 30. Metadata Hub MH-B4 field review and schema 1015
+
+MH-B4 adds a provider-neutral field-review aggregate without exposing it through
+REST, UI, Add Book or `CoreApplication`. `MetadataRecordId` is an opaque review
+workflow identity; it is deliberately not a provider ID or a second Work,
+Edition or Item identity. The future authorized integration owns creation and
+binding of that review identity.
+
+`MetadataFieldReviewService` decomposes the existing provider-neutral
+`MetadataCandidate` into the eight supported field keys. Each value is encoded
+as bounded, deterministic JSON and identified by its SHA-256 content hash.
+Ordered lists remain one atomic value. Exact typed equality is used; Core does
+not invent semantic normalization, confidence, provider precedence or partial
+list merging.
+
+The aggregate owns transitions between unknown, unconfirmed, user-confirmed
+and intentionally blank canonical field state. Content proposals are active,
+supporting, rejected, superseded, confirmed or blocked by intentionally blank.
+Only explicit confirm/manual-correction commands can create user-confirmed
+state. A transaction plus a locked field-state row serializes every mutation.
+
+Schema 1015 adds three Core-owned InnoDB tables:
+
+- `biblio_metadata_field_states` stores one current canonical field state,
+  actor, version and update time per metadata record and field;
+- `biblio_metadata_field_values` stores each exact content value once with its
+  review state and decision actor/time, preserving inactive history;
+- `biblio_metadata_field_evidence` stores deduplicated provider/source
+  observations per content value with first/last retrieval time and observation
+  count.
+
+Restrictive composite foreign keys preserve state → value → evidence history.
+Checks constrain field/state vocabularies, JSON/hash shape, decision nullability,
+timestamps, exact-ISBN query provenance and positive versions/counts. Migration
+1014→1015 is additive, changes no existing catalog or DATA-01 row, recognizes
+only absent or structurally healthy retry state and records 1015 only after full
+post-health succeeds.

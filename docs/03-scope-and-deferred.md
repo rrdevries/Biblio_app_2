@@ -36,8 +36,9 @@
 - lightweight central metadata correction proposal.
 - provider-neutral Metadata Hub minimum: ISBN validation, local-first lookup,
   conditional Open Library adapter, temporary conditional Google fallback,
-  whole-record review, minimum provenance, manual/no-ISBN entry and independent
-  Biblio-owned covers; implementation requires a separately approved build task.
+  whole-record candidate acquisition, persistent field-level confirmation and
+  evidence history, manual/no-ISBN entry and independent Biblio-owned covers;
+  REST/UI/Add Book integration requires a separately approved build task.
 
 ## Explicitly deferred
 
@@ -96,7 +97,7 @@
 - broad central bibliographic editor for all Library managers;
 - automatic structural Work/Author/Series merge;
 - publisher entity hierarchy;
-- field-level evidence/confidence and merge policy;
+- field-level confidence scoring, automatic merge policy and provider priority;
 - multi-provider record fusion;
 - OCR/vision and shelf/spine recognition;
 - community metadata and Metadata Graph;

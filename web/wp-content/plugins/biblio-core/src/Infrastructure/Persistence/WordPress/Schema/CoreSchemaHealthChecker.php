@@ -44,6 +44,7 @@ final readonly class CoreSchemaHealthChecker
             1012 => $this->inspectTables($this->tableNames->schema1012(), true, 1012),
             1013 => $this->inspectTables($this->tableNames->schema1013(), true, 1013),
             1014 => $this->inspectTables($this->tableNames->schema1014(), true, 1014),
+            1015 => $this->inspectTables($this->tableNames->schema1015(), true, 1015),
             default => throw new CoreSchemaMigrationException(
                 "No explicit Biblio Core schema-health contract exists for "
                 . "schema version {$expectedVersion}."
@@ -174,6 +175,15 @@ final readonly class CoreSchemaHealthChecker
             $this->tableNames->schema1014Additions(),
             false,
             1014
+        );
+    }
+
+    public function inspectExistingSchema1015Additions(): CoreSchemaHealth
+    {
+        return $this->inspectTables(
+            $this->tableNames->schema1015Additions(),
+            false,
+            1015
         );
     }
 
@@ -781,6 +791,45 @@ final readonly class CoreSchemaHealthChecker
                 "queried_identifier" => $ascii("varchar(13)"),
                 "confirmation_state" => $ascii("varchar(32)"),
             ],
+            $this->tableNames->metadataFieldStates() => [
+                "metadata_record_id" => $id,
+                "field_key" => $ascii("varchar(64)"),
+                "canonical_value_json" => ["type" => "longtext", "nullable" => "YES"],
+                "canonical_value_hash" => [
+                    "type" => "char(64)",
+                    "nullable" => "YES",
+                    "collation" => "ascii_bin",
+                ],
+                "confirmation_state" => $ascii("varchar(32)"),
+                "confirmed_by_user_id" => $nullableId,
+                "field_version" => ["type" => "bigint(20) unsigned", "nullable" => "NO"],
+                "updated_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+            ],
+            $this->tableNames->metadataFieldValues() => [
+                "metadata_record_id" => $id,
+                "field_key" => $ascii("varchar(64)"),
+                "value_hash" => $ascii("char(64)"),
+                "value_json" => ["type" => "longtext", "nullable" => "NO"],
+                "review_state" => $ascii("varchar(40)"),
+                "first_seen_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "last_seen_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "decided_by_user_id" => $nullableId,
+                "decided_at" => ["type" => "datetime(6)", "nullable" => "YES"],
+            ],
+            $this->tableNames->metadataFieldEvidence() => [
+                "evidence_id" => $ascii("char(64)"),
+                "metadata_record_id" => $id,
+                "field_key" => $ascii("varchar(64)"),
+                "value_hash" => $ascii("char(64)"),
+                "provider_key" => $ascii("varchar(64)"),
+                "provider_record_id" => $id,
+                "first_retrieved_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "last_retrieved_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "observation_count" => ["type" => "bigint(20) unsigned", "nullable" => "NO"],
+                "match_method" => $ascii("varchar(32)"),
+                "queried_identifier_type" => $ascii("varchar(16)"),
+                "queried_identifier" => $ascii("varchar(13)"),
+            ],
             $this->tableNames->locations() => [
                 "library_id" => $id,
                 "location_id" => $id,
@@ -1182,6 +1231,18 @@ final readonly class CoreSchemaHealthChecker
                 "edition_metadata_provenance_identity" => ["unique" => true, "columns" => ["edition_id", "provider_key", "provider_record_id", "queried_identifier"]],
                 "edition_metadata_provenance_by_time" => ["unique" => false, "columns" => ["edition_id", "retrieved_at", "provenance_id"]],
             ],
+            $this->tableNames->metadataFieldStates() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["metadata_record_id", "field_key"]],
+                "metadata_field_states_by_confirmation" => ["unique" => false, "columns" => ["confirmation_state", "updated_at", "metadata_record_id", "field_key"]],
+            ],
+            $this->tableNames->metadataFieldValues() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["metadata_record_id", "field_key", "value_hash"]],
+                "metadata_field_values_active" => ["unique" => false, "columns" => ["metadata_record_id", "field_key", "review_state", "last_seen_at"]],
+            ],
+            $this->tableNames->metadataFieldEvidence() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["evidence_id"]],
+                "metadata_field_evidence_by_value" => ["unique" => false, "columns" => ["metadata_record_id", "field_key", "value_hash", "first_retrieved_at", "evidence_id"]],
+            ],
             $this->tableNames->locations() => [
                 "PRIMARY" => [
                     "unique" => true,
@@ -1488,6 +1549,20 @@ final readonly class CoreSchemaHealthChecker
             $this->tableNames->editionMetadataProvenance() => [
                 $restrict(["edition_id"], $this->tableNames->editions(), ["edition_id"]),
             ],
+            $this->tableNames->metadataFieldValues() => [
+                $restrict(
+                    ["metadata_record_id", "field_key"],
+                    $this->tableNames->metadataFieldStates(),
+                    ["metadata_record_id", "field_key"]
+                ),
+            ],
+            $this->tableNames->metadataFieldEvidence() => [
+                $restrict(
+                    ["metadata_record_id", "field_key", "value_hash"],
+                    $this->tableNames->metadataFieldValues(),
+                    ["metadata_record_id", "field_key", "value_hash"]
+                ),
+            ],
             $this->tableNames->locations() => [
                 $restrict(["library_id"], $this->tableNames->libraries(), ["library_id"]),
             ],
@@ -1694,6 +1769,35 @@ final readonly class CoreSchemaHealthChecker
                 "match_method = 'exact_isbn'",
                 "queried_identifier_type = 'isbn_10' AND queried_identifier REGEXP '^[0-9]{9}[0-9X]$' OR queried_identifier_type = 'isbn_13' AND queried_identifier REGEXP '^97[89][0-9]{10}$'",
                 "confirmation_state IN ('accepted_unchanged', 'accepted_corrected')",
+            ],
+            $this->tableNames->metadataFieldStates() => [
+                "CHAR_LENGTH(TRIM(metadata_record_id)) > 0",
+                "field_key IN ('title', 'subtitle', 'contributors', 'languages', 'publishers', 'publication_date', 'page_count', 'format')",
+                "canonical_value_json IS NULL OR JSON_VALID(canonical_value_json)",
+                "canonical_value_hash IS NULL OR canonical_value_hash REGEXP '^[0-9a-f]{64}$'",
+                "canonical_value_hash IS NULL OR CAST(canonical_value_hash AS CHAR CHARSET binary) = CAST(SHA2(canonical_value_json, 256) AS CHAR CHARSET binary)",
+                "confirmation_state IN ('unknown', 'unconfirmed', 'user_confirmed', 'intentionally_blank')",
+                "confirmation_state = 'unknown' AND canonical_value_json IS NULL AND canonical_value_hash IS NULL AND confirmed_by_user_id IS NULL OR confirmation_state = 'unconfirmed' AND canonical_value_json IS NOT NULL AND canonical_value_hash IS NOT NULL AND confirmed_by_user_id IS NULL OR confirmation_state = 'user_confirmed' AND canonical_value_json IS NOT NULL AND canonical_value_hash IS NOT NULL AND confirmed_by_user_id IS NOT NULL OR confirmation_state = 'intentionally_blank' AND canonical_value_json IS NULL AND canonical_value_hash IS NULL AND confirmed_by_user_id IS NOT NULL",
+                "confirmed_by_user_id IS NULL OR CHAR_LENGTH(TRIM(confirmed_by_user_id)) > 0",
+                "field_version >= 1",
+            ],
+            $this->tableNames->metadataFieldValues() => [
+                "value_hash REGEXP '^[0-9a-f]{64}$'",
+                "JSON_VALID(value_json)",
+                "CAST(value_hash AS CHAR CHARSET binary) = CAST(SHA2(value_json, 256) AS CHAR CHARSET binary)",
+                "review_state IN ('active', 'supporting', 'rejected', 'superseded', 'confirmed', 'blocked_by_intentional_blank')",
+                "last_seen_at >= first_seen_at",
+                "decided_by_user_id IS NULL AND decided_at IS NULL OR decided_by_user_id IS NOT NULL AND decided_at IS NOT NULL",
+                "decided_by_user_id IS NULL OR CHAR_LENGTH(TRIM(decided_by_user_id)) > 0",
+            ],
+            $this->tableNames->metadataFieldEvidence() => [
+                "evidence_id REGEXP '^[0-9a-f]{64}$'",
+                "CHAR_LENGTH(TRIM(provider_key)) > 0",
+                "CHAR_LENGTH(TRIM(provider_record_id)) > 0",
+                "last_retrieved_at >= first_retrieved_at",
+                "observation_count >= 1",
+                "match_method = 'exact_isbn'",
+                "queried_identifier_type = 'isbn_10' AND queried_identifier REGEXP '^[0-9]{9}[0-9X]$' OR queried_identifier_type = 'isbn_13' AND queried_identifier REGEXP '^97[89][0-9]{10}$'",
             ],
             $this->tableNames->locations() => [
                 "CHAR_LENGTH(TRIM(display_name)) > 0",
