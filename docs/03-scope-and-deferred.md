@@ -13,7 +13,8 @@
 - multiple Library memberships.
 - Beheerrol + Gebruikstoegang.
 - basic Platform account administration.
-- physical collection, Locations, Conditions and Acquisition.
+- physical collection, Locations, Conditions, Acquisition and the
+  collector-local layers defined by ADR-013.
 - Collections.
 - Archive.
 - simple internal loans.
@@ -155,6 +156,18 @@ Migration from existing Biblio V1 data is a later controlled technical activity,
 
 ### Collector-local overrides
 
-Which platform-wide Work/Edition data may a Bibliotheek present differently or
-supplement locally for collectors, and which collector-specific data belongs on
-Item/Copy level? No override model is decided in v2.001.
+ADR-013 fixes the v2.001 collector-local boundary: exactly three
+Library-local presentation fields and exactly six additional Item/Copy
+collector fields supplement, but never replace, central Work/Edition
+bibliography. The following specialist collector data remains explicitly
+deferred as separate structured fields:
+
+- paper or watermark details;
+- foxing;
+- extensive restoration data;
+- bookbinder;
+- ex-libris as its own entity;
+- extensive provenance chains;
+- certificates;
+- signature authentication;
+- other specialist antiquarian cataloguing.

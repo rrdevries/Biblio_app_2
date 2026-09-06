@@ -335,9 +335,30 @@ Includes:
 - Acquisition;
 - inventory number;
 - copy-specific physical features;
-- completeness/deviations;
 - archive/lifecycle;
 - lending state.
+
+### Collector-local layers
+
+Collector-local data supplements, and never replaces, platform-wide Work/Edition
+bibliography. It has two separate layers.
+
+The Library-local presentation layer controls how a shared Work/Edition record
+is presented in one Library. In v2.001 it contains exactly own display name,
+own sort title and short local explanation / label.
+
+The Item/Copy collector layer describes one concrete physical copy. In addition
+to existing Condition, Location and Acquisition data, v2.001 contains exactly
+Signed, Copy number / limitation, Dust jacket, Inscription / dedication,
+Origin / provenance and Completeness / enclosures. `Leesexemplaar` /
+`verzamelkopie` is not a separate Item/Copy core field; the local
+presentation-/label layer may express it.
+
+Author(s), ISBN, language, publisher, publication date and other shared
+Work/Edition metadata do not receive local overrides. A central error remains a
+Biblio Librarian correction-flow matter. Specialist antiquarian cataloguing is
+deferred. MH-B5 and later UI must respect these ownership boundaries; this
+decision defines no MH-B5 or UI behavior. See ADR-013.
 
 ## LibraryCatalogContext
 

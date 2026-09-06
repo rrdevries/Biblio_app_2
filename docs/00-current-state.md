@@ -166,6 +166,8 @@ Library-local:
 - LibraryCatalogContext
 - Item/Exemplaar
 - local Boeksoort / Genre / Onderwerp
+- collector-local presentation: own display name, own sort title and short
+  local explanation / label
 - acquisition, location, condition, archive and lending state
 
 User-owned:
@@ -178,6 +180,19 @@ Eigenaar en Beheerder kunnen zo'n voorstel indienen wanneer zij daar bevoegd
 toe zijn, maar wijzigen de centrale metadata niet rechtstreeks. Dit vervangt
 de oudere één-Bibliotheek-uitzondering voor directe correctie. Provider-evidence
 voor Work/Edition blijft eveneens platformbreed gedeeld.
+
+Collector-local data is supplementary and has two separate layers. The
+Library-scoped presentation layer controls only how a shared Work/Edition
+record is presented inside that Library; in v2.001 it supports own display
+name, own sort title and short local explanation / label. The Library-owned
+Item/Copy collector layer describes the concrete physical copy and supports
+signed, copy number/limitation, dust jacket, inscription/dedication,
+origin/provenance and completeness/enclosures in addition to existing
+condition, location and acquisition data. Neither layer replaces central
+bibliography. `Leesexemplaar` / `verzamelkopie` is not a separate Item/Copy
+core field; a local presentation/label may express it. Specialist antiquarian
+cataloguing remains deferred. The canonical decision is
+`docs/decisions/ADR-013-collector-local-overrides.md`.
 
 The technical central bibliographic baseline is schema `1009`. It persists
 stable Author and Series identities plus typed Work relationships. Work
@@ -2015,3 +2030,19 @@ automatically canonicalize a Work title, and no Librarian confirmation blocks
 Edition use. No queue, schema, REST/UI, role, MH-B5, merge flow or
 collector-local override model is implemented. The canonical decision is
 `docs/decisions/ADR-012-provisional-catalog-and-librarian-review-governance.md`.
+
+### D-COL-01 — Collector-local overrides
+
+Status: **DECISION CANONICALIZED / NOT IMPLEMENTED**
+
+Shared Work/Edition bibliography remains central. A Library may supplement it
+through two separate collector layers: a Library-scoped presentation layer with
+exactly own display name, own sort title and short local explanation / label;
+and a Library-owned Item/Copy layer with exactly signed, copy number/limitation,
+dust jacket, inscription/dedication, origin/provenance and
+completeness/enclosures in addition to existing condition, location and
+acquisition data. Neither layer replaces central metadata. Central corrections
+remain governed by the Biblio Librarian flow. No schema, REST, UI, MH-B5 or
+collector workflow is implemented. Specialist antiquarian fields remain
+deferred. The canonical decision is
+`docs/decisions/ADR-013-collector-local-overrides.md`.

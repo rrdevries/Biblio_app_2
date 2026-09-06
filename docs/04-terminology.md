@@ -86,6 +86,18 @@ Concrete physical copy belonging to exactly one Library.
 
 UI term: `Exemplaar`.
 
+## Bibliotheek-lokale presentatielaag
+Library-scoped supplementary presentation of a shared Work/Edition record in
+one Library. In v2.001 it has exactly own display name, own sort title and
+short local explanation / label. It never replaces central bibliography.
+
+## Item/Copy collector-laag
+Library-owned supplementary data about one concrete Item/Copy. In v2.001 it
+has exactly Signed, Copy number / limitation, Dust jacket,
+Inscription / dedication, Origin / provenance and Completeness / enclosures,
+beside existing Condition, Location and Acquisition data. It never replaces
+central Work/Edition bibliography.
+
 ## LibraryCatalogContext
 Library-local catalog context attached to central Work/Edition identity, including local Boeksoort/Genre/Onderwerp and later explicitly designed local metadata.
 

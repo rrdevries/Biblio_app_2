@@ -148,6 +148,14 @@ Acceptance:
 - Biblio searches existing central identities before creating a new one;
 - this creation never makes an external borrowed source a Library Item;
 - same Work can be referenced by Items in multiple Libraries;
+- local collector data never replaces shared Work/Edition bibliography;
+- the Library-scoped presentation layer contains only own display name, own
+  sort title and short local explanation / label in v2.001;
+- Item/Copy collector data remains Library-owned and is distinct from existing
+  condition, location and acquisition data and from user-owned reading data;
+- a local author, ISBN, language, publisher, publication date or other central
+  Work/Edition override is not accepted; central corrections retain the Biblio
+  Librarian flow.
 - same user's rereads across different Libraries still resolve to one Work;
 - Work can exist without Edition/Item for legitimate central personal use case;
 - local Boeksoort/Genre/Onderwerp do not mutate central Work/Edition.

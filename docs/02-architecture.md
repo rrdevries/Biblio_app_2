@@ -132,6 +132,15 @@ Library-local:
 
 This allows one personal reading history to recognize the same Work across multiple Libraries without creating duplicate identities.
 
+Collector-local data is supplementary, never a Library-local replacement for
+shared Work/Edition bibliography. It has a Library-scoped presentation layer
+and a Library-owned Item/Copy collector layer. The former has exactly own
+display name, own sort title and short local explanation / label in v2.001; the
+latter has exactly signed, copy number/limitation, dust jacket,
+inscription/dedication, origin/provenance and completeness/enclosures beyond
+existing condition, location and acquisition data. This is a functional
+ownership decision, not a persistence, schema, REST or UI design. See ADR-013.
+
 Central identity governance:
 - an authorized Library Item-add flow may create missing Work/Edition identity;
 - the Eigenaar of the designated personal Privébibliotheek may create minimum Work/Edition/Auteur/Serie identity needed by a valid personal reading/borrowing flow;
