@@ -95,6 +95,8 @@
 ### Metadata/catalog
 - full institutional cataloguing workflow;
 - broad central bibliographic editor for all Library managers;
+- Librarian-review queue UI, priority algorithm, notifications, automatic task
+  assignment, dashboard and merge flow;
 - automatic structural Work/Author/Series merge;
 - publisher entity hierarchy;
 - field-level confidence scoring, automatic merge policy and provider priority;
@@ -148,3 +150,11 @@ Migration from existing Biblio V1 data is a later controlled technical activity,
 - final CPT/CCT/custom-table persistence mapping before spike;
 - final hosting/backup product selection before hosting is known;
 - advanced search infrastructure (Elastic/Algolia/SearchWP) unless proven necessary.
+
+## Open future design questions
+
+### Collector-local overrides
+
+Which platform-wide Work/Edition data may a Bibliotheek present differently or
+supplement locally for collectors, and which collector-specific data belongs on
+Item/Copy level? No override model is decided in v2.001.

@@ -67,7 +67,8 @@ Platform-wide identity of the intellectual/content work.
 
 Its title is explicitly either `provisional` or `librarian_confirmed`. A title
 seeded while creating a first Edition is provisional until a `Biblio Librarian`
-confirms it.
+confirms it. A provisional Work is a usable shared catalog record; this status
+does not itself mean erroneous, blocked or subject to review.
 
 Dutch UI wording may use `Werk` where appropriate; canonical data concept remains Work.
 
@@ -266,6 +267,17 @@ Proposal to a `Biblio Librarian` to change platform-wide Work/Edition metadata.
 It is required for every such change, whether one or multiple Libraries use the
 record. An authorized Eigenaar or Beheerder may submit it, but does not directly
 mutate the central metadata.
+
+## Librarian-reviewreason
+Functional reason why a future Biblio Librarian review is required. One record
+may have multiple reasons: `correction_proposed`, `ambiguous_match`,
+`possible_duplicate`, `identity_conflict`, `unresolved_work_identity` or
+`structural_ambiguity`.
+
+`provisional` is not a Librarian-reviewreason. Missing ordinary enrichment,
+incomplete single-provider data, an Edition with an unambiguous canonical ISBN,
+corroborating providers and a provisional Work title without concrete further
+uncertainty are not reasons either.
 
 ## Superseded terms/concepts
 

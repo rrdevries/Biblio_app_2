@@ -1991,3 +1991,27 @@ and Work titles. MH-B4 evidence remains provider-neutral and Edition-oriented;
 CAT-T1 adds no REST/UI/Add Book integration and does not bypass MH-B5. Detailed
 evidence is in
 `docs/46-catalog-cat-t1-work-edition-title-separation-exit-evidence.md`.
+
+### D-GOV-02 — Provisional catalog and Librarian-review governance
+
+Status: **DECISION CANONICALIZED / NOT IMPLEMENTED**
+
+New Work/Edition records may immediately exist as usable platform-wide
+`provisional` catalog records; Librarian approval normally never blocks
+collection management. `provisional` means not yet content-curated/confirmed,
+not erroneous, suspicious, blocked or automatically review-worthy.
+
+Biblio Librarian review is exception-based. Future review tasks can retain one
+or more of `correction_proposed`, `ambiguous_match`, `possible_duplicate`,
+`identity_conflict`, `unresolved_work_identity` and `structural_ambiguity`.
+Provisional status alone and routine absence/incompleteness of metadata are not
+triggers. Existing central Work/Edition correction governance is unchanged:
+authorized Eigenaar/Beheerder proposes; Biblio Librarian assesses; Libraries
+never directly mutate shared metadata.
+
+CAT-T1 continues to make Edition title concrete and Work title either
+`provisional` or `librarian_confirmed`; an Edition title may seed but not
+automatically canonicalize a Work title, and no Librarian confirmation blocks
+Edition use. No queue, schema, REST/UI, role, MH-B5, merge flow or
+collector-local override model is implemented. The canonical decision is
+`docs/decisions/ADR-012-provisional-catalog-and-librarian-review-governance.md`.

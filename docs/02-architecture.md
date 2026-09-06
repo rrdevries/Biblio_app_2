@@ -136,6 +136,8 @@ Central identity governance:
 - an authorized Library Item-add flow may create missing Work/Edition identity;
 - the Eigenaar of the designated personal Privébibliotheek may create minimum Work/Edition/Auteur/Serie identity needed by a valid personal reading/borrowing flow;
 - existing central records are searched before new identity creation;
+- a missing appropriate Work and/or Edition may be created immediately as a
+  usable platform-wide `provisional` record; this is not Librarian-gated;
 - every Work/Edition metadata change is a correction proposal for a separate
   platform-wide `Biblio Librarian` capability, regardless of the number of
   Libraries using the record;
@@ -145,6 +147,14 @@ Central identity governance:
 
 `Biblio Librarian` is separate from `Admin` and `Super admin`; neither role
 automatically grants the other. No new technical override is defined here.
+
+`provisional` is catalog-curation state, not an error, block or review-queue
+state. Future review orchestration is exception-based and can retain one or
+more closed reasons: `correction_proposed`, `ambiguous_match`,
+`possible_duplicate`, `identity_conflict`, `unresolved_work_identity` and
+`structural_ambiguity`. The status alone, ordinary missing enrichment, one
+incomplete provider, an unambiguous canonical ISBN, corroborating providers or
+a provisional title without further uncertainty do not create a review task.
 
 The schema-1009 Author/Series foundation represents this identity with
 separate central Author and Series records and explicit Work relationships.
@@ -1190,6 +1200,11 @@ separate title plus the closed `WorkTitleStatus` values `provisional` and
 provisional; only a later explicit `Biblio Librarian` command may construct
 confirmed state. Provider evidence and MH-B4 field review cannot perform that
 transition.
+
+That provisional Work title is usable without review solely because of its
+state. The Edition title may seed it, but does not automatically become a
+canonical Work title; only a concrete future exception may need a review reason
+such as `unresolved_work_identity` or `structural_ambiguity`.
 
 `AddLibraryItemService` requires a title when it creates an Edition. On the
 new-Work path it uses the same input to seed a provisional Work, without title

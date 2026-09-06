@@ -389,6 +389,11 @@ and cannot automatically confirm or overwrite a Work title. Search may match
 both the concrete Edition title and the Work title; normal catalog display,
 alphabetical ordering and title tie-breakers use the Edition title.
 
+`provisional` means that the shared Work record exists and is fully usable, but
+has not yet been content-curated or confirmed by a Biblio Librarian. It does
+not mean erroneous, suspicious, blocked or automatically queued for review.
+Missing Librarian confirmation never blocks adding or using an Edition.
+
 ## Metadata Hub and acquisition
 
 The Metadata Hub is a provider-neutral evidence and candidate boundary.
@@ -576,6 +581,11 @@ This personal-flow authority exists because the user has a personal Privébiblio
 
 Before creating a new central identity, Biblio first searches for an existing appropriate record to reduce duplicates.
 
+A new Work and/or Edition may immediately arise as a platform-wide
+`provisional` catalog record when no appropriate existing record exists. This
+normal creation is fully usable for collection management and is not a Biblio
+Librarian approval gate.
+
 Work and Edition are platform-wide shared bibliographic entities, irrespective
 of whether one or multiple Libraries currently use them. Provider evidence for
 them is also platform-wide shared. Every change to their metadata is therefore
@@ -590,6 +600,32 @@ ordinary correction while one Library was the sole user of a central record.
 Structural actions such as merge/split of Works, identity merging of Authors or major Series restructuring remain platform/bibliographic administration.
 
 Local Boeksoort/Genre/Onderwerp remain directly managed by the Library.
+
+### Exception-based Librarian review
+
+Biblio Librarian is catalog curation and exception handling, not mandatory
+review of every new provisional Work or Edition. A future review task may carry
+one or more of these reasons:
+
+- `correction_proposed`: an Eigenaar or authorized Beheerder explicitly
+  proposes a central metadata correction;
+- `ambiguous_match`: multiple plausible Work/Edition matches cannot safely be
+  chosen automatically;
+- `possible_duplicate`: records may describe the same Work/Edition but an
+  automatic merge is not sufficiently certain;
+- `identity_conflict`: evidence conflicts on Work/Edition identity metadata;
+- `unresolved_work_identity`: Work relation, original Work identity or
+  original/canonical Work title remains substantively uncertain;
+- `structural_ambiguity`: structure is unreliable to determine automatically,
+  such as translation versus another Work, omnibus/bundle, boxset or multiple
+  underlying Works.
+
+`provisional` status alone never creates review. Nor do a missing cover,
+publisher or publication date; incomplete data from one provider; a new
+Edition with an unambiguous canonical ISBN; multiple providers supporting the
+same metadata; or a provisional Work title without concrete further
+uncertainty. Queue presentation, priority, notification, task assignment,
+dashboard and merge flow remain future design/implementation scope.
 
 ## Biblio Library Intelligence and Lens
 

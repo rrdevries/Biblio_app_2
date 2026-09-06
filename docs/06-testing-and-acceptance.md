@@ -152,6 +152,19 @@ Acceptance:
 - Work can exist without Edition/Item for legitimate central personal use case;
 - local Boeksoort/Genre/Onderwerp do not mutate central Work/Edition.
 
+Creation and review:
+- a new appropriate-miss Work and/or Edition may be created immediately as a
+  usable platform-wide `provisional` record; Librarian approval never normally
+  blocks collection management;
+- provisional status alone creates no Librarian review task;
+- a future review task supports one or more of exactly
+  `correction_proposed`, `ambiguous_match`, `possible_duplicate`,
+  `identity_conflict`, `unresolved_work_identity` and
+  `structural_ambiguity`;
+- missing cover/publisher/publication date, one incomplete provider, an
+  unambiguous canonical ISBN, corroborating providers and a provisional Work
+  title without concrete further uncertainty create no review task.
+
 Governance:
 - every Work/Edition metadata change, including for a record used by one
   Library only, is a correction proposal for Biblio Librarian;
@@ -2316,6 +2329,9 @@ CAT-T1 is accepted when:
 - new Edition creation requires and persists its concrete title;
 - new Work+Edition creation seeds the Work title as provisional and cannot
   silently create librarian-confirmed state;
+- a provisional Work title and absent Librarian confirmation do not block
+  creation or use of its Edition; an Edition title can seed but never
+  automatically canonicalizes the Work title;
 - schema 1015→1016 preserves every existing Work title, copies it exactly to
   each related Edition and marks every migrated Work provisional;
 - the migration is retry-safe for absent and known derived partial state,
