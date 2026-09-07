@@ -55,6 +55,15 @@ function textList(value) {
         && value.every((entry) => typeof entry === "string");
 }
 
+function textMap(value) {
+    if (Array.isArray(value)) {
+        return value.length === 0;
+    }
+
+    return record(value)
+        && Object.entries(value).every(([key, entry]) => text(key) && text(entry));
+}
+
 function readIdentifier(value) {
     if (
         !exact(value, ["isbn_10", "isbn_13"])
@@ -220,7 +229,7 @@ function readFieldBinding(value) {
         ])
         || !text(value.field)
         || !text(value.target)
-        || !textList(value.explicit_mappings)
+        || !textMap(value.explicit_mappings)
         || !nullableText(value.fallback_target)
     ) {
         throw new TypeError("The Add Book field-binding contract is invalid.");
@@ -228,7 +237,7 @@ function readFieldBinding(value) {
 
     return Object.freeze({
         ...value,
-        explicit_mappings: Object.freeze([...value.explicit_mappings]),
+        explicit_mappings: Object.freeze({ ...value.explicit_mappings }),
     });
 }
 
