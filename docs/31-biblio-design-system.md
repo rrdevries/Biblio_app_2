@@ -468,6 +468,15 @@ implementatiespecificatie. De inhoud en copy daarin zijn illustratief, tenzij
 elders al canoniek vastgelegd; de mockup introduceert geen nieuwe functionele
 besluiten. Bestaande canonieke product- en domeinbesluiten blijven leidend.
 
+#### D-ADD-02 — Add Book vervolgcontext
+
+Na succesvol Add Book is `Exemplaar verder beschrijven` een contextuele
+deep-link binnen de bestaande Boekdetail-bewerkmodus: Boekdetail opent in
+bewerkmodus met `Exemplaar` direct gefocust en de collector-fields zichtbaar/
+geselecteerd. Opslaan behoudt de gebruiker op Boekdetail. Dit is geen aparte
+collector-wizard of editor en specificeert geen Boekdetail-editmode of
+collector-fieldimplementatie; de basiscompositie hierboven blijft ongewijzigd.
+
 ### 14.2 Collectie-detail
 
 Kijkmodus is editorial, ruim en covergericht, met een grotere collection hero

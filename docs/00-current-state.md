@@ -2148,14 +2148,29 @@ response. Schema remains `1017`. Detailed evidence:
 
 Status: **DECISION CANONICALIZED / NOT IMPLEMENTED**
 
-There is one local-first Add Book Wizard: ISBN scan/entry and `Geen ISBN`,
-existing Edition control/reuse, local ambiguity, reviewed single or multiple
-metadata candidates, manual Edition input, provider failure and expired review
-are paths within one flow. It preserves manual, optional `Koppel aan bestaand
-werk`, non-blocking extra-copy addition, conditional summary and a calm success
-state. The UX adds no provider fusion, automatic Work matching, central
-metadata override, Librarian UI or collector-detail design. Canonical design:
+There is one local-first Add Book Wizard: `Scan ISBN` is camera-based
+barcode/ISBN detection, while manual typing/pasting remains available in the
+normal ISBN field. Hardware barcode scanners have no separate UX mode and may
+fill that field as typed input. `Geen ISBN`, existing Edition control/reuse,
+local ambiguity, reviewed single or multiple metadata candidates, manual
+Edition input, provider failure and expired review are paths within one flow.
+It preserves manual, optional `Koppel aan bestaand werk`, non-blocking
+extra-copy addition, conditional summary and a calm success state. The UX adds
+no provider fusion, automatic Work matching, central metadata override,
+Librarian UI or collector-detail design. Canonical design:
 `docs/48-add-book-wizard-ux-canonical-design.md`.
+
+### D-ADD-02 — Add Book final UX delta
+
+Status: **DECISION CANONICALIZED / NOT IMPLEMENTED**
+
+After successful Add Book, `Exemplaar verder beschrijven` is not a separate
+collector wizard or editor. It is a contextual deep-link to Boekdetail in its
+existing edit mode, focused on `Exemplaar` with the collector fields visible/
+selected. Saving retains Boekdetail. The Add Book UX specification remains
+`docs/48-add-book-wizard-ux-canonical-design.md`; the consistent Boekdetail
+reference is `docs/31-biblio-design-system.md`. No Book Detail edit mode,
+collector-field persistence/UI, scanner or other implementation is included.
 
 ### ADD-API-01 — reusable Work discovery contract
 

@@ -19,9 +19,13 @@ document supplies their user-facing wizard design only.
 There is one Add Book Wizard. Metadata lookup, manual entry and existing
 Edition reuse are paths within that flow; there is no parallel manual wizard.
 
-The start supports ISBN scanning, manual ISBN entry and the explicit action
-`Geen ISBN`. `Geen ISBN` skips provider lookup and goes directly to manual
-Edition input. Biblio never invents an ISBN.
+The start supports `Scan ISBN`, manual ISBN entry and the explicit action
+`Geen ISBN`. `Scan ISBN` means camera-based barcode/ISBN detection. Manual
+typing or pasting into the normal ISBN field always remains available.
+USB/Bluetooth/hardware barcode scanners have no separate UX mode; they may
+fill that normal ISBN field as though a user typed into it. `Geen ISBN` skips
+provider lookup and goes directly to manual Edition input. Biblio never
+invents an ISBN.
 
 ## 2. Local-first existing Edition paths
 
@@ -139,8 +143,14 @@ an existing domain contract already requires them.
 
 The six collector fields—signed, copy number/limitation, dust jacket,
 inscription/dedication, origin/provenance and completeness/enclosures—are not a
-required main-wizard step. A successful addition may offer the conceptual
-follow-up `Exemplaar verder beschrijven`; that follow-up is not designed here.
+required main-wizard step. After successful addition,
+`Exemplaar verder beschrijven` is a contextual deep-link into the existing
+Boekdetail-bewerkmodus: it opens Boekdetail in edit mode, focuses the
+`Exemplaar` section/tab and shows/selects the collector fields. It is not a
+separate collector wizard or editor. After saving, the user remains on
+Boekdetail. This decision designs no Boekdetail edit mode or collector-field
+implementation; the Boekdetail composition remains governed by
+`docs/31-biblio-design-system.md`.
 
 When the same Edition already has one or more Items in the current Library,
 adding remains allowed. Show a compact check such as `Deze uitgave staat al 2×
