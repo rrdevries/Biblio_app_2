@@ -9,6 +9,8 @@
     --biblio-space-16: 4rem;
     --biblio-content-max: 90rem;
     --biblio-reading-max: 48rem;
+    --biblio-guided-max: 52rem;
+    --biblio-comparison-max: 68rem;
     --biblio-dialog-max: 32rem;
     --biblio-control-min: 44px;
     --biblio-radius-compact: 0.25rem;
@@ -111,6 +113,7 @@
     cursor: pointer;
     display: inline-flex;
     justify-content: center;
+    font-weight: 600;
     min-block-size: var(--biblio-control-min);
     padding: var(--biblio-space-2) var(--biblio-space-4);
     text-align: center;
@@ -398,8 +401,15 @@
 
 /* Add Book Wizard */
 [data-biblio-ui-root] .biblio-ui__add-book {
-    inline-size: min(100%, 64rem);
+    --biblio-add-book-max: var(--biblio-guided-max);
+
+    gap: var(--biblio-space-8);
+    inline-size: min(100%, var(--biblio-add-book-max));
     margin-inline: auto;
+}
+
+[data-biblio-ui-root] :where(.biblio-ui__add-book[data-add-book-step="ambiguous"], .biblio-ui__add-book[data-add-book-step="multiple"]) {
+    --biblio-add-book-max: var(--biblio-comparison-max);
 }
 
 [data-biblio-ui-root] .biblio-ui__guided-header,
@@ -413,32 +423,69 @@
     min-inline-size: 0;
 }
 
+[data-biblio-ui-root] .biblio-ui__guided-header {
+    border-block-end: var(--biblio-boundary-width) solid var(--biblio-color-border);
+    gap: var(--biblio-space-1);
+    padding-block-end: var(--biblio-space-6);
+}
+
+[data-biblio-ui-root] .biblio-ui__guided-header .biblio-ui__page-title {
+    font-size: clamp(2rem, 1.65rem + 1.1vw, 2.75rem);
+    line-height: 1.04;
+    max-inline-size: 24ch;
+}
+
+[data-biblio-ui-root] .biblio-ui__guided-header .biblio-ui__page-title:focus {
+    outline: 0;
+    text-decoration: underline;
+    text-decoration-color: var(--biblio-color-brass);
+    text-decoration-thickness: var(--biblio-boundary-width);
+    text-underline-offset: 0.16em;
+}
+
+[data-biblio-ui-root] .biblio-ui__guided-header .biblio-ui__eyebrow {
+    color: var(--biblio-color-brass);
+}
+
 [data-biblio-ui-root] .biblio-ui__guided-form {
     gap: var(--biblio-space-6);
-    max-inline-size: var(--biblio-reading-max);
+    inline-size: 100%;
+    max-inline-size: var(--biblio-guided-max);
 }
 
 [data-biblio-ui-root] .biblio-ui__guided-actions {
+    align-items: center;
     display: flex;
     flex-wrap: wrap;
     gap: var(--biblio-space-3);
 }
 
+[data-biblio-ui-root] :where(.biblio-ui__add-book > .biblio-ui__guided-actions, .biblio-ui__guided-form > .biblio-ui__guided-actions) {
+    border-block-start: var(--biblio-boundary-width) solid var(--biblio-color-border);
+    padding-block-start: var(--biblio-space-6);
+}
+
 [data-biblio-ui-root] .biblio-ui__field > label,
 [data-biblio-ui-root] .biblio-ui__choice-group legend {
+    font-size: 0.9375rem;
     font-weight: 600;
 }
 
 [data-biblio-ui-root] .biblio-ui__field :where(input, textarea, select),
 [data-biblio-ui-root] .biblio-ui__work-search-form input {
     background: var(--biblio-color-surface);
-    border: var(--biblio-boundary-width) solid var(--biblio-color-border-strong);
+    border: var(--biblio-boundary-width) solid var(--biblio-color-border);
     border-radius: var(--biblio-radius-control);
     color: var(--biblio-color-text-primary);
     inline-size: 100%;
     min-block-size: var(--biblio-control-min);
     min-inline-size: 0;
     padding: var(--biblio-space-2) var(--biblio-space-3);
+}
+
+[data-biblio-ui-root] .biblio-ui__field :where(input, textarea, select):focus-visible,
+[data-biblio-ui-root] .biblio-ui__work-search-form input:focus-visible {
+    border-color: var(--biblio-color-focus);
 }
 
 [data-biblio-ui-root] .biblio-ui__field textarea {
@@ -454,19 +501,19 @@
 [data-biblio-ui-root] .biblio-ui__edition-grid,
 [data-biblio-ui-root] .biblio-ui__work-results {
     display: grid;
-    gap: var(--biblio-space-4);
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+    gap: var(--biblio-space-6);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
     list-style: none;
     margin: 0;
     padding: 0;
 }
 
 [data-biblio-ui-root] .biblio-ui__edition-card,
-[data-biblio-ui-root] .biblio-ui__work-result,
-[data-biblio-ui-root] .biblio-ui__summary {
+[data-biblio-ui-root] .biblio-ui__work-result {
     background: var(--biblio-color-surface);
     border: var(--biblio-boundary-width) solid var(--biblio-color-border);
-    border-radius: var(--biblio-radius-overlay);
+    border-block-start: 2px solid var(--biblio-color-brass);
+    border-radius: var(--biblio-radius-control);
     display: grid;
     gap: var(--biblio-space-4);
     margin: 0;
@@ -474,33 +521,131 @@
     padding: var(--biblio-space-6);
 }
 
+[data-biblio-ui-root] .biblio-ui__edition-card > .biblio-ui__control,
+[data-biblio-ui-root] .biblio-ui__work-result > .biblio-ui__control {
+    margin-block-start: auto;
+}
+
+[data-biblio-ui-root] .biblio-ui__entity-kicker {
+    color: var(--biblio-color-brass);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
 [data-biblio-ui-root] .biblio-ui__edition-title,
-[data-biblio-ui-root] .biblio-ui__success-title {
+[data-biblio-ui-root] .biblio-ui__success-title,
+[data-biblio-ui-root] .biblio-ui__work-title {
     font-family: var(--biblio-font-serif);
     font-size: clamp(1.4rem, 1.2rem + 0.7vw, 2rem);
     font-weight: 500;
+    line-height: 1.08;
 }
 
-[data-biblio-ui-root] .biblio-ui__edition-facts,
-[data-biblio-ui-root] .biblio-ui__summary {
+[data-biblio-ui-root] .biblio-ui__edition-subtitle {
+    color: var(--biblio-color-text-secondary);
+    margin-block-start: calc(-1 * var(--biblio-space-3));
+}
+
+[data-biblio-ui-root] :where(.biblio-ui__edition-authors, .biblio-ui__work-authors) {
+    color: var(--biblio-color-text-secondary);
+    font-family: var(--biblio-font-serif);
+    font-size: 1.15rem;
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+[data-biblio-ui-root] .biblio-ui__edition-facts {
+    border-block-start: var(--biblio-boundary-width) solid var(--biblio-color-border);
     display: grid;
     gap: var(--biblio-space-2) var(--biblio-space-4);
     grid-template-columns: minmax(7rem, auto) minmax(0, 1fr);
+    padding-block-start: var(--biblio-space-4);
 }
 
 [data-biblio-ui-root] .biblio-ui__edition-fact { display: contents; }
 [data-biblio-ui-root] .biblio-ui__edition-fact :where(dt, dd) { margin: 0; min-inline-size: 0; }
-[data-biblio-ui-root] .biblio-ui__edition-fact dt { color: var(--biblio-color-text-muted); }
+[data-biblio-ui-root] .biblio-ui__edition-fact dt {
+    color: var(--biblio-color-text-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
 [data-biblio-ui-root] .biblio-ui__edition-fact--different dd {
-    box-shadow: inset 0 -0.45em var(--biblio-color-brass-subtle);
+    background: var(--biblio-color-brass-subtle);
+    border-radius: var(--biblio-radius-compact);
+    inline-size: fit-content;
+    padding-inline: var(--biblio-space-1);
+}
+
+[data-biblio-ui-root] .biblio-ui__edition-identity--different {
+    background: linear-gradient(
+        to top,
+        var(--biblio-color-brass-subtle) 0.38em,
+        transparent 0.38em
+    );
     inline-size: fit-content;
 }
 
-[data-biblio-ui-root] .biblio-ui__existing-copy,
-[data-biblio-ui-root] .biblio-ui__work-link {
-    background: var(--biblio-color-surface-muted);
-    border-inline-start: 0.25rem solid var(--biblio-color-brass);
+[data-biblio-ui-root] .biblio-ui__edition-fact--identifier :where(dt, dd) {
+    color: var(--biblio-color-text-muted);
+    font-size: 0.8125rem;
+}
+
+[data-biblio-ui-root] .biblio-ui__summary {
+    border-block: var(--biblio-boundary-width) solid var(--biblio-color-border);
+    display: grid;
+    gap: var(--biblio-space-3) var(--biblio-space-6);
+    grid-template-columns: minmax(8rem, auto) minmax(0, 1fr);
+    margin: 0;
+    max-inline-size: var(--biblio-guided-max);
+    padding-block: var(--biblio-space-6);
+}
+
+[data-biblio-ui-root] .biblio-ui__existing-copy {
+    background: color-mix(in srgb, var(--biblio-color-brass-subtle) 45%, transparent);
+    border-inline-start: 2px solid var(--biblio-color-brass);
     padding: var(--biblio-space-4);
+}
+
+[data-biblio-ui-root] .biblio-ui__work-link {
+    border-block: var(--biblio-boundary-width) solid var(--biblio-color-border);
+    gap: var(--biblio-space-3);
+    padding-block: var(--biblio-space-6);
+}
+
+[data-biblio-ui-root] .biblio-ui__work-link h2 {
+    font-family: var(--biblio-font-serif);
+    font-size: 1.5rem;
+    font-weight: 500;
+}
+
+[data-biblio-ui-root] .biblio-ui__status-panel,
+[data-biblio-ui-root] .biblio-ui__pending-state {
+    background: color-mix(in srgb, var(--biblio-color-surface) 58%, transparent);
+    border-inline-start: 2px solid var(--biblio-color-border-strong);
+    max-inline-size: var(--biblio-reading-max);
+    padding: var(--biblio-space-4);
+}
+
+[data-biblio-ui-root] .biblio-ui__status-panel--warning {
+    border-inline-start-color: var(--biblio-color-status-warning);
+}
+
+[data-biblio-ui-root] .biblio-ui__status-panel--danger {
+    border-inline-start-color: var(--biblio-color-status-danger);
+}
+
+[data-biblio-ui-root] .biblio-ui__pending-state {
+    border-inline-start-color: var(--biblio-color-brass);
+    color: var(--biblio-color-text-secondary);
+}
+
+[data-biblio-ui-root] .biblio-ui__add-book[data-add-book-step="success"] {
+    border-block-start: 2px solid var(--biblio-color-status-success);
+    padding-block-start: var(--biblio-space-8);
 }
 
 [data-biblio-ui-root] .biblio-ui__compact-list { padding-inline-start: var(--biblio-space-6); }
@@ -508,15 +653,14 @@
 [data-biblio-ui-root] .biblio-ui__choice-group {
     border: 0;
     display: grid;
-    gap: var(--biblio-space-2);
+    gap: 0;
     margin: 0;
     padding: 0;
 }
 
 [data-biblio-ui-root] .biblio-ui__check-choice {
     align-items: center;
-    border: var(--biblio-boundary-width) solid var(--biblio-color-border);
-    border-radius: var(--biblio-radius-control);
+    border-block-end: var(--biblio-boundary-width) solid var(--biblio-color-border);
     cursor: pointer;
     display: flex;
     gap: var(--biblio-space-3);
@@ -563,6 +707,14 @@
     [data-biblio-ui-root] .biblio-ui__guided-actions .biblio-ui__control {
         inline-size: 100%;
         justify-self: stretch;
+    }
+
+    [data-biblio-ui-root] .biblio-ui__add-book {
+        gap: var(--biblio-space-6);
+    }
+
+    [data-biblio-ui-root] :where(.biblio-ui__edition-card, .biblio-ui__work-result) {
+        padding: var(--biblio-space-4);
     }
 
     [data-biblio-ui-root] .biblio-ui__edition-facts,
