@@ -434,7 +434,13 @@ final class NextReadingRestApiTest extends PersistenceIntegrationTestCase
         self::assertCount(2, $first["items"]);
         self::assertSame(["Alpha 01", "Alpha 02"], array_column($first["items"], "title"));
         self::assertNotNull($first["next_cursor"]);
-        self::assertSame(["work_id", "title"], array_keys($first["items"][0]));
+        self::assertSame(
+            ["work_id", "title", "authors", "work_title_status", "series"],
+            array_keys($first["items"][0])
+        );
+        self::assertSame([], $first["items"][0]["authors"]);
+        self::assertSame("provisional", $first["items"][0]["work_title_status"]);
+        self::assertSame([], $first["items"][0]["series"]);
 
         $second = $this->data($this->dispatchAs($this->actorId, $this->queryRequest(
             "/biblio/v1/me/works",
@@ -459,6 +465,14 @@ final class NextReadingRestApiTest extends PersistenceIntegrationTestCase
         ));
         self::assertSame(400, $tooLarge->get_status());
 
+        wp_set_current_user(0);
+        unset($_SERVER["HTTP_X_WP_NONCE"], $GLOBALS["wp_rest_auth_cookie"]);
+        $anonymous = $this->server->dispatch($this->queryRequest(
+            "/biblio/v1/me/works",
+            ["q" => "Alpha"]
+        ));
+        self::assertSame(401, $anonymous->get_status());
+
         $this->seedLibrary("library-a", "Kast A", $this->actorId);
         $this->seedLibrary("library-b", "Kast B", $this->actorId, "view_only");
         $this->seedLibrary("library-foreign", "Verborgen", $this->otherId);
@@ -482,6 +496,66 @@ final class NextReadingRestApiTest extends PersistenceIntegrationTestCase
         self::assertStringNotContainsString("item-foreign", $serialized);
         self::assertStringNotContainsString("loan-foreign", $serialized);
         self::assertStringNotContainsString((string) $this->actorId, $serialized);
+    }
+
+    public function testWorkDiscoverySearchesAuthorsWithoutDuplicateResultsAndProjectsSeries(): void
+    {
+        $this->seedWork("work-author-only", "De verre kust", "librarian_confirmed");
+        $this->seedAuthor("author-octavia", "Octavia Butler", "work-author-only", 1);
+        $this->seedSeries("series-patternist", "Patternist", "work-author-only", "2");
+
+        $this->seedWork("work-title-and-author", "Butler verhalen");
+        $this->seedAuthor("author-butler-two", "Octavia Butler", "work-title-and-author", 1);
+        $this->seedAuthor("author-co", "Co Auteur", "work-title-and-author", 2);
+
+        $result = $this->data($this->dispatchAs($this->actorId, $this->queryRequest(
+            "/biblio/v1/me/works",
+            ["q" => "Butler"]
+        )));
+
+        self::assertSame(
+            ["work-title-and-author", "work-author-only"],
+            array_column($result["items"], "work_id")
+        );
+        self::assertCount(2, $result["items"]);
+        self::assertSame(
+            ["Octavia Butler", "Co Auteur"],
+            array_column($result["items"][0]["authors"], "display_name")
+        );
+        self::assertSame("librarian_confirmed", $result["items"][1]["work_title_status"]);
+        self::assertSame([[
+            "series_id" => "series-patternist",
+            "display_name" => "Patternist",
+            "position" => "2",
+        ]], $result["items"][1]["series"]);
+
+        $serialized = (string) wp_json_encode($result);
+        foreach (["library_id", "item_id", "user_id", "membership", "owner"] as $privateKey) {
+            self::assertStringNotContainsString($privateKey, $serialized);
+        }
+    }
+
+    public function testWorkDiscoveryEscapesWildcardCharacters(): void
+    {
+        $this->seedWork("work-percent", "100% echt");
+        $this->seedWork("work-decoy", "1000 echt");
+        $this->seedWork("work-underscore", "A_B");
+        $this->seedWork("work-underscore-decoy", "ACB");
+
+        $percent = $this->data($this->dispatchAs($this->actorId, $this->queryRequest(
+            "/biblio/v1/me/works",
+            ["q" => "%"]
+        )));
+        self::assertSame(["work-percent"], array_column($percent["items"], "work_id"));
+
+        $underscore = $this->data($this->dispatchAs($this->actorId, $this->queryRequest(
+            "/biblio/v1/me/works",
+            ["q" => "_"]
+        )));
+        self::assertSame(
+            ["work-underscore"],
+            array_column($underscore["items"], "work_id")
+        );
     }
 
     public function testStartReadingConsumesAtMostOneAndListRemainsConsistent(): void
@@ -625,7 +699,11 @@ final class NextReadingRestApiTest extends PersistenceIntegrationTestCase
         return $id;
     }
 
-    private function seedWork(string $workId, string $title): void
+    private function seedWork(
+        string $workId,
+        string $title,
+        string $titleStatus = "provisional"
+    ): void
     {
         if ((int) $this->database->get_var($this->database->prepare(
             "SELECT COUNT(*) FROM `{$this->tableNames->works()}` WHERE work_id = %s",
@@ -633,9 +711,54 @@ final class NextReadingRestApiTest extends PersistenceIntegrationTestCase
         )) === 0) {
             self::assertSame(1, $this->database->insert(
                 $this->tableNames->works(),
-                ["work_id" => $workId, "work_title" => $title]
+                [
+                    "work_id" => $workId,
+                    "work_title" => $title,
+                    "work_title_status" => $titleStatus,
+                ]
             ), $this->database->last_error);
         }
+    }
+
+    private function seedAuthor(
+        string $authorId,
+        string $displayName,
+        string $workId,
+        int $position
+    ): void {
+        self::assertSame(1, $this->database->insert(
+            $this->tableNames->authors(),
+            ["author_id" => $authorId, "display_name" => $displayName]
+        ), $this->database->last_error);
+        self::assertSame(1, $this->database->insert(
+            $this->tableNames->workContributors(),
+            [
+                "work_id" => $workId,
+                "author_id" => $authorId,
+                "contributor_role" => $position === 1 ? "author" : "co_author",
+                "contributor_position" => $position,
+            ]
+        ), $this->database->last_error);
+    }
+
+    private function seedSeries(
+        string $seriesId,
+        string $displayName,
+        string $workId,
+        ?string $position
+    ): void {
+        self::assertSame(1, $this->database->insert(
+            $this->tableNames->series(),
+            ["series_id" => $seriesId, "display_name" => $displayName]
+        ), $this->database->last_error);
+        self::assertSame(1, $this->database->insert(
+            $this->tableNames->workSeries(),
+            [
+                "work_id" => $workId,
+                "series_id" => $seriesId,
+                "series_position" => $position,
+            ]
+        ), $this->database->last_error);
     }
 
     private function seedLibrary(

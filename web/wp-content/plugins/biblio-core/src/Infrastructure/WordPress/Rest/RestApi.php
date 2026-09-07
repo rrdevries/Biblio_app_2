@@ -18,7 +18,7 @@ final class RestApi
         $catalogCursors = new CatalogCursorCodec();
         $historyCursors = new ReadingHistoryCursorCodec();
         $privateNoteCursors = new PrivateNoteCursorCodec();
-        $nextReadingWorkCursors = new NextReadingWorkCursorCodec();
+        $workDiscoveryCursors = new WorkDiscoveryCursorCodec();
         $publicAssessmentCursors = new PublicAssessmentCursorCodec();
         $this->controller = new RestController(
             $applicationProvider,
@@ -26,14 +26,14 @@ final class RestApi
                 $catalogCursors,
                 $historyCursors,
                 $privateNoteCursors,
-                $nextReadingWorkCursors,
+                $workDiscoveryCursors,
                 $publicAssessmentCursors
             ),
             new RestResponseSerializer(
                 $catalogCursors,
                 $historyCursors,
                 $privateNoteCursors,
-                $nextReadingWorkCursors,
+                $workDiscoveryCursors,
                 $publicAssessmentCursors
             ),
             new RestErrorMapper()

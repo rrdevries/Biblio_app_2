@@ -9,6 +9,7 @@ use Biblio\Core\Application\Assessments\Read\GetLibraryPublicAssessmentsService;
 
 use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
 use Biblio\Core\Application\Catalog\AddLibraryItemService;
+use Biblio\Core\Application\Catalog\Discovery\WorkDiscoveryService;
 use Biblio\Core\Application\Catalog\ManageLibraryItemArchiveService;
 use Biblio\Core\Application\Catalog\Query\CatalogQueryService;
 use Biblio\Core\Application\Catalog\Read\CatalogUiReadService;
@@ -135,6 +136,7 @@ final readonly class CoreApplication
         private ReorderNextReadingListService $nextReadingReorder,
         private GetMyNextReadingListService $myNextReadingList,
         private GetNextReadingHomeProjectionService $nextReadingHome,
+        private WorkDiscoveryService $workDiscovery,
         private NextReadingDiscoveryService $nextReadingDiscovery
     ) {
     }
@@ -394,5 +396,6 @@ final readonly class CoreApplication
     public function nextReadingReorder(): ReorderNextReadingListService { return $this->nextReadingReorder; }
     public function myNextReadingList(): GetMyNextReadingListService { return $this->myNextReadingList; }
     public function nextReadingHome(): GetNextReadingHomeProjectionService { return $this->nextReadingHome; }
+    public function workDiscovery(): WorkDiscoveryService { return $this->workDiscovery; }
     public function nextReadingDiscovery(): NextReadingDiscoveryService { return $this->nextReadingDiscovery; }
 }

@@ -19,7 +19,8 @@ use Biblio\Core\Application\Library\LibraryContextView;
 use Biblio\Core\Application\Notes\Read\PrivateNoteView;
 use Biblio\Core\Application\Notes\Read\PrivateNoteViewPage;
 use Biblio\Core\Application\NextReading\{NextReadingEntryView,NextReadingListView,NextReadingRemoval,PreferredReadingSourceState,PreferredReadingSourceView};
-use Biblio\Core\Application\NextReading\Read\{NextReadingSourceOptionView,NextReadingWorkPage,NextReadingWorkView};
+use Biblio\Core\Application\Catalog\Discovery\{WorkDiscoveryPage,WorkDiscoverySeriesView,WorkDiscoveryView};
+use Biblio\Core\Application\NextReading\Read\NextReadingSourceOptionView;
 use Biblio\Core\Application\Catalog\LocalEditionResolutionType;
 use Biblio\Core\Application\Metadata\{AddBookCommitResult,AddBookExistingEdition,AddBookExistingItem,AddBookMetadataLookupResult,ClassifiedMetadataCandidate,MetadataCandidateId,MetadataFieldBinding,MetadataLookupStatus};
 use Biblio\Core\Application\Reading\History\ReadingHistoryEntry;
@@ -40,7 +41,7 @@ final readonly class RestResponseSerializer
         private CatalogCursorCodec $cursors,
         private ReadingHistoryCursorCodec $historyCursors,
         private PrivateNoteCursorCodec $privateNoteCursors,
-        private ?NextReadingWorkCursorCodec $nextReadingWorkCursors = null,
+        private ?WorkDiscoveryCursorCodec $workDiscoveryCursors = null,
         private ?PublicAssessmentCursorCodec $publicAssessmentCursors = null
     ) {
     }
@@ -376,20 +377,36 @@ final readonly class RestResponseSerializer
         ];
     }
 
-    /** @return array{items: list<array{work_id: string, title: string}>, next_cursor: ?string} */
-    public function nextReadingWorks(NextReadingWorkPage $page): array
+    /** @return array{items: list<array<string, mixed>>, next_cursor: ?string} */
+    public function workDiscovery(WorkDiscoveryPage $page): array
     {
         return [
             "items" => array_map(
-                static fn (NextReadingWorkView $work): array => [
+                static fn (WorkDiscoveryView $work): array => [
                     "work_id" => $work->workId()->value(),
                     "title" => $work->title(),
+                    "authors" => array_map(
+                        static fn (Author $author): array => [
+                            "author_id" => $author->id()->value(),
+                            "display_name" => $author->displayName(),
+                        ],
+                        $work->authors()
+                    ),
+                    "work_title_status" => $work->titleStatus()->value,
+                    "series" => array_map(
+                        static fn (WorkDiscoverySeriesView $context): array => [
+                            "series_id" => $context->series()->id()->value(),
+                            "display_name" => $context->series()->displayName(),
+                            "position" => $context->position()->value(),
+                        ],
+                        $work->series()
+                    ),
                 ],
                 $page->works()
             ),
             "next_cursor" => $page->nextCursor() === null
                 ? null
-                : $this->nextReadingWorkCursorCodec()->encode(
+                : $this->workDiscoveryCursorCodec()->encode(
                     $page->nextCursor()
                 ),
         ];
@@ -503,9 +520,9 @@ final readonly class RestResponseSerializer
         ];
     }
 
-    private function nextReadingWorkCursorCodec(): NextReadingWorkCursorCodec
+    private function workDiscoveryCursorCodec(): WorkDiscoveryCursorCodec
     {
-        return $this->nextReadingWorkCursors ?? new NextReadingWorkCursorCodec();
+        return $this->workDiscoveryCursors ?? new WorkDiscoveryCursorCodec();
     }
 
     private function publicAssessmentCursorCodec(): PublicAssessmentCursorCodec

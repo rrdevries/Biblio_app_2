@@ -19,26 +19,6 @@ final readonly class NextReadingDiscoveryService
     ) {
     }
 
-    public function searchWorks(
-        NextReadingWorkSearchTerm $search,
-        ?NextReadingDiscoveryLimit $limit = null,
-        ?NextReadingWorkCursor $cursor = null
-    ): NextReadingWorkPage {
-        $this->authenticatedUser->requireUserId();
-
-        if ($cursor !== null && $cursor->search()->value() !== $search->value()) {
-            throw new \Biblio\Core\Exception\ValidationException(
-                "Work discovery cursor does not match the search."
-            );
-        }
-
-        return $this->repository->searchWorks(
-            $search,
-            $limit ?? new NextReadingDiscoveryLimit(),
-            $cursor
-        );
-    }
-
     /** @return list<NextReadingSourceOptionView> */
     public function sourceOptions(WorkId $workId): array
     {

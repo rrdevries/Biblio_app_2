@@ -10,12 +10,6 @@ use Biblio\Core\Library\LibraryId;
 
 interface NextReadingDiscoveryRepository
 {
-    public function searchWorks(
-        NextReadingWorkSearchTerm $search,
-        NextReadingDiscoveryLimit $limit,
-        ?NextReadingWorkCursor $cursor
-    ): NextReadingWorkPage;
-
     /**
      * @param list<LibraryId> $libraryIds
      * @return list<NextReadingSourceOptionView>

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Biblio\Core\Application\NextReading\Read;
+namespace Biblio\Core\Application\Catalog\Discovery;
 
 use Biblio\Core\Exception\ValidationException;
 
-final readonly class NextReadingWorkSearchTerm
+final readonly class WorkDiscoverySearchTerm
 {
     public const MAXIMUM_LENGTH = 100;
 
