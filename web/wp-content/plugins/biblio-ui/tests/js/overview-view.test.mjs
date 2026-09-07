@@ -226,6 +226,12 @@ test("overview rendering uses only allowlisted known Item presentation", () => {
     assert.equal(byTag(root, "ul").length, 1);
     assert.equal(byTag(root, "li").length, 2);
     assert.equal(byTag(root, "img").length, 1);
+    assert.equal(byClass(root, "biblio-ui__cover--placeholder").length, 1);
+    assert.equal(
+        byClass(root, "biblio-ui__cover--placeholder")[0]
+            .getAttribute("aria-label"),
+        "Geen omslag beschikbaar voor Zonder metadata"
+    );
     assert.equal(
         byTag(root, "img")[0].getAttribute("alt"),
         "Omslag van De bekende titel"
@@ -258,9 +264,9 @@ test("overview rendering uses only allowlisted known Item presentation", () => {
     });
     assert.deepEqual(opened, ["one"]);
     assert.match(text(root), /Auteur A, Auteur B/);
-    assert.match(text(root), /Boek · Kast B · Aan het lezen/);
-    assert.match(text(root), /Zonder metadata Uitgelezen/);
-    assert.doesNotMatch(text(root), /Onbekend|never render|work-one|edition-one/);
+    assert.match(text(root), /Boek · Kast B Aan het lezen/);
+    assert.match(text(root), /Zonder metadata Auteur onbekend Uitgelezen/);
+    assert.doesNotMatch(text(root), /never render|work-one|edition-one/);
 });
 
 test("all Library bootstrap, chooser, unavailable and request states render safely", () => {
@@ -394,7 +400,7 @@ test("empty overview and cursor controls follow the exact component states", () 
     );
 });
 
-test("toolbar reveals deferred filters and switches Grid, List and Bookshelf", () => {
+test("toolbar reveals deferred filters, switches Grid/List and disables Bookshelf", () => {
     const { root, view } = setup();
     const actions = { openItem() {}, quickView() {} };
 
@@ -416,13 +422,18 @@ test("toolbar reveals deferred filters and switches Grid, List and Bookshelf", (
         "list"
     );
 
-    byTag(root, "button").find((button) => button.textContent === "Boekenplank").click();
-    assert.match(text(root), /Weergave voorbereid Boekenplank/);
-    assert.equal(byClass(root, "biblio-ui__catalog-list").length, 0);
-    byTag(root, "button").find((button) => button.textContent === "Terug naar Grid").click();
+    const bookshelf = byTag(root, "button").find((button) => (
+        button.textContent === "Boekenplank"
+    ));
+    assert.equal(bookshelf.disabled, true);
+    assert.equal(
+        bookshelf.getAttribute("title"),
+        "Boekenplank is nog niet beschikbaar"
+    );
+    bookshelf.click();
     assert.equal(
         byClass(root, "biblio-ui__catalog-list")[0].getAttribute("data-catalog-view"),
-        "grid"
+        "list"
     );
 });
 

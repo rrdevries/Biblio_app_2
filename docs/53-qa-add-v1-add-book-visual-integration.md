@@ -15,9 +15,11 @@ authors inside generic metadata and gave the same width and rhythm to simple
 and comparative states. Status and programmatic heading focus also appeared
 more technical than editorial.
 
-The WordPress page shell additionally places a large global site header before
-the Biblio application and a global footer after it. That whitespace is outside
-the Biblio UI root and this bounded slice does not alter it.
+At the time of QA-ADD-V1, the WordPress page shell additionally placed a large
+global site header before the Biblio application and a global footer after it.
+That finding was outside this slice and was later closed page-scoped by
+UI-FOUND-01; see
+[`docs/54-ui-found-01-app-shell-and-mijn-bibliotheek-visual-baseline.md`](54-ui-found-01-app-shell-and-mijn-bibliotheek-visual-baseline.md).
 
 ## 2. Visual integration
 
@@ -110,5 +112,6 @@ presentation module.
 Renée retains final human visual acceptance on intended production browsers
 and devices, including actual 200% browser zoom, real-device focus/keyboard
 inspection and comparison with the surrounding production WordPress shell.
-The global WordPress header/footer spacing remains a separate shell finding,
-not a hidden change in this slice.
+The global WordPress header/footer spacing was a separate shell finding in this
+slice and is now closed by UI-FOUND-01 without retroactively changing this
+historical `0.5.0` verification record.

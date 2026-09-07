@@ -245,7 +245,9 @@ test("Deep Library shell, views, filters and Quick View recompose accessibly", a
 
         const response = await route.fetch();
         const body = await response.json();
-        const addCover = (record, index = 0) => ({
+        const addCover = (record, index = 0) => record.item_id === IDS.missingItem
+            ? record
+            : ({
             ...record,
             cover_reference: {
                 state: "known",
@@ -276,12 +278,20 @@ test("Deep Library shell, views, filters and Quick View recompose accessibly", a
     const workspace = page.locator(".biblio-ui__workspace");
     await expect(shell).toHaveAttribute("data-biblio-theme", "ink");
     await expect(shell).toHaveAttribute("data-biblio-appearance", "light");
+    await expect(page.locator("body")).toHaveClass(/biblio-app-shell-page/);
+    await expect(page.locator(".wp-site-blocks > header.wp-block-template-part")).toBeHidden();
+    await expect(page.locator(".wp-site-blocks > footer.wp-block-template-part")).toBeHidden();
+    await expect(page.locator("#wpadminbar")).toBeVisible();
     await expect(page.locator("[data-catalog-view='grid']")).toBeVisible();
     await expectNoHorizontalOverflow(page);
+    expect(Math.round((await shell.boundingBox())?.y ?? -1)).toBe(32);
     expect(Math.round((await sidebar.boundingBox())?.width ?? 0)).toBe(224);
 
-    const covers = page.locator(".biblio-ui__cover--overview");
-    await expect(covers).toHaveCount(9);
+    const covers = page.locator("img.biblio-ui__cover--overview");
+    await expect(covers).toHaveCount(8);
+    await expect(page.getByRole("img", {
+        name: "Geen omslag beschikbaar voor The Secret Commonwealth",
+    })).toBeVisible();
     expect(Math.round((await covers.first().boundingBox())?.width ?? 0)).toBe(148);
     await page.screenshot({
         path: testInfo.outputPath("deep-library-desktop-grid.png"),
@@ -293,6 +303,8 @@ test("Deep Library shell, views, filters and Quick View recompose accessibly", a
     expect(Math.round((await sidebar.boundingBox())?.width ?? 0)).toBe(72);
     await page.reload();
     await expect(shell).toHaveAttribute("data-sidebar-collapsed", "true");
+    await expect(page.locator("[data-catalog-view='grid']")).toBeVisible();
+    await expectNoHorizontalOverflow(page);
     await page.screenshot({
         path: testInfo.outputPath("deep-library-desktop-rail.png"),
         fullPage: true,
@@ -304,16 +316,19 @@ test("Deep Library shell, views, filters and Quick View recompose accessibly", a
     await expect(page.getByRole("searchbox", { name: "Zoeken" })).toBeDisabled();
     await expect(page.getByRole("combobox", { name: "Sorteren" })).toBeDisabled();
     await expect(page.getByText(/Library-REST-contract/)).toBeVisible();
+    await page.screenshot({
+        path: testInfo.outputPath("deep-library-toolbar.png"),
+        fullPage: true,
+    });
 
     await page.getByRole("button", { name: "Lijst", exact: true }).click();
     await expect(page.locator("[data-catalog-view='list']")).toBeVisible();
-    await page.getByRole("button", { name: "Boekenplank", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Boekenplank" })).toBeVisible();
     await page.screenshot({
-        path: testInfo.outputPath("deep-library-bookshelf-placeholder.png"),
+        path: testInfo.outputPath("deep-library-desktop-list.png"),
         fullPage: true,
     });
-    await page.getByRole("button", { name: "Terug naar Grid" }).click();
+    await expect(page.getByRole("button", { name: "Boekenplank", exact: true })).toBeDisabled();
+    await page.getByRole("button", { name: "Grid", exact: true }).click();
 
     const workspaceBefore = await workspace.boundingBox();
     const quickTrigger = page.getByRole("button", { name: /Snel bekijken:/ }).first();
@@ -338,8 +353,9 @@ test("Deep Library shell, views, filters and Quick View recompose accessibly", a
         fullPage: true,
     });
 
-    await page.setViewportSize({ width: 375, height: 812 });
+    await page.setViewportSize({ width: 390, height: 844 });
     await expectNoHorizontalOverflow(page);
+    expect(Math.round((await shell.boundingBox())?.y ?? -1)).toBe(46);
     const menu = page.getByRole("button", { name: "Navigatie openen" });
     await expect(menu).toBeVisible();
     await menu.click();
@@ -347,6 +363,7 @@ test("Deep Library shell, views, filters and Quick View recompose accessibly", a
     await expect(sidebar).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(shell).toHaveAttribute("data-mobile-nav-open", "false");
+    await expect(sidebar).toBeHidden();
     await expect(menu).toBeFocused();
     await page.screenshot({
         path: testInfo.outputPath("deep-library-mobile-grid.png"),

@@ -2594,3 +2594,36 @@ QA-ADD-V1 is accepted when:
 Status: **TECHNICAL GO / HUMAN VISUAL ACCEPTANCE PENDING**. Schema remains
 `1017`; Biblio UI is `0.5.0`. See
 `docs/53-qa-add-v1-add-book-visual-integration.md`.
+
+## 81. UI-FOUND-01 shared visual baseline acceptance
+
+UI-FOUND-01 is technically accepted when:
+
+- the canonical Mijn Bibliotheek application canvas starts directly below the
+  WordPress admin bar and page-scoped CSS suppresses only duplicated public
+  theme chrome/spacing, without Elementor data or site-template mutation;
+- desktop exposes the 224px sidebar and remembered 72px rail, tablet uses the
+  rail and mobile navigation closes completely off-canvas with Escape/focus
+  return;
+- the hierarchy follows Editorial Library × Serious Utility with shared
+  semantic tokens, serif title roles, sans-serif utility roles and restrained
+  boundaries/material treatment;
+- Grid and List render the same authoritative Items, cover geometry is stable,
+  missing covers are explicitly labelled and no bibliographic data is
+  fabricated;
+- Bookshelf is visible but non-selectable, Search/Sort remain disabled and
+  Filters explains the unavailable server contract;
+- Quick View retains scoped authorized reading, native dialog semantics,
+  stable workspace geometry, full-detail navigation and focus restoration;
+- Mijn Bibliotheek and Add Book share action, state, responsive and
+  accessibility patterns without a parallel component system;
+- authenticated 1440px, tablet, 390px and existing 640px 200%-equivalent
+  scenarios have no horizontal overflow and provide before/after screenshots;
+- complete UI, guarded Chromium and Core gates pass with clean fixture state;
+  and
+- no Core, REST, schema, authorization, provider, classification, Elementor or
+  public-site product behavior enters the slice.
+
+Status: **TECHNICAL GO / HUMAN VISUAL ACCEPTANCE PENDING**. Schema remains
+`1017`; Biblio UI is `0.6.0`. See
+`docs/54-ui-found-01-app-shell-and-mijn-bibliotheek-visual-baseline.md`.

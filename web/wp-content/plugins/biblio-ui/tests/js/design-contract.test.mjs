@@ -56,6 +56,9 @@ test("Deep Library exposes the canonical spacing and semantic token architecture
         "--biblio-radius-elevated: 0.625rem",
         "--biblio-boundary-width: 1px",
         "--biblio-focus-width: 2px",
+        "--biblio-page-gutter: var(--biblio-space-12)",
+        "--biblio-cover-width: 9.25rem",
+        "--biblio-cover-ratio: 2 / 3",
     ]) {
         assert.match(css, new RegExp(contract.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     }
@@ -92,6 +95,7 @@ test("Deep Library exposes the canonical spacing and semantic token architecture
     assert.match(css, /inline-size: 100vw/);
     assert.match(css, /margin-inline: calc\(50% - 50vw\)/);
     assert.match(css, /:focus-visible/);
+    assert.match(css, /body\.biblio-app-shell-page[\s\S]*\.wp-block-template-part/);
     assert.doesNotMatch(css, /\.elementor(?:-|\s|\{|\.)/);
 });
 
@@ -100,9 +104,10 @@ test("shell, views and Quick View recompose across the three breakpoint families
     assert.match(css, /@media \(max-width: 767px\)/);
     assert.match(css, /\.biblio-ui__shell \{[\s\S]*grid-template-columns: 14rem minmax\(0, 1fr\)/);
     assert.match(css, /data-sidebar-collapsed="true"[\s\S]*grid-template-columns: 4\.5rem/);
-    assert.match(css, /data-catalog-view="grid"[\s\S]*repeat\(auto-fill, minmax\(min\(100%, 9\.25rem\), 1fr\)\)/);
+    assert.match(css, /data-catalog-view="grid"[\s\S]*repeat\(auto-fill, minmax\(min\(100%, var\(--biblio-cover-width\)\), 1fr\)\)/);
     assert.match(css, /data-catalog-view="list"/);
-    assert.match(css, /\.biblio-ui__bookshelf-placeholder/);
+    assert.match(css, /\.biblio-ui__cover--placeholder/);
+    assert.match(css, /data-biblio-icon="book-open"/);
     assert.match(css, /\.biblio-ui__quick-view[\s\S]*position: fixed|\.biblio-ui__sidebar[\s\S]*position: fixed/);
     assert.match(css, /\.biblio-ui__quick-view[\s\S]*min-block-size: calc\(100dvb - var\(--biblio-space-8\)\)/);
     assert.match(css, /data-mobile-nav-open="true"/);

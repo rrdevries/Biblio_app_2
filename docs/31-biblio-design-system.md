@@ -647,6 +647,36 @@ onderhoudbaar blijft.
 Motion blijft subtiel, rustig en functioneel en respecteert reduced motion.
 Exacte durations, easing en reduced-motion-details zijn nog open.
 
+### 17.1 D-UI-GAP-01 — gedeelde visuele productbaseline
+
+Status: **Definitief als implementatiebaseline**.
+
+De canonical Page Shell bezit op Biblio-applicatiepagina's het volledige canvas
+onder eventuele operationele browser-/beheerchrome. Publieke WordPress
+site-header/footer en door het block theme inline opgelegde buitenruimte worden
+op zo'n pagina niet rond de applicatie herhaald. Dit is pagina-gescopeerd: het
+wijzigt geen publieke template en Elementor blijft uitsluitend de gewone Page
+Shell met één Biblio-shortcode.
+
+De gedeelde minimumkwaliteit is:
+
+- één Classic Sidebar/rail/off-canvas patroon voor desktop, tablet en mobiel;
+- echte iconen of toegankelijke icon-markers, geen tijdelijke letterblokken;
+- titelgedreven editorial hierarchy, met utility-controls en metadata in de
+  sans-serif rol;
+- één herbruikbare covergeometrie per context en een expliciet no-cover object
+  dat ontbrekende data toont zonder die data te verzinnen;
+- Grid en List als werkende presentaties van hetzelfde autoritatieve resultaat;
+- niet-geïmplementeerde views en controls blijven zichtbaar disabled of worden
+  eerlijk als niet beschikbaar uitgelegd; en
+- gedeelde action hierarchy, empty/error/loading/status states, focus, targets,
+  reflow en reduced-motion-regels voor Mijn Bibliotheek en flows zoals Add Book.
+
+Deze baseline canoniseert geen nog open exacte kleurwaarden, productiefonts,
+icon library, coverratio-keuze, Atmosphere-assets of Bookshelf-gedrag. De
+technische closure en het bewijs staan in
+[`docs/54-ui-found-01-app-shell-and-mijn-bibliotheek-visual-baseline.md`](54-ui-found-01-app-shell-and-mijn-bibliotheek-visual-baseline.md).
+
 ## 18. Nog open en werkwaarden
 
 De volgende punten zijn bewust niet definitief:

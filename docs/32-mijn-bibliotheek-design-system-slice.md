@@ -45,9 +45,10 @@ The implementation order was:
 - The shell wraps every existing overview/detail/mutation state. Library
   resolution, routing, authorization and mutations remain unchanged.
 - The existing ordinary Elementor Page continues to provide only the outer
-  container and shortcode mount. The current WordPress theme header/footer may
-  still surround it, as explicitly allowed by the Slice 1A Page contract; a
-  site-wide navigation/template redesign is not part of this slice.
+  container and shortcode mount. UI-FOUND-01 later gave this one application
+  page a scoped body class so the shortcode-owned canvas is no longer wrapped
+  by duplicated public theme chrome/spacing. No Elementor data or site-wide
+  navigation/template is changed.
 
 ### Tokens and component styling
 
@@ -67,11 +68,12 @@ The implementation order was:
 ### Mijn Bibliotheek overview
 
 - Grid is the default and retains the existing paginated, active-Item server
-  result. The desktop work value is 148px per cover, with 24px horizontal and
-  36px vertical rhythm. Missing covers remain absent instead of being invented.
+  result. The desktop work value is 148px per cover, with a shared 2:3 ratio.
+  Missing covers use an explicitly labelled no-cover object instead of
+  fabricated bibliographic data.
 - List is a working alternate presentation of the same authoritative result.
-- Bookshelf is an explicit, accessible placeholder. It does not simulate book
-  spines while cover-ratio and shelf rendering contracts remain open.
+- Bookshelf is an explicit disabled future choice. It cannot be selected and
+  does not simulate book spines while shelf rendering contracts remain open.
 - Every Item retains the hierarchy cover → title → authors when known →
   contextual/status line. Links and actions continue to depend on the server
   capabilities; visual visibility is not authorization.
@@ -122,15 +124,15 @@ expose fake settings or store domain data in browser storage.
 | Deep Library open composition | Proven | Root-scoped semantic-token CSS, few elevated surfaces; Quick View is the intentional overlay. |
 | Ink Light shell | Proven with work values | Theme/appearance attributes and contrast contract; exact palette remains non-canonical. |
 | 224px sidebar / 72px remembered rail | Proven | Unit and authenticated desktop-browser measurements plus reload persistence. |
-| Tablet/mobile recomposition | Proven | Authenticated Chromium at 900×1000 and 375×812, overflow checks, off-canvas Escape/focus. |
+| Tablet/mobile recomposition | Proven | Authenticated Chromium at 900×1000 and 390×844, overflow checks, complete off-canvas close and Escape/focus. |
 | Grid default and 148px desktop covers | Proven | Authenticated Chromium count/geometry and visual artifact. |
 | List view | Proven | Unit and authenticated browser view switch. |
-| Bookshelf | Placeholder only | Explicit placeholder; no invented spine/ratio contract. |
+| Bookshelf | Disabled future choice | Visible and unavailable; no selectable placeholder or invented shelf contract. |
 | Search/filter/sort | Deferred by contract | Toolbar and disclosure proven; no false client-only catalog operation. |
 | Quick View overlay | Proven | Existing detail REST read, native dialog, stable workspace width, full-detail route and focus return. |
 | Existing Library/Item/Reading/Notes behavior | Proven compatible | Full frontend/Core/REST and guarded Playwright gates; no contract or schema delta. |
 | Accessibility | Slice-level proven | Native semantics, named controls/dialog, keyboard, focus, reduced motion, contrast work values and narrow overflow. No full WCAG claim. |
-| Elementor boundary | Proven unchanged | Existing shortcode Page is reused; no Elementor data, theme or Crocoblock mutation. |
+| Elementor boundary | Proven unchanged | Existing shortcode Page is reused; page-scoped canvas CSS only, with no Elementor data, theme or Crocoblock mutation. |
 
 ## 5. Non-scope
 
@@ -167,3 +169,12 @@ The summarized gate is also recorded in section 56 of
 [`docs/06-testing-and-acceptance.md`](06-testing-and-acceptance.md). Browser
 screenshots are local, ignored acceptance artifacts under `.local/e2e-results`
 and are not production assets.
+
+## 7. UI-FOUND-01 current-baseline note
+
+The verification counts above remain the historical record of this original
+slice. UI-FOUND-01 supersedes only its recorded visual gaps: theme whitespace,
+placeholder marks, absent no-cover geometry and selectable Bookshelf
+placeholder behavior. The current technical evidence and Biblio UI `0.6.0`
+version are recorded in
+[`docs/54-ui-found-01-app-shell-and-mijn-bibliotheek-visual-baseline.md`](54-ui-found-01-app-shell-and-mijn-bibliotheek-visual-baseline.md).

@@ -2275,3 +2275,27 @@ authenticated responsive matrix covers 1440px, 1024px, 390px and the existing
 Biblio UI is `0.5.0`; schema remains `1017`. Technical status is **GO** and
 final human visual acceptance remains with Renée. Detailed evidence:
 `docs/53-qa-add-v1-add-book-visual-integration.md`.
+
+### UI-FOUND-01 — App Shell and Mijn Bibliotheek visual baseline
+
+Status: **TECHNICAL GO / HUMAN VISUAL ACCEPTANCE PENDING**
+
+The shared Biblio UI now reads as one coherent Deep Library product across Mijn
+Bibliotheek and Add Book. The existing Library Context, application routes and
+Core contracts are unchanged. The `/mijn-bibliotheek/` Page Shell owns its
+canvas below the WordPress admin bar, without duplicated public theme
+header/footer or block-theme spacing; this is page-scoped and does not redesign
+the public site or mutate Elementor data.
+
+The 224px sidebar, remembered 72px rail and mobile off-canvas navigation now
+use reusable icon markers. Mijn Bibliotheek has a title-first editorial header,
+shared 148px/2:3 cover geometry, a labelled no-cover object, compact status
+hierarchy, working Grid/List views and a visibly disabled, non-selectable
+Bookshelf choice. Search/Sort remain disabled and Filters remains an honest
+contract disclosure. Responsive and accessibility regressions cover desktop,
+tablet, 390px mobile and the existing 640px 200%-reflow equivalent.
+
+Biblio UI is `0.6.0`; schema remains `1017`. No Core, REST, provider,
+classification, authorization, data or page-builder behavior changed. Final
+human visual acceptance remains with Renée. Detailed evidence:
+`docs/54-ui-found-01-app-shell-and-mijn-bibliotheek-visual-baseline.md`.

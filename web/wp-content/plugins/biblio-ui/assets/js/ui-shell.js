@@ -22,11 +22,13 @@ function element(documentImpl, tagName, {
     return node;
 }
 
-function navMark(documentImpl) {
+function icon(documentImpl, name, className = "") {
     return element(documentImpl, "span", {
-        className: "biblio-ui__nav-mark",
-        text: "MB",
-        attributes: { "aria-hidden": "true" },
+        className: `biblio-ui__icon ${className}`.trim(),
+        attributes: {
+            "aria-hidden": "true",
+            "data-biblio-icon": name,
+        },
     });
 }
 
@@ -57,11 +59,7 @@ export function createLibraryShell(mount, {
         attributes: { href: overviewUrl },
     });
     brand.append(
-        element(documentImpl, "span", {
-            className: "biblio-ui__brand-mark",
-            text: "B",
-            attributes: { "aria-hidden": "true" },
-        }),
+        icon(documentImpl, "book-open", "biblio-ui__brand-mark"),
         element(documentImpl, "span", {
             className: "biblio-ui__nav-label",
             text: "Biblio",
@@ -75,11 +73,11 @@ export function createLibraryShell(mount, {
             "aria-controls": navId,
         },
     });
-    const collapseMark = element(documentImpl, "span", {
-        className: "biblio-ui__collapse-mark",
-        text: "‹",
-        attributes: { "aria-hidden": "true" },
-    });
+    const collapseMark = icon(
+        documentImpl,
+        "chevron-left",
+        "biblio-ui__collapse-mark"
+    );
     const collapseLabel = element(documentImpl, "span", {
         className: "biblio-ui__nav-label",
     });
@@ -98,7 +96,7 @@ export function createLibraryShell(mount, {
         },
     });
     navLink.append(
-        navMark(documentImpl),
+        icon(documentImpl, "books", "biblio-ui__nav-mark"),
         element(documentImpl, "span", {
             className: "biblio-ui__nav-label",
             text: "Mijn Bibliotheek",
@@ -110,11 +108,7 @@ export function createLibraryShell(mount, {
         className: "biblio-ui__sidebar-context",
     });
     account.append(
-        element(documentImpl, "span", {
-            className: "biblio-ui__context-mark",
-            text: "P",
-            attributes: { "aria-hidden": "true" },
-        }),
+        icon(documentImpl, "user", "biblio-ui__context-mark"),
         element(documentImpl, "span", {
             className: "biblio-ui__nav-label",
             text: "Privéomgeving",
@@ -146,10 +140,7 @@ export function createLibraryShell(mount, {
             "aria-label": "Navigatie openen",
         },
     });
-    menuButton.append(element(documentImpl, "span", {
-        text: "☰",
-        attributes: { "aria-hidden": "true" },
-    }));
+    menuButton.append(icon(documentImpl, "menu"));
     mobileBar.append(
         menuButton,
         element(documentImpl, "span", {
@@ -184,7 +175,10 @@ export function createLibraryShell(mount, {
             collapsed ? "Navigatie uitklappen" : "Navigatie inklappen"
         );
         collapseLabel.textContent = collapsed ? "Uitklappen" : "Inklappen";
-        collapseMark.textContent = collapsed ? "›" : "‹";
+        collapseMark.setAttribute(
+            "data-biblio-icon",
+            collapsed ? "chevron-right" : "chevron-left"
+        );
         menuButton.setAttribute("aria-expanded", mobileOpen ? "true" : "false");
         menuButton.setAttribute(
             "aria-label",
