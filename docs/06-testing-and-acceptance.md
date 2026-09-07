@@ -2484,3 +2484,28 @@ ADD-API-01 is accepted when:
 
 Status: **GO / CLOSED**. Schema remains `1017`. See
 `docs/50-add-api-01-work-discovery-contract-exit-evidence.md`.
+
+## 77. ADD-API-02 Add Book UI contract completion acceptance
+
+ADD-API-02 is accepted when:
+
+- every existing/local-ambiguous Edition match exposes Edition title,
+  canonical ISBN-13, ordered central Authors and the existing safe current-
+  Library Item context without invoking a provider;
+- cover, language, publisher and publication date remain absent when the
+  current catalog projection has no reliable value source;
+- authenticated Library-scoped classification options expose only active Book
+  Type, Genre and Subject IDs/display names for the resolved Library Context;
+- classification response fields are allowlisted, contain no seed IDs or
+  normalized names and never expose another Library's terms;
+- the one frontend `/me/works` decoder strictly accepts Work ID/title, Authors,
+  CAT-T1 Work-title status and Series and rejects extra or malformed fields;
+- existing Next Reading Work discovery remains functional and the decoder is
+  reusable by the later Add Book UI;
+- focused Core/REST/frontend tests, complete Core unit/integration suites,
+  PHPStan, syntax, smoke and the repository quality gate pass; and
+- schema, Add Book UI, provider behavior, Location APIs, classification logic,
+  central metadata and authorization rules remain unchanged.
+
+Status: **GO / CLOSED**. Schema remains `1017`. See
+`docs/51-add-api-02-add-book-ui-contract-completion.md`.

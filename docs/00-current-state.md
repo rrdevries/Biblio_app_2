@@ -2182,3 +2182,31 @@ No original-language field is returned because no current Work-level
 persistence/query source exists. Schema remains `1017`; no metadata provider,
 series-intelligence, matching, Add Book UI or governance behavior changed.
 Detailed evidence: `docs/50-add-api-01-work-discovery-contract-exit-evidence.md`.
+
+### ADD-API-02 — Add Book UI contract completion
+
+Status: **GO / CLOSED**
+
+The existing/local-ambiguous B5A projection now adds only bibliography already
+available from trusted local reads: ordered central Authors and canonical
+ISBN-13, alongside the existing Edition title and Library-scoped Item context.
+Provider lookup remains skipped for every local match. Cover, language,
+publisher and publication date remain absent because the current catalog UI
+projection still has no reliable value source for them; no persistence or
+fallback metadata model was introduced.
+
+The authenticated
+`GET /biblio/v1/libraries/{library_id}/classification-options` route exposes
+only active Book Type, Genre and Subject IDs/display names from the existing
+`LibraryClassificationQueryService`. Library Context is resolved server-side,
+every persistence predicate contains the requested Library ID and foreign or
+missing Libraries retain the same non-enumerating failure contract. No seed
+keys, normalized names or hardcoded IDs cross the REST boundary.
+
+The Biblio UI now has one strict shared decoder for the current `/me/works`
+discovery item shape: Work ID/title, Authors, CAT-T1 title status and Series.
+Next Reading consumes that decoder without changing its product behavior, and
+the same exported decoder is reusable by the later Add Book UI. Schema remains
+`1017`; no Add Book UI, camera scanner, Book Detail edit mode, classification
+logic, Location route or new authorization rule was added. Detailed evidence:
+`docs/51-add-api-02-add-book-ui-contract-completion.md`.

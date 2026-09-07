@@ -107,6 +107,7 @@ final class RestApiTest extends PersistenceIntegrationTestCase
                 . "(?P<work_id>[^/]+)/assessments",
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/items",
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/catalog",
+            "/biblio/v1/libraries/(?P<library_id>[^/]+)/classification-options",
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/metadata-lookups",
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/items/(?P<item_id>[^/]+)",
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/items/"
@@ -122,7 +123,7 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             }
         }
 
-        self::assertCount(18, array_filter(
+        self::assertCount(19, array_filter(
             array_keys($routes),
             static fn (string $route): bool => str_starts_with(
                 $route,
@@ -439,6 +440,16 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             "isbn_13" => "9780306406157",
             "explicitly_no_isbn" => 0,
         ]);
+        $this->database->insert($this->tableNames->authors(), [
+            "author_id" => "author-shared-context",
+            "display_name" => "Veilige auteur",
+        ]);
+        $this->database->insert($this->tableNames->workContributors(), [
+            "work_id" => "work-shared-context",
+            "author_id" => "author-shared-context",
+            "contributor_role" => "author",
+            "contributor_position" => 1,
+        ]);
         $this->database->insert(
             $this->tableNames->editionIdentifierClaims(),
             [
@@ -475,6 +486,12 @@ final class RestApiTest extends PersistenceIntegrationTestCase
 
         self::assertSame(200, $response->get_status());
         self::assertSame(2, $match["existing_item_count"]);
+        self::assertSame("Shared Edition", $match["edition_title"]);
+        self::assertSame("9780306406157", $match["canonical_isbn"]);
+        self::assertSame([[
+            "author_id" => "author-shared-context",
+            "display_name" => "Veilige auteur",
+        ]], $match["authors"]);
         self::assertSame(
             ["item-a1", "item-a2"],
             array_column($match["existing_items"], "item_id")
@@ -490,6 +507,76 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             "INV-FOREIGN",
             (string) wp_json_encode($data)
         );
+    }
+
+    public function testClassificationOptionsAreAllowlistedAndLibraryScoped(): void
+    {
+        $this->seedLibrary("library-options", "Opties", $this->actorId, "owner");
+        $this->seedLibrary("library-options-foreign", "Verborgen", $this->otherId, "owner");
+        foreach ([
+            [$this->tableNames->libraryBookTypes(), "book_type_id", "book-local", "Leesboek", "active"],
+            [$this->tableNames->libraryGenres(), "genre_id", "genre-local", "Roman", "active"],
+            [$this->tableNames->librarySubjects(), "subject_id", "subject-local", "Geschiedenis", "active"],
+            [$this->tableNames->libraryGenres(), "genre_id", "genre-inactive", "Oud", "inactive"],
+        ] as [$table, $column, $id, $name, $status]) {
+            self::assertSame(1, $this->database->insert($table, [
+                "library_id" => "library-options",
+                $column => $id,
+                "display_name" => $name,
+                "normalized_name" => mb_strtolower($name),
+                "term_status" => $status,
+                "seed_key" => $id === "book-local" ? "book_type.reading_book" : null,
+            ]));
+        }
+        self::assertSame(1, $this->database->insert(
+            $this->tableNames->libraryBookTypes(),
+            [
+                "library_id" => "library-options-foreign",
+                "book_type_id" => "book-foreign",
+                "display_name" => "Verborgen type",
+                "normalized_name" => "verborgen type",
+                "term_status" => "active",
+            ]
+        ));
+
+        $response = $this->dispatchAsActor(new WP_REST_Request(
+            "GET",
+            "/biblio/v1/libraries/library-options/classification-options"
+        ));
+        $data = $this->successData($response);
+
+        self::assertSame(200, $response->get_status());
+        self::assertSame(
+            ["library_id", "book_types", "genres", "subjects"],
+            array_keys($data)
+        );
+        self::assertSame([[
+            "book_type_id" => "book-local",
+            "display_name" => "Leesboek",
+        ]], $data["book_types"]);
+        self::assertSame([[
+            "genre_id" => "genre-local",
+            "display_name" => "Roman",
+        ]], $data["genres"]);
+        self::assertSame([[
+            "subject_id" => "subject-local",
+            "display_name" => "Geschiedenis",
+        ]], $data["subjects"]);
+        $serialized = (string) wp_json_encode($data);
+        self::assertStringNotContainsString("book-foreign", $serialized);
+        self::assertStringNotContainsString("genre-inactive", $serialized);
+        self::assertStringNotContainsString("seed_key", $serialized);
+        self::assertStringNotContainsString("normalized_name", $serialized);
+
+        $foreign = $this->dispatchAsActor(new WP_REST_Request(
+            "GET",
+            "/biblio/v1/libraries/library-options-foreign/classification-options"
+        ));
+        $missing = $this->dispatchAsActor(new WP_REST_Request(
+            "GET",
+            "/biblio/v1/libraries/library-options-missing/classification-options"
+        ));
+        $this->assertEquivalentNotAvailable($foreign, $missing);
     }
 
     public function testAddBookCommitCreatesThenReusesEditionAndRetainsDifference(): void
@@ -594,6 +681,16 @@ final class RestApiTest extends PersistenceIntegrationTestCase
                 "work_id" => "work-ambiguous-{$suffix}",
                 "work_title" => "Work {$suffix}",
             ]);
+            $this->database->insert($this->tableNames->authors(), [
+                "author_id" => "author-ambiguous-{$suffix}",
+                "display_name" => "Auteur {$suffix}",
+            ]);
+            $this->database->insert($this->tableNames->workContributors(), [
+                "work_id" => "work-ambiguous-{$suffix}",
+                "author_id" => "author-ambiguous-{$suffix}",
+                "contributor_role" => "author",
+                "contributor_position" => 1,
+            ]);
         }
         $this->database->insert($this->tableNames->editions(), [
             "edition_id" => "edition-ambiguous-a",
@@ -614,7 +711,24 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             "library-ambiguous",
             ["identifier" => "9780306406157"]
         ));
-        self::assertSame("local_ambiguous", $this->successData($lookup)["status"]);
+        $lookupData = $this->successData($lookup);
+        self::assertSame("local_ambiguous", $lookupData["status"]);
+        self::assertSame(
+            ["Edition A", "Edition B"],
+            array_column($lookupData["local_matches"], "edition_title")
+        );
+        self::assertSame(
+            ["9780306406157", "9780306406157"],
+            array_column($lookupData["local_matches"], "canonical_isbn")
+        );
+        self::assertSame(
+            ["Auteur a", "Auteur b"],
+            array_map(
+                static fn (array $match): string =>
+                    $match["authors"][0]["display_name"],
+                $lookupData["local_matches"]
+            )
+        );
 
         $body = [
             "identifier" => "9780306406157",
