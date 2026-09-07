@@ -2624,6 +2624,36 @@ UI-FOUND-01 is technically accepted when:
 - no Core, REST, schema, authorization, provider, classification, Elementor or
   public-site product behavior enters the slice.
 
-Status: **TECHNICAL GO / HUMAN VISUAL ACCEPTANCE PENDING**. Schema remains
+Status: **TECHNICAL GO / HUMAN VISUAL GO**. Schema remains
 `1017`; Biblio UI is `0.6.0`. See
 `docs/54-ui-found-01-app-shell-and-mijn-bibliotheek-visual-baseline.md`.
+
+## 82. UI-BOOK-01 Book Detail composition acceptance
+
+UI-BOOK-01 is technically accepted when:
+
+- the D-BOOK-01 Identity Zone leads with cover/no-cover, Edition title,
+  available Authors, reading state and at most one primary action;
+- quiet anchor navigation and semantic headings expose only sections supported
+  by current Book Detail data contracts;
+- Overview, Reading History and owner-scoped Private Notes remain personal and
+  open on the left, while Book, Edition and Library Item context is visibly
+  separated on the right at desktop widths;
+- missing description, cover and optional metadata use honest empty/omitted
+  states without fabricated copy, client-only persistence or cross-Library
+  inference;
+- Reviews, Collections, classification and unsupported mockup fields do not
+  appear without an approved composed Book Detail contract;
+- ReadingRound and Private Notes behavior, focus, native semantics and
+  non-enumerating authorization failures remain unchanged;
+- authenticated 1440px, 1024px, 768px, 390px and 720px 200%-reflow-equivalent
+  scenarios have no horizontal overflow and provide section screenshots;
+- complete UI, guarded Chromium and Core regression gates pass with clean
+  fixture state; and
+- no Core, REST, schema, migration, authorization, provider, classification,
+  Elementor or production Atmosphere behavior enters the slice.
+
+Status: **TECHNICAL GO / HUMAN VISUAL ACCEPTANCE PENDING**. Schema remains
+`1017`; Biblio UI is `0.7.0`. Actual 200% zoom and final production-browser/
+device visual acceptance remain with Renée. See
+`docs/55-ui-book-01-book-detail-visual-baseline.md`.

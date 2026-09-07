@@ -252,7 +252,14 @@ function renderReady(documentImpl, model, actions, locale) {
         list.append(item);
     }
 
-    section.append(heading, list);
+    section.append(
+        element(documentImpl, "p", {
+            className: "biblio-ui__section-kicker",
+            text: "Persoonlijk",
+        }),
+        heading,
+        list
+    );
 
     if (model.refreshing) {
         section.append(element(documentImpl, "p", {
@@ -326,6 +333,21 @@ function renderReady(documentImpl, model, actions, locale) {
     };
 }
 
+function renderStateSection(documentImpl, message, attributes = {}) {
+    const section = element(documentImpl, "section", {
+        className: "biblio-ui__section biblio-ui__reading-history",
+    });
+    section.append(
+        element(documentImpl, "p", {
+            className: "biblio-ui__section-kicker",
+            text: "Persoonlijk",
+        }),
+        element(documentImpl, "h2", { text: "Leesgeschiedenis" }),
+        element(documentImpl, "p", { text: message, attributes })
+    );
+    return section;
+}
+
 export function createReadingHistoryView(root, {
     documentImpl = globalThis.document,
     locale = "nl-NL",
@@ -347,26 +369,37 @@ export function createReadingHistoryView(root, {
         region.setAttribute("aria-busy", "false");
 
         if (model.state === "empty") {
-            region.replaceChildren();
+            region.replaceChildren(renderStateSection(
+                documentImpl,
+                "Nog geen afgeronde leesrondes."
+            ));
             return region;
         }
 
         if (model.state === "loading") {
             region.setAttribute("aria-busy", "true");
-            region.replaceChildren(element(documentImpl, "p", {
-                className: "biblio-ui__history-loading",
-                text: "Leesgeschiedenis laden…",
-                attributes: { "aria-live": "polite" },
-            }));
+            region.replaceChildren(renderStateSection(
+                documentImpl,
+                "Leesgeschiedenis laden…",
+                { "aria-live": "polite" }
+            ));
             return region;
         }
 
         if (model.state === "error") {
-            region.replaceChildren(renderError(
+            const section = renderStateSection(
                 documentImpl,
-                model,
-                actions
-            ).node);
+                "Leesgeschiedenis kon niet worden geladen."
+            );
+            section.replaceChildren(
+                element(documentImpl, "p", {
+                    className: "biblio-ui__section-kicker",
+                    text: "Persoonlijk",
+                }),
+                element(documentImpl, "h2", { text: "Leesgeschiedenis" }),
+                renderError(documentImpl, model, actions).node
+            );
+            region.replaceChildren(section);
             return region;
         }
 

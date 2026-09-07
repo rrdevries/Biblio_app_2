@@ -223,8 +223,13 @@ test("real-content responsive, target, keyboard and missing-metadata acceptance"
     await expect(page.getByRole("heading", { name: "The Secret Commonwealth" })).toBeVisible();
     await expectNoHorizontalOverflow(page);
     await expect(page.locator(".biblio-ui__detail img")).toHaveCount(0);
-    await expect(page.getByRole("heading", { name: "Uitgave" })).toHaveCount(0);
-    await expect(page.getByRole("heading", { name: "Exemplaar" })).toHaveCount(0);
+    await expect(page.getByRole("img", {
+        name: "Geen omslag beschikbaar voor The Secret Commonwealth",
+    })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Uitgave" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Exemplaar" })).toBeVisible();
+    await expect(page.getByText("ISBN", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("Locatie", { exact: true })).toHaveCount(0);
 
     const startButton = page.getByRole("button", { name: "Lezen starten" });
     const target = await startButton.boundingBox();

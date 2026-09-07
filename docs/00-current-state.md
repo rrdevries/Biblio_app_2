@@ -2278,7 +2278,7 @@ final human visual acceptance remains with Renée. Detailed evidence:
 
 ### UI-FOUND-01 — App Shell and Mijn Bibliotheek visual baseline
 
-Status: **TECHNICAL GO / HUMAN VISUAL ACCEPTANCE PENDING**
+Status: **TECHNICAL GO / HUMAN VISUAL GO**
 
 The shared Biblio UI now reads as one coherent Deep Library product across Mijn
 Bibliotheek and Add Book. The existing Library Context, application routes and
@@ -2295,7 +2295,30 @@ Bookshelf choice. Search/Sort remain disabled and Filters remains an honest
 contract disclosure. Responsive and accessibility regressions cover desktop,
 tablet, 390px mobile and the existing 640px 200%-reflow equivalent.
 
-Biblio UI is `0.6.0`; schema remains `1017`. No Core, REST, provider,
-classification, authorization, data or page-builder behavior changed. Final
-human visual acceptance remains with Renée. Detailed evidence:
+Biblio UI was `0.6.0` for this slice; schema remains `1017`. No Core, REST,
+provider, classification, authorization, data or page-builder behavior changed.
+Renée has given human visual **GO**. Detailed evidence:
 `docs/54-ui-found-01-app-shell-and-mijn-bibliotheek-visual-baseline.md`.
+
+### UI-BOOK-01 — Book Detail D-BOOK-01 composition baseline
+
+Status: **TECHNICAL GO / HUMAN VISUAL ACCEPTANCE PENDING**
+
+Book Detail now implements the approved D-BOOK-01 structure inside the existing
+`[biblio_library_app]` shell: a compact neutral Atmosphere hero, deterministic
+cover/no-cover object, Edition title and Authors, honest reading state, at most
+one primary action, quiet anchor navigation and an open two-column composition.
+Personal Overview, Reading History and Private Notes stay left; available
+Book, Edition and Library Item fields stay in the right context column.
+
+The UI consumes only the existing authorized Item detail, Work history and
+owner-scoped Notes contracts. Missing description data is stated honestly.
+Reviews, Collections, Library classification and other mockup-only fields are
+not rendered because Book Detail has no approved composed contract for them.
+Core authorization, Library Context, REST payloads and schema remain unchanged.
+
+Biblio UI is `0.7.0`; schema remains `1017`. Automated responsive evidence
+covers 1440px, 1024px, 768px, 390px and the repository's 720px
+200%-reflow-equivalent. Actual 200% browser zoom and final production-browser/
+device visual acceptance remain with Renée. Detailed evidence:
+`docs/55-ui-book-01-book-detail-visual-baseline.md`.

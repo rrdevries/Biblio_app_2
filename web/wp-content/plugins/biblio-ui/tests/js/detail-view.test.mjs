@@ -155,7 +155,8 @@ test("detail renders the allowlisted known contract and canonical back link", ()
     assert.equal(byTag(root, "h1").length, 1);
     assert.equal(byTag(root, "h1")[0].textContent, "Het bekende boek");
     assert.deepEqual(byTag(root, "h2").map((node) => node.textContent), [
-        "Lezen",
+        "Overzicht",
+        "Boekdetails",
         "Uitgave",
         "Exemplaar",
     ]);
@@ -167,13 +168,30 @@ test("detail renders the allowlisted known contract and canonical back link", ()
         byAttribute(root, "data-biblio-private-notes", "true").length,
         1
     );
-    assert.doesNotMatch(text(root), /Leesgeschiedenis/);
+    assert.equal(
+        byTag(root, "h2").some((node) => node.textContent === "Leesgeschiedenis"),
+        false
+    );
     assert.equal(byTag(root, "a")[0].getAttribute("href"), backUrl);
     assert.equal(byTag(root, "img")[0].getAttribute("src"),
         "https://images.example.test/cover.jpg");
     assert.equal(byTag(root, "img")[0].getAttribute("alt"),
         "Omslag van Het bekende boek");
-    assert.match(text(root), /Mijn Bibliotheek/);
+    assert.equal(byAttribute(root, "role", "group")[0].getAttribute("aria-label"),
+        "Boekstatus");
+    assert.deepEqual(
+        byTag(root, "nav")[0].children[0].children.map((item) => (
+            item.children[0].textContent
+        )),
+        [
+            "Overzicht",
+            "Leesgeschiedenis",
+            "Mijn notities",
+            "Boekdetails",
+            "Uitgave",
+            "Exemplaar",
+        ]
+    );
     assert.match(text(root), /Auteur A, Auteur B/);
     assert.match(text(root), /Mijn testbibliotheek/);
     assert.match(text(root), /Vorm Boek/);
@@ -241,14 +259,22 @@ test("unknown, missing and not-applicable values omit labels and sections", () =
 
     assert.deepEqual(
         byTag(root, "h2").map((node) => node.textContent),
-        ["Lezen"]
+        ["Overzicht", "Uitgave", "Exemplaar"]
     );
     assert.equal(byTag(root, "img").length, 0);
+    assert.equal(
+        byAttribute(
+            root,
+            "aria-label",
+            "Geen omslag beschikbaar voor Het bekende boek"
+        ).length,
+        1
+    );
     assert.match(text(root), /Leesstatus Niet gelezen/);
     assert.doesNotMatch(text(root),
         /Auteur|Vorm|Actieve leesrondes|Uitgelezen leesrondes|Gestopte leesrondes/);
     assert.doesNotMatch(text(root),
-        /Waarvan historisch|ISBN|Taal|Uitgever|Publicatiedatum|Serie/);
+        /Waarvan historisch|ISBN|Taal|Uitgever|Publicatiedatum|Serie|Boekdetails/);
     assert.doesNotMatch(text(root),
         /Locatie|Conditie|Verwerving|Beschikbaarheid|undefined|null|Onbekend/);
 });
@@ -349,6 +375,7 @@ test("End Reading appears only for capability plus active round and passes its o
         byTag(root, "button").map((node) => node.textContent),
         ["Leesronde afronden"]
     );
+    assert.match(text(root), /Huidige leesronde · gestart op 20 augustus 2026/);
     byTag(root, "button")[0].click();
     assert.equal(openers[0], byTag(root, "button")[0]);
     assert.doesNotMatch(text(root), /private-round|version/);

@@ -468,6 +468,14 @@ implementatiespecificatie. De inhoud en copy daarin zijn illustratief, tenzij
 elders al canoniek vastgelegd; de mockup introduceert geen nieuwe functionele
 besluiten. Bestaande canonieke product- en domeinbesluiten blijven leidend.
 
+UI-BOOK-01 implementeert deze compositie met uitsluitend het bestaande
+geautoriseerde Item-detailcontract, Reading History en Private Notes. Een
+neutrale token-gedreven hero draagt de visuele rol zolang er geen production
+Atmospherebron is. Secties voor beschrijving, beoordelingen, collecties en
+classificatie verschijnen pas wanneer een afzonderlijk goedgekeurd
+Book-Detail-contract daarvoor echte gegevens levert; afwezigheid wordt niet
+met mockupcopy of clientdata gemaskeerd.
+
 #### D-ADD-02 — Add Book vervolgcontext
 
 Na succesvol Add Book is `Exemplaar verder beschrijven` een contextuele

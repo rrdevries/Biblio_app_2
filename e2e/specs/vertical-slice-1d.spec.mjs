@@ -172,7 +172,7 @@ test("zero state stays visible and create saves once then reconciles and persist
 
     await openItem(page, IDS.zeroItem);
     await expect(page.getByRole("heading", { level: 1, name: "Dagboek van een slecht jaar" })).toBeVisible();
-    await expect(page.getByRole("heading", { level: 2, name: "Lezen" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "Overzicht" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Notitie toevoegen" })).toBeVisible();
     await expect(noteCards(page)).toHaveCount(0);
     await expect(notesRegion(page).getByRole("list")).toHaveCount(0);

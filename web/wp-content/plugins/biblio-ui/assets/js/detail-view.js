@@ -38,6 +38,55 @@ function knownText(value) {
         : null;
 }
 
+function knownList(value) {
+    return value?.state === "known" && Array.isArray(value.values)
+        && value.values.length > 0
+        ? value.values.join(", ")
+        : null;
+}
+
+function icon(documentImpl, name) {
+    return element(documentImpl, "span", {
+        className: "biblio-ui__icon",
+        attributes: {
+            "aria-hidden": "true",
+            "data-biblio-icon": name,
+        },
+    });
+}
+
+function coverPresentation(documentImpl, detail) {
+    const cover = knownText(detail.cover_reference);
+
+    if (cover !== null) {
+        return element(documentImpl, "img", {
+            className: "biblio-ui__cover biblio-ui__cover--detail",
+            attributes: {
+                alt: `Omslag van ${detail.title}`,
+                src: cover,
+            },
+        });
+    }
+
+    const placeholder = element(documentImpl, "span", {
+        className: "biblio-ui__cover biblio-ui__cover--detail biblio-ui__cover--placeholder",
+        attributes: {
+            role: "img",
+            "aria-label": `Geen omslag beschikbaar voor ${detail.title}`,
+        },
+    });
+    placeholder.append(
+        icon(documentImpl, "book-open"),
+        element(documentImpl, "span", {
+            className: "biblio-ui__cover-label",
+            text: "Biblio",
+            attributes: { "aria-hidden": "true" },
+        })
+    );
+
+    return placeholder;
+}
+
 function readingStatusLabel(status) {
     const label = READING_STATUS_LABELS[status];
 
@@ -46,6 +95,27 @@ function readingStatusLabel(status) {
     }
 
     return label;
+}
+
+function readingDateLabel(value) {
+    if (value === null || value === undefined) {
+        return null;
+    }
+
+    const months = [
+        "januari", "februari", "maart", "april", "mei", "juni",
+        "juli", "augustus", "september", "oktober", "november", "december",
+    ];
+
+    if (value.month === null) {
+        return String(value.year);
+    }
+
+    if (value.day === null) {
+        return `${months[value.month - 1]} ${value.year}`;
+    }
+
+    return `${value.day} ${months[value.month - 1]} ${value.year}`;
 }
 
 function shouldHandleNavigation(event) {
@@ -83,15 +153,18 @@ function definition(documentImpl, list, label, value) {
     );
 }
 
-function metadataSection(documentImpl, heading, fields) {
-    const knownFields = fields.filter(([, value]) => knownText(value) !== null);
+function metadataSection(documentImpl, id, heading, fields) {
+    const knownFields = fields.filter(([, value]) => (
+        typeof value === "string" && value.length > 0
+    ));
 
     if (knownFields.length === 0) {
         return null;
     }
 
     const section = element(documentImpl, "section", {
-        className: "biblio-ui__section",
+        className: "biblio-ui__section biblio-ui__metadata-section",
+        attributes: { id },
     });
     const list = element(documentImpl, "dl", {
         className: "biblio-ui__metadata",
@@ -99,7 +172,7 @@ function metadataSection(documentImpl, heading, fields) {
     section.append(element(documentImpl, "h2", { text: heading }));
 
     for (const [label, value] of knownFields) {
-        definition(documentImpl, list, label, knownText(value));
+        definition(documentImpl, list, label, value);
     }
 
     section.append(list);
@@ -153,15 +226,33 @@ function renderUnavailable(documentImpl, model, actions) {
     return view;
 }
 
-function renderReading(documentImpl, reading) {
+function renderReading(documentImpl, reading, activeRound) {
     const section = element(documentImpl, "section", {
-        className: "biblio-ui__section biblio-ui__reading",
+        className: "biblio-ui__section biblio-ui__reading biblio-ui__detail-section",
+        attributes: { id: "overzicht" },
     });
     const list = element(documentImpl, "dl", {
         className: "biblio-ui__metadata",
     });
-    const heading = element(documentImpl, "h2", { text: "Lezen" });
-    section.append(heading);
+    const heading = element(documentImpl, "h2", { text: "Overzicht" });
+    section.append(
+        element(documentImpl, "p", {
+            className: "biblio-ui__section-kicker",
+            text: "Persoonlijk",
+        }),
+        heading,
+        element(documentImpl, "p", {
+            className: "biblio-ui__detail-empty-copy",
+            text: "Voor dit boek is nog geen beschrijving beschikbaar.",
+        })
+    );
+    const startedOn = readingDateLabel(activeRound?.started_on);
+    if (startedOn !== null) {
+        section.append(element(documentImpl, "p", {
+            className: "biblio-ui__current-round",
+            text: `Huidige leesronde · gestart op ${startedOn}`,
+        }));
+    }
     definition(
         documentImpl,
         list,
@@ -200,35 +291,19 @@ function renderDetail(documentImpl, model, actions) {
         model.backUrl,
         actions.backToOverview
     );
-    backLink.className = "biblio-ui__quiet-link";
+    backLink.className = "biblio-ui__quiet-link biblio-ui__detail-back";
     view.append(backLink);
-    append(
-        view,
-        element(documentImpl, "p", {
-            className: "biblio-ui__eyebrow",
-            text: "Mijn Bibliotheek",
-        })
-    );
-
-    const layout = element(documentImpl, "div", {
-        className: "biblio-ui__detail-layout",
+    const hero = element(documentImpl, "header", {
+        className: "biblio-ui__detail-hero",
     });
-    const content = element(documentImpl, "div", {
-        className: "biblio-ui__detail-content",
+    const identity = element(documentImpl, "div", {
+        className: "biblio-ui__detail-identity",
     });
-    const cover = knownText(detail.cover_reference);
-
-    if (cover !== null) {
-        layout.append(element(documentImpl, "img", {
-            className: "biblio-ui__cover biblio-ui__cover--detail",
-            attributes: {
-                alt: `Omslag van ${detail.title}`,
-                src: cover,
-            },
-        }));
-    }
-
-    content.append(element(documentImpl, "h1", {
+    identity.append(element(documentImpl, "p", {
+        className: "biblio-ui__eyebrow",
+        text: detail.library.name,
+    }));
+    identity.append(element(documentImpl, "h1", {
         className: "biblio-ui__page-title",
         text: detail.title,
     }));
@@ -237,40 +312,31 @@ function renderDetail(documentImpl, model, actions) {
         detail.authors.state === "known"
         && detail.authors.values.length > 0
     ) {
-        content.append(element(documentImpl, "p", {
-            className: "biblio-ui__authors",
+        identity.append(element(documentImpl, "p", {
+            className: "biblio-ui__authors biblio-ui__detail-authors",
             text: detail.authors.values.join(", "),
         }));
     }
 
-    content.append(element(documentImpl, "p", {
-        className: "biblio-ui__library",
-        text: detail.library.name,
+    const heroMeta = element(documentImpl, "div", {
+        className: "biblio-ui__detail-hero-meta",
+        attributes: { "aria-label": "Boekstatus", role: "group" },
+    });
+    heroMeta.append(element(documentImpl, "span", {
+        className: `biblio-ui__status biblio-ui__status--${detail.reading.status}`,
+        text: readingStatusLabel(detail.reading.status),
     }));
-
     if (knownText(detail.form) === "physical_book") {
-        const summary = element(documentImpl, "dl", {
-            className: "biblio-ui__summary",
-        });
-        definition(documentImpl, summary, "Vorm", "Boek");
-        content.append(summary);
+        heroMeta.append(element(documentImpl, "span", {
+            className: "biblio-ui__detail-chip",
+            text: "Boek",
+        }));
     }
+    identity.append(heroMeta);
 
-    const reading = renderReading(documentImpl, detail.reading);
-    content.append(reading.section);
-    let focusTarget = reading.heading;
-
-    if (typeof model.notice === "string" && model.notice.length > 0) {
-        focusTarget = element(documentImpl, "p", {
-            text: model.notice,
-            attributes: {
-                "aria-live": "polite",
-                role: "status",
-                tabindex: "-1",
-            },
-        });
-        content.append(focusTarget);
-    }
+    const heroActions = element(documentImpl, "div", {
+        className: "biblio-ui__detail-actions",
+    });
 
     if (detail.capabilities.start_reading === true) {
         const startButton = element(documentImpl, "button", {
@@ -282,7 +348,7 @@ function renderDetail(documentImpl, model, actions) {
             "click",
             () => actions.startReading(startButton)
         );
-        content.append(startButton);
+        heroActions.append(startButton);
     }
 
     if (
@@ -299,43 +365,107 @@ function renderDetail(documentImpl, model, actions) {
             "click",
             () => actions.endReading(endButton)
         );
-        content.append(endButton);
+        heroActions.append(endButton);
+    }
+    identity.append(heroActions);
+    hero.append(coverPresentation(documentImpl, detail), identity);
+    view.append(hero);
+
+    const bookDetails = metadataSection(documentImpl, "boekdetails", "Boekdetails", [
+        ["Auteur", knownList(detail.authors)],
+        ["Serie", knownText(detail.series)],
+    ]);
+    const editionDetails = metadataSection(documentImpl, "uitgave", "Uitgave", [
+        ["Titel", detail.title],
+        ["ISBN", knownText(detail.isbn)],
+        ["Taal", knownText(detail.language)],
+        ["Uitgever", knownText(detail.publisher)],
+        ["Publicatiedatum", knownText(detail.publication_date)],
+        ["Vorm", knownText(detail.form) === "physical_book" ? "Boek" : null],
+    ]);
+    const itemDetails = metadataSection(documentImpl, "exemplaar", "Exemplaar", [
+        ["Bibliotheek", detail.library.name],
+        ["Locatie", knownText(detail.location)],
+        ["Conditie", knownText(detail.condition)],
+        ["Verwerving", knownText(detail.acquisition)],
+        ["Beschikbaarheid", knownText(detail.availability)],
+    ]);
+
+    const navItems = [
+        ["Overzicht", "overzicht"],
+        ["Leesgeschiedenis", "leesgeschiedenis"],
+        ["Mijn notities", "mijn-notities"],
+        ...(bookDetails === null ? [] : [["Boekdetails", "boekdetails"]]),
+        ...(editionDetails === null ? [] : [["Uitgave", "uitgave"]]),
+        ...(itemDetails === null ? [] : [["Exemplaar", "exemplaar"]]),
+    ];
+    const subnav = element(documentImpl, "nav", {
+        className: "biblio-ui__detail-subnav",
+        attributes: { "aria-label": "Boeksecties" },
+    });
+    const subnavList = element(documentImpl, "ul");
+    for (const [label, id] of navItems) {
+        const listItem = element(documentImpl, "li");
+        listItem.append(element(documentImpl, "a", {
+            text: label,
+            attributes: { href: `#${id}` },
+        }));
+        subnavList.append(listItem);
+    }
+    subnav.append(subnavList);
+    view.append(subnav);
+
+    const body = element(documentImpl, "div", {
+        className: "biblio-ui__detail-body",
+    });
+    const content = element(documentImpl, "div", {
+        className: "biblio-ui__detail-content",
+    });
+
+    const reading = renderReading(
+        documentImpl,
+        detail.reading,
+        detail.active_reading_round
+    );
+    content.append(reading.section);
+    let focusTarget = reading.heading;
+
+    if (typeof model.notice === "string" && model.notice.length > 0) {
+        focusTarget = element(documentImpl, "p", {
+            text: model.notice,
+            attributes: {
+                "aria-live": "polite",
+                role: "status",
+                tabindex: "-1",
+            },
+        });
+        reading.section.append(focusTarget);
     }
 
     content.append(element(documentImpl, "div", {
-        className: "biblio-ui__history-region",
+        className: "biblio-ui__history-region biblio-ui__detail-section",
         attributes: {
             "aria-busy": "false",
             "data-biblio-reading-history": "true",
+            id: "leesgeschiedenis",
         },
     }));
 
     content.append(element(documentImpl, "div", {
-        className: "biblio-ui__private-notes-region",
+        className: "biblio-ui__private-notes-region biblio-ui__detail-section",
         attributes: {
             "aria-busy": "false",
             "data-biblio-private-notes": "true",
+            id: "mijn-notities",
         },
     }));
-
-    append(
-        content,
-        metadataSection(documentImpl, "Uitgave", [
-            ["ISBN", detail.isbn],
-            ["Taal", detail.language],
-            ["Uitgever", detail.publisher],
-            ["Publicatiedatum", detail.publication_date],
-            ["Serie", detail.series],
-        ]),
-        metadataSection(documentImpl, "Exemplaar", [
-            ["Locatie", detail.location],
-            ["Conditie", detail.condition],
-            ["Verwerving", detail.acquisition],
-            ["Beschikbaarheid", detail.availability],
-        ])
-    );
-    layout.append(content);
-    view.append(layout);
+    const context = element(documentImpl, "aside", {
+        className: "biblio-ui__detail-context",
+        attributes: { "aria-label": "Boek- en exemplaargegevens" },
+    });
+    append(context, bookDetails, editionDetails, itemDetails);
+    body.append(content, context);
+    view.append(body);
 
     return { focusTarget, view };
 }

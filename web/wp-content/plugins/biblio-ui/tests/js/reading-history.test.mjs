@@ -253,13 +253,14 @@ test("loading, empty and local retry stay subordinate without stealing focus", (
     view.render({ state: "loading" }, actions);
     assert.equal(region.getAttribute("aria-busy"), "true");
     assert.match(text(region), /Leesgeschiedenis laden/);
-    assert.equal(byTag(region, "h2").length, 0);
+    assert.equal(byTag(region, "h2").length, 1);
     assert.equal(byAttribute(region, "aria-live", "polite").length, 1);
     assert.equal(byAttribute(region, "role", "status").length, 0);
     assert.equal(focused(region).length, 0);
 
     view.render({ state: "empty" }, actions);
-    assert.equal(region.children.length, 0);
+    assert.equal(byTag(region, "h2")[0].textContent, "Leesgeschiedenis");
+    assert.match(text(region), /Nog geen afgeronde leesrondes/);
     assert.equal(region.getAttribute("aria-busy"), "false");
 
     view.render({
@@ -267,7 +268,7 @@ test("loading, empty and local retry stay subordinate without stealing focus", (
         message: "Leesgeschiedenis kon niet worden geladen.",
         recovery: "retry",
     }, actions);
-    assert.equal(byTag(region, "h2").length, 0);
+    assert.equal(byTag(region, "h2").length, 1);
     assert.match(text(region), /kon niet worden geladen/);
     assert.equal(region.getAttribute("aria-busy"), "false");
     assert.equal(focused(region).length, 0);

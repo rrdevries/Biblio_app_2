@@ -402,10 +402,17 @@ function renderNotes(documentImpl, model, actions) {
         },
     });
     const heading = element(documentImpl, "h2", { text: "Privénotities" });
-    const add = control(documentImpl, "Notitie toevoegen", "primary");
+    const add = control(documentImpl, "Notitie toevoegen", "secondary");
     add.disabled = model.mutationPending;
     add.addEventListener("click", () => actions.add(add));
-    section.append(heading, add);
+    section.append(
+        element(documentImpl, "p", {
+            className: "biblio-ui__section-kicker",
+            text: "Privé",
+        }),
+        heading,
+        add
+    );
 
     if (model.loading) {
         section.append(element(documentImpl, "p", {

@@ -1,6 +1,6 @@
 # 54 — UI-FOUND-01 App Shell and Mijn Bibliotheek visual baseline
 
-Status: **TECHNICAL GO / HUMAN VISUAL ACCEPTANCE PENDING**
+Status: **TECHNICAL GO / HUMAN VISUAL GO**
 
 Date: 2026-09-07
 
@@ -122,11 +122,10 @@ Verified in the final implementation tree:
 - explicit independent second review against scope, canon, architecture,
   authorization/privacy, accessibility and regression risk: no blocker.
 
-## 7. Version and remaining human QA
+## 7. Version and human visual acceptance
 
 Biblio UI is versioned `0.6.0` so browsers request the changed shared assets.
 
-Renée retains final visual acceptance on intended production browsers/devices,
-including actual 200% zoom, keyboard/focus inspection and comparison with the
-production WordPress environment. A **GO** from that review authorizes the
-already prepared local commit for push; no push is part of UI-FOUND-01 itself.
+Renée has given human visual **GO** for UI-FOUND-01. The shared shell and Mijn
+Bibliotheek baseline are therefore the accepted visual foundation for later UI
+slices. No push was part of UI-FOUND-01 itself.

@@ -219,26 +219,11 @@ body.admin-bar.biblio-app-shell-page {
     padding: var(--biblio-space-4);
 }
 
-[data-biblio-ui-root] .biblio-ui__detail { max-inline-size: var(--biblio-content-max); }
-
-[data-biblio-ui-root] .biblio-ui__detail-layout {
-    display: grid;
-    gap: var(--biblio-space-8);
-    grid-template-columns: minmax(0, 16rem) minmax(0, var(--biblio-reading-max));
-    min-inline-size: 0;
-}
-
-[data-biblio-ui-root] .biblio-ui__detail-layout:not(:has(.biblio-ui__cover)) { grid-template-columns: minmax(0, var(--biblio-reading-max)); }
-[data-biblio-ui-root] .biblio-ui__cover--detail { inline-size: min(100%, 16rem); }
-
-[data-biblio-ui-root] .biblio-ui__detail-content,
 [data-biblio-ui-root] .biblio-ui__section {
     display: grid;
     gap: var(--biblio-space-4);
     min-inline-size: 0;
 }
-
-[data-biblio-ui-root] .biblio-ui__detail-content { max-inline-size: var(--biblio-reading-max); }
 
 [data-biblio-ui-root] .biblio-ui__metadata {
     display: grid;
@@ -255,8 +240,6 @@ body.admin-bar.biblio-app-shell-page {
     min-inline-size: 0;
 }
 
-[data-biblio-ui-root] .biblio-ui__history-region:empty { display: none; }
-
 [data-biblio-ui-root] .biblio-ui__history-loading {
     color: var(--biblio-color-primary);
     padding-block: var(--biblio-space-2);
@@ -264,19 +247,22 @@ body.admin-bar.biblio-app-shell-page {
 
 [data-biblio-ui-root] .biblio-ui__history-list {
     display: grid;
-    gap: var(--biblio-space-3);
+    gap: 0;
     margin: 0;
     padding-inline-start: var(--biblio-space-6);
 }
 
+[data-biblio-ui-root] .biblio-ui__history-list ::marker {
+    color: var(--biblio-color-brass);
+}
+
 [data-biblio-ui-root] .biblio-ui__history-entry {
-    background: var(--biblio-color-surface-muted);
-    border: var(--biblio-boundary-width) solid var(--biblio-color-boundary);
-    border-radius: var(--biblio-card-radius);
+    border-inline-start: 2px solid var(--biblio-color-brass);
+    border-block-end: var(--biblio-boundary-width) solid var(--biblio-color-border);
     display: list-item;
     min-inline-size: 0;
     overflow-wrap: anywhere;
-    padding: var(--biblio-space-4);
+    padding: var(--biblio-space-3) var(--biblio-space-4) var(--biblio-space-4);
 }
 
 [data-biblio-ui-root] .biblio-ui__history-outcome { font-weight: 600; }
@@ -309,14 +295,12 @@ body.admin-bar.biblio-app-shell-page {
 }
 
 [data-biblio-ui-root] .biblio-ui__note-card {
-    background: var(--biblio-color-surface-muted);
-    border: var(--biblio-boundary-width) solid var(--biblio-color-boundary);
-    border-radius: var(--biblio-card-radius);
+    border-block-start: var(--biblio-boundary-width) solid var(--biblio-color-border);
     display: grid;
     gap: var(--biblio-space-4);
     min-inline-size: 0;
     overflow-wrap: anywhere;
-    padding: var(--biblio-space-4);
+    padding-block: var(--biblio-space-4);
 }
 
 [data-biblio-ui-root] .biblio-ui__note-body,
@@ -1550,6 +1534,295 @@ body.admin-bar.biblio-app-shell-page {
         max-block-size: calc(100dvb - var(--biblio-space-8));
         min-block-size: calc(100dvb - var(--biblio-space-8));
         padding: var(--biblio-space-6) var(--biblio-space-4) max(var(--biblio-space-6), env(safe-area-inset-bottom));
+    }
+}
+
+/* Book Detail — D-BOOK-01 composition baseline. */
+[data-biblio-ui-root] .biblio-ui__detail {
+    gap: 0;
+    inline-size: 100%;
+    max-inline-size: var(--biblio-content-max);
+}
+
+[data-biblio-ui-root] .biblio-ui__detail-back {
+    margin-block-end: var(--biblio-space-4);
+}
+
+[data-biblio-ui-root] .biblio-ui__detail-hero {
+    align-items: center;
+    background:
+        radial-gradient(circle at 82% 15%, color-mix(in srgb, var(--biblio-color-brass) 10%, transparent), transparent 24rem),
+        linear-gradient(125deg, color-mix(in srgb, var(--biblio-color-surface-elevated) 88%, transparent), color-mix(in srgb, var(--biblio-color-book-atmosphere) 42%, var(--biblio-color-surface)));
+    border-block: var(--biblio-boundary-width) solid var(--biblio-color-border);
+    display: grid;
+    gap: var(--biblio-space-8);
+    grid-template-columns: minmax(8rem, 11rem) minmax(0, 1fr);
+    min-inline-size: 0;
+    overflow: hidden;
+    padding: var(--biblio-space-8);
+    position: relative;
+}
+
+[data-biblio-ui-root] .biblio-ui__detail-hero::after {
+    border: var(--biblio-boundary-width) solid color-mix(in srgb, var(--biblio-color-brass) 22%, transparent);
+    content: "";
+    inset: var(--biblio-space-3);
+    pointer-events: none;
+    position: absolute;
+}
+
+[data-biblio-ui-root] .biblio-ui__detail-hero > * {
+    position: relative;
+    z-index: 1;
+}
+
+[data-biblio-ui-root] .biblio-ui__cover--detail {
+    box-shadow: var(--biblio-cover-shadow);
+    inline-size: min(100%, 11rem);
+}
+
+[data-biblio-ui-root] .biblio-ui__detail-identity {
+    align-content: center;
+    display: grid;
+    gap: var(--biblio-space-3);
+    max-inline-size: 48rem;
+    min-inline-size: 0;
+}
+
+[data-biblio-ui-root] .biblio-ui__detail-identity .biblio-ui__page-title {
+    font-size: clamp(2.5rem, 2rem + 2vw, 4rem);
+    font-style: italic;
+    font-weight: 500;
+    line-height: 0.98;
+    max-inline-size: 22ch;
+}
+
+[data-biblio-ui-root] .biblio-ui__detail-authors {
+    font-size: clamp(1.1rem, 1rem + 0.45vw, 1.4rem);
+}
+
+[data-biblio-ui-root] .biblio-ui__detail-hero-meta,
+[data-biblio-ui-root] .biblio-ui__detail-actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--biblio-space-2);
+}
+
+[data-biblio-ui-root] .biblio-ui__detail-chip {
+    border: var(--biblio-boundary-width) solid var(--biblio-color-border);
+    border-radius: var(--biblio-radius-compact);
+    color: var(--biblio-color-text-secondary);
+    font-size: 0.75rem;
+    line-height: 1.35;
+    padding: 0.1rem var(--biblio-space-2);
+}
+
+[data-biblio-ui-root] .biblio-ui__detail-actions {
+    margin-block-start: var(--biblio-space-2);
+}
+
+[data-biblio-ui-root] .biblio-ui__detail-subnav {
+    border-block-end: var(--biblio-boundary-width) solid var(--biblio-color-border);
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+[data-biblio-ui-root] .biblio-ui__detail-subnav ul {
+    display: flex;
+    gap: var(--biblio-space-6);
+    list-style: none;
+    margin: 0;
+    min-inline-size: max-content;
+    padding: 0;
+}
+
+[data-biblio-ui-root] .biblio-ui__detail-subnav a {
+    align-items: center;
+    color: var(--biblio-color-text-secondary);
+    display: inline-flex;
+    font-size: 0.875rem;
+    font-weight: 600;
+    min-block-size: var(--biblio-control-min);
+    text-decoration: none;
+}
+
+[data-biblio-ui-root] .biblio-ui__detail-subnav a:hover {
+    color: var(--biblio-color-interactive-hover);
+    text-decoration: underline;
+    text-decoration-color: var(--biblio-color-brass);
+    text-underline-offset: 0.3em;
+}
+
+[data-biblio-ui-root] .biblio-ui__detail-body {
+    display: grid;
+    gap: var(--biblio-space-12);
+    grid-template-columns: minmax(0, 1fr) minmax(17rem, 20rem);
+    min-inline-size: 0;
+}
+
+[data-biblio-ui-root] .biblio-ui__detail-content,
+[data-biblio-ui-root] .biblio-ui__detail-context {
+    min-inline-size: 0;
+}
+
+[data-biblio-ui-root] .biblio-ui__detail-section,
+[data-biblio-ui-root] .biblio-ui__metadata-section {
+    scroll-margin-block-start: var(--biblio-space-4);
+}
+
+[data-biblio-ui-root] .biblio-ui__detail-section {
+    border-block-end: var(--biblio-boundary-width) solid var(--biblio-color-border);
+    padding-block: var(--biblio-space-12);
+}
+
+[data-biblio-ui-root] .biblio-ui__detail-section:last-child {
+    border-block-end: 0;
+}
+
+[data-biblio-ui-root] .biblio-ui__detail-context {
+    align-content: start;
+    border-inline-start: var(--biblio-boundary-width) solid var(--biblio-color-border);
+    display: grid;
+    gap: 0;
+    padding-inline-start: var(--biblio-space-6);
+}
+
+[data-biblio-ui-root] .biblio-ui__metadata-section {
+    align-content: start;
+    border-block-end: var(--biblio-boundary-width) solid var(--biblio-color-border);
+    gap: var(--biblio-space-4);
+    padding-block: var(--biblio-space-8);
+}
+
+[data-biblio-ui-root] .biblio-ui__metadata-section h2,
+[data-biblio-ui-root] .biblio-ui__detail-section h2 {
+    font-size: clamp(1.35rem, 1.2rem + 0.4vw, 1.65rem);
+    font-weight: 600;
+}
+
+[data-biblio-ui-root] .biblio-ui__metadata-section .biblio-ui__metadata {
+    gap: var(--biblio-space-2);
+    grid-template-columns: minmax(0, 1fr);
+}
+
+[data-biblio-ui-root] .biblio-ui__metadata-section .biblio-ui__metadata dt {
+    color: var(--biblio-color-text-muted);
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    margin-block-start: var(--biblio-space-2);
+    text-transform: uppercase;
+}
+
+[data-biblio-ui-root] .biblio-ui__metadata-section .biblio-ui__metadata dt:first-child {
+    margin-block-start: 0;
+}
+
+[data-biblio-ui-root] .biblio-ui__section-kicker {
+    color: var(--biblio-color-brass);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+[data-biblio-ui-root] .biblio-ui__detail-empty-copy {
+    color: var(--biblio-color-text-muted);
+    font-style: italic;
+}
+
+[data-biblio-ui-root] .biblio-ui__current-round {
+    border-inline-start: 2px solid var(--biblio-color-status-success);
+    color: var(--biblio-color-text-secondary);
+    font-weight: 600;
+    padding: var(--biblio-space-2) var(--biblio-space-4);
+}
+
+[data-biblio-ui-root] .biblio-ui__reading > .biblio-ui__metadata {
+    background: color-mix(in srgb, var(--biblio-color-surface) 58%, transparent);
+    border-inline-start: 2px solid var(--biblio-color-brass);
+    max-inline-size: 36rem;
+    padding: var(--biblio-space-4);
+}
+
+[data-biblio-ui-root] .biblio-ui__private-notes > .biblio-ui__control {
+    justify-self: start;
+}
+
+@media (min-width: 768px) and (max-width: 1100px) {
+    [data-biblio-ui-root] .biblio-ui__detail-body {
+        gap: var(--biblio-space-8);
+        grid-template-columns: minmax(0, 1fr) minmax(15rem, 18rem);
+    }
+}
+
+@media (min-width: 768px) and (max-width: 900px) {
+    [data-biblio-ui-root] .biblio-ui__detail-body {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    [data-biblio-ui-root] .biblio-ui__detail-context {
+        border-block-start: var(--biblio-boundary-width) solid var(--biblio-color-border);
+        border-inline-start: 0;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        padding-inline-start: 0;
+    }
+
+    [data-biblio-ui-root] .biblio-ui__metadata-section {
+        padding-inline: var(--biblio-space-4);
+    }
+}
+
+@media (max-width: 767px) {
+    [data-biblio-ui-root] .biblio-ui__detail-back {
+        margin-block-end: var(--biblio-space-3);
+    }
+
+    [data-biblio-ui-root] .biblio-ui__detail-hero {
+        align-items: start;
+        gap: var(--biblio-space-6);
+        grid-template-columns: minmax(0, 1fr);
+        padding: var(--biblio-space-6);
+    }
+
+    [data-biblio-ui-root] .biblio-ui__cover--detail {
+        inline-size: 8rem;
+    }
+
+    [data-biblio-ui-root] .biblio-ui__detail-identity .biblio-ui__page-title {
+        font-size: clamp(2.2rem, 10vw, 3rem);
+    }
+
+    [data-biblio-ui-root] .biblio-ui__detail-actions .biblio-ui__control {
+        inline-size: 100%;
+    }
+
+    [data-biblio-ui-root] .biblio-ui__detail-subnav ul {
+        flex-wrap: wrap;
+        gap: var(--biblio-space-4);
+        min-inline-size: 0;
+    }
+
+    [data-biblio-ui-root] .biblio-ui__detail-subnav {
+        overflow-x: visible;
+    }
+
+    [data-biblio-ui-root] .biblio-ui__detail-body {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    [data-biblio-ui-root] .biblio-ui__detail-section {
+        padding-block: var(--biblio-space-8);
+    }
+
+    [data-biblio-ui-root] .biblio-ui__detail-context {
+        border-block-start: var(--biblio-boundary-width) solid var(--biblio-color-border);
+        border-inline-start: 0;
+        padding-inline-start: 0;
+    }
+
+    [data-biblio-ui-root] .biblio-ui__metadata-section {
+        padding-block: var(--biblio-space-6);
     }
 }
 
