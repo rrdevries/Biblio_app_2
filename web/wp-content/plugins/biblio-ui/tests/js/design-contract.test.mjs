@@ -148,6 +148,22 @@ test("Add Book Guided Flow uses open composition and restrained entity cards", (
     assert.doesNotMatch(addBookCss, /box-shadow:/);
 });
 
+test("Book Detail keeps the D-BOOK-01 editorial composition responsive and token-scoped", () => {
+    const bookDetailCss = css.slice(
+        css.indexOf("/* Book Detail"),
+        css.indexOf("@media (prefers-reduced-motion")
+    );
+
+    assert.match(bookDetailCss, /\.biblio-ui__detail-hero[\s\S]*grid-template-columns: minmax\(8rem, 11rem\) minmax\(0, 1fr\)/);
+    assert.match(bookDetailCss, /\.biblio-ui__detail-hero[\s\S]*var\(--biblio-color-book-atmosphere\)/);
+    assert.match(bookDetailCss, /\.biblio-ui__detail-subnav a[\s\S]*min-block-size: var\(--biblio-control-min\)/);
+    assert.match(bookDetailCss, /\.biblio-ui__detail-body[\s\S]*grid-template-columns: minmax\(0, 1fr\) minmax\(17rem, 20rem\)/);
+    assert.match(bookDetailCss, /@media \(min-width: 768px\) and \(max-width: 900px\)[\s\S]*\.biblio-ui__detail-body[\s\S]*grid-template-columns: minmax\(0, 1fr\)/);
+    assert.match(bookDetailCss, /@media \(max-width: 767px\)[\s\S]*\.biblio-ui__detail-actions \.biblio-ui__control[\s\S]*inline-size: 100%/);
+    assert.doesNotMatch(bookDetailCss, /#[0-9a-f]{3,8}/iu);
+    assert.doesNotMatch(bookDetailCss, /animation:|transition:/);
+});
+
 test("Reading history CSS preserves reflow, native lists and scoped token use", () => {
     const historyRules = [...css.matchAll(
         /([^{}]*\.biblio-ui__history[^{}]*)\{([^{}]*)\}/gu

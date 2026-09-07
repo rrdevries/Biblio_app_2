@@ -122,7 +122,7 @@ test("Work-wide ended history is private, newest-first and survives reload", asy
     await expect(historyEntries(page).first()).toContainText("13 december 2025");
 });
 
-test("zero and active-only Works render no history section or controls", async ({ page }) => {
+test("zero and active-only Works render an honest empty history section without controls", async ({ page }) => {
     for (const [itemId, expectedStatus] of [
         [IDS.zeroItem, "Niet gelezen"],
         [IDS.activeItem, "Aan het lezen"],
@@ -130,7 +130,8 @@ test("zero and active-only Works render no history section or controls", async (
         await page.goto(libraryUrl(itemId));
         await expect(definitionValue(page, "Leesstatus")).toHaveText(expectedStatus);
         await expect(historyRegion(page)).toHaveAttribute("aria-busy", "false");
-        await expect(page.getByRole("heading", { level: 2, name: "Leesgeschiedenis" })).toHaveCount(0);
+        await expect(page.getByRole("heading", { level: 2, name: "Leesgeschiedenis" })).toBeVisible();
+        await expect(historyRegion(page).getByText("Nog geen afgeronde leesrondes.")).toBeVisible();
         await expect(historyEntries(page)).toHaveCount(0);
         await expect(historyRegion(page).getByRole("button", { name: "Meer laden" })).toHaveCount(0);
     }
@@ -192,7 +193,7 @@ test("initial history failure stays local and explicit retry does not reload det
     await expect(page.getByRole("heading", { level: 1, name: "E2E Leesgeschiedenis" })).toBeVisible();
     await expect(definitionValue(page, "Leesstatus")).toHaveText("Aan het lezen");
     await expect(historyRegion(page).getByText("Leesgeschiedenis kon niet worden geladen.")).toBeVisible();
-    await expect(page.getByRole("heading", { level: 2, name: "Leesgeschiedenis" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { level: 2, name: "Leesgeschiedenis" })).toBeVisible();
     expect(historyGets).toBe(1);
     expect(detailGets).toBe(1);
 
