@@ -6,7 +6,8 @@ namespace Biblio\UI;
 
 final class Plugin
 {
-    public const VERSION = "0.5.0";
+    public const VERSION = "0.6.0";
+    public const PAGE_BODY_CLASS = "biblio-app-shell-page";
     public const SCRIPT_MODULE_ID = "biblio-ui/app";
     public const ADD_BOOK_SCRIPT_MODULE_ID = "biblio-ui/add-book-wizard";
     public const API_SCRIPT_MODULE_ID = "biblio-ui/api";
@@ -47,7 +48,23 @@ final class Plugin
         add_action("init", [$this->libraryAppShortcode, "register"]);
         add_action("init", [$this->nextReadingAppShortcode, "register"]);
         add_action("wp_enqueue_scripts", [$this, "registerAndEnqueueAssets"]);
+        add_filter("body_class", [$this, "addPageBodyClass"]);
         $this->booted = true;
+    }
+
+    /**
+     * @param list<string> $classes
+     * @return list<string>
+     */
+    public function addPageBodyClass(array $classes): array
+    {
+        if (!is_page(LibraryAppShortcode::PAGE_SLUG)) {
+            return $classes;
+        }
+
+        $classes[] = self::PAGE_BODY_CLASS;
+
+        return array_values(array_unique($classes));
     }
 
     public function registerAndEnqueueAssets(): void

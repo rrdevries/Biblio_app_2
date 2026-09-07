@@ -48,6 +48,16 @@ function actionButton(documentImpl, label, listener, modifier = "secondary") {
     return button;
 }
 
+function icon(documentImpl, name) {
+    return element(documentImpl, "span", {
+        className: "biblio-ui__icon",
+        attributes: {
+            "aria-hidden": "true",
+            "data-biblio-icon": name,
+        },
+    });
+}
+
 function shouldHandleNavigation(event) {
     return !event?.defaultPrevented
         && (event?.button === undefined || event.button === 0)
@@ -124,22 +134,38 @@ function contextLine(item) {
         segments.push(locationOrSource);
     }
 
-    segments.push(readingStatusLabel(item.reading_status));
     return segments.join(" · ");
 }
 
 function coverImage(documentImpl, item, modifier) {
     const cover = knownText(item.cover_reference);
 
-    return cover === null
-        ? null
-        : element(documentImpl, "img", {
+    if (cover !== null) {
+        return element(documentImpl, "img", {
             className: `biblio-ui__cover biblio-ui__cover--${modifier}`,
             attributes: {
                 alt: `Omslag van ${item.title}`,
                 src: cover,
             },
         });
+    }
+
+    const placeholder = element(documentImpl, "span", {
+        className: `biblio-ui__cover biblio-ui__cover--${modifier} biblio-ui__cover--placeholder`,
+        attributes: {
+            role: "img",
+            "aria-label": `Geen omslag beschikbaar voor ${item.title}`,
+        },
+    });
+    placeholder.append(
+        icon(documentImpl, "book-open"),
+        element(documentImpl, "span", {
+            className: "biblio-ui__cover-label",
+            text: "Biblio",
+            attributes: { "aria-hidden": "true" },
+        })
+    );
+    return placeholder;
 }
 
 function itemCard(documentImpl, item, libraryId, itemUrl, actions) {
@@ -168,10 +194,7 @@ function itemCard(documentImpl, item, libraryId, itemUrl, actions) {
         });
     }
 
-    const cover = coverImage(documentImpl, item, "overview");
-    if (cover !== null) {
-        content.append(cover);
-    }
+    content.append(coverImage(documentImpl, item, "overview"));
 
     const body = element(documentImpl, "div", {
         className: "biblio-ui__book-copy",
@@ -181,28 +204,42 @@ function itemCard(documentImpl, item, libraryId, itemUrl, actions) {
         text: item.title,
     }));
     const authors = authorLine(item);
-    if (authors !== null) {
-        body.append(element(documentImpl, "p", {
-            className: "biblio-ui__authors",
-            text: authors,
+    body.append(element(documentImpl, "p", {
+        className: authors === null
+            ? "biblio-ui__authors biblio-ui__authors--unknown"
+            : "biblio-ui__authors",
+        text: authors ?? "Auteur onbekend",
+    }));
+    const metadata = element(documentImpl, "div", {
+        className: "biblio-ui__book-meta",
+    });
+    const context = contextLine(item);
+    if (context.length > 0) {
+        metadata.append(element(documentImpl, "p", {
+            className: "biblio-ui__context",
+            text: context,
         }));
     }
-    body.append(element(documentImpl, "p", {
-        className: "biblio-ui__context",
-        text: contextLine(item),
+    metadata.append(element(documentImpl, "span", {
+        className: `biblio-ui__status biblio-ui__status--${item.reading_status}`,
+        text: readingStatusLabel(item.reading_status),
     }));
+    body.append(metadata);
     content.append(body);
     listItem.append(content);
 
     if (canView) {
         const quickView = actionButton(
             documentImpl,
-            `Snel bekijken: ${item.title}`,
+            "",
             () => actions.quickView(item.item_id),
             "tertiary"
         );
         quickView.className += " biblio-ui__quick-view-trigger";
         quickView.setAttribute("data-quick-view-for", item.item_id);
+        quickView.setAttribute("aria-label", `Snel bekijken: ${item.title}`);
+        quickView.setAttribute("title", "Snel bekijken");
+        quickView.append(icon(documentImpl, "eye"));
         listItem.append(quickView);
     }
 
@@ -277,10 +314,15 @@ function renderToolbar(documentImpl, {
         const button = actionButton(
             documentImpl,
             label,
-            () => setView(value),
+            value === "bookshelf" ? () => {} : () => setView(value),
             value === selectedView ? "active" : "tertiary"
         );
         button.setAttribute("aria-pressed", value === selectedView ? "true" : "false");
+        if (value === "bookshelf") {
+            button.disabled = true;
+            button.setAttribute("aria-describedby", "biblio-toolbar-contract-note");
+            button.setAttribute("title", "Boekenplank is nog niet beschikbaar");
+        }
         switcher.append(button);
     }
 
@@ -310,29 +352,6 @@ function renderToolbar(documentImpl, {
         attributes: { id: "biblio-toolbar-contract-note" },
     }));
     return region;
-}
-
-function renderBookshelfPlaceholder(documentImpl, setView) {
-    const placeholder = element(documentImpl, "section", {
-        className: "biblio-ui__bookshelf-placeholder",
-        attributes: { "aria-labelledby": "biblio-bookshelf-title" },
-    });
-    append(
-        placeholder,
-        element(documentImpl, "p", {
-            className: "biblio-ui__eyebrow",
-            text: "Weergave voorbereid",
-        }),
-        element(documentImpl, "h2", {
-            text: "Boekenplank",
-            attributes: { id: "biblio-bookshelf-title" },
-        }),
-        element(documentImpl, "p", {
-            text: "De fysieke rugweergave wacht op het definitieve coverratio- en titelcontract.",
-        }),
-        actionButton(documentImpl, "Terug naar Grid", () => setView("grid"))
-    );
-    return placeholder;
 }
 
 function quickViewDetail(
@@ -385,10 +404,7 @@ function quickViewDetail(
         }));
     } else if (quickView.state === "ready") {
         const detail = quickView.detail;
-        const cover = coverImage(documentImpl, detail, "quick-view");
-        if (cover !== null) {
-            dialog.append(cover);
-        }
+        dialog.append(coverImage(documentImpl, detail, "quick-view"));
         const authors = authorLine(detail);
         if (authors !== null) {
             dialog.append(element(documentImpl, "p", {
@@ -582,11 +598,21 @@ function renderOverview(documentImpl, model, actions, itemUrl, uiState) {
     const header = element(documentImpl, "header", {
         className: "biblio-ui__page-header",
     });
-    appHeading(documentImpl, header);
-    header.append(element(documentImpl, "p", {
+    const headingGroup = element(documentImpl, "div", {
+        className: "biblio-ui__page-heading",
+    });
+    headingGroup.append(
+        element(documentImpl, "p", {
+            className: "biblio-ui__eyebrow",
+            text: "Catalogus",
+        })
+    );
+    appHeading(documentImpl, headingGroup);
+    headingGroup.append(element(documentImpl, "p", {
         className: "biblio-ui__library",
         text: model.library.name,
     }));
+    header.append(headingGroup);
     if (model.library.capabilities.add_catalog_item === true) {
         const addBook = actionButton(
             documentImpl,
@@ -614,40 +640,46 @@ function renderOverview(documentImpl, model, actions, itemUrl, uiState) {
     }));
 
     if (model.items.length === 0) {
-        view.append(element(documentImpl, "h2", {
-            text: "Nog geen actieve boeken",
-        }));
+        const empty = element(documentImpl, "section", {
+            className: "biblio-ui__empty-state",
+            attributes: { "aria-labelledby": "biblio-empty-title" },
+        });
+        append(
+            empty,
+            icon(documentImpl, "book-open"),
+            element(documentImpl, "h2", {
+                text: "Nog geen actieve boeken",
+                attributes: { id: "biblio-empty-title" },
+            }),
+            element(documentImpl, "p", {
+                text: "Boeken die aan deze bibliotheek zijn toegevoegd verschijnen hier.",
+            })
+        );
+        view.append(empty);
         return view;
     }
 
-    if (uiState.selectedView === "bookshelf") {
-        view.append(renderBookshelfPlaceholder(documentImpl, (value) => {
-            uiState.selectedView = value;
-            rerender();
-        }));
-    } else {
-        const heading = element(documentImpl, "h2", {
-            className: "biblio-ui__visually-hidden",
-            text: "Boeken",
-        });
-        const list = element(documentImpl, "ul", {
-            className: "biblio-ui__catalog-list",
-            attributes: {
-                "aria-label": "Actieve boeken",
-                "data-catalog-view": uiState.selectedView,
-            },
-        });
-        for (const item of model.items) {
-            list.append(itemCard(
-                documentImpl,
-                item,
-                model.library.library_id,
-                itemUrl,
-                actions
-            ));
-        }
-        view.append(heading, list);
+    const heading = element(documentImpl, "h2", {
+        className: "biblio-ui__visually-hidden",
+        text: "Boeken",
+    });
+    const list = element(documentImpl, "ul", {
+        className: "biblio-ui__catalog-list",
+        attributes: {
+            "aria-label": "Actieve boeken",
+            "data-catalog-view": uiState.selectedView,
+        },
+    });
+    for (const item of model.items) {
+        list.append(itemCard(
+            documentImpl,
+            item,
+            model.library.library_id,
+            itemUrl,
+            actions
+        ));
     }
+    view.append(heading, list);
 
     const loadMore = renderLoadMore(documentImpl, model, actions);
     if (loadMore !== null) {
