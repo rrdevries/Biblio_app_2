@@ -5,7 +5,6 @@ import {
     movedEntryIds,
     readNextReadingList,
     readSourceOptions,
-    readWorkPage,
     sourceRequest,
     nextReadingErrorMessage,
 } from "../../assets/js/next-reading.js";
@@ -55,18 +54,6 @@ test("empty and unavailable preferred-source projections are safe", () => {
 test("list allowlist rejects owner, persistence and malformed order data", () => {
     assert.throws(() => readNextReadingList({ list_version: 1, entries: [], owner_id: "private" }));
     assert.throws(() => readNextReadingList({ list_version: 1, entries: [entry("one", 2)] }));
-});
-
-test("bounded Work page validates only minimal discovery fields", () => {
-    const page = readWorkPage({
-        items: [{ work_id: "work-one", title: "Eerste boek" }],
-        next_cursor: "opaque",
-    });
-    assert.equal(page.items[0].title, "Eerste boek");
-    assert.throws(() => readWorkPage({
-        items: [{ work_id: "work-one", title: "Boek", owner_id: "private" }],
-        next_cursor: null,
-    }));
 });
 
 test("source discovery and mutation payloads stay typed and human-labelled", () => {

@@ -27,7 +27,9 @@ use Biblio\Core\Application\Reading\History\ReadingHistoryEntry;
 use Biblio\Core\Application\Reading\History\ReadingHistoryPage;
 use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Catalog\Author;
+use Biblio\Core\Catalog\IsbnRules;
 use Biblio\Core\Catalog\Classification\{LibraryGenreId,LibrarySubjectId};
+use Biblio\Core\Catalog\Classification\{LibraryBookType,LibraryGenre,LibrarySubject};
 use Biblio\Core\Collections\CollectionId;
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Reading\ReadingDate;
@@ -134,10 +136,70 @@ final readonly class RestResponseSerializer
             "work_title_status" => $match->work()->titleStatus()->value,
             "edition_id" => $match->edition()->id()->value(),
             "edition_title" => $match->edition()->title(),
+            "authors" => array_map(
+                static fn (Author $author): array => [
+                    "author_id" => $author->id()->value(),
+                    "display_name" => $author->displayName(),
+                ],
+                $match->authors()
+            ),
+            "canonical_isbn" => $this->canonicalIsbn($match),
             "existing_item_count" => count($match->existingItems()),
             "existing_items" => array_map(
                 $this->addBookExistingItem(...),
                 $match->existingItems()
+            ),
+        ];
+    }
+
+    private function canonicalIsbn(AddBookExistingEdition $match): ?string
+    {
+        $metadata = $match->edition()->isbnMetadata();
+        $isbn13 = $metadata->isbn13();
+        if ($isbn13 !== null) {
+            return $isbn13->value();
+        }
+
+        $isbn10 = $metadata->isbn10();
+        return $isbn10 === null
+            ? null
+            : IsbnRules::isbn10To13($isbn10->value());
+    }
+
+    /**
+     * @param list<LibraryBookType> $bookTypes
+     * @param list<LibraryGenre> $genres
+     * @param list<LibrarySubject> $subjects
+     * @return array<string, mixed>
+     */
+    public function classificationOptions(
+        LibraryId $libraryId,
+        array $bookTypes,
+        array $genres,
+        array $subjects
+    ): array {
+        return [
+            "library_id" => $libraryId->value(),
+            "book_types" => array_map(
+                static fn (LibraryBookType $term): array => [
+                    "book_type_id" => $term->id()->value(),
+                    "display_name" => $term->name()->value(),
+                ],
+                $bookTypes
+            ),
+            "genres" => array_map(
+                static fn (LibraryGenre $term): array => [
+                    "genre_id" => $term->id()->value(),
+                    "display_name" => $term->name()->value(),
+                ],
+                $genres
+            ),
+            "subjects" => array_map(
+                static fn (LibrarySubject $term): array => [
+                    "subject_id" => $term->id()->value(),
+                    "display_name" => $term->name()->value(),
+                ],
+                $subjects
             ),
         ];
     }

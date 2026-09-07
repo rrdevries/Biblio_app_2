@@ -6,6 +6,7 @@ namespace Biblio\Core\Tests\Unit\Application;
 
 use Biblio\Core\Application\Catalog\LocalEditionResolutionType;
 use Biblio\Core\Application\Catalog\LocalEditionResolver;
+use Biblio\Core\Application\Catalog\Read\BibliographicRelationshipQueryService;
 use Biblio\Core\Application\Identity\AuthenticatedUser;
 use Biblio\Core\Application\Library\ActorLibraryContext;
 use Biblio\Core\Application\Library\ActorLibraryContextRepository;
@@ -13,7 +14,7 @@ use Biblio\Core\Application\Library\LibraryContextQueryService;
 use Biblio\Core\Application\Metadata\{AddBookExistingItem,AddBookExistingItemRepository,AddBookMetadataLookupResult,AddBookMetadataLookupService,AddBookMetadataReviewPolicy,CandidateClassifier,FirstSufficientMetadataLookupService,MetadataCandidate,MetadataCandidateId,MetadataClock,MetadataLookupId,MetadataLookupIdGenerator,MetadataLookupSnapshot,MetadataLookupSnapshotRepository,MetadataMatchMethod,MetadataProvider,MetadataWorkLink,ProviderFailureReason,ProviderLookupResult};
 use Biblio\Core\Application\TransactionManager;
 use Biblio\Core\Authorization\LibraryAuthorizationPolicy;
-use Biblio\Core\Catalog\{BibliographicMetadataRepository,CanonicalIsbnIdentity,Edition,EditionId,EditionIdentifierClaimRepository,EditionIsbnMetadata,EditionRepository,InventoryNumber,Isbn13,IsbnCanonicalizer,ItemId,LibraryLocation,LocationId,Work,WorkId,WorkRepository};
+use Biblio\Core\Catalog\{Author,AuthorId,AuthorRepository,BibliographicMetadataRepository,CanonicalIsbnIdentity,ContributorPosition,ContributorRole,Edition,EditionId,EditionIdentifierClaimRepository,EditionIsbnMetadata,EditionRepository,InventoryNumber,Isbn13,IsbnCanonicalizer,ItemId,LibraryLocation,LocationId,SeriesRepository,Work,WorkContributor,WorkId,WorkRepository};
 use Biblio\Core\Exception\AuthorizationException;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\WordPress\Rest\{CatalogCursorCodec,PrivateNoteCursorCodec,ReadingHistoryCursorCodec,RestResponseSerializer};
@@ -80,6 +81,21 @@ final class AddBookMetadataLookupServiceTest extends TestCase
                     ),
                 ],
             ]);
+        $authors = $this->createStub(AuthorRepository::class);
+        $authors->method("contributorsForWorks")->willReturn([
+            "work-existing" => [new WorkContributor(
+                $edition->workId(),
+                new AuthorId("author-existing"),
+                ContributorRole::Author,
+                new ContributorPosition(1)
+            )],
+        ]);
+        $authors->method("findMany")->willReturn([
+            "author-existing" => new Author(
+                new AuthorId("author-existing"),
+                "Auteur Naam"
+            ),
+        ]);
         $service = $this->service(
             LibraryMembership::owner(),
             $claims,
@@ -88,7 +104,8 @@ final class AddBookMetadataLookupServiceTest extends TestCase
             $works,
             $primary,
             $fallback,
-            $existingItems
+            $existingItems,
+            $authors
         );
 
         $result = $service->lookup(
@@ -104,6 +121,19 @@ final class AddBookMetadataLookupServiceTest extends TestCase
         self::assertSame("edition-existing", $result->localMatches()[0]
             ->edition()->id()->value());
         $serialized = $this->serializer()->addBookMetadataLookup($result);
+        self::assertSame("Concrete titel", $serialized["local_matches"][0]
+            ["edition_title"]);
+        self::assertSame("Auteur Naam", $serialized["local_matches"][0]
+            ["authors"][0]["display_name"]);
+        self::assertSame("9780306406157", $serialized["local_matches"][0]
+            ["canonical_isbn"]);
+        self::assertArrayNotHasKey("cover", $serialized["local_matches"][0]);
+        self::assertArrayNotHasKey("language", $serialized["local_matches"][0]);
+        self::assertArrayNotHasKey("publisher", $serialized["local_matches"][0]);
+        self::assertArrayNotHasKey(
+            "publication_date",
+            $serialized["local_matches"][0]
+        );
         self::assertSame(1, $serialized["local_matches"][0]
             ["existing_item_count"]);
         self::assertSame("item-existing", $serialized["local_matches"][0]
@@ -288,7 +318,8 @@ final class AddBookMetadataLookupServiceTest extends TestCase
         WorkRepository $works,
         MetadataProvider $primary,
         MetadataProvider $fallback,
-        ?AddBookExistingItemRepository $existingItems = null
+        ?AddBookExistingItemRepository $existingItems = null,
+        ?AuthorRepository $authors = null
     ): AddBookMetadataLookupService {
         $actor = new UserId("actor-a");
         $libraryId = new LibraryId("library-a");
@@ -334,6 +365,10 @@ final class AddBookMetadataLookupServiceTest extends TestCase
                 $legacy
             ),
             $works,
+            new BibliographicRelationshipQueryService(
+                $authors ?? $this->createStub(AuthorRepository::class),
+                $this->createStub(SeriesRepository::class)
+            ),
             $existingItems
                 ?? $this->createStub(AddBookExistingItemRepository::class),
             new FirstSufficientMetadataLookupService(

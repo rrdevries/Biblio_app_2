@@ -72,6 +72,15 @@ final class RestController
         );
         register_rest_route(
             self::NAMESPACE,
+            "/libraries/(?P<library_id>[^/]+)/classification-options",
+            [
+                "methods" => WP_REST_Server::READABLE,
+                "callback" => [$this, "classificationOptions"],
+                "permission_callback" => [$this, "authenticated"],
+            ]
+        );
+        register_rest_route(
+            self::NAMESPACE,
             "/libraries/(?P<library_id>[^/]+)/metadata-lookups",
             [
                 "methods" => WP_REST_Server::CREATABLE,
@@ -267,6 +276,24 @@ final class RestController
             );
 
             return $this->success($this->responses->catalogQuery($page));
+        });
+    }
+
+    public function classificationOptions(
+        WP_REST_Request $request
+    ): WP_REST_Response|WP_Error {
+        return $this->execute(function (
+            CoreApplication $application
+        ) use ($request): WP_REST_Response {
+            $libraryId = $this->requests->libraryId($request);
+            $classifications = $application->libraryClassifications();
+
+            return $this->success($this->responses->classificationOptions(
+                $libraryId,
+                $classifications->activeBookTypes($libraryId),
+                $classifications->activeGenres($libraryId),
+                $classifications->activeSubjects($libraryId)
+            ));
         });
     }
 

@@ -1,9 +1,9 @@
 import { BiblioApiError, createBiblioApi } from "./api.js";
+import { readWorkPage } from "./work-discovery.js";
 
 const LIST_FIELDS = ["list_version", "entries"];
 const ENTRY_FIELDS = ["entry_id", "position", "work", "preferred_source"];
 const WORK_FIELDS = ["work_id", "title"];
-const PAGE_FIELDS = ["items", "next_cursor"];
 const SOURCE_STATES = new Set(["none", "available", "unavailable"]);
 
 function record(value) {
@@ -78,21 +78,6 @@ export function readNextReadingList(value) {
     return Object.freeze({
         list_version: value.list_version,
         entries: Object.freeze(entries),
-    });
-}
-
-export function readWorkPage(value) {
-    if (
-        !exact(value, PAGE_FIELDS)
-        || !Array.isArray(value.items)
-        || !(value.next_cursor === null || text(value.next_cursor))
-    ) {
-        throw new TypeError("The Biblio Work discovery response is invalid.");
-    }
-
-    return Object.freeze({
-        items: Object.freeze(value.items.map(readNextReadingWork)),
-        next_cursor: value.next_cursor,
     });
 }
 

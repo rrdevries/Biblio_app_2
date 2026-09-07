@@ -8,6 +8,7 @@ use Biblio\Core\Application\Identity\AuthenticatedUser;
 use Biblio\Core\Application\TransactionManager;
 use Biblio\Core\Application\Catalog\LocalEditionResolutionType;
 use Biblio\Core\Application\Catalog\LocalEditionResolver;
+use Biblio\Core\Application\Catalog\Read\BibliographicRelationshipQueryService;
 use Biblio\Core\Application\Library\LibraryContextQueryService;
 use Biblio\Core\Catalog\Edition;
 use Biblio\Core\Catalog\WorkRepository;
@@ -22,6 +23,7 @@ final readonly class AddBookMetadataLookupService
         private LibraryContextQueryService $libraryContexts,
         private LocalEditionResolver $localEditions,
         private WorkRepository $works,
+        private BibliographicRelationshipQueryService $relationships,
         private AddBookExistingItemRepository $existingItems,
         private FirstSufficientMetadataLookupService $metadata,
         private AddBookMetadataReviewPolicy $reviewPolicy,
@@ -89,15 +91,47 @@ final readonly class AddBookMetadataLookupService
                 $localEditions
             )
         );
-        $matches = array_map(
-            fn (Edition $edition): AddBookExistingEdition =>
-                new AddBookExistingEdition(
-                    $this->requireWork($edition),
-                    $edition,
-                    $existingItems[$edition->id()->value()] ?? []
-                ),
-            $localEditions
+        $works = [];
+        $workIds = [];
+        foreach ($localEditions as $edition) {
+            $work = $this->requireWork($edition);
+            $works[$edition->id()->value()] = $work;
+            $workIds[$work->id()->value()] = $work->id();
+        }
+        $contributors = $this->relationships->contributorsForWorks(
+            array_values($workIds)
         );
+        $authorIds = [];
+        foreach ($contributors as $workContributors) {
+            foreach ($workContributors as $contributor) {
+                $authorIds[$contributor->authorId()->value()] =
+                    $contributor->authorId();
+            }
+        }
+        $authors = $this->relationships->authors(array_values($authorIds));
+
+        $matches = array_map(function (Edition $edition) use (
+            $authors,
+            $contributors,
+            $existingItems,
+            $works
+        ): AddBookExistingEdition {
+            $work = $works[$edition->id()->value()];
+            $workAuthors = [];
+            foreach ($contributors[$work->id()->value()] ?? [] as $contributor) {
+                $author = $authors[$contributor->authorId()->value()] ?? null;
+                if ($author !== null) {
+                    $workAuthors[] = $author;
+                }
+            }
+
+            return new AddBookExistingEdition(
+                $work,
+                $edition,
+                $workAuthors,
+                $existingItems[$edition->id()->value()] ?? []
+            );
+        }, $localEditions);
 
         return AddBookMetadataLookupResult::local(
             $library,
