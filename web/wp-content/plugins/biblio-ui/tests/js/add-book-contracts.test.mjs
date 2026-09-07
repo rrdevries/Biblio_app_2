@@ -97,18 +97,39 @@ test("lookup decoder accepts each internally consistent state", () => {
         status: "multiple_candidates",
         candidates: [candidate("candidate-1"), candidate("candidate-2")],
     }), "library-1").candidates.length, 2);
-    assert.equal(readAddBookLookup(lookup({
+    const providerFailure = readAddBookLookup(lookup({
         status: "provider_failure",
         lookup_id: null,
         candidates: [],
+        field_bindings: [binding("title"), {
+            field: "contributors",
+            target: "evidence_only",
+            explicit_mappings: {
+                author: "work",
+                translator: "edition",
+            },
+            fallback_target: "evidence_only",
+        }],
         retry_available: true,
-    }), "library-1").retry_available, true);
+    }), "library-1");
+    assert.equal(providerFailure.retry_available, true);
+    assert.equal(providerFailure.manual_available, true);
+    assert.deepEqual(providerFailure.field_bindings[1].explicit_mappings, {
+        author: "work",
+        translator: "edition",
+    });
 });
 
 test("lookup decoder rejects extra data and inconsistent state", () => {
     assert.throws(() => readAddBookLookup({ ...lookup(), provider_payload: {} }, "library-1"));
     assert.throws(() => readAddBookLookup(lookup({ lookup_id: null }), "library-1"));
     assert.throws(() => readAddBookLookup(lookup(), "library-foreign"));
+    assert.throws(() => readAddBookLookup(lookup({
+        field_bindings: [{
+            ...binding("contributors"),
+            explicit_mappings: ["work"],
+        }],
+    }), "library-1"));
 });
 
 test("classification and commit decoders are exact and Library-bound", () => {

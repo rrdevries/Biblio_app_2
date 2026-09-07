@@ -2238,7 +2238,7 @@ logic, Location route or new authorization rule. Detailed evidence:
 
 ### ADD-UI-01 — Add Book Wizard server-contract integration
 
-Status: **TECHNICAL GO / HUMAN QA PENDING**
+Status: **TECHNICAL FIX GO / PROVIDER CONFIG + HUMAN QA PENDING**
 
 The existing Mijn Bibliotheek application now owns the canonical single Add
 Book Wizard. It strictly decodes and orchestrates metadata lookup, local
@@ -2252,3 +2252,15 @@ parallel persistence, automatic Work match, central bibliographic mutation,
 Location source, collector fields or Elementor logic. The schema remains
 `1017`. Complete implementation, automated verification and required human QA
 are recorded in `docs/52-add-ui-01-add-book-wizard-exit-evidence.md`.
+
+QA-ADD-F1 established that the local DDEV runtime has neither
+`BIBLIO_OPEN_LIBRARY_CONTACT_EMAIL` nor `GOOGLE_BOOKS_API_KEY` configured.
+Consequently both adapters return a controlled configuration failure and all
+local ISBN misses end in `provider_failure`; either provider can still produce
+a candidate independently when its own configuration is present. The same QA
+also found that the UI decoder incorrectly expected the role-aware
+`explicit_mappings` field-binding map to be a list. It therefore rejected the
+otherwise valid lookup response before rendering the provider-failure state.
+The decoder now accepts the existing REST shape, the manual fallback retains
+the normalized ISBN, and Biblio UI `0.4.1` invalidates the affected cached
+module. No provider policy, REST contract or schema changed.

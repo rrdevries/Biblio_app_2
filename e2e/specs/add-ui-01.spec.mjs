@@ -7,6 +7,20 @@ const CLASSIFICATION = {
     genres: [{ genre_id: "genre", display_name: "Roman" }],
     subjects: [{ subject_id: "subject", display_name: "Geschiedenis" }],
 };
+const FIELD_BINDINGS = [{
+    field: "title",
+    target: "edition_title_evidence",
+    explicit_mappings: [],
+    fallback_target: null,
+}, {
+    field: "contributors",
+    target: "evidence_only",
+    explicit_mappings: {
+        author: "work",
+        translator: "edition",
+    },
+    fallback_target: "evidence_only",
+}];
 
 function success(data) {
     return { data };
@@ -67,7 +81,7 @@ function lookup(status, isbn, {
         lookup_id: candidates.length > 0 ? `lookup-${isbn}` : null,
         local_matches: localMatches,
         candidates,
-        field_bindings: [],
+        field_bindings: FIELD_BINDINGS,
         manual_available: true,
         retry_available: retry,
     });
@@ -133,7 +147,7 @@ test("ADD-UI-01 browsermatrix covers canonical selection, recovery and fallback 
             break;
         case "9780131103627":
             failureLookups += 1;
-            response = failureLookups === 1
+            response = failureLookups <= 2
                 ? lookup("provider_failure", identifier, { retry: true })
                 : lookup("no_usable_candidate", identifier);
             break;
@@ -296,6 +310,14 @@ test("ADD-UI-01 browsermatrix covers canonical selection, recovery and fallback 
     await openWizard(page);
     await enterIsbn(page, "9780131103627");
     await expect(page.getByText("Boekgegevens konden tijdelijk niet worden opgehaald.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Opnieuw proberen" })).toBeVisible();
+    await page.getByRole("button", { name: "Handmatig invoeren" }).click();
+    await expect(page.locator("[data-add-book-step='edition-form']")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Uitgave handmatig invoeren" })).toBeVisible();
+    await expect(page.getByLabel("ISBN")).toHaveValue("9780131103627");
+    await page.getByRole("button", { name: "Annuleren" }).click();
+    await openWizard(page);
+    await enterIsbn(page, "9780131103627");
     await page.getByRole("button", { name: "Opnieuw proberen" }).click();
     await expect(page.getByRole("heading", { name: "Geen bruikbare boekgegevens gevonden" })).toBeVisible();
 

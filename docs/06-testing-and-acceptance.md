@@ -2540,3 +2540,30 @@ Status: **TECHNICAL GO / HUMAN QA PENDING**. Automated evidence is complete;
 real-device camera, production-browser visual, keyboard and reflow checks remain
 the explicit pre-deployment human QA. Schema remains `1017`. See
 `docs/52-add-ui-01-add-book-wizard-exit-evidence.md`.
+
+## 79. QA-ADD-F1 provider failure and manual fallback acceptance
+
+QA-ADD-F1 is accepted when:
+
+- a real DDEV/WordPress composition probe reports each provider attempt and
+  distinguishes missing provider configuration from transport, parsing and
+  provider-policy failures without exposing secrets or provider payloads;
+- Open Library and Google Books remain independently usable: a sufficient
+  result from either configured provider may produce a review candidate while
+  missing configuration for the other remains a controlled attempt failure;
+- the frontend lookup decoder accepts the existing role-aware
+  `explicit_mappings` response map, including the existing empty-array encoding
+  for bindings without explicit mappings, and rejects malformed values;
+- a real `provider_failure` response renders both `Opnieuw proberen` and
+  `Handmatig invoeren` rather than the generic transport-error state;
+- `Handmatig invoeren` opens the existing manual Edition route and preserves
+  the already normalized ISBN independently of provider availability;
+- focused JS, REST and authenticated Chromium regressions plus the complete
+  repository quality gate pass with no fixture residue; and
+- no provider order, fallback policy, REST contract, schema, visual redesign or
+  secret enters the implementation or repository.
+
+Status: **TECHNICAL FIX GO / PROVIDER CONFIG + HUMAN QA PENDING**. The code
+correction is complete; a successful live-provider result remains dependent on
+local operational configuration supplied outside Git. See
+`docs/52-add-ui-01-add-book-wizard-exit-evidence.md`.

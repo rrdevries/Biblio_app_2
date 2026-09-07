@@ -1,6 +1,6 @@
 # 52 — ADD-UI-01 Add Book Wizard server-contract integration
 
-Status: **TECHNICAL GO / HUMAN QA PENDING**
+Status: **TECHNICAL FIX GO / PROVIDER CONFIG + HUMAN QA PENDING**
 
 Date: 2026-09-07
 
@@ -92,7 +92,67 @@ The tracked E2E fixture needed one compatibility correction: its existing
 CAT-T1 helper call now supplies the already-required concrete Edition title.
 This changes no production behavior or fixture intent.
 
-## 6. Human QA still required
+## 6. QA-ADD-F1 correction
+
+A real DDEV/WordPress composition probe with ISBNs `9780140328721`,
+`9780306406157` and `9780061120084` returned the same exact attempt chain for
+each lookup: Open Library `configuration_error/configuration`, followed by
+Google Books `configuration_error/configuration`, with zero candidates and
+final `provider_failure`. Neither required runtime value is defined or present
+in the DDEV web environment:
+
+- Open Library requires `BIBLIO_OPEN_LIBRARY_CONTACT_EMAIL` so its requests use
+  the required identified contact configuration;
+- Google Books requires `GOOGLE_BOOKS_API_KEY` for the production adapter.
+
+`ProductionComposition` wires both providers into the existing
+first-sufficient orchestration independently. A sufficient Open Library result
+returns without Google; when Open Library cannot produce a candidate, a
+configured Google adapter may still do so. Both providers were disabled here
+only because both values were absent. WordPress and DDEV logs contained no
+additional provider error; the controlled attempt results above are the
+sanitized failure evidence.
+
+Renée must supply the real values outside Git before a successful live-provider
+probe is possible. In this DDEV checkout, environment values belong in ignored
+`.ddev/config.local.yaml`; the ignored `web/wp-config.php` custom-values block
+must define the two WordPress constants from those environment values before
+WordPress loads. No value is committed, logged or invented by this fix.
+
+The missing manual action had a separate cause. Core already returned HTTP 200
+with `provider_failure`, `manual_available: true` and `retry_available: true`,
+but the strict frontend decoder treated the role-aware `explicit_mappings`
+object as a string list. Every real lookup response includes that contributor
+map, so decoding failed and the wizard rendered its generic transport-error
+state before `renderProviderFailure()` could run. The decoder now accepts and
+freezes the existing map shape, including Core's existing empty-array encoding
+for an empty map. No REST response or provider policy changed.
+
+The authenticated browser regression now uses the real field-binding shape and
+proves the exact route `provider_failure` → `Handmatig invoeren` → existing
+manual Edition state with the normalized ISBN retained. Retry remains covered.
+Biblio UI is versioned `0.4.1` so browsers request the corrected module.
+
+Correction-specific final verification:
+
+- the real three-ISBN composition probe and authenticated browser runtime probe
+  produced the exact results above; the browser loaded
+  `add-book-wizard.js?ver=0.4.1`;
+- the complete Biblio UI smoke/JavaScript suite passed: 202 tests;
+- focused Core lookup tests passed: 5 tests, 56 assertions;
+- focused Add Book REST integration passed: 6 tests, 86 assertions;
+- the focused authenticated Chromium matrix passed: 1 test;
+- the complete Core quality gate passed, including PHPStan, syntax,
+  Composer/platform, 410 unit tests with 1,735 assertions and two existing
+  non-failing notices, 339 MariaDB integration tests with 4,125 assertions,
+  WordPress smoke, manifest and whitespace checks; and
+- the complete guarded Chromium suite passed on its unchanged verification
+  rerun: 51 tests, all five fail-closed guards, double cleanup, zero residue and
+  an unchanged non-fixture fingerprint. Its first full run had one unrelated
+  timing failure in the existing Private Notes keyboard-focus case; no Notes or
+  other out-of-scope code was changed, and the immediate full rerun passed.
+
+## 7. Human QA still required
 
 Before deployment, verify on the intended production browsers/devices:
 
@@ -109,7 +169,7 @@ Before deployment, verify on the intended production browsers/devices:
 6. confirm `Bekijk boek` opens the created Item and the disabled
    `Exemplaar verder beschrijven` explanation is clear.
 
-## 7. Scope and schema
+## 8. Scope and schema
 
 Schema remains `1017`. No migration, Core production code, Elementor page,
 Location API, Book Detail edit mode, collector-field persistence/UI, Librarian
