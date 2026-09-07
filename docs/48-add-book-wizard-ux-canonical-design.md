@@ -1,14 +1,16 @@
 # 48 — Add Book Wizard UX canonical design
 
-Status: **DECISION CANONICALIZED / NOT IMPLEMENTED**
+Status: **DECISION CANONICALIZED / IMPLEMENTED BY ADD-UI-01**
 
 Date: 2026-09-06
 
 ## Purpose and boundary
 
-This document records the approved UX for the single Add Book Wizard. It
-implements no production code, schema, REST contract, Elementor configuration
-or UI. It does not change Metadata Hub rules, Librarian governance, provider
+This document records the approved UX for the single Add Book Wizard. The
+production implementation and verification are recorded separately in
+`docs/52-add-ui-01-add-book-wizard-exit-evidence.md`; this design document does
+not itself define schema, REST, Elementor configuration or new behavior. It
+does not change Metadata Hub rules, Librarian governance, provider
 selection/fusion, Work-match behavior, collector-detail design or Book Detail.
 
 ADR-014 and MH-B5A/MH-B5B remain the authoritative server-side contracts. This

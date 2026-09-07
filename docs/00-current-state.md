@@ -2146,7 +2146,7 @@ response. Schema remains `1017`. Detailed evidence:
 
 ### D-ADD-01 — Add Book Wizard UX canonicalization
 
-Status: **DECISION CANONICALIZED / NOT IMPLEMENTED**
+Status: **IMPLEMENTED / TECHNICAL GO / HUMAN QA PENDING**
 
 There is one local-first Add Book Wizard: `Scan ISBN` is camera-based
 barcode/ISBN detection, while manual typing/pasting remains available in the
@@ -2160,6 +2160,14 @@ no provider fusion, automatic Work matching, central metadata override,
 Librarian UI or collector-detail design. Canonical design:
 `docs/48-add-book-wizard-ux-canonical-design.md`.
 
+ADD-UI-01 implements that one wizard inside the existing
+`[biblio_library_app]` shell. Its capability-gated entry, dependency-free
+camera/manual ISBN start, all canonical lookup branches, explicit Work choice,
+server-provided classification, conditional commit flow, snapshot-expiry
+recovery and success state consume only the established ADD-API-01/02 and
+MH-B5 contracts. Location is omitted without a safe option source. Detailed
+evidence: `docs/52-add-ui-01-add-book-wizard-exit-evidence.md`.
+
 ### D-ADD-02 — Add Book final UX delta
 
 Status: **DECISION CANONICALIZED / NOT IMPLEMENTED**
@@ -2169,8 +2177,10 @@ collector wizard or editor. It is a contextual deep-link to Boekdetail in its
 existing edit mode, focused on `Exemplaar` with the collector fields visible/
 selected. Saving retains Boekdetail. The Add Book UX specification remains
 `docs/48-add-book-wizard-ux-canonical-design.md`; the consistent Boekdetail
-reference is `docs/31-biblio-design-system.md`. No Book Detail edit mode,
-collector-field persistence/UI, scanner or other implementation is included.
+reference is `docs/31-biblio-design-system.md`. No Book Detail edit mode or
+collector-field persistence/UI is included. The ADD-UI-01 success state
+therefore renders `Exemplaar verder beschrijven` as an explained disabled
+future action instead of inventing the missing deep link.
 
 ### ADD-API-01 — reusable Work discovery contract
 
@@ -2218,10 +2228,27 @@ every persistence predicate contains the requested Library ID and foreign or
 missing Libraries retain the same non-enumerating failure contract. No seed
 keys, normalized names or hardcoded IDs cross the REST boundary.
 
-The Biblio UI now has one strict shared decoder for the current `/me/works`
+The Biblio UI has one strict shared decoder for the current `/me/works`
 discovery item shape: Work ID/title, Authors, CAT-T1 title status and Series.
 Next Reading consumes that decoder without changing its product behavior, and
-the same exported decoder is reusable by the later Add Book UI. Schema remains
-`1017`; no Add Book UI, camera scanner, Book Detail edit mode, classification
-logic, Location route or new authorization rule was added. Detailed evidence:
+ADD-UI-01 now reuses the same export. ADD-API-02 itself left schema `1017` and
+added no Add Book UI, camera scanner, Book Detail edit mode, classification
+logic, Location route or new authorization rule. Detailed evidence:
 `docs/51-add-api-02-add-book-ui-contract-completion.md`.
+
+### ADD-UI-01 — Add Book Wizard server-contract integration
+
+Status: **TECHNICAL GO / HUMAN QA PENDING**
+
+The existing Mijn Bibliotheek application now owns the canonical single Add
+Book Wizard. It strictly decodes and orchestrates metadata lookup, local
+Edition reuse/ambiguity, reviewed candidates, manual Edition input, optional
+existing-Work discovery, Library-scoped classification, transactional commit
+and expired-review recovery. Manual ISBN entry always remains available;
+camera scanning uses only feature-detected browser APIs and adds no dependency.
+
+Core remains the sole authorization and domain authority. The UI adds no
+parallel persistence, automatic Work match, central bibliographic mutation,
+Location source, collector fields or Elementor logic. The schema remains
+`1017`. Complete implementation, automated verification and required human QA
+are recorded in `docs/52-add-ui-01-add-book-wizard-exit-evidence.md`.

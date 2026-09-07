@@ -9,6 +9,7 @@ let appSource = await readFile(appSourceUrl, "utf8");
 
 for (const [moduleId, file] of [
     ["biblio-ui/api", "api.js"],
+    ["biblio-ui/add-book-wizard", "add-book-wizard.js"],
     ["biblio-ui/detail-view", "detail-view.js"],
     ["biblio-ui/end-reading-view", "end-reading-view.js"],
     ["biblio-ui/library-state", "library-state.js"],
@@ -72,7 +73,11 @@ function library(id, designated = false) {
         type: "private",
         status: "active",
         designated_personal: designated,
-        capabilities: {},
+        capabilities: {
+            add_catalog_item: false,
+            use_item_directly: true,
+            receive_internal_loan: false,
+        },
     };
 }
 
@@ -202,6 +207,9 @@ test("abort is control flow while other transport errors remain unchanged", asyn
 test("functional modules keep personal UI storage isolated from domain state", async () => {
     const sources = await Promise.all([
         "app.js",
+        "add-book-contracts.js",
+        "add-book-wizard.js",
+        "isbn-scanner.js",
         "route-state.js",
         "library-state.js",
         "overview-view.js",

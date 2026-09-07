@@ -120,11 +120,34 @@ function library(id = "library-1") {
         library_id: id,
         name: "Mijn testbibliotheek",
         capabilities: {
+            add_catalog_item: false,
             use_item_directly: true,
             receive_internal_loan: false,
         },
     };
 }
+
+test("Add Book entry is shown only for the presentation capability", () => {
+    const { root, view } = setup();
+    let trigger = null;
+    const enabled = library();
+    enabled.capabilities.add_catalog_item = true;
+
+    view.render(overviewModel({ library: enabled, items: [] }), {
+        addBook(opener) { trigger = opener; },
+    });
+    const add = byTag(root, "button").find((control) => (
+        control.textContent === "Boek toevoegen"
+    ));
+    assert.ok(add);
+    add.click({ currentTarget: add });
+    assert.equal(trigger, add);
+
+    view.render(overviewModel({ items: [] }), { addBook() {} });
+    assert.equal(byTag(root, "button").some((control) => (
+        control.textContent === "Boek toevoegen"
+    )), false);
+});
 
 function item(id, overrides = {}) {
     return {

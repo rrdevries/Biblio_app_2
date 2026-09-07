@@ -396,6 +396,147 @@
 [data-biblio-ui-root] .biblio-ui__dialog-actions .biblio-ui__control { min-inline-size: 0; overflow-wrap: anywhere; }
 [data-biblio-ui-root] .biblio-ui__field-error { color: var(--biblio-color-error, #9b1c1c); }
 
+/* Add Book Wizard */
+[data-biblio-ui-root] .biblio-ui__add-book {
+    inline-size: min(100%, 64rem);
+    margin-inline: auto;
+}
+
+[data-biblio-ui-root] .biblio-ui__guided-header,
+[data-biblio-ui-root] .biblio-ui__guided-form,
+[data-biblio-ui-root] .biblio-ui__field,
+[data-biblio-ui-root] .biblio-ui__work-link,
+[data-biblio-ui-root] .biblio-ui__existing-copy,
+[data-biblio-ui-root] .biblio-ui__work-result {
+    display: grid;
+    gap: var(--biblio-space-2);
+    min-inline-size: 0;
+}
+
+[data-biblio-ui-root] .biblio-ui__guided-form {
+    gap: var(--biblio-space-6);
+    max-inline-size: var(--biblio-reading-max);
+}
+
+[data-biblio-ui-root] .biblio-ui__guided-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--biblio-space-3);
+}
+
+[data-biblio-ui-root] .biblio-ui__field > label,
+[data-biblio-ui-root] .biblio-ui__choice-group legend {
+    font-weight: 600;
+}
+
+[data-biblio-ui-root] .biblio-ui__field :where(input, textarea, select),
+[data-biblio-ui-root] .biblio-ui__work-search-form input {
+    background: var(--biblio-color-surface);
+    border: var(--biblio-boundary-width) solid var(--biblio-color-border-strong);
+    border-radius: var(--biblio-radius-control);
+    color: var(--biblio-color-text-primary);
+    inline-size: 100%;
+    min-block-size: var(--biblio-control-min);
+    min-inline-size: 0;
+    padding: var(--biblio-space-2) var(--biblio-space-3);
+}
+
+[data-biblio-ui-root] .biblio-ui__field textarea {
+    min-block-size: 5rem;
+    resize: vertical;
+}
+
+[data-biblio-ui-root] .biblio-ui__field-help {
+    color: var(--biblio-color-text-muted);
+    font-size: 0.875rem;
+}
+
+[data-biblio-ui-root] .biblio-ui__edition-grid,
+[data-biblio-ui-root] .biblio-ui__work-results {
+    display: grid;
+    gap: var(--biblio-space-4);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+[data-biblio-ui-root] .biblio-ui__edition-card,
+[data-biblio-ui-root] .biblio-ui__work-result,
+[data-biblio-ui-root] .biblio-ui__summary {
+    background: var(--biblio-color-surface);
+    border: var(--biblio-boundary-width) solid var(--biblio-color-border);
+    border-radius: var(--biblio-radius-overlay);
+    display: grid;
+    gap: var(--biblio-space-4);
+    margin: 0;
+    min-inline-size: 0;
+    padding: var(--biblio-space-6);
+}
+
+[data-biblio-ui-root] .biblio-ui__edition-title,
+[data-biblio-ui-root] .biblio-ui__success-title {
+    font-family: var(--biblio-font-serif);
+    font-size: clamp(1.4rem, 1.2rem + 0.7vw, 2rem);
+    font-weight: 500;
+}
+
+[data-biblio-ui-root] .biblio-ui__edition-facts,
+[data-biblio-ui-root] .biblio-ui__summary {
+    display: grid;
+    gap: var(--biblio-space-2) var(--biblio-space-4);
+    grid-template-columns: minmax(7rem, auto) minmax(0, 1fr);
+}
+
+[data-biblio-ui-root] .biblio-ui__edition-fact { display: contents; }
+[data-biblio-ui-root] .biblio-ui__edition-fact :where(dt, dd) { margin: 0; min-inline-size: 0; }
+[data-biblio-ui-root] .biblio-ui__edition-fact dt { color: var(--biblio-color-text-muted); }
+[data-biblio-ui-root] .biblio-ui__edition-fact--different dd {
+    box-shadow: inset 0 -0.45em var(--biblio-color-brass-subtle);
+    inline-size: fit-content;
+}
+
+[data-biblio-ui-root] .biblio-ui__existing-copy,
+[data-biblio-ui-root] .biblio-ui__work-link {
+    background: var(--biblio-color-surface-muted);
+    border-inline-start: 0.25rem solid var(--biblio-color-brass);
+    padding: var(--biblio-space-4);
+}
+
+[data-biblio-ui-root] .biblio-ui__compact-list { padding-inline-start: var(--biblio-space-6); }
+
+[data-biblio-ui-root] .biblio-ui__choice-group {
+    border: 0;
+    display: grid;
+    gap: var(--biblio-space-2);
+    margin: 0;
+    padding: 0;
+}
+
+[data-biblio-ui-root] .biblio-ui__check-choice {
+    align-items: center;
+    border: var(--biblio-boundary-width) solid var(--biblio-color-border);
+    border-radius: var(--biblio-radius-control);
+    cursor: pointer;
+    display: flex;
+    gap: var(--biblio-space-3);
+    min-block-size: var(--biblio-control-min);
+    padding: var(--biblio-space-2) var(--biblio-space-3);
+}
+
+[data-biblio-ui-root] .biblio-ui__check-choice input {
+    min-block-size: 1.25rem;
+    min-inline-size: 1.25rem;
+}
+
+[data-biblio-ui-root] .biblio-ui__scanner-preview {
+    background: var(--biblio-color-navigation);
+    border-radius: var(--biblio-radius-overlay);
+    inline-size: min(100%, 36rem);
+    min-block-size: 16rem;
+    object-fit: cover;
+}
+
 @media (min-width: 768px) and (max-width: 1023px) {
     [data-biblio-ui-root] .biblio-ui__cover--overview { inline-size: 4.5rem; }
     [data-biblio-ui-root] .biblio-ui__detail-layout { grid-template-columns: minmax(0, 12rem) minmax(0, var(--biblio-reading-max)); }
@@ -418,6 +559,21 @@
     }
 
     [data-biblio-ui-root] .biblio-ui__detail-layout { grid-template-columns: minmax(0, 1fr); }
+
+    [data-biblio-ui-root] .biblio-ui__guided-actions .biblio-ui__control {
+        inline-size: 100%;
+        justify-self: stretch;
+    }
+
+    [data-biblio-ui-root] .biblio-ui__edition-facts,
+    [data-biblio-ui-root] .biblio-ui__summary {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    [data-biblio-ui-root] .biblio-ui__edition-fact {
+        display: grid;
+        gap: var(--biblio-space-1);
+    }
     [data-biblio-ui-root] .biblio-ui__cover--detail { inline-size: min(100%, 16rem); }
     [data-biblio-ui-root] .biblio-ui__metadata { grid-template-columns: minmax(0, 1fr); }
     [data-biblio-ui-root] .biblio-ui__note-actions .biblio-ui__control { flex: 1 1 10rem; }

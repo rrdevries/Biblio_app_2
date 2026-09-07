@@ -2509,3 +2509,34 @@ ADD-API-02 is accepted when:
 
 Status: **GO / CLOSED**. Schema remains `1017`. See
 `docs/51-add-api-02-add-book-ui-contract-completion.md`.
+
+## 78. ADD-UI-01 Add Book Wizard acceptance
+
+ADD-UI-01 is technically accepted when:
+
+- the existing `[biblio_library_app]` shell exposes one `Boek toevoegen` entry
+  only for a Library presentation whose `add_catalog_item` capability is true;
+- camera scan is dependency-free and feature-detected while manual ISBN entry
+  and no-ISBN entry always remain available;
+- strict decoders and one state machine cover existing Edition, local
+  ambiguity, single/multiple candidate, miss, provider failure, manual,
+  deliberate Work selection, extra-copy and expired-review flows;
+- only physical Edition observations, server-provided classification and
+  supported Item inventory data enter the existing commit contract;
+- Core remains authoritative for authentication, Library Context,
+  authorization, re-resolution, Work validation and transactionality;
+- the summary remains conditional, pending submission cannot double-commit and
+  success exposes View Book, reset and the explained disabled collector-detail
+  action;
+- semantic labels, keyboard behavior, live feedback, focus movement, 44px
+  targets, responsive reflow and reduced motion are represented;
+- complete UI, Core and guarded Chromium regression gates pass with no fixture
+  residue; and
+- no schema, migration, Elementor logic, Location route, Book Detail edit mode,
+  collector fields, Librarian UI, provider fusion or automatic Work matching
+  is added.
+
+Status: **TECHNICAL GO / HUMAN QA PENDING**. Automated evidence is complete;
+real-device camera, production-browser visual, keyboard and reflow checks remain
+the explicit pre-deployment human QA. Schema remains `1017`. See
+`docs/52-add-ui-01-add-book-wizard-exit-evidence.md`.

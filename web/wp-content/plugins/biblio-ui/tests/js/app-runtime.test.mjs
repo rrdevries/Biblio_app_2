@@ -9,6 +9,7 @@ let appSource = await readFile(appSourceUrl, "utf8");
 
 for (const [moduleId, file] of [
     ["biblio-ui/api", "api.js"],
+    ["biblio-ui/add-book-wizard", "add-book-wizard.js"],
     ["biblio-ui/detail-view", "detail-view.js"],
     ["biblio-ui/end-reading-view", "end-reading-view.js"],
     ["biblio-ui/library-state", "library-state.js"],
@@ -310,6 +311,29 @@ function endReadingRecorder() {
     return startReadingRecorder();
 }
 
+function addBookRecorder() {
+    const opens = [];
+    let destroys = 0;
+
+    return {
+        opens,
+        get destroys() {
+            return destroys;
+        },
+        factory() {
+            return {
+                open(options) {
+                    opens.push(options);
+                    return Promise.resolve(true);
+                },
+                destroy() {
+                    destroys += 1;
+                },
+            };
+        },
+    };
+}
+
 function privateNotesRecorder() {
     const creations = [];
 
@@ -357,6 +381,7 @@ function createApp({
     historyRenders = historyRecorder(),
     privateNotes = privateNotesRecorder(),
     startReadingRenders = startReadingRecorder(),
+    addBookRenders = addBookRecorder(),
 }) {
     const browser = browserDouble(url);
     const app = createLibraryApp(mount(), {
@@ -379,6 +404,7 @@ function createApp({
         readingHistoryViewFactory: historyRenders.factory,
         privateNotesControllerFactory: privateNotes.factory,
         startReadingViewFactory: startReadingRenders.factory,
+        addBookWizardFactory: addBookRenders.factory,
     });
 
     return {
@@ -389,12 +415,38 @@ function createApp({
         historyRenders,
         privateNotes,
         startReadingRenders,
+        addBookRenders,
         submitEndReading(intent) {
             detailRenders.renders.at(-1).actions.endReading({ focus() {} });
             return endReadingRenders.opens.at(-1).submit(intent);
         },
     };
 }
+
+test("Add Book opens only through the current Library presentation action", async () => {
+    const selected = library("library-1", { designated: true });
+    selected.capabilities.add_catalog_item = true;
+    const renders = recorder();
+    const trigger = { focus() {} };
+    const { app, addBookRenders } = createApp({
+        url: "https://example.test/mijn-bibliotheek/?library_id=library-1",
+        renders,
+        async get(path) {
+            return path === "me/libraries"
+                ? { libraries: [selected] }
+                : overview(selected, [item("item-1")]);
+        },
+    });
+
+    await app.start();
+    await renders.renders.at(-1).actions.addBook(trigger);
+
+    assert.equal(addBookRenders.opens.length, 1);
+    assert.equal(addBookRenders.opens[0].library.library_id, "library-1");
+    assert.equal(addBookRenders.opens[0].trigger, trigger);
+    addBookRenders.opens[0].onClose();
+    assert.equal(renders.renders.at(-1).model.state, "overview");
+});
 
 async function waitFor(predicate) {
     for (let attempt = 0; attempt < 20; attempt += 1) {
