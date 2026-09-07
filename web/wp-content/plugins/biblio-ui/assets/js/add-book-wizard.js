@@ -156,12 +156,16 @@ function listText(values) {
         : null;
 }
 
-function addFact(documentImpl, list, label, value, differing = false) {
+function addFact(documentImpl, list, label, value, differing = false, modifier = null) {
     if (value === null || value === undefined || value === "") {
         return;
     }
     const row = element(documentImpl, "div", {
-        className: `biblio-ui__edition-fact${differing ? " biblio-ui__edition-fact--different" : ""}`,
+        className: [
+            "biblio-ui__edition-fact",
+            differing ? "biblio-ui__edition-fact--different" : null,
+            modifier === null ? null : `biblio-ui__edition-fact--${modifier}`,
+        ].filter(Boolean).join(" "),
     });
     row.append(
         element(documentImpl, "dt", { text: label }),
@@ -170,28 +174,52 @@ function addFact(documentImpl, list, label, value, differing = false) {
     list.append(row);
 }
 
-function editionCard(documentImpl, edition, { differences = new Set() } = {}) {
+function editionCard(documentImpl, edition, {
+    differences = new Set(),
+    kicker = null,
+} = {}) {
     const card = element(documentImpl, "article", {
         className: "biblio-ui__edition-card",
     });
     const title = edition.edition_title ?? edition.fields?.title;
+    const fields = edition.fields ?? {};
+    const authors = edition.authors
+        ? listText(edition.authors.map((author) => author.display_name))
+        : listText(fields.contributors);
+    if (kicker !== null) {
+        card.append(element(documentImpl, "p", {
+            className: "biblio-ui__entity-kicker",
+            text: kicker,
+        }));
+    }
     card.append(element(documentImpl, "h2", {
         className: "biblio-ui__edition-title",
         text: title,
     }));
+    if (fields.subtitle) {
+        card.append(element(documentImpl, "p", {
+            className: `biblio-ui__edition-subtitle${differences.has("subtitle")
+                ? " biblio-ui__edition-identity--different"
+                : ""}`,
+            text: fields.subtitle,
+        }));
+    }
+    if (authors !== null) {
+        card.append(element(documentImpl, "p", {
+            className: `biblio-ui__edition-authors${differences.has("contributors")
+                ? " biblio-ui__edition-identity--different"
+                : ""}`,
+            text: authors,
+        }));
+    }
     const facts = element(documentImpl, "dl", {
         className: "biblio-ui__edition-facts",
     });
-    const fields = edition.fields ?? {};
-    addFact(documentImpl, facts, "Ondertitel", fields.subtitle, differences.has("subtitle"));
-    addFact(documentImpl, facts, "Auteur(s)", edition.authors
-        ? listText(edition.authors.map((author) => author.display_name))
-        : listText(fields.contributors), differences.has("contributors"));
     addFact(documentImpl, facts, "Taal", listText(fields.languages), differences.has("languages"));
     addFact(documentImpl, facts, "Uitgever", listText(fields.publishers), differences.has("publishers"));
     addFact(documentImpl, facts, "Publicatie", fields.publication_date, differences.has("publication_date"));
     addFact(documentImpl, facts, "ISBN", edition.canonical_isbn
-        ?? edition.identifier?.isbn_13, differences.has("identifier"));
+        ?? edition.identifier?.isbn_13, differences.has("identifier"), "identifier");
     addFact(documentImpl, facts, "Pagina's", fields.page_count, differences.has("page_count"));
     addFact(documentImpl, facts, "Bindwijze", fields.format, differences.has("format"));
     card.append(facts);
@@ -870,6 +898,7 @@ export function createAddBookWizard(root, {
     function renderLoading() {
         const view = page(documentImpl, "loading", true);
         view.append(heading(documentImpl, "Boek toevoegen"), element(documentImpl, "p", {
+            className: "biblio-ui__pending-state",
             text: "De invoer wordt voorbereid…",
         }));
         return view;
@@ -890,7 +919,7 @@ export function createAddBookWizard(root, {
                 state.step = "scanning";
                 state.notice = "Richt de camera op de ISBN-barcode.";
                 render();
-            }, "primary"),
+            }),
             button(documentImpl, "Geen ISBN", startManual),
             button(documentImpl, "Annuleren", cancel, "tertiary")
         );
@@ -941,6 +970,7 @@ export function createAddBookWizard(root, {
     function renderLookup() {
         const view = page(documentImpl, "lookup", true);
         view.append(heading(documentImpl, "Boekgegevens zoeken"), element(documentImpl, "p", {
+            className: "biblio-ui__pending-state",
             text: "We controleren eerst of deze uitgave al bij Biblio bekend is…",
         }));
         return view;
@@ -954,7 +984,7 @@ export function createAddBookWizard(root, {
                 ? "Is dit inderdaad mijn uitgave?"
                 : "Nog een exemplaar toevoegen?"
         ));
-        view.append(editionCard(documentImpl, edition));
+        view.append(editionCard(documentImpl, edition, { kicker: "Bestaande uitgave" }));
         const existing = localItemContext(documentImpl, edition);
         if (existing !== null) {
             view.append(existing);
@@ -995,12 +1025,12 @@ export function createAddBookWizard(root, {
             className: "biblio-ui__edition-grid",
         });
         for (const edition of state.lookup.local_matches) {
-            const card = editionCard(documentImpl, edition);
+            const card = editionCard(documentImpl, edition, { kicker: "Bestaande uitgave" });
             const existing = localItemContext(documentImpl, edition);
             if (existing !== null) {
                 card.append(existing);
             }
-            card.append(button(documentImpl, "Deze uitgave", () => chooseExisting(edition), "primary"));
+            card.append(button(documentImpl, "Deze uitgave", () => chooseExisting(edition)));
             list.append(card);
         }
         view.append(list, actions(
@@ -1103,7 +1133,7 @@ export function createAddBookWizard(root, {
         const differences = candidateDifferences(state.lookup.candidates);
         for (const candidate of state.lookup.candidates) {
             const card = editionCard(documentImpl, candidate, { differences });
-            card.append(button(documentImpl, "Deze uitgave", () => chooseCandidate(candidate), "primary"));
+            card.append(button(documentImpl, "Deze uitgave", () => chooseCandidate(candidate)));
             list.append(card);
         }
         view.append(list, actions(
@@ -1117,6 +1147,7 @@ export function createAddBookWizard(root, {
     function renderMiss() {
         const view = page(documentImpl, "miss");
         view.append(heading(documentImpl, "Geen bruikbare boekgegevens gevonden"), element(documentImpl, "p", {
+            className: "biblio-ui__status-panel biblio-ui__status-panel--neutral",
             text: "Je kunt deze uitgave handmatig invoeren.",
         }), actions(
             documentImpl,
@@ -1129,6 +1160,7 @@ export function createAddBookWizard(root, {
     function renderProviderFailure() {
         const view = page(documentImpl, "provider-failure");
         view.append(heading(documentImpl, "Boekgegevens niet beschikbaar"), element(documentImpl, "p", {
+            className: "biblio-ui__status-panel biblio-ui__status-panel--warning",
             text: "Boekgegevens konden tijdelijk niet worden opgehaald.",
             attributes: { role: "alert" },
         }), actions(
@@ -1250,9 +1282,15 @@ export function createAddBookWizard(root, {
                 const item = element(documentImpl, "li", {
                     className: "biblio-ui__work-result",
                 });
-                item.append(element(documentImpl, "h2", { text: work.title }));
+                item.append(element(documentImpl, "h2", {
+                    className: "biblio-ui__work-title",
+                    text: work.title,
+                }));
                 if (work.authors.length > 0) {
-                    item.append(element(documentImpl, "p", { text: work.authors.map((author) => author.display_name).join(", ") }));
+                    item.append(element(documentImpl, "p", {
+                        className: "biblio-ui__work-authors",
+                        text: work.authors.map((author) => author.display_name).join(", "),
+                    }));
                 }
                 item.append(element(documentImpl, "p", {
                     className: "biblio-ui__context",
@@ -1267,7 +1305,7 @@ export function createAddBookWizard(root, {
                     state.step = "edition-form";
                     state.notice = `${work.title} is als bestaand werk gekozen.`;
                     render();
-                }, "primary"));
+                }));
                 list.append(item);
             }
             view.append(list);
@@ -1411,6 +1449,7 @@ export function createAddBookWizard(root, {
     function renderCommitting() {
         const view = page(documentImpl, "committing", true);
         view.append(heading(documentImpl, "Boek toevoegen"), element(documentImpl, "p", {
+            className: "biblio-ui__pending-state",
             text: "Je boek wordt toegevoegd…",
         }));
         const pending = button(documentImpl, "Boek toevoegen", () => {}, "primary");
@@ -1445,6 +1484,7 @@ export function createAddBookWizard(root, {
     function renderError() {
         const view = page(documentImpl, "error");
         view.append(heading(documentImpl, "Boek toevoegen lukt niet"), element(documentImpl, "p", {
+            className: "biblio-ui__status-panel biblio-ui__status-panel--danger",
             text: state.errorMessage,
             attributes: { role: "alert" },
         }), actions(

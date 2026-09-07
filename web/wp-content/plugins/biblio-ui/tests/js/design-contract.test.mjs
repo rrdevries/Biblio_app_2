@@ -46,6 +46,8 @@ test("Deep Library exposes the canonical spacing and semantic token architecture
         "--biblio-space-16: 4rem",
         "--biblio-content-max: 90rem",
         "--biblio-reading-max: 48rem",
+        "--biblio-guided-max: 52rem",
+        "--biblio-comparison-max: 68rem",
         "--biblio-dialog-max: 32rem",
         "--biblio-control-min: 44px",
         "--biblio-radius-compact: 0.25rem",
@@ -119,6 +121,26 @@ test("shell, views and Quick View recompose across the three breakpoint families
         css.indexOf("[data-biblio-next-reading-root]")
     );
     assert.doesNotMatch(librarySlice, /#[0-9a-f]{3,8}/iu);
+});
+
+test("Add Book Guided Flow uses open composition and restrained entity cards", () => {
+    const addBookCss = css.slice(
+        css.indexOf("/* Add Book Wizard */"),
+        css.indexOf("/* Mijn Bibliotheek")
+    );
+
+    assert.match(addBookCss, /--biblio-add-book-max: var\(--biblio-guided-max\)/);
+    assert.match(addBookCss, /data-add-book-step="multiple"/);
+    assert.match(addBookCss, /--biblio-add-book-max: var\(--biblio-comparison-max\)/);
+    assert.match(addBookCss, /\.biblio-ui__guided-header[\s\S]*border-block-end/);
+    assert.match(addBookCss, /\.biblio-ui__edition-card,[\s\S]*border-block-start: 2px solid var\(--biblio-color-brass\)/);
+    assert.match(addBookCss, /\.biblio-ui__edition-authors[\s\S]*font-family: var\(--biblio-font-serif\)/);
+    assert.match(addBookCss, /\.biblio-ui__summary[\s\S]*border-block:/);
+    assert.match(addBookCss, /\.biblio-ui__work-link[\s\S]*border-block:/);
+    assert.match(addBookCss, /\.biblio-ui__status-panel--warning[\s\S]*var\(--biblio-color-status-warning\)/);
+    assert.match(addBookCss, /@media \(max-width: 767px\)[\s\S]*\.biblio-ui__guided-actions \.biblio-ui__control[\s\S]*inline-size: 100%/);
+    assert.doesNotMatch(addBookCss, /#[0-9a-f]{3,8}/iu);
+    assert.doesNotMatch(addBookCss, /box-shadow:/);
 });
 
 test("Reading history CSS preserves reflow, native lists and scoped token use", () => {

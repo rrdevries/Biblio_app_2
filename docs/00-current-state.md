@@ -2264,3 +2264,14 @@ otherwise valid lookup response before rendering the provider-failure state.
 The decoder now accepts the existing REST shape, the manual fallback retains
 the normalized ISBN, and Biblio UI `0.4.1` invalidates the affected cached
 module. No provider policy, REST contract or schema changed.
+
+QA-ADD-V1 visually integrates that unchanged flow with the canonical Deep
+Library design system. Ordinary steps now use one controlled Guided Flow
+column; comparison alone may widen. Edition/Work identity is editorial,
+metadata is compact, forms/Work-link/summary use open composition, actions have
+one contextual primary and status uses restrained semantic accent lines. The
+authenticated responsive matrix covers 1440px, 1024px, 390px and the existing
+640px 200%-reflow equivalent with twelve local visual evidence captures.
+Biblio UI is `0.5.0`; schema remains `1017`. Technical status is **GO** and
+final human visual acceptance remains with Renée. Detailed evidence:
+`docs/53-qa-add-v1-add-book-visual-integration.md`.

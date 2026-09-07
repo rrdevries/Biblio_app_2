@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { mkdir } from "node:fs/promises";
 
 const LIBRARY_ID = "e2e-library-actor";
 const CLASSIFICATION = {
@@ -104,6 +105,46 @@ async function classify(page, inventory = "") {
     }
 }
 
+async function capture(page, name) {
+    const directory = ".local/qa-add-v1-screenshots";
+    await mkdir(directory, { recursive: true });
+    await page.locator("[data-biblio-ui-root] .biblio-ui__shell").screenshot({
+        animations: "disabled",
+        path: `${directory}/${name}.png`,
+    });
+}
+
+async function expectNoHorizontalOverflow(page, label) {
+    const widths = await page.evaluate(() => {
+        const root = document.querySelector("[data-biblio-ui-root]");
+        const wizard = document.querySelector(".biblio-ui__add-book");
+        return {
+            rootClient: root?.clientWidth ?? 0,
+            rootScroll: root?.scrollWidth ?? 0,
+            wizardClient: wizard?.clientWidth ?? 0,
+            wizardScroll: wizard?.scrollWidth ?? 0,
+        };
+    });
+    expect(widths.rootScroll, `${label} root`).toBeLessThanOrEqual(widths.rootClient);
+    expect(widths.wizardScroll, `${label} wizard`).toBeLessThanOrEqual(widths.wizardClient);
+}
+
+async function expectControlsReachable(page, label) {
+    const controls = await page.locator(".biblio-ui__add-book .biblio-ui__control").evaluateAll(
+        (nodes) => nodes.map((node) => {
+            const box = node.getBoundingClientRect();
+            return { height: box.height, left: box.left, right: box.right };
+        })
+    );
+    for (const [index, control] of controls.entries()) {
+        expect(control.height, `${label} control ${index} height`).toBeGreaterThanOrEqual(44);
+        expect(control.left, `${label} control ${index} left`).toBeGreaterThanOrEqual(0);
+        expect(control.right, `${label} control ${index} right`).toBeLessThanOrEqual(
+            await page.evaluate(() => window.innerWidth)
+        );
+    }
+}
+
 test("ADD-UI-01 browsermatrix covers canonical selection, recovery and fallback paths", async ({ page }) => {
     let candidateCommitAttempts = 0;
     let failureLookups = 0;
@@ -203,17 +244,30 @@ test("ADD-UI-01 browsermatrix covers canonical selection, recovery and fallback 
             value: undefined,
         });
     });
+    await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto(`/mijn-bibliotheek/?library_id=${LIBRARY_ID}`);
     await expect(page.getByRole("heading", { name: "Mijn Bibliotheek" })).toBeVisible();
 
     // Unsupported camera stays in the one wizard with immediate manual fallback.
     await openWizard(page);
+    await expect(page.locator(".biblio-ui__guided-header h1")).toBeFocused();
+    await capture(page, "A-start-desktop-1440");
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expectNoHorizontalOverflow(page, "start mobile");
+    await expectControlsReachable(page, "start mobile");
+    await capture(page, "A-start-mobile-390");
+    await page.setViewportSize({ width: 1440, height: 1000 });
     await page.getByRole("button", { name: "Scan ISBN" }).click();
     await expect(page.locator("[data-add-book-step='start']")).toBeVisible();
     await expect(page.getByText("Camera scannen is hier niet beschikbaar. Voer het ISBN handmatig in.")).toBeAttached();
 
     // Manual/no-ISBN with deliberate platform-wide Work selection.
     await page.getByRole("button", { name: "Geen ISBN" }).click();
+    await capture(page, "E-manual-edition-desktop-1440");
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expectNoHorizontalOverflow(page, "manual mobile");
+    await capture(page, "E-manual-edition-mobile-390");
+    await page.setViewportSize({ width: 1440, height: 1000 });
     await page.getByLabel("Titel van deze uitgave").fill("Handmatige uitgave");
     await page.getByRole("button", { name: "Koppel aan bestaand werk" }).click();
     await page.getByLabel("Zoek op werktitel of auteur").fill("Ada");
@@ -228,13 +282,21 @@ test("ADD-UI-01 browsermatrix covers canonical selection, recovery and fallback 
     await expect(page.locator("[data-add-book-step='summary']")).toContainText("Bestaand werk");
     await page.getByRole("button", { name: "Boek toevoegen" }).click();
     await expect(page.getByRole("heading", { name: "Boek toegevoegd" })).toBeVisible();
+    await capture(page, "G-success-desktop-1440");
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expectNoHorizontalOverflow(page, "success mobile");
+    await capture(page, "G-success-mobile-390");
+    await page.setViewportSize({ width: 1440, height: 1000 });
     await expect(page.getByRole("button", { name: "Exemplaar verder beschrijven" })).toBeDisabled();
     await page.getByRole("button", { name: "Nog een boek toevoegen" }).click();
 
     // Existing mismatch blocks duplicate creation before retrying the same ISBN.
     await enterIsbn(page, "9780306406157");
     await expect(page.getByRole("heading", { name: "Is dit inderdaad mijn uitgave?" })).toBeVisible();
+    await expect(page.getByText("Bestaande uitgave", { exact: true })).toBeVisible();
+    await expect(page.locator(".biblio-ui__edition-authors")).toHaveText("Auteur een");
     await expect(page.getByText("Deze uitgave staat al 1× in je Bibliotheek.")).toBeVisible();
+    await capture(page, "B-existing-edition-desktop-1440");
     await page.getByRole("button", { name: "Klopt niet?" }).click();
     await page.getByRole("button", { name: "Dit is niet mijn uitgave" }).click();
     await expect(page.getByText("Er wordt niet automatisch een dubbele uitgave gemaakt")).toBeVisible();
@@ -277,6 +339,7 @@ test("ADD-UI-01 browsermatrix covers canonical selection, recovery and fallback 
 
     // Candidate snapshot expiry starts a fresh review and keeps Item input.
     await enterIsbn(page, "9780140328721");
+    await capture(page, "C-single-candidate-desktop-1440");
     await page.getByRole("button", { name: "Gegevens aanpassen" }).click();
     await page.getByLabel("Ondertitel (optioneel)").fill("Gecontroleerd");
     await page.getByRole("button", { name: "Verder" }).click();
@@ -297,6 +360,19 @@ test("ADD-UI-01 browsermatrix covers canonical selection, recovery and fallback 
     await enterIsbn(page, "9780061120084");
     await expect(page.locator(".biblio-ui__edition-card")).toHaveCount(2);
     await expect(page.locator(".biblio-ui__edition-fact--different")).not.toHaveCount(0);
+    await expect(page.locator(".biblio-ui__edition-card .biblio-ui__control--primary")).toHaveCount(0);
+    await capture(page, "D-multiple-candidates-desktop-1440");
+    await page.setViewportSize({ width: 1024, height: 900 });
+    await expectNoHorizontalOverflow(page, "multiple tablet");
+    await expectControlsReachable(page, "multiple tablet");
+    await page.setViewportSize({ width: 640, height: 900 });
+    await expectNoHorizontalOverflow(page, "multiple 200%-equivalent");
+    await expectControlsReachable(page, "multiple 200%-equivalent");
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expectNoHorizontalOverflow(page, "multiple mobile");
+    await expectControlsReachable(page, "multiple mobile");
+    await capture(page, "D-multiple-candidates-mobile-390");
+    await page.setViewportSize({ width: 1440, height: 1000 });
     await page.getByRole("button", { name: "Geen van deze / Handmatig invoeren" }).click();
     await expect(page.getByRole("heading", { name: "Uitgave handmatig invoeren" })).toBeVisible();
     await page.getByRole("button", { name: "Annuleren" }).click();
@@ -310,7 +386,13 @@ test("ADD-UI-01 browsermatrix covers canonical selection, recovery and fallback 
     await openWizard(page);
     await enterIsbn(page, "9780131103627");
     await expect(page.getByText("Boekgegevens konden tijdelijk niet worden opgehaald.")).toBeVisible();
+    await expect(page.locator(".biblio-ui__status-panel--warning")).toBeVisible();
     await expect(page.getByRole("button", { name: "Opnieuw proberen" })).toBeVisible();
+    await capture(page, "F-provider-failure-desktop-1440");
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expectNoHorizontalOverflow(page, "provider failure mobile");
+    await capture(page, "F-provider-failure-mobile-390");
+    await page.setViewportSize({ width: 1440, height: 1000 });
     await page.getByRole("button", { name: "Handmatig invoeren" }).click();
     await expect(page.locator("[data-add-book-step='edition-form']")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Uitgave handmatig invoeren" })).toBeVisible();

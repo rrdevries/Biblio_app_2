@@ -2567,3 +2567,30 @@ Status: **TECHNICAL FIX GO / PROVIDER CONFIG + HUMAN QA PENDING**. The code
 correction is complete; a successful live-provider result remains dependent on
 local operational configuration supplied outside Git. See
 `docs/52-add-ui-01-add-book-wizard-exit-evidence.md`.
+
+## 80. QA-ADD-V1 Add Book visual integration acceptance
+
+QA-ADD-V1 is accepted when:
+
+- the unchanged wizard uses the canonical Editorial Library × Serious Utility
+  hierarchy, semantic tokens, serif/sans roles and open composition;
+- Edition and Work identity lead the presentation while ISBN, provider context
+  and system metadata remain subordinate;
+- cards are limited to real Edition/candidate/Work entities and summary,
+  Work-linking and ordinary form sections avoid card stacking;
+- every context has no more than one primary progression action and secondary,
+  tertiary, disabled and error states remain explicit;
+- provider failure, extra-copy, pending and error feedback use calm semantic
+  accents without losing alert/live-region meaning;
+- 1440px, 1024px, 390px and 640px 200%-equivalent reflow retain scanability,
+  44px controls and no horizontal overflow;
+- desktop screenshots cover start, existing Edition, single candidate,
+  multiple candidates, manual Edition, provider failure and success, with
+  representative mobile captures;
+- complete UI, guarded Chromium and Core regression gates pass; and
+- no functional, REST, provider, Core, schema, Elementor, classification,
+  authorization or governance change enters the slice.
+
+Status: **TECHNICAL GO / HUMAN VISUAL ACCEPTANCE PENDING**. Schema remains
+`1017`; Biblio UI is `0.5.0`. See
+`docs/53-qa-add-v1-add-book-visual-integration.md`.
