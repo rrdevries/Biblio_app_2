@@ -652,14 +652,14 @@ final class RestController
         return $this->execute(function (
             CoreApplication $application
         ) use ($request): WP_REST_Response {
-            $input = $this->requests->nextReadingWorkSearch($request);
-            $page = $application->nextReadingDiscovery()->searchWorks(
+            $input = $this->requests->workDiscoverySearch($request);
+            $page = $application->workDiscovery()->search(
                 $input["search"],
                 $input["limit"],
                 $input["cursor"]
             );
 
-            return $this->success($this->responses->nextReadingWorks($page));
+            return $this->success($this->responses->workDiscovery($page));
         });
     }
 

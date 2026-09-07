@@ -2156,3 +2156,29 @@ werk`, non-blocking extra-copy addition, conditional summary and a calm success
 state. The UX adds no provider fusion, automatic Work matching, central
 metadata override, Librarian UI or collector-detail design. Canonical design:
 `docs/48-add-book-wizard-ux-canonical-design.md`.
+
+### ADD-API-01 — reusable Work discovery contract
+
+Status: **GO / CLOSED**
+
+The existing authenticated `GET /biblio/v1/me/works?q=...&limit=...&cursor=...`
+route is now backed by a catalog-wide Work-discovery application boundary
+rather than Next Reading-specific search code. The route, required non-empty
+query, 100-character maximum, limits, wildcard escaping, stable title/Work-ID
+ordering and version-1 cursor payload remain compatible for the existing Next
+Reading consumer.
+
+Discovery now matches either central Work title or a linked central Author
+display name without ranking, fuzzy matching or automatic Work selection. Each
+result exposes only `work_id`, `title`, ordered `authors`,
+`work_title_status` and existing central `series` membership context. It exposes
+no Library Item, membership, ownership, Library-local or personal data. Search
+still requires an authenticated user but no Library Context; the route grants
+no mutation authority. MH-B5B continues to reauthorize the eventual manual
+existing-Work selection against explicit Library Context and
+`catalog.item_add`.
+
+No original-language field is returned because no current Work-level
+persistence/query source exists. Schema remains `1017`; no metadata provider,
+series-intelligence, matching, Add Book UI or governance behavior changed.
+Detailed evidence: `docs/50-add-api-01-work-discovery-contract-exit-evidence.md`.

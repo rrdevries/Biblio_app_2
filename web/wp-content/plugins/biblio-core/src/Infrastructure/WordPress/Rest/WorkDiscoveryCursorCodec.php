@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Infrastructure\WordPress\Rest;
 
-use Biblio\Core\Application\NextReading\Read\{NextReadingWorkCursor,NextReadingWorkSearchTerm};
+use Biblio\Core\Application\Catalog\Discovery\{WorkDiscoveryCursor,WorkDiscoverySearchTerm};
 use Biblio\Core\Catalog\WorkId;
 use Throwable;
 
-final readonly class NextReadingWorkCursorCodec
+final readonly class WorkDiscoveryCursorCodec
 {
-    public function encode(NextReadingWorkCursor $cursor): string
+    public function encode(WorkDiscoveryCursor $cursor): string
     {
         $json = json_encode([
             "v" => 1,
@@ -22,7 +22,7 @@ final readonly class NextReadingWorkCursorCodec
         return rtrim(strtr(base64_encode($json), "+/", "-_"), "=");
     }
 
-    public function decode(string $encoded): NextReadingWorkCursor
+    public function decode(string $encoded): WorkDiscoveryCursor
     {
         try {
             if ($encoded === "" || preg_match('/^[A-Za-z0-9_-]+$/D', $encoded) !== 1) {
@@ -52,8 +52,8 @@ final readonly class NextReadingWorkCursorCodec
                 throw RestRequestException::invalid("cursor");
             }
 
-            return new NextReadingWorkCursor(
-                new NextReadingWorkSearchTerm($payload["q"]),
+            return new WorkDiscoveryCursor(
+                new WorkDiscoverySearchTerm($payload["q"]),
                 $payload["title"],
                 new WorkId($payload["work_id"])
             );

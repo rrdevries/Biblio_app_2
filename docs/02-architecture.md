@@ -1297,3 +1297,28 @@ requires the Work to exist. No Work search, automatic matching or central Work
 mutation is added. B5A existing-Edition context is read through a dedicated
 port whose persistence predicate contains both current Library ID and Edition
 ID and projects only Item ID, inventory number and safe Location identity/name.
+
+## 33. Reusable platform-wide Work discovery
+
+`WorkDiscoveryService` is the authenticated, read-only application boundary
+behind `GET /biblio/v1/me/works`. It is catalog-wide and independent of both
+Library Context and the Next Reading source-option query. The legacy route and
+opaque cursor payload remain unchanged so Next Reading can keep consuming the
+same transport contract while Add Book reuses it for explicit manual Work
+selection.
+
+`WpdbWorkDiscoveryRepository` selects each matching Work once using Work-title
+`LIKE` or an `EXISTS` predicate over the central Work-contributor/Author
+relationship. Both predicates use the same escaped literal search term. Page
+identity uses no ranking or match scoring: ordering and cursor continuation
+remain `work_title`, then `work_id`. After the bounded Work page is known, two
+batch reads project ordered central Authors and central Series memberships with
+optional position.
+
+The REST allowlist contains only Work ID/title, Author ID/display name,
+CAT-T1 `work_title_status`, and Series ID/display name/position. It contains no
+Item, Library, membership, ownership, local override or personal context.
+Authentication proves only access to discovery; MH-B5B independently validates
+the selected Work, explicit Library Context and `catalog.item_add` at commit.
+No original language is projected because the current model has no Work-level
+source for it. Schema remains 1017.

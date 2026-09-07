@@ -2461,3 +2461,26 @@ MH-B5C is accepted when:
 
 Status: **GO / CLOSED**. Schema remains `1017`. See
 `docs/49-metadata-hub-mh-b5c-add-book-contract-completion.md`.
+
+## 76. ADD-API-01 reusable Work discovery acceptance
+
+ADD-API-01 is accepted when:
+
+- the existing authenticated `/biblio/v1/me/works` route, query fields, limits,
+  title/Work-ID ordering and version-1 cursor remain compatible;
+- title search and linked Author display-name search both return Works, with a
+  Work matching both predicates occurring only once;
+- `%` and `_` in the query remain escaped literal wildcard characters;
+- every result contains only Work ID/title, ordered central Authors, CAT-T1
+  title status and existing central Series context;
+- discovery requires authentication but no Library Context and grants no
+  mutation authority;
+- no Library Item, membership, ownership, Library-local or personal data enters
+  the response;
+- MH-B5B authorization and Work validation remain unchanged;
+- focused title, Author, duplicate, wildcard, pagination/cursor, response
+  allowlist, authentication and Next Reading regressions pass; and
+- PHPStan, syntax, full unit/integration, smoke and repository gates pass.
+
+Status: **GO / CLOSED**. Schema remains `1017`. See
+`docs/50-add-api-01-work-discovery-contract-exit-evidence.md`.

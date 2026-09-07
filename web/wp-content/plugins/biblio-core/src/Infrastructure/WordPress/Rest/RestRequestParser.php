@@ -12,7 +12,7 @@ use Biblio\Core\Application\Catalog\Classification\LibraryCatalogContextInitiali
 use Biblio\Core\Application\Metadata\{AddBookCommitRequest,AddBookCommitSelection,AddBookObservedMetadata,MetadataCandidateId,MetadataFieldValue,MetadataLookupId,UserObservedMetadataField};
 use Biblio\Core\Application\Reading\History\ReadingHistoryCursor;
 use Biblio\Core\Application\Reading\History\ReadingHistoryPageSize;
-use Biblio\Core\Application\NextReading\Read\{NextReadingDiscoveryLimit,NextReadingWorkCursor,NextReadingWorkSearchTerm};
+use Biblio\Core\Application\Catalog\Discovery\{WorkDiscoveryCursor,WorkDiscoveryLimit,WorkDiscoverySearchTerm};
 use Biblio\Core\Borrowing\ExternalLoanId;
 use Biblio\Core\Catalog\EditionId;
 use Biblio\Core\Catalog\ItemId;
@@ -40,7 +40,7 @@ final readonly class RestRequestParser
         private CatalogCursorCodec $cursors,
         private ReadingHistoryCursorCodec $historyCursors,
         private PrivateNoteCursorCodec $privateNoteCursors,
-        private ?NextReadingWorkCursorCodec $nextReadingWorkCursors = null,
+        private ?WorkDiscoveryCursorCodec $workDiscoveryCursors = null,
         private ?PublicAssessmentCursorCodec $publicAssessmentCursors = null,
         private ?RestCatalogQueryParser $catalogQueries = null
     ) {
@@ -288,8 +288,8 @@ final readonly class RestRequestParser
         return $this->nextReadingRemove($request);
     }
 
-    /** @return array{search: NextReadingWorkSearchTerm, limit: NextReadingDiscoveryLimit, cursor: ?NextReadingWorkCursor} */
-    public function nextReadingWorkSearch(WP_REST_Request $request): array
+    /** @return array{search: WorkDiscoverySearchTerm, limit: WorkDiscoveryLimit, cursor: ?WorkDiscoveryCursor} */
+    public function workDiscoverySearch(WP_REST_Request $request): array
     {
         $this->validateQueryFields($request, ["q", "limit", "cursor"]);
         $query = $request->get_query_params();
@@ -303,17 +303,17 @@ final readonly class RestRequestParser
         }
 
         try {
-            $search = new NextReadingWorkSearchTerm($query["q"]);
+            $search = new WorkDiscoverySearchTerm($query["q"]);
         } catch (Throwable) {
             throw RestRequestException::invalid("q");
         }
 
         try {
-            $limit = new NextReadingDiscoveryLimit(
+            $limit = new WorkDiscoveryLimit(
                 $this->positiveQueryInteger(
                     $query["limit"] ?? null,
                     "limit",
-                    NextReadingDiscoveryLimit::DEFAULT
+                    WorkDiscoveryLimit::DEFAULT
                 )
             );
         } catch (RestRequestException $exception) {
@@ -333,7 +333,7 @@ final readonly class RestRequestParser
             "limit" => $limit,
             "cursor" => $cursorValue === null
                 ? null
-                : $this->nextReadingWorkCursorCodec()->decode($cursorValue),
+                : $this->workDiscoveryCursorCodec()->decode($cursorValue),
         ];
     }
 
@@ -741,9 +741,9 @@ final readonly class RestRequestParser
         throw RestRequestException::invalid("preferred_source");
     }
 
-    private function nextReadingWorkCursorCodec(): NextReadingWorkCursorCodec
+    private function workDiscoveryCursorCodec(): WorkDiscoveryCursorCodec
     {
-        return $this->nextReadingWorkCursors ?? new NextReadingWorkCursorCodec();
+        return $this->workDiscoveryCursors ?? new WorkDiscoveryCursorCodec();
     }
 
     /**

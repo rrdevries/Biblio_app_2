@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Biblio\Core\Application\NextReading\Read;
+namespace Biblio\Core\Application\Catalog\Discovery;
 
 use Biblio\Core\Exception\ValidationException;
 
-final readonly class NextReadingDiscoveryLimit
+final readonly class WorkDiscoveryLimit
 {
     public const DEFAULT = 10;
     public const MAXIMUM = 25;
@@ -15,8 +15,7 @@ final readonly class NextReadingDiscoveryLimit
     {
         if ($value < 1 || $value > self::MAXIMUM) {
             throw new ValidationException(
-                "Next Reading discovery limit must be between 1 and "
-                . self::MAXIMUM . "."
+                "Work discovery limit must be between 1 and " . self::MAXIMUM . "."
             );
         }
     }

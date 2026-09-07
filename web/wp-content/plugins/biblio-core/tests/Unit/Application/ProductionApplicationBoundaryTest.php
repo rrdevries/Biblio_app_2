@@ -7,6 +7,7 @@ namespace Biblio\Core\Tests\Unit\Application;
 use Biblio\Core\Application\Assessments\Read\GetLibraryPublicAssessmentsService;
 use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
 use Biblio\Core\Application\Catalog\AddLibraryItemService;
+use Biblio\Core\Application\Catalog\Discovery\WorkDiscoveryService;
 use Biblio\Core\Application\Catalog\Classification\CreateLibraryCatalogContextService;
 use Biblio\Core\Application\Catalog\Classification\ManageLibraryBookTypesService;
 use Biblio\Core\Application\Catalog\Classification\ManageLibraryGenresService;
@@ -74,7 +75,7 @@ final class ProductionApplicationBoundaryTest extends TestCase
             [GetMyPrivateNotesForWorkService::class, "forWork"],
             [ListPrivateNotesForReadingRoundService::class, "list"],
             [ListMyPrivateNotesService::class, "list"],
-            [NextReadingDiscoveryService::class, "searchWorks"],
+            [WorkDiscoveryService::class, "search"],
             [NextReadingDiscoveryService::class, "sourceOptions"],
             [GetLibraryPublicAssessmentsService::class, "forWork"],
             [LibraryCollectionQueryService::class, "activeCollections"],
@@ -214,6 +215,7 @@ final class ProductionApplicationBoundaryTest extends TestCase
             "reviewPublication",
             "stopReadingRound",
             "subjectManagement",
+            "workDiscovery",
         ], $publicMethods);
         self::assertNotContains("get", $publicMethods);
         self::assertNotContains("resolve", $publicMethods);

@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Biblio\Core\Application\NextReading\Read;
+namespace Biblio\Core\Application\Catalog\Discovery;
 
 use Biblio\Core\Catalog\{Work,WorkId};
 use Biblio\Core\Exception\ValidationException;
 
-final readonly class NextReadingWorkCursor
+final readonly class WorkDiscoveryCursor
 {
     public function __construct(
-        private NextReadingWorkSearchTerm $search,
+        private WorkDiscoverySearchTerm $search,
         private string $title,
         private WorkId $workId
     ) {
@@ -25,7 +25,7 @@ final readonly class NextReadingWorkCursor
         }
     }
 
-    public function search(): NextReadingWorkSearchTerm { return $this->search; }
+    public function search(): WorkDiscoverySearchTerm { return $this->search; }
     public function title(): string { return $this->title; }
     public function workId(): WorkId { return $this->workId; }
 }

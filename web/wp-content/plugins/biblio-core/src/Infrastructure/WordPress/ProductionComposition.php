@@ -9,6 +9,7 @@ use Biblio\Core\Application\Assessments\Read\GetLibraryPublicAssessmentsService;
 
 use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
 use Biblio\Core\Application\Catalog\AddLibraryItemService;
+use Biblio\Core\Application\Catalog\Discovery\WorkDiscoveryService;
 use Biblio\Core\Application\Catalog\LocalEditionResolver;
 use Biblio\Core\Application\Catalog\ItemArchiveActivity;
 use Biblio\Core\Application\Catalog\ManageLibraryItemArchiveService;
@@ -102,6 +103,7 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPersonalLibraryReposito
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPrivateNoteRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbNextReadingRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbNextReadingDiscoveryRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbWorkDiscoveryRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPublicationRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbRatingRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbReviewRepository;
@@ -661,6 +663,10 @@ final class ProductionComposition
             $nextReadingRepository,
             $nextReadingProjector
         );
+        $workDiscovery = new WorkDiscoveryService(
+            $authenticatedUser,
+            new WpdbWorkDiscoveryRepository($database, $tableNames)
+        );
         $nextReadingDiscovery = new NextReadingDiscoveryService(
             $authenticatedUser,
             $workRepository,
@@ -770,6 +776,7 @@ final class ProductionComposition
             $nextReadingReorder,
             $myNextReadingList,
             $nextReadingHome,
+            $workDiscovery,
             $nextReadingDiscovery
         );
         $this->lifecycle = new CoreLifecycleCoordinator(
