@@ -1336,7 +1336,8 @@ function biblioE2eSetup(wpdb $database): void
         new LibraryId(BIBLIO_E2E_OTHER_LIBRARY),
         new ItemId(BIBLIO_E2E_HISTORY_OTHER_EDITION_ITEM),
         new EditionId("e2e-edition-history-other"),
-        new WorkId("e2e-work-history")
+        new WorkId("e2e-work-history"),
+        "E2E Leesgeschiedenis"
     );
     biblioE2eAddItem($database, $composition, BIBLIO_E2E_OTHER_LIBRARY, BIBLIO_E2E_HISTORY_ZERO_ITEM, "e2e-work-history-zero", "E2E Geen Leesgeschiedenis", "e2e-edition-history-zero");
     biblioE2eAddItem($database, $composition, BIBLIO_E2E_OTHER_LIBRARY, BIBLIO_E2E_HISTORY_ACTIVE_ITEM, "e2e-work-history-active-only", "E2E Alleen Actief", "e2e-edition-history-active-only");

@@ -587,6 +587,16 @@ function renderOverview(documentImpl, model, actions, itemUrl, uiState) {
         className: "biblio-ui__library",
         text: model.library.name,
     }));
+    if (model.library.capabilities.add_catalog_item === true) {
+        const addBook = actionButton(
+            documentImpl,
+            "Boek toevoegen",
+            (event) => actions.addBook(event?.currentTarget),
+            "primary"
+        );
+        addBook.className += " biblio-ui__add-book-trigger";
+        header.append(addBook);
+    }
     view.append(header);
 
     const rerender = () => uiState.render(model, actions);

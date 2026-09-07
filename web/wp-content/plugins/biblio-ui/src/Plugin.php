@@ -6,8 +6,9 @@ namespace Biblio\UI;
 
 final class Plugin
 {
-    public const VERSION = "0.3.0";
+    public const VERSION = "0.4.0";
     public const SCRIPT_MODULE_ID = "biblio-ui/app";
+    public const ADD_BOOK_SCRIPT_MODULE_ID = "biblio-ui/add-book-wizard";
     public const API_SCRIPT_MODULE_ID = "biblio-ui/api";
     public const ROUTE_SCRIPT_MODULE_ID = "biblio-ui/route-state";
     public const LIBRARY_SCRIPT_MODULE_ID = "biblio-ui/library-state";
@@ -132,6 +133,12 @@ final class Plugin
             self::VERSION
         );
         wp_register_script_module(
+            self::ADD_BOOK_SCRIPT_MODULE_ID,
+            $assetBaseUrl . "js/add-book-wizard.js",
+            [],
+            self::VERSION
+        );
+        wp_register_script_module(
             self::SCRIPT_MODULE_ID,
             $assetBaseUrl . "js/app.js",
             [[
@@ -160,6 +167,9 @@ final class Plugin
                 "import" => "static",
             ], [
                 "id" => self::END_READING_SCRIPT_MODULE_ID,
+                "import" => "static",
+            ], [
+                "id" => self::ADD_BOOK_SCRIPT_MODULE_ID,
                 "import" => "static",
             ], [
                 "id" => self::UI_SHELL_SCRIPT_MODULE_ID,

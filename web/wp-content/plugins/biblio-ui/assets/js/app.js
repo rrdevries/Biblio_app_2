@@ -1,4 +1,5 @@
 import { BiblioApiError, createBiblioApi } from "biblio-ui/api";
+import { createAddBookWizard } from "biblio-ui/add-book-wizard";
 import { createDetailView } from "biblio-ui/detail-view";
 import { createEndReadingView } from "biblio-ui/end-reading-view";
 import { resolveLibraryContext } from "biblio-ui/library-state";
@@ -17,6 +18,7 @@ import {
 } from "biblio-ui/route-state";
 
 export { BiblioApiError, createBiblioApi } from "biblio-ui/api";
+export { createAddBookWizard } from "biblio-ui/add-book-wizard";
 export { createDetailView } from "biblio-ui/detail-view";
 export { createEndReadingView } from "biblio-ui/end-reading-view";
 export { resolveLibraryContext } from "biblio-ui/library-state";
@@ -77,6 +79,7 @@ function assertLibraryPresentation(library) {
         || typeof library.name !== "string"
         || library.name.length === 0
         || !isRecord(library.capabilities)
+        || typeof library.capabilities.add_catalog_item !== "boolean"
         || typeof library.capabilities.use_item_directly !== "boolean"
         || typeof library.capabilities.receive_internal_loan !== "boolean"
     ) {
@@ -510,6 +513,7 @@ export function createLibraryApp(mount, {
     readingHistoryViewFactory = createReadingHistoryView,
     privateNotesControllerFactory = createPrivateNotesController,
     startReadingViewFactory = createStartReadingView,
+    addBookWizardFactory = createAddBookWizard,
     shellFactory = createLibraryShell,
     reload = () => locationImpl.reload(),
     abortControllerFactory = () => new AbortController(),
@@ -539,6 +543,7 @@ export function createLibraryApp(mount, {
     let privateNotesController = null;
     let activeRouteState = null;
     let startReadingView;
+    let addBookWizard;
     let currentController = null;
     let mutationController = null;
     let generation = 0;
@@ -598,6 +603,18 @@ export function createLibraryApp(mount, {
         }
 
         return startReadingView;
+    }
+
+    function currentAddBookWizard() {
+        if (addBookWizard === undefined) {
+            addBookWizard = addBookWizardFactory(applicationRoot(), {
+                api,
+                documentImpl,
+                abortControllerFactory,
+            });
+        }
+
+        return addBookWizard;
     }
 
     function currentEndReadingView() {
@@ -755,6 +772,7 @@ export function createLibraryApp(mount, {
         const runGeneration = generation + 1;
         generation = runGeneration;
         startReadingView?.destroy();
+        addBookWizard?.destroy();
         endReadingView?.destroy();
         privateNotesController?.destroy();
         privateNotesController = null;
@@ -1522,6 +1540,19 @@ export function createLibraryApp(mount, {
                             quickViewRevision += 1;
                             overview.quickView = null;
                         },
+                        addBook(opener) {
+                            return setIdle(currentAddBookWizard().open({
+                                library: overview.library,
+                                trigger: opener,
+                                onClose: renderOverview,
+                                onOpenItem(itemId) {
+                                    return openDetail(
+                                        resolution.library.library_id,
+                                        itemId
+                                    );
+                                },
+                            }));
+                        },
                     }
                 );
             }
@@ -1637,6 +1668,7 @@ export function createLibraryApp(mount, {
     function destroy() {
         generation += 1;
         startReadingView?.destroy();
+        addBookWizard?.destroy();
         endReadingView?.destroy();
         privateNotesController?.destroy();
         privateNotesController = null;
