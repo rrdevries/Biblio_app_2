@@ -2,6 +2,12 @@
 
 Status: canonical working state for Biblio V2 / v2.001.
 
+Release boundary: V2.001 is a reliable, migratable replacement for Biblio V1
+for daily use. It is judged on migration suitability and daily usability, not
+on completeness of every designed V2 module. The authoritative release
+classification, primary journeys, preserved/deferred data rule and Definition
+of Done are in `docs/03-scope-and-deferred.md`.
+
 Explicit decisions, directions and open design questions for versions after
 the active v2.001 scope are maintained in
 `docs/26-future-roadmap-decisions.md`.
@@ -35,6 +41,10 @@ The same user can additionally belong to, manage or own other Privébibliotheken
 v2.001 supports only physical books.
 
 ## Scope layers
+
+The lists below state ownership and current product concepts. They do not make
+every listed domain a V2.001 release requirement; implementation state and
+release class are separate facts.
 
 ### Platform
 
@@ -78,7 +88,7 @@ Owns private:
 
 ### Wat zal ik lezen?
 
-Status: **Functionele basis v2.001 — vastgezet; nog niet geïmplementeerd**.
+Status: **Functionele basis behouden; actieve feature deferred naar V2.002+**.
 
 `Wat zal ik lezen?` is een private, gebruiker-eigen en platformbrede keuzehulp
 naast het volledig handmatige `Hierna lezen`. Dezelfde drie persoonlijke
@@ -88,10 +98,13 @@ beperkt. De functie bepaalt eerst concrete beschikbare bronkandidaten en hun
 toepasselijke Library-lokale classificatie, dedupliceert daarna per Work en
 muteert nooit brondata.
 
-Het volledige contract, `Kies uit…`, persoonlijke suggestion-uitsluitingen,
-deferred onderdelen en open ontwerpvragen staan in
+Het volledige bewaarde ontwerp, `Kies uit…`, persoonlijke
+suggestion-uitsluitingen, deferred onderdelen en open ontwerpvragen staan in
 `docs/40-what-shall-i-read-functional-design.md`. Er is geen productiecode,
-schema, REST- of UI-implementatie aan gekoppeld.
+
+D-WR-01 maakt ranking-engine, recommendation API, preferenceopslag, engines en
+UI expliciet geen V2.001-releaseblocker. Het handmatige `Hierna lezen` blijft
+wel V2.001-MUST.
 
 ## Library types
 
@@ -231,10 +244,14 @@ There is at most one active ReadingRound per user + concrete source.
 
 Multiple simultaneous ReadingRounds for the same Work are allowed when they use different physical sources.
 
-Valid active v2.001 sources:
+Valid active physical source types in the retained design:
 - Library Item available through `Directe toegang`;
 - Item currently internally lent to the user;
 - active external loan.
+
+These are retained source contracts, not a requirement to ship the full
+lending module in V2.001. MIG-01 determines whether existing V1 circulation
+requires a minimal active settlement/source subset at cutover.
 
 Historical closed ReadingRounds may have an unknown source if it is genuinely no longer known.
 
@@ -273,15 +290,24 @@ consumption does not. The technical default Undo TTL is 30 seconds.
 
 ## Lending
 
+Release classification: the full internal/external lending feature is V2.002+.
+The current domain foundation and rules below remain implemented/design truth;
+only a MIG-01-proven minimal cutover lifecycle may become V2.001 acceptance.
+
 `Directe toegang` allows direct use without a loan, but an explicit internal loan may still be recorded.
 
 `Lenen` requires an internal loan before the Library Item becomes the user's physical reading source.
 
 `Alleen bekijken` allows collection viewing/searching but neither direct use nor receiving an internal loan.
 
-No loan request/reservation workflow in v2.001.
+Loan requests and reservations remain outside the first full lending
+implementation.
 
 ## Biblio Home, Bibliotheek Home en Mijn Bibliotheek
+
+Release classification: V2.001 requires the safe shell and normal navigation
+to its retained core flows. Rich Biblio Home and Bibliotheek Home/dashboard
+behavior is V2.002+; implemented shell foundation may remain.
 
 Biblio kent drie structureel verschillende navigatieniveaus:
 
@@ -327,6 +353,9 @@ uit. Deze verdeling verfijnt de IA en ontwerpt de bestaande Home-functionaliteit
 niet opnieuw.
 
 ## Audit
+
+Release classification: the active Audit UI is V2.002+. Existing traceability,
+security and preserved V1 audit data remain relevant independently of that UI.
 
 `Bibliotheek → Activiteitenlog` is a Library audit function for Eigenaar and authorized Beheerders, not a general member feature.
 
@@ -1656,11 +1685,14 @@ Collection-filter semantics, URL plus session state, `Titel A–Z`, `Auteur A–
 conditional `Serievolgorde`, and one mixed active/archive result list with
 `Archief` labels. Search relevance remains authoritative while Search is active.
 
-The first implementation wave is now fixed as Leesstatus, Auteur, Serie,
-Locatie, Boeksoort, Genre, Onderwerp, Collecties and `Zonder collectie`.
-Taal, Uitgever, Uitleenstatus, Conditie and `In bibliotheek sinds` remain in the
-broader v2.001 design as **deferred within v2.001**; they are not removed or
-future-version-only. No product decision remains for the first wave.
+The typed query foundation supports Leesstatus, Auteur, Serie, Locatie,
+Boeksoort, Genre, Onderwerp, Collecties and `Zonder collectie`. CAT-UI-01
+currently exposes only controls with a safe authorized source: Leesstatus,
+Boeksoort, Genre, Onderwerp and `Zonder collectie`. Additional safe
+Library-scoped option/read routes for Author, Series, Location and ordinary
+Collection controls are V2.002+, together with Taal, Uitgever, Uitleenstatus,
+Conditie and `In bibliotheek sinds`. Implemented backend foundation is not the
+same as a V2.001 release requirement.
 
 Technical source readiness is complete. Schemas 1009–1013 provide the central
 Author/Series, remaining Search-metadata, Item Location, Archive and

@@ -4,6 +4,31 @@ This file converts canonical product rules into a baseline for domain, integrati
 
 It is not a complete test-case catalogue yet.
 
+## 0. V2.001 release acceptance after D-SCOPE-01
+
+V2.001 is a reliable, migratable replacement for Biblio V1 for daily use. The
+20 primary release journeys in `docs/03-scope-and-deferred.md` section 4 are
+the authoritative compact end-to-end set. Acceptance recorded below for a
+designed or implemented domain remains valuable evidence, but does not by
+itself make that complete domain a V2.001 release blocker.
+
+The release gate requires reproducible V1 mapping/migration, dry-run,
+reconciliation, idempotency/retry, trial migration, full rehearsal, final
+cutover and explained treatment of every relevant V1 source category. It also
+requires the daily catalog, reading, Private Notes, basic Collections, basic
+personal Verlanglijst, Hierna lezen, archive, navigation and security journeys;
+readability of migrated V1 ratings/reviews; healthy fresh install/upgrade;
+rehearsed backup/restore/recovery; and human responsive/accessibility
+acceptance. No known unexplained data-loss case is acceptable.
+
+Wat zal ik lezen?, active Goals, the full lending module, new Rating/Review
+writes/publication, rich Authors/Series, owned cover management, Stats,
+dashboards, Audit UI, extensive administration, Bookshelf and rich Series
+Intelligence are explicitly not V2.001 release blockers. Their V1 data still
+requires the mapped/transformed/preserved-deferred/quarantined classification
+defined in document 03; `INTENTIONALLY_NOT_MIGRATED` requires an explicit
+product decision and documented reason.
+
 ## 1. Tenant isolation
 
 Acceptance:
@@ -109,12 +134,17 @@ Acceptance:
 
 ## 8. Internal lending
 
+This is retained domain acceptance for the future full lending module, not a
+V2.001 release requirement. Only a MIG-01-proven minimal cutover lifecycle can
+become V2.001 acceptance.
+
 Acceptance:
 - Lenen member requires active loan before Item is personal reading source;
 - Directe toegang member may use without loan;
 - Directe toegang member may still receive explicit loan;
 - Alleen bekijken member cannot receive internal loan;
-- member cannot self-request/create a loan in v2.001;
+- member cannot self-request/create a loan in the first full lending
+  implementation;
 - active loan remains after access downgrade or membership termination;
 - former member may still use that active loan source;
 - return removes current physical access from the loan without deleting history.
@@ -226,12 +256,12 @@ Filter acceptance:
 - values within one group use OR and groups combine through AND;
 - changes apply directly without an Apply button;
 - every active value has a removable chip and `Alle filters wissen` exists;
-- the first v2.001 implementation wave contains Leesstatus, Auteur, Serie,
+- the implemented catalog-query foundation supports Leesstatus, Auteur, Serie,
   Locatie, Boeksoort, Genre, Onderwerp, Collecties and `Zonder collectie`;
 - Collection multi-select uses OR, combines through AND, yields each Item once,
   supports exclusive `Zonder collectie` and offers active Collections only;
 - Taal, Uitgever, Uitleenstatus, Conditie and `In bibliotheek sinds` remain
-  **deferred within v2.001**, not removed, rejected or future-version-only;
+  valid designed options but are V2.002+ release scope under D-SCOPE-01;
 - no varying physical/digital form filter exists in v2.001.
 
 Sort acceptance:
@@ -256,6 +286,9 @@ No-result:
 
 ## 13. Biblio Home and Bibliotheek Home
 
+This retained domain acceptance applies to future rich Home/dashboard work.
+V2.001 requires only the safe shell and normal navigation to release flows.
+
 Acceptance:
 - Biblio Home remains outside one active Library Context and exposes accessible
   Libraries/opening/switching without presenting the full Library shell as
@@ -274,6 +307,13 @@ Acceptance:
 
 ## 14. Ratings/reviews/notes
 
+For V2.001, existing V1 ratings/reviews must be migrated, retained and
+readable, while Private Notes remain active release scope. The new
+Rating/Review write/publication/moderation flows described below are V2.002+.
+The V1 migration reference contains simple per-book writes, so MIG-01 must
+retain and reconcile their data and record the post-cutover limitation, but
+D-SCOPE-01 makes Review writing/publication non-blocking for first cutover.
+
 Acceptance:
 - private contributions need no Library;
 - publication requires one explicit active Library context with active Item of Work;
@@ -282,6 +322,10 @@ Acceptance:
 - Notes always private.
 
 ## 15. Reading goals/statistics
+
+This retained domain acceptance is for V2.002+ feature work. V2.001 requires
+MIG-01 to preserve or quarantine existing V1 goal/statistics data, not active
+Goals or Stats UI.
 
 Acceptance:
 - successful ReadingRound only counts as completion;
@@ -292,6 +336,9 @@ Acceptance:
 - Collection/Series snapshots do not silently mutate.
 
 ## 16. Library audit
+
+This retained domain acceptance is for the V2.002+ Audit UI. Security,
+traceability and preservation obligations remain binding in V2.001.
 
 Acceptance:
 - Eigenaar sees full Library audit;
@@ -304,6 +351,10 @@ Acceptance:
 - navigation/search/filter actions do not create audit entries.
 
 ## 17. Settings/platform admin
+
+This retained domain acceptance covers the broader V2.002+ administration
+design. Only the smallest migration-proven safe setup/recovery subset can be a
+V2.001 requirement.
 
 Acceptance:
 - only implemented v2.001 settings visible;
@@ -324,24 +375,16 @@ Acceptance:
 - hidden/stale form fields do not mutate data;
 - failure leaves previous valid state intact.
 
-## 19. E2E critical flows
+## 19. V2.001 E2E critical flows
 
-Minimum E2E candidates:
-- platform account exists without Library → first relevant reading/borrowing action auto-creates designated personal Privébibliotheek;
-- Platformbeheer links existing account to another Library;
-- Eigenaar changes member access/role;
-- add physical book/Edition/Item;
-- central Work/Edition metadata correction proposal and Biblio Librarian
-  assessment, including for a one-Library record;
-- Library search and temporary archive search;
-- Start/finish/stop ReadingRound;
-- two simultaneous rounds same Work on different sources;
-- Collection draft save/cancel;
-- archive/restore;
-- internal loan/return;
-- external loan;
-- Home customization;
-- permission/privacy boundaries.
+The authoritative release set is exactly the 20 primary journeys in
+`docs/03-scope-and-deferred.md` section 4. E2E coverage must combine the daily
+catalog, reading, Private Notes, basic Collection, basic Verlanglijst, Hierna
+lezen, archive, login/account/navigation and permission/privacy journeys with
+the migration/reconciliation outcome. Full lending, Home customization,
+Librarian assessment, Goals, Stats and other V2.002+ journeys are not V2.001
+release blockers merely because their retained domain acceptance appears in
+this document.
 
 ## 20. Technical test layers
 
@@ -1862,8 +1905,7 @@ Readiness acceptance established:
 - the first implementation wave is fixed as Leesstatus, Auteur, Serie, Locatie,
   Boeksoort, Genre, Onderwerp, Collecties and `Zonder collectie`;
 - Taal, Uitgever, Uitleenstatus, Conditie and `In bibliotheek sinds` remain
-  explicitly deferred within v2.001 rather than removed or moved to a future
-  version;
+  valid designed options but are V2.002+ release scope under D-SCOPE-01;
 - no product decision remains for the first implementation wave;
 - normalization, cursor/fingerprint, transport, SQL, tie-breaker and index
   choices are classified as technical rather than user product decisions;
@@ -2060,13 +2102,16 @@ Evidence is recorded in
 
 ## 64. Wat zal ik lezen? functionele acceptancebasis
 
+D-WR-01 and D-SCOPE-01 preserve this design acceptance but defer all active
+feature work to V2.002+. This section is not V2.001 release acceptance.
+
 Bij toekomstige implementatie geldt minimaal:
 
 - resultaten, afgeleid profiel en instellingen zijn private user-owned data;
 - Library-rollen of supporttoegang geven geen toegang tot data van een ander;
 - Mijn Biblio bepaalt eerst alle concrete bronnen die de actor nu kan lezen;
   een Library-ingang beperkt die bronkandidaten tot die geautoriseerde Library;
-- de v2.001-kandidaten zijn uitsluitend direct toegankelijke actieve Library
+- de kandidaten zijn uitsluitend direct toegankelijke actieve Library
   Items, actieve interne leningen aan de actor en actieve externe leningen;
 - toegang/beschikbaarheid, actieve scope, toepasselijke Library-lokale
   classificatie en persoonlijke uitsluitingen worden per concrete bron bepaald

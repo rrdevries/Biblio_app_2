@@ -4,6 +4,14 @@ Status: **PRODUCT GO / TECHNICAL SOURCE READY — READY FOR TYPED CATALOG QUERY 
 
 Date: 2026-09-04.
 
+Release-scope note (D-SCOPE-01, 2026-09-09): this document preserves the
+historical product/readiness contract and the implemented typed backend
+foundation. Its statements that unsupported filter controls remain within
+V2.001 are superseded by `docs/03-scope-and-deferred.md`: extra safe
+Author/Series/Location/Collection option routes and the other deferred filters
+are V2.002+. Implemented foundation remains implemented; it is not thereby a
+V2.001 release blocker.
+
 ## 1. Context, scope and verdict
 
 This document reconciles the final approved product decisions for server-side

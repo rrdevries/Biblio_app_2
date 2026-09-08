@@ -1,8 +1,14 @@
 # 40 — Wat zal ik lezen? functionele basis
 
-Status: **Functionele basis v2.001 — vastgezet**
+Status: **Functionele basis behouden — actieve feature deferred naar V2.002+**
 
 Datum: 2026-09-04.
+
+D-WR-01 and D-SCOPE-01 preserve this approved design but remove its ranking
+engine, recommendation API, preference storage, engines and UI from the V2.001
+release boundary. Nothing in this document is a V2.001 release blocker. A
+future V2.002+ implementation may still require the open decisions in section
+14 before build work starts.
 
 ## 1. Doel en afbakening
 
@@ -55,7 +61,7 @@ worden overwogen, maar is niet de hoofdinteractie.
 
 De standaardpool start bij concrete bronkandidaten die de gebruiker binnen de
 actieve scope op dat moment daadwerkelijk kan lezen. De gesloten fysieke
-v2.001-set is: een direct toegankelijk actief Library Item, een actief intern
+basisset is: een direct toegankelijk actief Library Item, een actief intern
 geleend Item aan de huidige gebruiker en een actieve externe lening. Digitale,
 provider-, pseudo- en generieke andere bronnen horen niet bij deze basis.
 
@@ -107,7 +113,8 @@ gescheiden.
 ## 6. Voor mij gekozen
 
 Doel: beantwoorden wat waarschijnlijk goed bij de gebruiker past om nu te
-lezen. v2.001 gebruikt een uitlegbare rule-based engine, zonder vereiste voor
+lezen. De eerste implementatie gebruikt een uitlegbare rule-based engine,
+zonder vereiste voor
 machine learning, collaborative filtering of black-boxscore.
 
 Mogelijke persoonlijke signalen zijn eigen ReadingRounds, waarderingen,
@@ -141,7 +148,8 @@ een hoog gewaardeerde auteur, eerder uitgelezen seriedelen of de combinatie van
 Hierna lezen en een actief leesdoel. `Past bij jouw profiel`, matchpercentages
 en schijnprecisie zijn niet toegestaan.
 
-Andere gebruikers leveren in v2.001 geen signalen: geen populariteit, publieke
+Andere gebruikers leveren in de eerste implementatie geen signalen: geen
+populariteit, publieke
 gemiddelde rating, sociaal model of `mensen zoals jij`.
 
 ### Cold start
@@ -159,7 +167,7 @@ waarschijnlijk over het hoofd ziet. De engine optimaliseert op herontdekking,
 niet op hoogste smaakmatch. Nooit uitgelezen en eerder uitgelezen Works mogen
 voorkomen, zonder geforceerde balans.
 
-Primaire v2.001-strategieën zijn:
+Primaire strategieën voor de eerste implementatie zijn:
 
 - **Lang in de kast:** langere tijd beschikbaar en nooit uitgelezen;
 - **Oude favoriet:** eerder uitgelezen, positief gewaardeerd en langere tijd
@@ -170,7 +178,7 @@ Primaire v2.001-strategieën zijn:
 `Lang op Hierna lezen` is hoogstens ondersteunend. Iedere suggestie legt
 concreet uit wat wordt herontdekt. Complexe novelty-profielen, mood-logica, een
 automatische `anders-dan-normaal`-engine en externe ontdekking vallen niet in
-de eerste v2.001-versie.
+de eerste implementatie.
 
 Een strategie gebruikt alleen tijdclaims waarvoor de betrokken bron- of
 persoonlijke historie de vereiste precisie heeft. Ontbrekende of grovere data
@@ -196,7 +204,8 @@ gekozen.
 ## 9. Kies uit…
 
 De flow is: scope bepalen, optioneel verfijnen en vervolgens één van de drie
-engines toepassen. Primaire scopes voor v2.001 zijn alles wat ik kan lezen, de
+engines toepassen. Primaire scopes voor de eerste implementatie zijn alles wat
+ik kan lezen, de
 actuele/specifieke Bibliotheek, Hierna lezen, één Collectie, een geschikt actief
 leesdoel en geleende boeken. Een leesdoel is alleen rechtstreeks bruikbaar als
 het voldoende concrete Works of selectieregels oplevert.
@@ -252,7 +261,7 @@ Librarydefault, Library-eigendom of Librarybeheer. De zichtbare structuur is:
                 └── Uitgesloten Genres
 
 `Algemeen` is zichtbaar zodra er ten minste één concrete instelling bestaat.
-De eerdere v2.001-regel dat een lege/beperkte set `Algemeen` verborgen houdt,
+De eerdere regel dat een lege/beperkte set `Algemeen` verborgen houdt,
 is hiervoor bewust vervangen. `Kies uit…` heeft geen eigen uitsluitlijst.
 Standaard is niets uitgesloten.
 

@@ -1,8 +1,16 @@
 # 01 — Functional design
 
-Status: canonical functional design for Biblio V2 v2.001.
+Status: canonical functional design for Biblio V2; release scope is classified
+separately in `docs/03-scope-and-deferred.md`.
 
 This document states the latest approved product behavior. Historical handovers can contain superseded models such as WordPress Multisite, the role `Lezer`, old Verlanglijst terminology, `Next to read`, `Gepauzeerd`, mandatory Library context for every ReadingRound, the old fixed Home model, or mockups that place Home content under `Mijn Bibliotheek`. Those historical variants are not current behavior unless explicitly retained here.
+
+D-SCOPE-01 separates approved design and implemented foundation from release
+necessity. A section in this document may therefore describe valid V2.002+
+behavior or already implemented foundation without making that capability a
+V2.001 blocker. V2.001 is a reliable, migratable V1 replacement for daily use;
+the release matrix, primary journeys and Definition of Done in document 03 are
+authoritative when version scope is at issue.
 
 ---
 
@@ -434,8 +442,11 @@ The approved v2.001 build target is deliberately small:
 - retain minimum provenance: provider, provider record ID, `retrieved_at`,
   match method, queried identifier and confirmation state;
 - preserve a first-class manual/no-ISBN path;
-- support Biblio-owned or user-supplied covers without depending on provider
-  covers.
+- render an honest no-cover state without depending on a provider cover.
+
+Independent Biblio-owned or user-supplied cover acquisition/management is
+V2.002+. Existing V1 cover references/assets remain migration inventory and
+may not be silently discarded.
 
 Wikidata and BookBrainz are **NO-GO** runtime adapters for v2.001 based on the
 completed benchmark, but remain future evidence/relationship candidates. Google
@@ -574,6 +585,11 @@ Biblio never fabricates a day/month.
 
 ## Covers
 
+Release classification: independent Biblio-owned cover acquisition and
+management is V2.002+. V2.001 may use truthful no-cover presentation. MIG-01
+must inventory and preserve existing V1 cover references/assets; the design
+rules below remain valid for later activation.
+
 Edition may have multiple cover images and one Primary cover.
 
 If no Primary exists, a reviewed and permitted external image may become
@@ -596,7 +612,8 @@ Compact v2.001 roles:
 - Bewerker
 - Overig
 
-Only Auteur/Co-auteur drive Author detail pages in v2.001.
+When the dedicated Authors module is implemented, only Auteur/Co-auteur drive
+Author detail pages in its first version.
 
 ## Condition
 
@@ -719,10 +736,10 @@ en leesleven?` It keeps two evidence scopes separate:
 - **Reading Fit:** other books by the same Author, personal Author history,
   genre/reading profile, and the actor's own ratings and reading history.
 
-v2.001 does not promise all Lens intelligence. Its first maturity is
-ISBN/Edition Intelligence. Later maturity may add richer Edition Intelligence,
-broader Work resolution, Series Intelligence, OCR/vision, shelf/spine
-recognition and a Metadata Graph.
+V2.001 does not require an active Lens feature. The implemented foundation is
+ISBN/Edition identity and evidence. Later maturity may add active Edition
+Intelligence, broader Work resolution, Series Intelligence, OCR/vision,
+shelf/spine recognition and a Metadata Graph.
 
 # 5. Library
 
@@ -852,7 +869,7 @@ through AND unless a filter has an explicitly documented exception. Expanded
 filters apply directly without an Apply button. Active values appear above the
 results as individually removable chips, together with `Alle filters wissen`.
 
-The first v2.001 implementation wave contains exactly:
+The typed catalog-query contract supports:
 
 - Leesstatus;
 - Auteur;
@@ -864,10 +881,12 @@ The first v2.001 implementation wave contains exactly:
 - Collecties;
 - `Zonder collectie`.
 
-Taal, Uitgever, Uitleenstatus, Conditie and `In bibliotheek sinds` remain part
-of the broader v2.001 product design but are deferred within v2.001 and are not
-part of this first implementation wave. They are not removed, rejected or
-reclassified as future-version-only.
+For V2.001 release UI, only controls with a safe authorized source are exposed:
+Leesstatus, Boeksoort, Genre, Onderwerp and `Zonder collectie` are currently
+supported. Author, Series, Location and ordinary Collection controls await
+additional safe Library-scoped option/read routes and are V2.002+, as are Taal,
+Uitgever, Uitleenstatus, Conditie and `In bibliotheek sinds`. Their typed
+backend foundation may remain without fabricating UI controls.
 
 Search, filter and sort state is represented in the URL. Browser Back/Forward
 restores the earlier query and a copied URL opens the same temporary query.
@@ -897,6 +916,10 @@ Archive result group. Archived hits are clearly marked `Archief`.
 Multiple matching Items are all visible. Work may group for readability but does not deduplicate physical copies.
 
 ## Library statistics
+
+Release classification: the active Library statistics feature is V2.002+ and
+is not a V2.001 blocker. MIG-01 inventories and preserves relevant V1 source
+data where necessary. The design below remains the approved future contract.
 
 Separate `Bibliotheek → Statistieken`.
 
@@ -935,7 +958,11 @@ At most one active ReadingRound per user + concrete source.
 
 Multiple active rounds for the same Work are allowed when they use different sources.
 
-## Valid active physical sources in v2.001
+## Valid active physical source types in the retained design
+
+D-SCOPE-01 does not make the full internal/external lending module a V2.001
+requirement. MIG-01 determines whether migrated circulation needs a minimal
+active source/settlement subset at cutover.
 
 - active Library Item available through `Directe toegang`;
 - Item actively internally lent to the user;
@@ -1085,6 +1112,11 @@ A matching Library Item never silently fulfils the personal Verlanglijst.
 
 ## Gewenste aanwinsten
 
+Release classification: the active Library-owned Gewenste-aanwinsten feature
+is V2.002+. MIG-01 must inventory V1 data and classify it as mapped,
+preserved/deferred or quarantined; only a migration-proven minimal exception
+may enter V2.001.
+
 Shared Library-owned list.
 
 Maximum one per Library.
@@ -1093,7 +1125,8 @@ Eigenaar manages by default.
 
 Beheerder only with explicit permission.
 
-Lid may receive explicit view-only access, never manage in v2.001.
+Lid may receive explicit view-only access, never manage in the first active
+feature version.
 
 A matching Item added to the same Library may prompt fulfilment. Execution mismatch requires confirmation; never silently fulfil.
 
@@ -1134,12 +1167,23 @@ available from Mijn Biblio and within each authorized Library context. It is
 separate from the fully manual `Hierna lezen` list and never automatically
 mutates planning, reading, collection or classification source data.
 
-Its v2.001 functional basis, three selection engines, `Kies uit…` orchestration,
-source-context-first candidate semantics, explainability and personal
-exclusions are fixed in
+Its retained functional basis, three selection engines, `Kies uit…`
+orchestration, source-context-first candidate semantics, explainability and
+personal exclusions are fixed in
 [`docs/40-what-shall-i-read-functional-design.md`](40-what-shall-i-read-functional-design.md).
 
+D-WR-01 defers the active feature, ranking engine, recommendation API,
+preference persistence, engines and UI to V2.002+. None is a V2.001 release
+blocker. The separate, manual `Hierna lezen` flow remains V2.001-MUST.
+
 # 8. Borrowed and lent
+
+Release classification: the full V2 lending module is V2.002+. MIG-01 must
+inventory existing V1 circulation data. If active/open loans exist at cutover,
+their smallest safe preservation/settlement lifecycle is a separate product
+decision and may become `V2.001 MINIMUM IF MIGRATION REQUIRES`. The design
+below remains authoritative for later implementation; it is not itself a
+V2.001 release journey.
 
 ## External borrowing
 
@@ -1157,7 +1201,8 @@ One shared transaction with two perspectives:
 - Library → Uitgeleend;
 - borrower → Mijn Biblio → Geleend.
 
-Eligible recipient in a v2.001 Privébibliotheek:
+Eligible recipient in the first full lending implementation for a
+Privébibliotheek:
 - active membership with `Lenen`;
 - or active membership with `Directe toegang`.
 
@@ -1167,7 +1212,8 @@ The transaction is created by:
 - Eigenaar;
 - Beheerder with lending permission.
 
-A `Lenen` user cannot submit a loan request or create their own internal loan in v2.001.
+A `Lenen` user cannot submit a loan request or create their own internal loan
+in the first full lending implementation.
 
 Formal requests/reservations/queues/renewals/fines are deferred.
 
@@ -1309,6 +1355,10 @@ Archived Collection is read-only until restored.
 
 ## Collection reading goal
 
+Release classification: active goal creation and management is V2.002+.
+Existing V1 goal data must be inventoried and preserved or quarantined through
+MIG-01; this future design does not make Collection goals a V2.001 blocker.
+
 A private completion goal can snapshot a Library Collection.
 
 At creation:
@@ -1324,6 +1374,11 @@ Loss of Library access does not delete the personal goal snapshot.
 
 # 11. Authors and Series
 
+Release classification: Author/Series identities and relations required for
+V1 mapping, catalog, Search and Book Detail remain V2.001-MUST. A separate
+Authors/Series index/detail module and rich Series Intelligence are V2.002+.
+The broader design below remains preserved without becoming release acceptance.
+
 Auteur and Serie are central stable identities.
 
 Library module:
@@ -1335,7 +1390,7 @@ An Author/Series appears in a Library index only when at least one active Item i
 
 Personal Verlanglijst/history/external loans/minimal central Works do not make them appear in a Library index.
 
-Only Auteur/Co-auteur gets Author detail in v2.001.
+Only Auteur/Co-auteur gets Author detail in the first dedicated module version.
 
 Other contributor roles remain structured metadata.
 
@@ -1542,6 +1597,14 @@ Minimal Works created for a Series goal do not create Library-index presence.
 
 # 12. Ratings, reviews and notes
 
+Release classification: existing V1 ratings/reviews must be migrated, retained
+and readable in V2.001, and Private Notes remain V2.001-MUST. New
+Rating/Review create/edit/publish/withdraw/moderation flows are V2.002+.
+The V1 migration reference contains a simple per-book write UI, so MIG-01 must
+map and retain that data and record the post-cutover limitation explicitly;
+D-SCOPE-01 nevertheless makes Review writing/publication non-blocking for the
+first cutover.
+
 All are user-owned.
 
 ## Rating
@@ -1603,6 +1666,10 @@ Optional ReadingRound link.
 No Library role grants access to another user's notes.
 
 # 13. Reading goals
+
+Release classification: active Reading Goals are V2.002+. Existing V1 goal
+data must be inventoried and classified by MIG-01; no silent discard is
+permitted. The design below is retained for later activation.
 
 Private/user-owned.
 
@@ -1712,6 +1779,10 @@ Seven-day deadline signal is fixed Biblio behavior, not a user preference.
 
 # 14. Personal insights
 
+Release classification: active personal Stats, Jaaroverzicht and Tijdlijn are
+V2.002+. MIG-01 inventories and preserves relevant V1 source data where
+necessary. The design below remains valid future product design.
+
 No standalone Profiel module.
 
 Private/user-owned:
@@ -1761,7 +1832,7 @@ Uses same personal scope principles.
 
 May include highest-rated Works and other personal activity.
 
-No year-over-year comparison in v2.001.
+No year-over-year comparison in the first active feature version.
 
 ## Tijdlijn
 
@@ -1787,6 +1858,10 @@ Deleting the user-owned source removes its derived timeline event.
 Historical Library context may remain after membership loss without restoring access to protected Library records.
 
 # 15. Biblio Home, Bibliotheek Home and search
+
+Release classification: V2.001 requires only the shell/navigation necessary to
+reach every release flow normally. Rich Biblio Home and Library Home/dashboard
+behavior is V2.002+. Search inside Mijn Bibliotheek remains V2.001-MUST.
 
 The current information architecture distinguishes three levels:
 
@@ -2068,6 +2143,10 @@ No recent-search history in v2.001.
 
 ## Library audit
 
+Release classification: an active Audit UI is V2.002+. Security, traceability
+and integrity rules remain binding, and MIG-01 preserves relevant V1 source
+data; the full UI below is not V2.001 release acceptance.
+
 `Bibliotheek → Activiteitenlog` is a shared Library-audit function.
 
 Visible:
@@ -2132,9 +2211,9 @@ Events are immutable to users.
 
 Corrections happen through source data and may create a new event.
 
-No functional automatic expiry in v2.001.
+No functional automatic expiry in the first active Audit version.
 
-No audit export button in v2.001.
+No audit export button in the first active Audit version.
 
 ## Relationships
 
@@ -2159,6 +2238,12 @@ Derived relationship visibility alone does not generate ActivityEvents.
 
 # 17. Settings and administration
 
+Release classification: extensive platform, membership, delegated-permission
+and Librarian administration is V2.002+. Only the smallest safe installation,
+account/membership and recovery operation proven necessary by MIG-01 can be
+`V2.001 MINIMUM IF MIGRATION REQUIRES`. The permission boundaries below remain
+security constraints where their implementation exists.
+
 One top-level `Instellingen`, with visible parts according to role/right:
 - Mijn voorkeuren;
 - Bibliotheekbeheer;
@@ -2180,10 +2265,11 @@ permanent change follows the explicit settings save behavior below.
 
 Home configuration is not duplicated here.
 
-`Algemeen` is visible when it contains the concrete platform-wide suggestion
-preferences defined for `Wat zal ik lezen?`: per selection engine excluded
-Boeksoorten and Genres. Those preferences are private and user-owned; they are
-not Library defaults or Library-managed settings.
+When `Wat zal ik lezen?` is implemented in V2.002+, `Algemeen` is visible when
+it contains the concrete platform-wide suggestion preferences defined for that
+feature: per selection engine excluded Boeksoorten and Genres. Those
+preferences are private and user-owned; they are not Library defaults or
+Library-managed settings.
 
 ## Library defaults
 
@@ -2269,7 +2355,7 @@ No separate micro-permission required.
 
 ## Platformbeheer
 
-v2.001 modules:
+Modules in the retained full administration design:
 - Gebruikers;
 - Bibliotheken;
 - Admins & platformrechten;
@@ -2302,7 +2388,8 @@ Support content access requires explicit Supporttoegang.
 
 ### Admins & platformrechten
 
-Only Super admin can create/deactivate Admins and assign/revoke platform permissions in v2.001.
+Only Super admin can create/deactivate Admins and assign/revoke platform
+permissions in the first full administration implementation.
 
 Admins cannot modify their own permissions or manage other Admins.
 
