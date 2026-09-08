@@ -237,6 +237,41 @@ function assertActiveReadingRound(round) {
     }
 }
 
+function assertClassificationTerm(value, idField) {
+    return isRecord(value)
+        && hasExactFields(value, [idField, "display_name"])
+        && typeof value[idField] === "string"
+        && value[idField].length > 0
+        && typeof value.display_name === "string"
+        && value.display_name.length > 0;
+}
+
+function assertDetailClassification(classification) {
+    if (
+        !isRecord(classification)
+        || !hasExactFields(classification, [
+            "book_types",
+            "genres",
+            "subjects",
+        ])
+        || !Array.isArray(classification.book_types)
+        || classification.book_types.length > 1
+        || !classification.book_types.every((term) => (
+            assertClassificationTerm(term, "book_type_id")
+        ))
+        || !Array.isArray(classification.genres)
+        || !classification.genres.every((term) => (
+            assertClassificationTerm(term, "genre_id")
+        ))
+        || !Array.isArray(classification.subjects)
+        || !classification.subjects.every((term) => (
+            assertClassificationTerm(term, "subject_id")
+        ))
+    ) {
+        throw new TypeError("The Biblio Item classification contract is invalid.");
+    }
+}
+
 function readDetail(payload, selectedLibraryId, requestedItemId) {
     const textFields = [
         "cover_reference",
@@ -265,6 +300,7 @@ function readDetail(payload, selectedLibraryId, requestedItemId) {
         || payload.title.length === 0
         || !assertTextListValue(payload.authors)
         || !textFields.every((field) => assertTextValue(payload[field]))
+        || !isRecord(payload.classification)
         || typeof payload.item_status !== "string"
         || !isRecord(payload.capabilities)
         || typeof payload.capabilities.view_item !== "boolean"
@@ -275,6 +311,7 @@ function readDetail(payload, selectedLibraryId, requestedItemId) {
     }
 
     assertLibraryPresentation(payload.library);
+    assertDetailClassification(payload.classification);
     assertReadingSummary(payload.reading);
     assertActiveReadingRound(payload.active_reading_round);
 

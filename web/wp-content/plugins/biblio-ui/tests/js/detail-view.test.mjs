@@ -114,6 +114,20 @@ function detail(overrides = {}) {
         condition: known("Goed"),
         acquisition: known("Aankoop"),
         availability: known("Beschikbaar"),
+        classification: {
+            book_types: [{
+                book_type_id: "book-type-reading",
+                display_name: "Leesboek",
+            }],
+            genres: [{ genre_id: "genre-literary", display_name: "Literatuur" }, {
+                genre_id: "genre-historical",
+                display_name: "Historisch",
+            }],
+            subjects: [{
+                subject_id: "subject-long",
+                display_name: "Een lang onderwerp dat in de utilitykolom moet kunnen afbreken",
+            }],
+        },
         item_status: "active",
         reading: {
             status: "reading",
@@ -178,7 +192,7 @@ test("detail renders the allowlisted known contract and canonical back link", ()
     assert.equal(byTag(root, "img")[0].getAttribute("alt"),
         "Omslag van Het bekende boek");
     assert.equal(byAttribute(root, "role", "group")[0].getAttribute("aria-label"),
-        "Boekstatus");
+        "Leesstatus en boeksoort");
     assert.deepEqual(
         byTag(root, "nav")[0].children[0].children.map((item) => (
             item.children[0].textContent
@@ -202,6 +216,9 @@ test("detail renders the allowlisted known contract and canonical back link", ()
     assert.match(text(root), /Waarvan historisch geregistreerd 1/);
     assert.match(text(root), /ISBN 9780000000001/);
     assert.match(text(root), /Locatie Kast B/);
+    assert.match(text(root), /Leesboek/);
+    assert.match(text(root), /Genres Literatuur, Historisch/);
+    assert.match(text(root), /Onderwerpen Een lang onderwerp/);
     assert.doesNotMatch(text(root),
         /work-internal|edition-internal|never render this/);
 
@@ -242,6 +259,11 @@ test("unknown, missing and not-applicable values omit labels and sections", () =
         condition: { state: "missing", value: null },
         acquisition: { state: "not_applicable", value: null },
         availability: unknown(),
+        classification: {
+            book_types: [],
+            genres: [],
+            subjects: [],
+        },
         reading: {
             status: "not_read",
             active_rounds: 0,
@@ -277,6 +299,7 @@ test("unknown, missing and not-applicable values omit labels and sections", () =
         /Waarvan historisch|ISBN|Taal|Uitgever|Publicatiedatum|Serie|Boekdetails/);
     assert.doesNotMatch(text(root),
         /Locatie|Conditie|Verwerving|Beschikbaarheid|undefined|null|Onbekend/);
+    assert.doesNotMatch(text(root), /Genres|Onderwerpen|Leesboek/);
 });
 
 test("Start Reading is presentation-only and focuses authoritative updates", () => {

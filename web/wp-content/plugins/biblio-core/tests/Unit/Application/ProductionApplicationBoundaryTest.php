@@ -88,6 +88,7 @@ final class ProductionApplicationBoundaryTest extends TestCase
             [LibraryClassificationQueryService::class, "activeGenres"],
             [LibraryClassificationQueryService::class, "activeSubjects"],
             [LibraryClassificationQueryService::class, "classificationsForWorks"],
+            [LibraryClassificationQueryService::class, "assignedClassificationsForWorks"],
             [CatalogQueryService::class, "query"],
             [ManageLibraryCollectionsService::class, "create"],
             [ManageLibraryCollectionsService::class, "update"],

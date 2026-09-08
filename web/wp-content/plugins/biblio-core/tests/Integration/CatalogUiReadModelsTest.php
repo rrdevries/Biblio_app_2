@@ -8,6 +8,7 @@ use Biblio\Core\Application\Catalog\Read\CatalogDataState;
 use Biblio\Core\Application\Catalog\Read\CatalogItemNotAvailable;
 use Biblio\Core\Application\Catalog\Read\CatalogOverviewPageSize;
 use Biblio\Core\Application\Catalog\Read\CatalogUiReadService;
+use Biblio\Core\Application\Catalog\Classification\Read\LibraryClassificationQueryService;
 use Biblio\Core\Application\Library\LibraryContextQueryService;
 use Biblio\Core\Authorization\LibraryAuthorizationPolicy;
 use Biblio\Core\Catalog\ItemId;
@@ -15,6 +16,7 @@ use Biblio\Core\Exception\AuthorizationException;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbActorLibraryContextRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbCatalogUiReadRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryClassificationReadRepository;
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Reading\PersonalWorkReadingStatus;
 use Biblio\Core\Tests\Support\ControllableAuthenticatedUser;
@@ -113,9 +115,85 @@ final class CatalogUiReadModelsTest extends PersistenceIntegrationTestCase
         self::assertSame(CatalogDataState::Unknown, $detail->condition()->state());
         self::assertSame(CatalogDataState::Unknown, $detail->acquisition()->state());
         self::assertSame(CatalogDataState::Unknown, $detail->availability()->state());
+        self::assertNull($detail->classification());
         self::assertTrue($detail->capabilities()->canStartReading());
         self::assertFalse($detail->capabilities()->canEndReading());
         self::assertNull($detail->activeReadingRound());
+    }
+
+    public function testDetailClassificationUsesAssignedTermsForExactLibraryAndWork(): void
+    {
+        $actor = new UserId("510");
+        $libraryA = new LibraryId("classification-library-a");
+        $libraryB = new LibraryId("classification-library-b");
+        $this->seedLibrary($libraryA->value(), "Classificatie A", $actor, "direct");
+        $this->seedLibrary($libraryB->value(), "Classificatie B", $actor, "direct");
+        $this->seedItem("classification-item-a", $libraryA->value(), "shared-work", "Gedeelde uitgave");
+        $this->database->insert($this->tableNames->items(), [
+            "item_id" => "classification-item-b",
+            "library_id" => $libraryB->value(),
+            "edition_id" => "edition-classification-item-a",
+            "item_status" => "active",
+        ]);
+
+        $this->seedClassification(
+            $libraryA->value(),
+            "shared-work",
+            ["book-a", "Leesboek", "leesboek", "active"],
+            [
+                ["genre-z", "Zed genre", "zed genre", "active"],
+                ["genre-a", "Archiefgenre", "archiefgenre", "inactive"],
+            ],
+            [
+                ["subject-b", "Zeer lang onderwerp dat rustig moet kunnen afbreken", "zeer lang onderwerp dat rustig moet kunnen afbreken", "active"],
+                ["subject-a", "Aarde", "aarde", "active"],
+            ]
+        );
+        $this->seedClassification(
+            $libraryB->value(),
+            "shared-work",
+            ["book-b", "Naslagwerk", "naslagwerk", "active"],
+            [["genre-b", "Detective", "detective", "active"]],
+            []
+        );
+
+        $service = $this->service($actor);
+        $detailA = $service->itemDetail(
+            $libraryA,
+            new ItemId("classification-item-a")
+        );
+        $detailB = $service->itemDetail(
+            $libraryB,
+            new ItemId("classification-item-b")
+        );
+
+        self::assertSame("book-a", $detailA->classification()?->bookType()->id()->value());
+        self::assertSame(
+            ["Archiefgenre", "Zed genre"],
+            array_map(
+                static fn ($term): string => $term->name()->value(),
+                $detailA->classification()?->genres() ?? []
+            )
+        );
+        self::assertSame(
+            ["Aarde", "Zeer lang onderwerp dat rustig moet kunnen afbreken"],
+            array_map(
+                static fn ($term): string => $term->name()->value(),
+                $detailA->classification()?->subjects() ?? []
+            )
+        );
+        self::assertSame(
+            "inactive",
+            $detailA->classification()?->genres()[0]->status()->value
+        );
+        self::assertSame("book-b", $detailB->classification()?->bookType()->id()->value());
+        self::assertSame(
+            ["Detective"],
+            array_map(
+                static fn ($term): string => $term->name()->value(),
+                $detailB->classification()?->genres() ?? []
+            )
+        );
     }
 
     public function testOverviewSortCursorAndDetailUseTheConcreteEditionTitle(): void
@@ -334,7 +412,14 @@ final class CatalogUiReadModelsTest extends PersistenceIntegrationTestCase
         return new CatalogUiReadService(
             $authenticated,
             $contexts,
-            new WpdbCatalogUiReadRepository($this->database, $this->tableNames)
+            new WpdbCatalogUiReadRepository($this->database, $this->tableNames),
+            new LibraryClassificationQueryService(
+                $contexts,
+                new WpdbLibraryClassificationReadRepository(
+                    $this->database,
+                    $this->tableNames
+                )
+            )
         );
     }
 
@@ -386,6 +471,62 @@ final class CatalogUiReadModelsTest extends PersistenceIntegrationTestCase
             "edition_id" => "edition-{$itemId}",
             "item_status" => "active",
         ]);
+    }
+
+    /**
+     * @param array{string, string, string, string} $bookType
+     * @param list<array{string, string, string, string}> $genres
+     * @param list<array{string, string, string, string}> $subjects
+     */
+    private function seedClassification(
+        string $libraryId,
+        string $workId,
+        array $bookType,
+        array $genres,
+        array $subjects
+    ): void {
+        [$bookTypeId, $bookTypeName, $bookTypeNormalized, $bookTypeStatus] = $bookType;
+        $this->database->insert($this->tableNames->libraryBookTypes(), [
+            "library_id" => $libraryId,
+            "book_type_id" => $bookTypeId,
+            "display_name" => $bookTypeName,
+            "normalized_name" => $bookTypeNormalized,
+            "term_status" => $bookTypeStatus,
+        ]);
+        $this->database->insert($this->tableNames->libraryCatalogContexts(), [
+            "library_id" => $libraryId,
+            "work_id" => $workId,
+            "book_type_id" => $bookTypeId,
+            "context_version" => 1,
+        ]);
+
+        foreach ($genres as [$id, $name, $normalized, $status]) {
+            $this->database->insert($this->tableNames->libraryGenres(), [
+                "library_id" => $libraryId,
+                "genre_id" => $id,
+                "display_name" => $name,
+                "normalized_name" => $normalized,
+                "term_status" => $status,
+            ]);
+            $this->database->insert(
+                $this->tableNames->libraryCatalogContextGenres(),
+                ["library_id" => $libraryId, "work_id" => $workId, "genre_id" => $id]
+            );
+        }
+
+        foreach ($subjects as [$id, $name, $normalized, $status]) {
+            $this->database->insert($this->tableNames->librarySubjects(), [
+                "library_id" => $libraryId,
+                "subject_id" => $id,
+                "display_name" => $name,
+                "normalized_name" => $normalized,
+                "term_status" => $status,
+            ]);
+            $this->database->insert(
+                $this->tableNames->libraryCatalogContextSubjects(),
+                ["library_id" => $libraryId, "work_id" => $workId, "subject_id" => $id]
+            );
+        }
     }
 
     private function seedRound(

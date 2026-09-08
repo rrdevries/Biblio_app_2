@@ -6,7 +6,7 @@ const ITEM_ID = "e2e-item-history";
 const DETAIL_URL = `/mijn-bibliotheek/?library_id=${LIBRARY_ID}&item_id=${ITEM_ID}`;
 
 async function capture(page, name, locator = null) {
-    const directory = ".local/ui-book-01-screenshots/after";
+    const directory = ".local/book-api-01-screenshots/after";
     await mkdir(directory, { recursive: true });
     const target = locator ?? page;
     await target.screenshot({
@@ -42,6 +42,23 @@ test("UI-BOOK-01 composes authoritative Book Detail data across responsive layou
             condition: { state: "known", value: "Goed" },
             acquisition: { state: "known", value: "Aankoop" },
             availability: { state: "known", value: "Beschikbaar" },
+            classification: {
+                book_types: [{
+                    book_type_id: "e2e-book-type-reading",
+                    display_name: "Leesboek",
+                }],
+                genres: [{
+                    genre_id: "e2e-genre-historical",
+                    display_name: "Historisch",
+                }, {
+                    genre_id: "e2e-genre-literary",
+                    display_name: "Literatuur",
+                }],
+                subjects: [{
+                    subject_id: "e2e-subject-long",
+                    display_name: "Europese familiegeschiedenis in de twintigste eeuw",
+                }],
+            },
         };
         await route.fulfill({ response, json: body });
     });
@@ -76,6 +93,13 @@ test("UI-BOOK-01 composes authoritative Book Detail data across responsive layou
     await expect(page.getByRole("heading", { name: "Exemplaar", level: 2 })).toBeVisible();
     await expect(page.getByText("9780306406157", { exact: true })).toBeVisible();
     await expect(page.getByText("Kast B", { exact: true })).toBeVisible();
+    await expect(hero.getByText("Leesboek", { exact: true })).toBeVisible();
+    await expect(page.getByText("Historisch, Literatuur", { exact: true })).toBeVisible();
+    await expect(page.getByText(
+        "Europese familiegeschiedenis in de twintigste eeuw",
+        { exact: true }
+    )).toBeVisible();
+    await expect(page.locator("body")).not.toContainText("Classificatie onbekend");
     await expect(page.locator("body")).not.toContainText("Beoordelingen");
     await expect(page.locator("body")).not.toContainText("In collecties");
     await expectNoHorizontalOverflow(page);

@@ -1461,6 +1461,11 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         self::assertSame("Boektitel", $detail["title"]);
         self::assertSame(["state" => "unknown", "value" => null], $detail["isbn"]);
         self::assertSame(["state" => "unknown", "values" => []], $detail["authors"]);
+        self::assertSame([
+            "book_types" => [],
+            "genres" => [],
+            "subjects" => [],
+        ], $detail["classification"]);
         self::assertSame("not_read", $detail["reading"]["status"]);
         self::assertNull($detail["active_reading_round"]);
         self::assertFalse($detail["capabilities"]["end_reading"]);
@@ -1481,6 +1486,71 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             $this->dispatchAsActor($foreign),
             $this->dispatchAsActor($missing)
         );
+    }
+
+    public function testDetailProjectsOnlyAssignedClassificationFromItsLibrary(): void
+    {
+        $this->seedLibrary("detail-class-a", "Bibliotheek A", $this->actorId, "owner");
+        $this->seedLibrary("detail-class-b", "Bibliotheek B", $this->actorId, "owner");
+        $this->seedItem("detail-class-item-a", "detail-class-a", "detail-shared-work", "Gedeeld boek");
+        $this->database->insert($this->tableNames->items(), [
+            "item_id" => "detail-class-item-b",
+            "library_id" => "detail-class-b",
+            "edition_id" => "edition-detail-class-item-a",
+            "item_status" => "active",
+        ]);
+        $this->seedClassificationAssignment(
+            "detail-class-a",
+            "detail-shared-work",
+            ["type-a", "Leesboek", "leesboek", "inactive"],
+            [
+                ["genre-z", "Thriller", "thriller", "active"],
+                ["genre-a", "Historisch", "historisch", "inactive"],
+            ],
+            [["subject-a", "Tweede Wereldoorlog", "tweede wereldoorlog", "active"]]
+        );
+        $this->seedClassificationAssignment(
+            "detail-class-b",
+            "detail-shared-work",
+            ["type-b", "Naslagwerk", "naslagwerk", "active"],
+            [["genre-b", "Wetenschap", "wetenschap", "active"]],
+            []
+        );
+
+        $detailA = $this->successData($this->dispatchAsActor(new WP_REST_Request(
+            "GET",
+            "/biblio/v1/libraries/detail-class-a/items/detail-class-item-a"
+        )));
+        $detailB = $this->successData($this->dispatchAsActor(new WP_REST_Request(
+            "GET",
+            "/biblio/v1/libraries/detail-class-b/items/detail-class-item-b"
+        )));
+
+        self::assertSame([
+            "book_types" => [[
+                "book_type_id" => "type-a",
+                "display_name" => "Leesboek",
+            ]],
+            "genres" => [[
+                "genre_id" => "genre-a",
+                "display_name" => "Historisch",
+            ], [
+                "genre_id" => "genre-z",
+                "display_name" => "Thriller",
+            ]],
+            "subjects" => [[
+                "subject_id" => "subject-a",
+                "display_name" => "Tweede Wereldoorlog",
+            ]],
+        ], $detailA["classification"]);
+        self::assertSame("type-b", $detailB["classification"]["book_types"][0]["book_type_id"]);
+        self::assertSame("Wetenschap", $detailB["classification"]["genres"][0]["display_name"]);
+        self::assertNotContains(
+            "Naslagwerk",
+            array_column($detailA["classification"]["book_types"], "display_name")
+        );
+        self::assertArrayNotHasKey("term_status", $detailA["classification"]["book_types"][0]);
+        self::assertArrayNotHasKey("normalized_name", $detailA["classification"]["genres"][0]);
     }
 
     public function testReadingHistoryRequiresCookieNonceAndReturnsEmptyWithoutOracle(): void
@@ -1889,6 +1959,7 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             "condition",
             "acquisition",
             "availability",
+            "classification",
             "item_status",
             "reading",
             "active_reading_round",
@@ -3472,6 +3543,63 @@ final class RestApiTest extends PersistenceIntegrationTestCase
                 "term_status" => "active",
             ]
         ));
+    }
+
+    /**
+     * @param array{string, string, string, string} $bookType
+     * @param list<array{string, string, string, string}> $genres
+     * @param list<array{string, string, string, string}> $subjects
+     */
+    private function seedClassificationAssignment(
+        string $libraryId,
+        string $workId,
+        array $bookType,
+        array $genres,
+        array $subjects
+    ): void {
+        [$bookTypeId, $name, $normalized, $status] = $bookType;
+        $this->database->insert($this->tableNames->libraryBookTypes(), [
+            "library_id" => $libraryId,
+            "book_type_id" => $bookTypeId,
+            "display_name" => $name,
+            "normalized_name" => $normalized,
+            "term_status" => $status,
+        ]);
+        $this->database->insert($this->tableNames->libraryCatalogContexts(), [
+            "library_id" => $libraryId,
+            "work_id" => $workId,
+            "book_type_id" => $bookTypeId,
+            "context_version" => 1,
+        ]);
+
+        foreach ($genres as [$termId, $termName, $termNormalized, $termStatus]) {
+            $this->database->insert($this->tableNames->libraryGenres(), [
+                "library_id" => $libraryId,
+                "genre_id" => $termId,
+                "display_name" => $termName,
+                "normalized_name" => $termNormalized,
+                "term_status" => $termStatus,
+            ]);
+            $this->database->insert($this->tableNames->libraryCatalogContextGenres(), [
+                "library_id" => $libraryId,
+                "work_id" => $workId,
+                "genre_id" => $termId,
+            ]);
+        }
+        foreach ($subjects as [$termId, $termName, $termNormalized, $termStatus]) {
+            $this->database->insert($this->tableNames->librarySubjects(), [
+                "library_id" => $libraryId,
+                "subject_id" => $termId,
+                "display_name" => $termName,
+                "normalized_name" => $termNormalized,
+                "term_status" => $termStatus,
+            ]);
+            $this->database->insert($this->tableNames->libraryCatalogContextSubjects(), [
+                "library_id" => $libraryId,
+                "work_id" => $workId,
+                "subject_id" => $termId,
+            ]);
+        }
     }
 
     private function seedItem(

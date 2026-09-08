@@ -7,6 +7,7 @@ namespace Biblio\Core\Application\Catalog\Read;
 use Biblio\Core\Application\Identity\AuthenticatedUser;
 use Biblio\Core\Application\Library\LibraryContextQueryService;
 use Biblio\Core\Application\Library\LibraryContextView;
+use Biblio\Core\Application\Catalog\Classification\Read\LibraryClassificationQueryService;
 use Biblio\Core\Catalog\ItemId;
 use Biblio\Core\Library\LibraryId;
 
@@ -15,7 +16,8 @@ final readonly class CatalogUiReadService
     public function __construct(
         private AuthenticatedUser $authenticatedUser,
         private LibraryContextQueryService $libraryContexts,
-        private CatalogUiReadRepository $repository
+        private CatalogUiReadRepository $repository,
+        private LibraryClassificationQueryService $classifications
     ) {
     }
 
@@ -56,6 +58,11 @@ final readonly class CatalogUiReadService
             throw new CatalogItemNotAvailable();
         }
 
+        $classification = $this->classifications->assignedClassificationsForWorks(
+            $libraryId,
+            [$record->workId()]
+        )[$record->workId()->value()] ?? null;
+
         $unknown = CatalogTextValue::unknown();
 
         return new CatalogItemDetailView(
@@ -76,6 +83,7 @@ final readonly class CatalogUiReadService
             $unknown,
             $unknown,
             $unknown,
+            $classification,
             $record->itemStatus(),
             new CatalogReadingSummary(
                 $record->readingStatus(),

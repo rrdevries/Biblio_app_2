@@ -9,6 +9,7 @@ use Biblio\Core\Catalog\EditionId;
 use Biblio\Core\Catalog\ItemId;
 use Biblio\Core\Catalog\ItemStatus;
 use Biblio\Core\Catalog\WorkId;
+use Biblio\Core\Catalog\Classification\LibraryCatalogClassification;
 
 final readonly class CatalogItemDetailView
 {
@@ -30,6 +31,7 @@ final readonly class CatalogItemDetailView
         private CatalogTextValue $condition,
         private CatalogTextValue $acquisition,
         private CatalogTextValue $availability,
+        private ?LibraryCatalogClassification $classification,
         private ItemStatus $itemStatus,
         private CatalogReadingSummary $reading,
         private ?CatalogActiveReadingRoundView $activeReadingRound,
@@ -54,6 +56,10 @@ final readonly class CatalogItemDetailView
     public function condition(): CatalogTextValue { return $this->condition; }
     public function acquisition(): CatalogTextValue { return $this->acquisition; }
     public function availability(): CatalogTextValue { return $this->availability; }
+    public function classification(): ?LibraryCatalogClassification
+    {
+        return $this->classification;
+    }
     public function itemStatus(): ItemStatus { return $this->itemStatus; }
     public function reading(): CatalogReadingSummary { return $this->reading; }
     public function activeReadingRound(): ?CatalogActiveReadingRoundView
