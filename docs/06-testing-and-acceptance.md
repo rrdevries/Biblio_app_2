@@ -2712,3 +2712,43 @@ BOOK-API-02 is accepted when:
 
 Status: **GO / CLOSED**. Schema remains `1017`; Biblio UI is `0.9.0`. See
 `docs/57-book-api-02-book-detail-collection-membership-projection.md`.
+
+## 85. BOOK-API-03 Book Detail Ratings & Reviews projection
+
+BOOK-API-03 is accepted when:
+
+- Item detail composes the existing B7 Library-public assessment read for the
+  Item-derived Work and exactly the already-authorized Library;
+- the B7 service independently enforces current actor plus
+  `canViewCollection`, while missing/foreign Item detail retains its existing
+  non-enumerating failure;
+- only active-author, visibly moderated publications for the current Library
+  and Work with active Item presence are returned; private, withdrawn, hidden,
+  removed/source-deleted and other-Library data remains absent;
+- Rating and Review remain independent user-owned sources, optional
+  owner/Work-matching ReadingRound links preserve multiple reread
+  contributions, and no contribution is collapsed into a latest record;
+- output reuses the exact B7 contribution shapes, current WordPress
+  `display_name`, publication time, unique-user rating aggregate and opaque
+  cursor, with no internal IDs, ownership, ReadingRound, Library or moderation
+  state;
+- deterministic mixed ordering is publication `updated_at DESC` then
+  `publication_id DESC`, with the first canonical page of 20 embedded in Book
+  Detail and no second frontend request;
+- the strict decoder rejects malformed shapes, rating scale/half-steps,
+  identity, timestamps, aggregate/cursor semantics and extra private fields
+  without coercion;
+- D-BOOK-01 shows a calm open `Beoordelingen` section only for non-empty data,
+  renders escaped review content as literal text, wraps long content, and adds
+  no create/edit/publish/moderation action;
+- deterministic fixtures prove empty, mixed, repeated ReadingRound, own and
+  other private, cross-Library shared-Work, rating-only, review-only,
+  withdrawn and hidden cases;
+- classification, Collection membership, ReadingRound lifecycle/history,
+  Private Notes, Core, REST, UI and guarded browser regressions pass with clean
+  fixture state; and
+- no schema, write flow, moderation, description, provider, aggregate engine,
+  Elementor or unrelated Book Detail behavior is added.
+
+Status: **GO / CLOSED**. Schema remains `1017`; Biblio UI is `0.10.0`. See
+`docs/58-book-api-03-book-detail-ratings-reviews-projection.md`.

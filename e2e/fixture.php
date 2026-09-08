@@ -39,6 +39,7 @@ const BIBLIO_E2E_MARKER_VALUE = "vertical-slice-1a-step-11";
 const BIBLIO_E2E_ACTOR_LIBRARY = "e2e-library-actor";
 const BIBLIO_E2E_OTHER_LIBRARY = "e2e-library-other";
 const BIBLIO_E2E_PRIMARY_ITEM = "e2e-item-primary";
+const BIBLIO_E2E_PRIMARY_OTHER_ITEM = "e2e-item-primary-other-library";
 const BIBLIO_E2E_MISSING_ITEM = "e2e-item-missing-metadata";
 const BIBLIO_E2E_CONFLICT_ITEM = "e2e-item-active-conflict";
 const BIBLIO_E2E_FOREIGN_ITEM = "e2e-item-foreign";
@@ -154,6 +155,7 @@ function biblioE2eIds(): array
         "history_refresh_edition" => "e2e-edition-history-refresh",
         "history_rapid_edition" => "e2e-edition-history-rapid",
         "primary_item" => BIBLIO_E2E_PRIMARY_ITEM,
+        "primary_other_item" => BIBLIO_E2E_PRIMARY_OTHER_ITEM,
         "missing_item" => BIBLIO_E2E_MISSING_ITEM,
         "conflict_item" => BIBLIO_E2E_CONFLICT_ITEM,
         "foreign_item" => BIBLIO_E2E_FOREIGN_ITEM,
@@ -323,6 +325,8 @@ function biblioE2eCleanupCore(wpdb $database): void
             biblioE2eDeleteIn($database, $tables->nextReadingLists(), "user_id", $userIds);
         }
         biblioE2eDeleteIn($database, $tables->contributionPublications(), "library_id", $libraries);
+        biblioE2eDeleteIn($database, $tables->ratings(), "work_id", $works);
+        biblioE2eDeleteIn($database, $tables->reviews(), "work_id", $works);
         biblioE2eDeleteIn($database, $tables->libraryActivityEvents(), "library_id", $libraries);
         biblioE2eDeleteIn($database, $tables->nextReadingEntries(), "item_id", $items);
         biblioE2eDeleteIn($database, $tables->readingRounds(), "work_id", $works);
@@ -337,8 +341,6 @@ function biblioE2eCleanupCore(wpdb $database): void
             ]
         );
         biblioE2eDeleteIn($database, $tables->privateNotes(), "work_id", $works);
-        biblioE2eDeleteIn($database, $tables->ratings(), "work_id", $works);
-        biblioE2eDeleteIn($database, $tables->reviews(), "work_id", $works);
         biblioE2eDeleteIn(
             $database,
             $tables->collectionMemberships(),
@@ -577,6 +579,120 @@ function biblioE2eSeedCollections(wpdb $database): void
             "end_reason" => $reason,
         ]) !== 1) {
             throw new RuntimeException("Could not create exact Collection membership fixture.");
+        }
+    }
+}
+
+function biblioE2eSeedAssessments(
+    wpdb $database,
+    string $actorId,
+    string $otherId
+): void {
+    $tables = new CoreTableNames($database->prefix);
+    $workId = "e2e-work-primary";
+    // Keep assessment history off the browsing actor's existing reading state.
+    $rounds = [
+        ["e2e-assessment-round-actor-a", $otherId],
+        ["e2e-assessment-round-actor-b", $otherId],
+        ["e2e-assessment-round-actor-c", $otherId],
+        ["e2e-assessment-round-actor-d", $otherId],
+        ["e2e-assessment-round-actor-e", $otherId],
+        ["e2e-assessment-round-actor-other-library", $otherId],
+        ["e2e-assessment-round-other-private", $otherId],
+        ["e2e-assessment-round-other-hidden", $otherId],
+    ];
+    foreach ($rounds as [$roundId, $userId]) {
+        biblioE2eSeedRound(
+            $database,
+            $roundId,
+            $userId,
+            $workId,
+            null,
+            null,
+            "completed",
+            "historical_manual",
+            ReadingDate::year(2026),
+            ReadingDate::year(2026)
+        );
+    }
+
+    $ratings = [
+        ["e2e-rating-actor-a", $otherId, "e2e-assessment-round-actor-a", 10, "10:01:00"],
+        ["e2e-rating-actor-b", $otherId, "e2e-assessment-round-actor-b", 8, "10:03:00"],
+        ["e2e-rating-actor-only", $otherId, "e2e-assessment-round-actor-c", 7, "10:05:00"],
+        ["e2e-rating-other-library", $otherId, null, 6, "10:01:30"],
+    ];
+    foreach ($ratings as [$ratingId, $userId, $roundId, $halfUnits, $time]) {
+        if ($database->insert($tables->ratings(), [
+            "rating_id" => $ratingId,
+            "user_id" => $userId,
+            "work_id" => $workId,
+            "reading_round_id" => $roundId,
+            "rating_half_units" => $halfUnits,
+            "created_at" => "2026-09-08 {$time}.000000",
+            "updated_at" => "2026-09-08 {$time}.000000",
+            "rating_version" => 1,
+        ]) !== 1) {
+            throw new RuntimeException("Could not create exact Rating fixture.");
+        }
+    }
+
+    $reviews = [
+        ["e2e-review-actor-a", $otherId, "e2e-assessment-round-actor-a", "Een bedachtzame eerste beoordeling met <script> als zichtbare tekst.", "10:02:00"],
+        ["e2e-review-actor-b", $otherId, "e2e-assessment-round-actor-b", "Een tweede leesronde met een zeerlangonafgebrokenreviewwoorddatveiligmoetafbrekenzonderhorizontaleoverflow.", "10:04:00"],
+        ["e2e-review-actor-text-only", $otherId, "e2e-assessment-round-actor-d", "Zonder sterren, wel met een rustige observatie.", "10:06:00"],
+        ["e2e-review-actor-private", $actorId, null, "E2E OWN PRIVATE REVIEW MUST NEVER LEAK.", "10:07:00"],
+        ["e2e-review-other-public", $otherId, null, "Alleen gepubliceerd in de andere Library.", "10:02:30"],
+        ["e2e-review-other-private", $otherId, "e2e-assessment-round-other-private", "E2E OTHER PRIVATE REVIEW MUST NEVER LEAK.", "10:07:30"],
+        ["e2e-review-actor-other-library", $otherId, "e2e-assessment-round-actor-other-library", "Publicatie uitsluitend in de andere Library.", "10:08:00"],
+        ["e2e-review-actor-withdrawn", $otherId, "e2e-assessment-round-actor-e", "E2E WITHDRAWN REVIEW MUST NEVER LEAK.", "10:09:00"],
+        ["e2e-review-other-hidden", $otherId, "e2e-assessment-round-other-hidden", "E2E HIDDEN REVIEW MUST NEVER LEAK.", "10:10:00"],
+    ];
+    foreach ($reviews as [$reviewId, $userId, $roundId, $content, $time]) {
+        if ($database->insert($tables->reviews(), [
+            "review_id" => $reviewId,
+            "user_id" => $userId,
+            "work_id" => $workId,
+            "reading_round_id" => $roundId,
+            "review_content" => $content,
+            "created_at" => "2026-09-08 {$time}.000000",
+            "updated_at" => "2026-09-08 {$time}.000000",
+            "review_version" => 1,
+        ]) !== 1) {
+            throw new RuntimeException("Could not create exact Review fixture.");
+        }
+    }
+
+    $publications = [
+        ["e2e-publication-rating-a", BIBLIO_E2E_ACTOR_LIBRARY, "e2e-rating-actor-a", null, "active", "visible", "10:01:00"],
+        ["e2e-publication-review-a", BIBLIO_E2E_ACTOR_LIBRARY, null, "e2e-review-actor-a", "active", "visible", "10:02:00"],
+        ["e2e-publication-rating-b", BIBLIO_E2E_ACTOR_LIBRARY, "e2e-rating-actor-b", null, "active", "visible", "10:03:00"],
+        ["e2e-publication-review-b", BIBLIO_E2E_ACTOR_LIBRARY, null, "e2e-review-actor-b", "active", "visible", "10:04:00"],
+        ["e2e-publication-rating-only", BIBLIO_E2E_ACTOR_LIBRARY, "e2e-rating-actor-only", null, "active", "visible", "10:05:00"],
+        ["e2e-publication-review-text-only", BIBLIO_E2E_ACTOR_LIBRARY, null, "e2e-review-actor-text-only", "active", "visible", "10:06:00"],
+        ["e2e-publication-other-rating", BIBLIO_E2E_OTHER_LIBRARY, "e2e-rating-other-library", null, "active", "visible", "10:01:30"],
+        ["e2e-publication-other-review", BIBLIO_E2E_OTHER_LIBRARY, null, "e2e-review-other-public", "active", "visible", "10:02:30"],
+        ["e2e-publication-actor-other", BIBLIO_E2E_OTHER_LIBRARY, null, "e2e-review-actor-other-library", "active", "visible", "10:08:00"],
+        ["e2e-publication-withdrawn", BIBLIO_E2E_ACTOR_LIBRARY, null, "e2e-review-actor-withdrawn", "withdrawn", "visible", "10:09:00"],
+        ["e2e-publication-hidden", BIBLIO_E2E_OTHER_LIBRARY, null, "e2e-review-other-hidden", "active", "hidden", "10:10:00"],
+    ];
+    foreach ($publications as [$publicationId, $libraryId, $ratingId, $reviewId, $authorStatus, $moderationStatus, $time]) {
+        $moderated = $moderationStatus === "visible" ? null : "fixture hidden";
+        if ($database->insert($tables->contributionPublications(), [
+            "publication_id" => $publicationId,
+            "library_id" => $libraryId,
+            "rating_id" => $ratingId,
+            "review_id" => $reviewId,
+            "author_status" => $authorStatus,
+            "moderation_status" => $moderationStatus,
+            "moderation_reason" => $moderated,
+            "moderator_user_id" => $moderated === null ? null : $actorId,
+            "moderated_at" => $moderated === null ? null : "2026-09-08 {$time}.000000",
+            "published_at" => "2026-09-08 {$time}.000000",
+            "updated_at" => "2026-09-08 {$time}.000000",
+            "publication_version" => 1,
+        ]) !== 1) {
+            throw new RuntimeException("Could not create exact assessment Publication fixture.");
         }
     }
 }
@@ -1003,6 +1119,19 @@ function biblioE2eCounts(wpdb $database): array
         "private_notes" => (int) $database->get_var($database->prepare(
             "SELECT COUNT(*) FROM `{$tables->privateNotes()}` WHERE work_id IN ({$workSql})",
             ...$workValues
+        )),
+        "ratings" => (int) $database->get_var($database->prepare(
+            "SELECT COUNT(*) FROM `{$tables->ratings()}` WHERE work_id IN ({$workSql})",
+            ...$workValues
+        )),
+        "reviews" => (int) $database->get_var($database->prepare(
+            "SELECT COUNT(*) FROM `{$tables->reviews()}` WHERE work_id IN ({$workSql})",
+            ...$workValues
+        )),
+        "assessment_publications" => (int) $database->get_var($database->prepare(
+            "SELECT COUNT(*) FROM `{$tables->contributionPublications()}` "
+                . "WHERE library_id IN ({$librarySql})",
+            ...$libraries
         )),
         "memberships" => (int) $database->get_var($database->prepare(
             "SELECT COUNT(*) FROM `{$tables->memberships()}` WHERE library_id IN ({$librarySql})",
@@ -1453,6 +1582,22 @@ function biblioE2eSetup(wpdb $database): void
     biblioE2eAddItem($database, $composition, BIBLIO_E2E_OTHER_LIBRARY, BIBLIO_E2E_HISTORY_REFRESH_ITEM, "e2e-work-history-refresh", "E2E History Refresh Failure", "e2e-edition-history-refresh");
     biblioE2eAddItem($database, $composition, BIBLIO_E2E_OTHER_LIBRARY, BIBLIO_E2E_HISTORY_RAPID_ITEM, "e2e-work-history-rapid", "E2E Andere Geschiedenis", "e2e-edition-history-rapid");
     biblioE2eAddItem($database, $composition, BIBLIO_E2E_OTHER_LIBRARY, BIBLIO_E2E_FOREIGN_ITEM, "e2e-work-foreign", "Ripper", "e2e-edition-foreign");
+    $composition->application()->libraryItemCreation()->addForExistingEdition(
+        new LibraryId(BIBLIO_E2E_OTHER_LIBRARY),
+        new ItemId(BIBLIO_E2E_PRIMARY_OTHER_ITEM),
+        new EditionId("e2e-edition-primary"),
+        new LibraryCatalogContextInitialization(new LibraryCatalogSelection(
+            (new WpdbLibraryBookTypeRepository(
+                $database,
+                new CoreTableNames($database->prefix)
+            ))->findBySeedKey(
+                new LibraryId(BIBLIO_E2E_OTHER_LIBRARY),
+                new ClassificationSeedKey("book_type.reading_book")
+            )?->id() ?? throw new RuntimeException(
+                "Required other-Library reading-book seed is missing."
+            )
+        ))
+    );
     biblioE2eSeedCollections($database);
 
     biblioE2eStartRound($database, $actorName, BIBLIO_E2E_ACTOR_LIBRARY, BIBLIO_E2E_END_COMPLETED_ITEM, ReadingDate::exact(2026, 8, 2));
@@ -1472,6 +1617,7 @@ function biblioE2eSetup(wpdb $database): void
         (string) $actor,
         (string) $other
     );
+    biblioE2eSeedAssessments($database, (string) $actor, (string) $other);
     biblioE2eSeedPrivateNotes(
         $database,
         (string) $actor,

@@ -149,6 +149,11 @@ function detail(selectedLibrary, itemId, overrides = {}) {
             subjects: [],
         },
         collections: [],
+        assessments: {
+            contributions: [],
+            aggregate: { average: null, voter_count: 0 },
+            next_cursor: null,
+        },
         item_status: "active",
         reading: {
             status: "not_read",
@@ -921,6 +926,143 @@ test("Item detail strictly validates active ReadingRound and end capability", as
             }],
         }),
         expectedState: "detail",
+    }, {
+        name: "valid mixed assessments",
+        payload: detail(selected, "item-1", {
+            assessments: {
+                contributions: [{
+                    type: "review",
+                    display_name: "Lezer A",
+                    published_at: "2026-09-08T10:20:30.123456Z",
+                    rating: 4.5,
+                    review_html: "Sterk &amp; rustig",
+                }, {
+                    type: "rating",
+                    display_name: "Lezer B",
+                    published_at: "2026-09-07T09:00:00.000000Z",
+                    rating: 3,
+                }],
+                aggregate: { average: 3.8, voter_count: 2 },
+                next_cursor: "opaque-cursor",
+            },
+        }),
+        expectedState: "detail",
+    }, {
+        name: "assessments must be an exact object",
+        payload: detail(selected, "item-1", {
+            assessments: {
+                contributions: [],
+                aggregate: { average: null, voter_count: 0 },
+                next_cursor: null,
+                user_id: "private",
+            },
+        }),
+        expectedState: "request-error",
+    }, {
+        name: "rating does not coerce strings",
+        payload: detail(selected, "item-1", {
+            assessments: {
+                contributions: [{
+                    type: "rating",
+                    display_name: "Lezer",
+                    published_at: "2026-09-08T10:20:30.123456Z",
+                    rating: "4.5",
+                }],
+                aggregate: { average: 4.5, voter_count: 1 },
+                next_cursor: null,
+            },
+        }),
+        expectedState: "request-error",
+    }, {
+        name: "rating rejects unsupported increments",
+        payload: detail(selected, "item-1", {
+            assessments: {
+                contributions: [{
+                    type: "rating",
+                    display_name: "Lezer",
+                    published_at: "2026-09-08T10:20:30.123456Z",
+                    rating: 4.2,
+                }],
+                aggregate: { average: 4.2, voter_count: 1 },
+                next_cursor: null,
+            },
+        }),
+        expectedState: "request-error",
+    }, {
+        name: "review requires a safe display identity",
+        payload: detail(selected, "item-1", {
+            assessments: {
+                contributions: [{
+                    type: "review",
+                    display_name: "",
+                    published_at: "2026-09-08T10:20:30.123456Z",
+                    rating: null,
+                    review_html: "Tekst",
+                }],
+                aggregate: { average: null, voter_count: 0 },
+                next_cursor: null,
+            },
+        }),
+        expectedState: "request-error",
+    }, {
+        name: "review rejects whitespace-only display identity",
+        payload: detail(selected, "item-1", {
+            assessments: {
+                contributions: [{
+                    type: "review",
+                    display_name: "   ",
+                    published_at: "2026-09-08T10:20:30.123456Z",
+                    rating: null,
+                    review_html: "Tekst",
+                }],
+                aggregate: { average: null, voter_count: 0 },
+                next_cursor: null,
+            },
+        }),
+        expectedState: "request-error",
+    }, {
+        name: "review rejects malformed publication timestamp",
+        payload: detail(selected, "item-1", {
+            assessments: {
+                contributions: [{
+                    type: "review",
+                    display_name: "Lezer",
+                    published_at: "2026-02-30T10:20:30.123456Z",
+                    rating: null,
+                    review_html: "Tekst",
+                }],
+                aggregate: { average: null, voter_count: 0 },
+                next_cursor: null,
+            },
+        }),
+        expectedState: "request-error",
+    }, {
+        name: "review rejects private or extra fields",
+        payload: detail(selected, "item-1", {
+            assessments: {
+                contributions: [{
+                    type: "review",
+                    display_name: "Lezer",
+                    published_at: "2026-09-08T10:20:30.123456Z",
+                    rating: null,
+                    review_html: "Tekst",
+                    reading_round_id: "private-round",
+                }],
+                aggregate: { average: null, voter_count: 0 },
+                next_cursor: null,
+            },
+        }),
+        expectedState: "request-error",
+    }, {
+        name: "aggregate nullability must match voter count",
+        payload: detail(selected, "item-1", {
+            assessments: {
+                contributions: [],
+                aggregate: { average: null, voter_count: 1 },
+                next_cursor: null,
+            },
+        }),
+        expectedState: "request-error",
     }, {
         name: "collections must be a list",
         payload: detail(selected, "item-1", { collections: null }),

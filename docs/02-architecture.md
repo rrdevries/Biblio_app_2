@@ -933,6 +933,22 @@ junction and term predicates remain Library-scoped. Unlike the active-only
 inactive terms. REST receives a small immutable allowlist of IDs and current
 display names; no persistence rows or status fields cross the adapter.
 
+BOOK-API-02 composes the existing Library Collection query for the exact Item
+after that same authorization boundary. Active Item, membership and Collection
+predicates all retain the explicit Library; no Edition-, Work- or sibling-Item
+inference is allowed.
+
+BOOK-API-03 then composes the existing B7 public assessment page for the
+Item-derived Work. `GetLibraryPublicAssessmentsService` independently resolves
+the actor and `canViewCollection` Library Context before its repository read.
+The repository unions active, visibly moderated rating and review publications
+for the exact Library and Work, requires active Library Item presence, and
+orders by publication update time plus publication ID. Item detail serializes
+the established public contribution DTOs, aggregate and opaque cursor without
+exposing source, owner, ReadingRound, publication or moderation internals.
+Private assessment reads and all assessment mutations remain separate Core
+boundaries.
+
 ## 22. F2.12 WordPress REST adapter boundary
 
 The versioned `biblio/v1` adapter is WordPress infrastructure around existing

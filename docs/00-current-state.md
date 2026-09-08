@@ -2365,3 +2365,35 @@ omits the section when empty. There is no Collection route, mutation, reorder,
 wishlist grouping or schema change. Schema remains `1017`; Biblio UI is
 `0.9.0`. Detailed evidence:
 `docs/57-book-api-02-book-detail-collection-membership-projection.md`.
+
+### BOOK-API-03 — Book Detail Ratings & Reviews projection
+
+Status: **GO / CLOSED**
+
+The existing authorized Item-detail response now composes the existing B7
+Library-public assessment page for the Item-derived Work and the same explicit
+Library. It returns the first 20 mixed rating/review publications, the existing
+unique-user rating aggregate and an opaque continuation cursor. Ordering
+remains publication `updated_at DESC, publication_id DESC`.
+
+Only active author publications with visible moderation are readable, and only
+while the Library still has an active Item for the Work. Withdrawn, hidden,
+removed or source-deleted publications and all unpublished private sources are
+absent. Current WordPress `display_name` is the only exposed author identity;
+source, owner, ReadingRound, publication, Library and moderation identifiers or
+state do not cross the public contract. The B7 read reauthorizes
+`canViewCollection` for the same Library Context, so shared Works never create
+a cross-Library fallback.
+
+Rating and Review remain separate user-owned, Work-scoped sources. Either may
+exist independently; each may optionally belong to an owner-matching
+ReadingRound for the same Work, allowing distinct contributions across
+rereads. Book Detail does not add own-private data or mutation behavior.
+
+The strict frontend decoder accepts only the exact established B7 contribution
+shapes, rating half-steps from 1.0 through 5.0, exact public timestamps,
+aggregate and cursor semantics. D-BOOK-01 renders non-empty results as a calm
+open `Beoordelingen` list in server order. Escaped review content is displayed
+as literal text, with compact rating, subdued identity/date and no controls.
+Schema remains `1017`; Biblio UI is `0.10.0`. Detailed evidence:
+`docs/58-book-api-03-book-detail-ratings-reviews-projection.md`.
