@@ -186,6 +186,31 @@ function metadataSection(documentImpl, id, heading, fields) {
     return section;
 }
 
+function collectionsSection(documentImpl, collections) {
+    if (!Array.isArray(collections) || collections.length === 0) {
+        return null;
+    }
+
+    const section = element(documentImpl, "section", {
+        className: "biblio-ui__metadata-section biblio-ui__detail-collections",
+        attributes: { id: "collecties" },
+    });
+    const list = element(documentImpl, "ul", {
+        className: "biblio-ui__collection-memberships",
+    });
+    section.append(element(documentImpl, "h2", { text: "In collecties" }));
+
+    for (const collection of collections) {
+        list.append(element(documentImpl, "li", {
+            text: collection.display_name,
+        }));
+    }
+
+    section.append(list);
+
+    return section;
+}
+
 function renderLoading(documentImpl) {
     const view = element(documentImpl, "section", {
         className: "biblio-ui__view",
@@ -404,6 +429,7 @@ function renderDetail(documentImpl, model, actions) {
         ["Verwerving", knownText(detail.acquisition)],
         ["Beschikbaarheid", knownText(detail.availability)],
     ]);
+    const collections = collectionsSection(documentImpl, detail.collections);
 
     const navItems = [
         ["Overzicht", "overzicht"],
@@ -412,6 +438,7 @@ function renderDetail(documentImpl, model, actions) {
         ...(bookDetails === null ? [] : [["Boekdetails", "boekdetails"]]),
         ...(editionDetails === null ? [] : [["Uitgave", "uitgave"]]),
         ...(itemDetails === null ? [] : [["Exemplaar", "exemplaar"]]),
+        ...(collections === null ? [] : [["In collecties", "collecties"]]),
     ];
     const subnav = element(documentImpl, "nav", {
         className: "biblio-ui__detail-subnav",
@@ -477,7 +504,7 @@ function renderDetail(documentImpl, model, actions) {
         className: "biblio-ui__detail-context",
         attributes: { "aria-label": "Boek- en exemplaargegevens" },
     });
-    append(context, bookDetails, editionDetails, itemDetails);
+    append(context, bookDetails, editionDetails, itemDetails, collections);
     body.append(content, context);
     view.append(body);
 

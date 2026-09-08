@@ -36,6 +36,13 @@ actor is also a direct manager of the other Library while the foreign active
 ReadingRound remains owned by the other user; this proves that Library
 management never transfers private ReadingRound ownership.
 
+The guarded Book Detail layer adds five exact Collections and five exact
+Collection-membership periods. The visible history Item has two active
+memberships in manual Collection order; its same-Edition sibling has a distinct
+membership. An archived Collection and an inactive removed membership remain
+absent from the active detail response. Cleanup and residue counts include both
+Collection tables explicitly.
+
 The 1C layer adds eight Items in that other allowlisted Library across six
 Works. One shared Work has a primary Item, another Item for the same Edition,
 an Item for another Edition, one actor-owned ExternalLoan, thirteen ended

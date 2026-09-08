@@ -8,7 +8,9 @@ use Biblio\Core\Application\Identity\AuthenticatedUser;
 use Biblio\Core\Application\Library\LibraryContextQueryService;
 use Biblio\Core\Application\Library\LibraryContextView;
 use Biblio\Core\Application\Catalog\Classification\Read\LibraryClassificationQueryService;
+use Biblio\Core\Application\Collections\Read\LibraryCollectionQueryService;
 use Biblio\Core\Catalog\ItemId;
+use Biblio\Core\Collections\CollectionStatus;
 use Biblio\Core\Library\LibraryId;
 
 final readonly class CatalogUiReadService
@@ -17,7 +19,8 @@ final readonly class CatalogUiReadService
         private AuthenticatedUser $authenticatedUser,
         private LibraryContextQueryService $libraryContexts,
         private CatalogUiReadRepository $repository,
-        private LibraryClassificationQueryService $classifications
+        private LibraryClassificationQueryService $classifications,
+        private LibraryCollectionQueryService $collections
     ) {
     }
 
@@ -62,6 +65,28 @@ final readonly class CatalogUiReadService
             $libraryId,
             [$record->workId()]
         )[$record->workId()->value()] ?? null;
+        $collectionIds = $this->collections->activeCollectionsForItems(
+            $libraryId,
+            [$record->itemId()]
+        )[$record->itemId()->value()] ?? [];
+        $collectionsById = $this->collections->collections(
+            $libraryId,
+            $collectionIds
+        );
+        $collections = [];
+        foreach ($collectionIds as $collectionId) {
+            $collection = $collectionsById[$collectionId->value()] ?? null;
+            if (
+                $collection === null
+                || $collection->status() !== CollectionStatus::Active
+            ) {
+                continue;
+            }
+            $collections[] = new CatalogItemCollectionView(
+                $collection->id(),
+                $collection->name()->value()
+            );
+        }
 
         $unknown = CatalogTextValue::unknown();
 
@@ -84,6 +109,7 @@ final readonly class CatalogUiReadService
             $unknown,
             $unknown,
             $classification,
+            $collections,
             $record->itemStatus(),
             new CatalogReadingSummary(
                 $record->readingStatus(),

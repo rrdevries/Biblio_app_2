@@ -311,6 +311,13 @@ final readonly class RestResponseSerializer
             "classification" => $this->detailClassification(
                 $detail->classification()
             ),
+            "collections" => array_map(
+                static fn ($collection): array => [
+                    "collection_id" => $collection->collectionId()->value(),
+                    "display_name" => $collection->displayName(),
+                ],
+                $detail->collections()
+            ),
             "item_status" => $detail->itemStatus()->value,
             "reading" => $this->readingSummary($detail->reading()),
             "active_reading_round" => $this->activeReadingRound(
