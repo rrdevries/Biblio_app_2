@@ -6,17 +6,26 @@ import { BiblioApiError } from "../../assets/js/api.js";
 
 const appSourceUrl = new URL("../../assets/js/app.js", import.meta.url);
 let appSource = await readFile(appSourceUrl, "utf8");
+const catalogQueryTestUrl = new URL(
+    "../../assets/js/catalog-query.js",
+    import.meta.url
+).href;
+const routeStateTestSource = (await readFile(
+    new URL("../../assets/js/route-state.js", import.meta.url),
+    "utf8"
+)).replace('"biblio-ui/catalog-query"', JSON.stringify(catalogQueryTestUrl));
+const routeStateTestUrl = `data:text/javascript;base64,${Buffer.from(routeStateTestSource).toString("base64")}`;
 
 for (const [moduleId, file] of [
     ["biblio-ui/api", "api.js"],
     ["biblio-ui/add-book-wizard", "add-book-wizard.js"],
+    ["biblio-ui/catalog-query", "catalog-query.js"],
     ["biblio-ui/detail-view", "detail-view.js"],
     ["biblio-ui/end-reading-view", "end-reading-view.js"],
     ["biblio-ui/library-state", "library-state.js"],
     ["biblio-ui/overview-view", "overview-view.js"],
     ["biblio-ui/private-notes", "private-notes.js"],
     ["biblio-ui/reading-history", "reading-history.js"],
-    ["biblio-ui/route-state", "route-state.js"],
     ["biblio-ui/start-reading-view", "start-reading-view.js"],
     ["biblio-ui/ui-preferences", "ui-preferences.js"],
     ["biblio-ui/ui-shell", "ui-shell.js"],
@@ -26,6 +35,7 @@ for (const [moduleId, file] of [
         JSON.stringify(new URL(`../../assets/js/${file}`, import.meta.url).href)
     );
 }
+appSource = appSource.replaceAll('"biblio-ui/route-state"', JSON.stringify(routeStateTestUrl));
 
 const { bootstrapLibraryApps, createLibraryApp } = await import(
     `data:text/javascript;base64,${Buffer.from(appSource).toString("base64")}`
@@ -110,15 +120,55 @@ function item(id, title = `Book ${id}`) {
         location_or_source: { state: "known", value: "Library source" },
         reading_status: "not_read",
         item_status: "active",
-        capabilities: { view_item: true, start_reading: true },
+        capabilities: { view_item: true, start_reading: false },
     };
 }
 
 function overview(selectedLibrary, items, nextCursor = null) {
     return {
         library: selectedLibrary,
-        items,
+        items: items.map((entry) => ({
+            item_id: entry.item_id,
+            work_id: entry.work_id,
+            edition_id: entry.edition_id,
+            title: entry.title,
+            item_status: entry.item_status,
+            inventory_number: null,
+            authors: entry.authors.values.map((displayName, index) => ({
+                author_id: `author-${index + 1}`,
+                display_name: displayName,
+            })),
+            series: [],
+            location: entry.location_or_source.state === "known"
+                ? {
+                    location_id: `location-${entry.item_id}`,
+                    display_name: entry.location_or_source.value,
+                }
+                : null,
+            classification: null,
+            collection_ids: [],
+            reading_status: entry.reading_status,
+            contained_match_title: null,
+        })),
         next_cursor: nextCursor,
+    };
+}
+
+function queryState(overrides = {}) {
+    return {
+        search: "",
+        readingStatuses: [],
+        authorIds: [],
+        seriesIds: [],
+        locationIds: [],
+        bookTypeIds: [],
+        genreIds: [],
+        subjectIds: [],
+        collectionIds: [],
+        withoutCollection: false,
+        sort: "title",
+        archiveScope: "active_only",
+        ...overrides,
     };
 }
 
@@ -399,6 +449,15 @@ function createApp({
         apiFactory() {
             return {
                 get(path, options) {
+                    if (path.endsWith("/classification-options")) {
+                        const libraryId = decodeURIComponent(path.split("/")[1]);
+                        return Promise.resolve({
+                            library_id: libraryId,
+                            book_types: [],
+                            genres: [],
+                            subjects: [],
+                        });
+                    }
                     return path.includes("/reading-history?")
                         ? historyGet(path, options)
                         : get(path, options);
@@ -572,7 +631,7 @@ test("chooser selection writes URL state then rebuilds with fresh Library data",
     assert.deepEqual(requests, [
         "me/libraries",
         "me/libraries",
-        "libraries/library-b/items",
+        "libraries/library-b/catalog",
     ]);
     assert.equal(renders.renders.at(-1).model.state, "overview");
     assert.equal(renders.renders.at(-1).model.library.library_id, "library-b");
@@ -598,7 +657,7 @@ test("a selected Library loads only the exact active overview contract", async (
 
     assert.deepEqual(requests.map(([path]) => path), [
         "me/libraries",
-        "libraries/library%2Fone/items",
+        "libraries/library%2Fone/catalog",
     ]);
     assert.ok(requests.every(([, signal]) => signal instanceof AbortSignal));
     assert.deepEqual(
@@ -613,8 +672,89 @@ test("a selected Library loads only the exact active overview contract", async (
         loadingMore: false,
         loadMoreError: false,
         canRetryCursor: false,
+        refreshing: false,
+        queryError: false,
+        query: queryState(),
+        searchDraft: "",
+        filterOptions: { bookTypes: [], genres: [], subjects: [] },
+        resultAnnouncement: "1 boek geladen.",
         quickView: null,
     });
+});
+
+test("explicit catalog URL state drives the exact first server query", async () => {
+    const selected = library("library-1", { designated: true });
+    const requests = [];
+    const renders = recorder();
+    const { app } = createApp({
+        url: "https://example.test/mijn-bibliotheek/?library_id=library-1"
+            + "&catalog_search=Dune&catalog_sort=author"
+            + "&catalog_reading_status=reading&catalog_book_type=type-1",
+        renders,
+        async get(path) {
+            requests.push(path);
+            return path === "me/libraries"
+                ? { libraries: [selected] }
+                : overview(selected, [item("dune")]);
+        },
+    });
+
+    await app.start();
+
+    assert.deepEqual(requests, [
+        "me/libraries",
+        "libraries/library-1/catalog?search=Dune"
+            + "&reading_statuses%5B%5D=reading"
+            + "&book_type_ids%5B%5D=type-1&sort=author",
+    ]);
+    assert.deepEqual(renders.renders.at(-1).model.query, queryState({
+        search: "Dune",
+        readingStatuses: ["reading"],
+        bookTypeIds: ["type-1"],
+        sort: "author",
+    }));
+});
+
+test("new catalog queries reset the cursor and stale responses cannot win", async () => {
+    const selected = library("library-1", { designated: true });
+    const firstSearch = deferred();
+    const secondSearch = deferred();
+    const requests = [];
+    const renders = recorder();
+    const { app, browser } = createApp({
+        url: "https://example.test/mijn-bibliotheek/?library_id=library-1",
+        renders,
+        get(path) {
+            requests.push(path);
+            if (path === "me/libraries") {
+                return Promise.resolve({ libraries: [selected] });
+            }
+            if (path.includes("search=First")) {
+                return firstSearch.promise;
+            }
+            if (path.includes("search=Second")) {
+                return secondSearch.promise;
+            }
+            return Promise.resolve(overview(selected, [item("initial")], "old-cursor"));
+        },
+    });
+    await app.start();
+
+    const firstPromise = renders.renders.at(-1).actions.submitSearch("First");
+    const secondPromise = renders.renders.at(-1).actions.submitSearch("Second");
+    secondSearch.resolve(overview(selected, [item("second")], "next-second"));
+    await secondPromise;
+    firstSearch.resolve(overview(selected, [item("first")], "next-first"));
+    await firstPromise;
+
+    assert.equal(requests.some((path) => path.includes("cursor=old-cursor")), false);
+    assert.deepEqual(
+        renders.renders.at(-1).model.items.map((entry) => entry.item_id),
+        ["second"]
+    );
+    assert.equal(renders.renders.at(-1).model.nextCursor, "next-second");
+    assert.match(browser.location.href, /catalog_search=Second/);
+    assert.doesNotMatch(browser.location.href, /catalog_search=First|cursor=/);
 });
 
 test("Quick View rereads the existing scoped detail endpoint without changing route", async () => {
@@ -641,7 +781,7 @@ test("Quick View rereads the existing scoped detail endpoint without changing ro
 
     assert.deepEqual(requests, [
         "me/libraries",
-        "libraries/library-1/items",
+        "libraries/library-1/catalog",
         "libraries/library-1/items/item-1",
     ]);
     assert.equal(browser.historyCalls.length, 0);
@@ -822,11 +962,11 @@ test("overview and detail actions push canonical routes and rebuild fresh", asyn
     ]]);
     assert.deepEqual(requests, [
         "me/libraries",
-        "libraries/library-1/items",
+        "libraries/library-1/catalog",
         "me/libraries",
         "libraries/library-1/items/item-1",
         "me/libraries",
-        "libraries/library-1/items",
+        "libraries/library-1/catalog",
     ]);
     assert.equal(renders.renders.at(-1).model.state, "overview");
 });
@@ -1526,7 +1666,7 @@ test("route change aborts mutation and stale success cannot trigger reread", asy
                 return { libraries: [selected] };
             }
 
-            if (path === "libraries/library-1/items") {
+            if (path === "libraries/library-1/catalog") {
                 return overview(selected, [item("item-1")]);
             }
 
@@ -1987,7 +2127,7 @@ test("End Reading navigation abort marks outcome unknown and cannot reread stale
                 return { libraries: [selected] };
             }
 
-            if (path === "libraries/library-1/items") {
+            if (path === "libraries/library-1/catalog") {
                 return overview(selected, [item("item-1")]);
             }
 
@@ -2121,14 +2261,49 @@ test("Meer laden follows only the opaque cursor and appends in order", async () 
 
     assert.deepEqual(requests, [
         "me/libraries",
-        "libraries/library-1/items",
-        "libraries/library-1/items?cursor=opaque%2B%2F%3D",
+        "libraries/library-1/catalog",
+        "libraries/library-1/catalog?cursor=opaque%2B%2F%3D",
     ]);
     assert.deepEqual(
         renders.renders.at(-1).model.items.map(({ item_id: id }) => id),
         ["one", "two"]
     );
     assert.equal(renders.renders.at(-1).model.nextCursor, null);
+});
+
+test("a late cursor response cannot append after a newer query wins", async () => {
+    const selected = library("library-1", { designated: true });
+    const oldCursor = deferred();
+    const renders = recorder();
+    const { app } = createApp({
+        url: "https://example.test/mijn-bibliotheek/",
+        renders,
+        get(path) {
+            if (path === "me/libraries") {
+                return Promise.resolve({ libraries: [selected] });
+            }
+            if (path.includes("cursor=old-cursor")) {
+                return oldCursor.promise;
+            }
+            if (path.includes("search=Newest")) {
+                return Promise.resolve(overview(selected, [item("newest")], null));
+            }
+            return Promise.resolve(overview(selected, [item("old")], "old-cursor"));
+        },
+    });
+
+    await app.start();
+    const cursorPromise = renders.renders.at(-1).actions.loadMore();
+    const queryPromise = renders.renders.at(-1).actions.submitSearch("Newest");
+    await queryPromise;
+    oldCursor.resolve(overview(selected, [item("late-old")], null));
+    await cursorPromise;
+
+    assert.deepEqual(
+        renders.renders.at(-1).model.items.map(({ item_id: id }) => id),
+        ["newest"]
+    );
+    assert.equal(renders.renders.at(-1).model.loadMoreError, false);
 });
 
 test("invalid cursor keeps Items, permits one retry and can restart page one", async () => {
@@ -2239,7 +2414,7 @@ test("popstate aborts obsolete overview work and rebuilds from fresh URL data", 
                 return { libraries: [firstLibrary, secondLibrary] };
             }
 
-            if (path === "libraries/library-a/items") {
+            if (path === "libraries/library-a/catalog") {
                 return firstOverview;
             }
 
@@ -2249,10 +2424,10 @@ test("popstate aborts obsolete overview work and rebuilds from fresh URL data", 
 
     const obsoleteRun = app.start();
     await waitFor(() => requests.some(([path]) => (
-        path === "libraries/library-a/items"
+        path === "libraries/library-a/catalog"
     )));
     const obsoleteSignal = requests.find(([path]) => (
-        path === "libraries/library-a/items"
+        path === "libraries/library-a/catalog"
     ))[1];
 
     browser.location.href = "https://example.test/mijn-bibliotheek/"
@@ -2318,11 +2493,11 @@ test("popstate switches overview and detail from current URL with fresh context"
 
     assert.deepEqual(requests, [
         "me/libraries",
-        "libraries/library-1/items",
+        "libraries/library-1/catalog",
         "me/libraries",
         "libraries/library-1/items/item-1",
         "me/libraries",
-        "libraries/library-1/items",
+        "libraries/library-1/catalog",
     ]);
 });
 

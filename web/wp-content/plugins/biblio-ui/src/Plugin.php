@@ -6,11 +6,12 @@ namespace Biblio\UI;
 
 final class Plugin
 {
-    public const VERSION = "0.10.0";
+    public const VERSION = "0.11.0";
     public const PAGE_BODY_CLASS = "biblio-app-shell-page";
     public const SCRIPT_MODULE_ID = "biblio-ui/app";
     public const ADD_BOOK_SCRIPT_MODULE_ID = "biblio-ui/add-book-wizard";
     public const API_SCRIPT_MODULE_ID = "biblio-ui/api";
+    public const CATALOG_QUERY_SCRIPT_MODULE_ID = "biblio-ui/catalog-query";
     public const ROUTE_SCRIPT_MODULE_ID = "biblio-ui/route-state";
     public const LIBRARY_SCRIPT_MODULE_ID = "biblio-ui/library-state";
     public const OVERVIEW_SCRIPT_MODULE_ID = "biblio-ui/overview-view";
@@ -87,9 +88,18 @@ final class Plugin
             self::VERSION
         );
         wp_register_script_module(
+            self::CATALOG_QUERY_SCRIPT_MODULE_ID,
+            $assetBaseUrl . "js/catalog-query.js",
+            [],
+            self::VERSION
+        );
+        wp_register_script_module(
             self::ROUTE_SCRIPT_MODULE_ID,
             $assetBaseUrl . "js/route-state.js",
-            [],
+            [[
+                "id" => self::CATALOG_QUERY_SCRIPT_MODULE_ID,
+                "import" => "static",
+            ]],
             self::VERSION
         );
         wp_register_script_module(
@@ -160,6 +170,9 @@ final class Plugin
             $assetBaseUrl . "js/app.js",
             [[
                 "id" => self::API_SCRIPT_MODULE_ID,
+                "import" => "static",
+            ], [
+                "id" => self::CATALOG_QUERY_SCRIPT_MODULE_ID,
                 "import" => "static",
             ], [
                 "id" => self::ROUTE_SCRIPT_MODULE_ID,

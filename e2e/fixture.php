@@ -4,6 +4,8 @@ use Biblio\Core\Application\Library\CreateLibraryService;
 use Biblio\Core\Application\Catalog\Classification\LibraryCatalogContextInitialization;
 use Biblio\Core\Catalog\EditionId;
 use Biblio\Core\Catalog\ItemId;
+use Biblio\Core\Catalog\ItemArchiveReason;
+use Biblio\Core\Catalog\ItemVersion;
 use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Catalog\Classification\ClassificationSeedKey;
 use Biblio\Core\Catalog\Classification\LibraryCatalogSelection;
@@ -43,6 +45,7 @@ const BIBLIO_E2E_PRIMARY_OTHER_ITEM = "e2e-item-primary-other-library";
 const BIBLIO_E2E_MISSING_ITEM = "e2e-item-missing-metadata";
 const BIBLIO_E2E_CONFLICT_ITEM = "e2e-item-active-conflict";
 const BIBLIO_E2E_FOREIGN_ITEM = "e2e-item-foreign";
+const BIBLIO_E2E_CATALOG_ARCHIVED_ITEM = "e2e-item-catalog-archived";
 const BIBLIO_E2E_END_COMPLETED_ITEM = "e2e-item-end-completed";
 const BIBLIO_E2E_END_STOPPED_ITEM = "e2e-item-end-stopped";
 const BIBLIO_E2E_END_STALE_ITEM = "e2e-item-end-stale";
@@ -118,7 +121,7 @@ function biblioE2eGuard(): void
 /** @return array<string, string> */
 function biblioE2eIds(): array
 {
-    return [
+    $ids = [
         "actor_library" => BIBLIO_E2E_ACTOR_LIBRARY,
         "other_library" => BIBLIO_E2E_OTHER_LIBRARY,
         "primary_work" => "e2e-work-primary",
@@ -159,6 +162,9 @@ function biblioE2eIds(): array
         "missing_item" => BIBLIO_E2E_MISSING_ITEM,
         "conflict_item" => BIBLIO_E2E_CONFLICT_ITEM,
         "foreign_item" => BIBLIO_E2E_FOREIGN_ITEM,
+        "catalog_archived_work" => "e2e-work-catalog-archived",
+        "catalog_archived_edition" => "e2e-edition-catalog-archived",
+        "catalog_archived_item" => BIBLIO_E2E_CATALOG_ARCHIVED_ITEM,
         "end_completed_item" => BIBLIO_E2E_END_COMPLETED_ITEM,
         "end_stopped_item" => BIBLIO_E2E_END_STOPPED_ITEM,
         "end_stale_item" => BIBLIO_E2E_END_STALE_ITEM,
@@ -184,6 +190,15 @@ function biblioE2eIds(): array
         "c7_foreign_loan" => BIBLIO_E2E_C7_FOREIGN_LOAN,
         "c7_page_slug" => BIBLIO_E2E_C7_PAGE_SLUG,
     ];
+
+    for ($position = 1; $position <= 25; $position++) {
+        $suffix = str_pad((string) $position, 2, "0", STR_PAD_LEFT);
+        $ids["catalog_cursor_{$suffix}_work"] = "e2e-work-catalog-cursor-{$suffix}";
+        $ids["catalog_cursor_{$suffix}_edition"] = "e2e-edition-catalog-cursor-{$suffix}";
+        $ids["catalog_cursor_{$suffix}_item"] = "e2e-item-catalog-cursor-{$suffix}";
+    }
+
+    return $ids;
 }
 
 /** @return list<string> */
@@ -356,6 +371,7 @@ function biblioE2eCleanupCore(wpdb $database): void
         biblioE2eDeleteIn($database, $tables->libraryCatalogContextGenres(), "library_id", $libraries);
         biblioE2eDeleteIn($database, $tables->libraryCatalogContextSubjects(), "library_id", $libraries);
         biblioE2eDeleteIn($database, $tables->libraryCatalogContexts(), "library_id", $libraries);
+        biblioE2eDeleteIn($database, $tables->itemArchivePeriods(), "item_id", $items);
         biblioE2eDeleteIn($database, $tables->items(), "item_id", $items);
         biblioE2eDeleteIn($database, $tables->editions(), "edition_id", $editions);
         biblioE2eDeleteIn($database, $tables->works(), "work_id", $works);
@@ -1080,6 +1096,10 @@ function biblioE2eCounts(wpdb $database): array
             "SELECT COUNT(*) FROM `{$tables->items()}` WHERE item_id IN ({$itemSql})",
             ...$items
         )),
+        "item_archive_periods" => (int) $database->get_var($database->prepare(
+            "SELECT COUNT(*) FROM `{$tables->itemArchivePeriods()}` WHERE item_id IN ({$itemSql})",
+            ...$items
+        )),
         "works" => (int) $database->get_var($database->prepare(
             "SELECT COUNT(*) FROM `{$tables->works()}` WHERE work_id IN ({$workSql})",
             ...$workValues
@@ -1560,6 +1580,25 @@ function biblioE2eSetup(wpdb $database): void
     biblioE2eAddItem($database, $composition, BIBLIO_E2E_ACTOR_LIBRARY, BIBLIO_E2E_END_NONCE_ITEM, "e2e-work-end-nonce", "E2E Nonce Flow", "e2e-edition-end-nonce");
     biblioE2eAddItem($database, $composition, BIBLIO_E2E_ACTOR_LIBRARY, BIBLIO_E2E_END_IDEMPOTENT_ITEM, "e2e-work-end-idempotent", "E2E Idempotent Flow", "e2e-edition-end-idempotent");
     biblioE2eAddItem($database, $composition, BIBLIO_E2E_ACTOR_LIBRARY, BIBLIO_E2E_END_LIFECYCLE_ITEM, "e2e-work-end-lifecycle", "E2E Lifecycle Flow", "e2e-edition-end-lifecycle");
+    biblioE2eAddItem($database, $composition, BIBLIO_E2E_ACTOR_LIBRARY, BIBLIO_E2E_CATALOG_ARCHIVED_ITEM, "e2e-work-catalog-archived", "Archived Catalog Evidence", "e2e-edition-catalog-archived");
+    $composition->application()->libraryItemArchiveManagement()->archive(
+        new LibraryId(BIBLIO_E2E_ACTOR_LIBRARY),
+        new ItemId(BIBLIO_E2E_CATALOG_ARCHIVED_ITEM),
+        ItemArchiveReason::Sold,
+        ItemVersion::initial()
+    );
+    for ($position = 1; $position <= 25; $position++) {
+        $suffix = str_pad((string) $position, 2, "0", STR_PAD_LEFT);
+        biblioE2eAddItem(
+            $database,
+            $composition,
+            BIBLIO_E2E_ACTOR_LIBRARY,
+            "e2e-item-catalog-cursor-{$suffix}",
+            "e2e-work-catalog-cursor-{$suffix}",
+            "ZZZ Cursorboek {$suffix}",
+            "e2e-edition-catalog-cursor-{$suffix}"
+        );
+    }
     biblioE2eAddItem($database, $composition, BIBLIO_E2E_ACTOR_LIBRARY, BIBLIO_E2E_C7_UNAVAILABLE_ITEM, "e2e-work-c7-unavailable", "C7 Verdwenen bron", "e2e-edition-c7-unavailable");
 
     wp_set_current_user($other);

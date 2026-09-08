@@ -6,17 +6,26 @@ import { BiblioApiError } from "../../assets/js/api.js";
 
 const appSourceUrl = new URL("../../assets/js/app.js", import.meta.url);
 let appSource = await readFile(appSourceUrl, "utf8");
+const catalogQueryTestUrl = new URL(
+    "../../assets/js/catalog-query.js",
+    import.meta.url
+).href;
+const routeStateTestSource = (await readFile(
+    new URL("../../assets/js/route-state.js", import.meta.url),
+    "utf8"
+)).replace('"biblio-ui/catalog-query"', JSON.stringify(catalogQueryTestUrl));
+const routeStateTestUrl = `data:text/javascript;base64,${Buffer.from(routeStateTestSource).toString("base64")}`;
 
 for (const [moduleId, file] of [
     ["biblio-ui/api", "api.js"],
     ["biblio-ui/add-book-wizard", "add-book-wizard.js"],
+    ["biblio-ui/catalog-query", "catalog-query.js"],
     ["biblio-ui/detail-view", "detail-view.js"],
     ["biblio-ui/end-reading-view", "end-reading-view.js"],
     ["biblio-ui/library-state", "library-state.js"],
     ["biblio-ui/overview-view", "overview-view.js"],
     ["biblio-ui/private-notes", "private-notes.js"],
     ["biblio-ui/reading-history", "reading-history.js"],
-    ["biblio-ui/route-state", "route-state.js"],
     ["biblio-ui/start-reading-view", "start-reading-view.js"],
     ["biblio-ui/ui-preferences", "ui-preferences.js"],
     ["biblio-ui/ui-shell", "ui-shell.js"],
@@ -26,6 +35,7 @@ for (const [moduleId, file] of [
         JSON.stringify(new URL(`../../assets/js/${file}`, import.meta.url).href)
     );
 }
+appSource = appSource.replaceAll('"biblio-ui/route-state"', JSON.stringify(routeStateTestUrl));
 
 const { createLibraryApp, readMountConfig } = await import(
     `data:text/javascript;base64,${Buffer.from(appSource).toString("base64")}`
@@ -225,7 +235,8 @@ test("functional modules keep personal UI storage isolated from domain state", a
     )));
     const source = sources.join("\n");
 
-    assert.doesNotMatch(source, /localStorage|sessionStorage|insertAdjacentHTML/);
+    assert.doesNotMatch(source, /localStorage|insertAdjacentHTML/);
+    assert.equal((source.match(/sessionStorageImpl/g) ?? []).length, 2);
     assert.equal((source.match(/\.innerHTML\s*=/gu) ?? []).length, 1);
     assert.match(source, /template\.innerHTML = html/);
     assert.doesNotMatch(
