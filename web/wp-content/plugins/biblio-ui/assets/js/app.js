@@ -1,5 +1,13 @@
 import { BiblioApiError, createBiblioApi } from "biblio-ui/api";
 import { createAddBookWizard } from "biblio-ui/add-book-wizard";
+import {
+    catalogQueryPath,
+    createCatalogQuerySession,
+    defaultCatalogQuery,
+    normalizeCatalogQuery,
+    readCatalogPage,
+    readClassificationOptions,
+} from "biblio-ui/catalog-query";
 import { createDetailView } from "biblio-ui/detail-view";
 import { createEndReadingView } from "biblio-ui/end-reading-view";
 import { resolveLibraryContext } from "biblio-ui/library-state";
@@ -19,6 +27,14 @@ import {
 
 export { BiblioApiError, createBiblioApi } from "biblio-ui/api";
 export { createAddBookWizard } from "biblio-ui/add-book-wizard";
+export {
+    catalogQueryPath,
+    createCatalogQuerySession,
+    defaultCatalogQuery,
+    normalizeCatalogQuery,
+    readCatalogPage,
+    readClassificationOptions,
+} from "biblio-ui/catalog-query";
 export { createDetailView } from "biblio-ui/detail-view";
 export { createEndReadingView } from "biblio-ui/end-reading-view";
 export { resolveLibraryContext } from "biblio-ui/library-state";
@@ -98,56 +114,6 @@ function assertTextListValue(value) {
         && METADATA_STATES.has(value.state)
         && Array.isArray(value.values)
         && value.values.every((entry) => typeof entry === "string");
-}
-
-function assertOverviewItem(item) {
-    if (
-        !isRecord(item)
-        || typeof item.item_id !== "string"
-        || item.item_id.length === 0
-        || typeof item.work_id !== "string"
-        || item.work_id.length === 0
-        || typeof item.edition_id !== "string"
-        || item.edition_id.length === 0
-        || typeof item.title !== "string"
-        || item.title.length === 0
-        || !assertTextListValue(item.authors)
-        || !assertTextValue(item.cover_reference)
-        || !assertTextValue(item.form)
-        || !assertTextValue(item.location_or_source)
-        || !READING_STATUSES.has(item.reading_status)
-        || typeof item.item_status !== "string"
-        || !isRecord(item.capabilities)
-        || typeof item.capabilities.view_item !== "boolean"
-        || typeof item.capabilities.start_reading !== "boolean"
-    ) {
-        throw new TypeError("The Biblio Item overview contract is invalid.");
-    }
-}
-
-function readOverview(payload, selectedLibraryId) {
-    if (
-        !isRecord(payload)
-        || !isRecord(payload.library)
-        || payload.library.library_id !== selectedLibraryId
-        || !Array.isArray(payload.items)
-        || !(
-            payload.next_cursor === null
-            || (typeof payload.next_cursor === "string"
-                && payload.next_cursor.length > 0)
-        )
-    ) {
-        throw new TypeError("The Biblio overview response is invalid.");
-    }
-
-    assertLibraryPresentation(payload.library);
-    payload.items.forEach(assertOverviewItem);
-
-    return Object.freeze({
-        library: payload.library,
-        items: Object.freeze([...payload.items]),
-        nextCursor: payload.next_cursor,
-    });
 }
 
 function assertReadingSummary(reading) {
@@ -478,14 +444,6 @@ function assertStartedRound(payload, requestedItemId, startedOn) {
     }
 }
 
-function overviewPath(libraryId, cursor = null) {
-    const path = `libraries/${encodeURIComponent(libraryId)}/items`;
-
-    return cursor === null
-        ? path
-        : `${path}?cursor=${encodeURIComponent(cursor)}`;
-}
-
 function detailPath(libraryId, itemId) {
     return `libraries/${encodeURIComponent(libraryId)}`
         + `/items/${encodeURIComponent(itemId)}`;
@@ -683,6 +641,9 @@ export function createLibraryApp(mount, {
     shellFactory = createLibraryShell,
     reload = () => locationImpl.reload(),
     abortControllerFactory = () => new AbortController(),
+    sessionStorageImpl,
+    setTimeoutImpl = globalThis.setTimeout,
+    clearTimeoutImpl = globalThis.clearTimeout,
 } = {}) {
     const config = readMountConfig(mount);
     const apiConfig = {
@@ -711,7 +672,9 @@ export function createLibraryApp(mount, {
     let startReadingView;
     let addBookWizard;
     let currentController = null;
+    let catalogController = null;
     let mutationController = null;
+    let searchTimer = null;
     let generation = 0;
     let unsubscribePopState = null;
     let started = false;
@@ -740,9 +703,11 @@ export function createLibraryApp(mount, {
                 documentImpl,
                 overviewUrl: config.overviewUrl,
                 itemUrl(libraryId, itemId) {
+                    const routeState = routes.read();
                     return buildRouteUrl(config.overviewUrl, {
                         libraryId,
                         itemId,
+                        catalogQuery: routeState.catalogQuery,
                     });
                 },
             });
@@ -876,7 +841,11 @@ export function createLibraryApp(mount, {
 
     function openOverview(libraryId) {
         const proceed = () => {
-            routes.push({ libraryId, itemId: null });
+            routes.push({
+                libraryId,
+                itemId: null,
+                catalogQuery: routes.read().catalogQuery,
+            });
             return beginNavigation();
         };
 
@@ -887,7 +856,11 @@ export function createLibraryApp(mount, {
 
     function openDetail(libraryId, itemId) {
         const proceed = () => {
-            routes.push({ libraryId, itemId });
+            routes.push({
+                libraryId,
+                itemId,
+                catalogQuery: routes.read().catalogQuery,
+            });
             return beginNavigation();
         };
 
@@ -943,6 +916,12 @@ export function createLibraryApp(mount, {
         privateNotesController?.destroy();
         privateNotesController = null;
         activeRouteState = null;
+        if (searchTimer !== null) {
+            clearTimeoutImpl(searchTimer);
+            searchTimer = null;
+        }
+        catalogController?.abort();
+        catalogController = null;
         mutationController?.abort();
         mutationController = null;
         currentController?.abort();
@@ -990,6 +969,7 @@ export function createLibraryApp(mount, {
                 detailBackUrl = buildRouteUrl(config.overviewUrl, {
                     libraryId: selectedLibraryId,
                     itemId: null,
+                    catalogQuery: routeState.catalogQuery,
                 });
                 const requestedItemId = routeState.itemId;
                 const resourcePath = detailPath(
@@ -1573,6 +1553,7 @@ export function createLibraryApp(mount, {
                 activeRouteState = Object.freeze({
                     libraryId: selectedLibraryId,
                     itemId: requestedItemId,
+                    catalogQuery: routeState.catalogQuery,
                 });
                 privateNotesController = privateNotesControllerFactory({
                     root: applicationRoot(),
@@ -1593,23 +1574,60 @@ export function createLibraryApp(mount, {
             }
 
             operation = "overview";
+            const libraryId = resolution.library.library_id;
+            const initialRouteState = routes.read();
+            const querySession = createCatalogQuerySession({
+                storage: sessionStorageImpl,
+                scope: `${config.restNonce}:${libraryId}:mijn-bibliotheek`,
+            });
+            const rememberedQuery = initialRouteState.hasCatalogQuery
+                ? null
+                : querySession.read();
+            let query = initialRouteState.hasCatalogQuery
+                ? initialRouteState.catalogQuery
+                : rememberedQuery ?? defaultCatalogQuery();
+
+            if (!initialRouteState.hasCatalogQuery && rememberedQuery !== null) {
+                routes.replace({
+                    libraryId,
+                    itemId: null,
+                    catalogQuery: query,
+                });
+            }
+
             render({
                 state: "overview-loading",
                 library: resolution.library,
             });
 
-            const payload = await api.get(
-                overviewPath(resolution.library.library_id),
-                { signal: controller.signal }
-            );
+            const initialCatalogController = abortControllerFactory();
+            catalogController = initialCatalogController;
+            const [payload, classificationPayload] = await Promise.all([
+                api.get(catalogQueryPath(libraryId, query), {
+                    signal: initialCatalogController.signal,
+                }),
+                api.get(
+                    `libraries/${encodeURIComponent(libraryId)}/classification-options`,
+                    { signal: initialCatalogController.signal }
+                ),
+            ]);
 
-            if (!isCurrent(runGeneration, controller)) {
+            if (
+                !isCurrent(runGeneration, controller)
+                || catalogController !== initialCatalogController
+                || initialCatalogController.signal.aborted
+            ) {
                 return;
             }
 
-            const firstPage = readOverview(
+            const firstPage = readCatalogPage(
                 payload,
-                resolution.library.library_id
+                libraryId
+            );
+            assertLibraryPresentation(firstPage.library);
+            const filterOptions = readClassificationOptions(
+                classificationPayload,
+                libraryId
             );
             const overview = {
                 library: firstPage.library,
@@ -1618,9 +1636,152 @@ export function createLibraryApp(mount, {
                 loadingMore: false,
                 loadMoreError: false,
                 canRetryCursor: false,
+                refreshing: false,
+                queryError: false,
+                query,
+                searchDraft: query.search,
+                filterOptions,
+                resultAnnouncement: firstPage.items.length === 1
+                    ? "1 boek geladen."
+                    : `${firstPage.items.length} boeken geladen.`,
                 quickView: null,
             };
             let quickViewRevision = 0;
+            let catalogRevision = 0;
+
+            function sameQuery(left, right) {
+                return JSON.stringify(left) === JSON.stringify(right);
+            }
+
+            function queryRoute(method = "push") {
+                const routeState = {
+                    libraryId,
+                    itemId: null,
+                    catalogQuery: query,
+                };
+                routes[method](routeState);
+                activeRouteState = Object.freeze(routeState);
+                querySession.write(query);
+            }
+
+            async function requestFirstPage(nextQuery, {
+                historyMethod = "push",
+                force = false,
+            } = {}) {
+                const normalized = normalizeCatalogQuery(nextQuery);
+                if (!force && sameQuery(query, normalized)) {
+                    overview.searchDraft = normalized.search;
+                    renderOverview();
+                    return true;
+                }
+
+                query = normalized;
+                overview.query = query;
+                overview.searchDraft = query.search;
+                overview.items = [];
+                overview.nextCursor = null;
+                overview.loadingMore = false;
+                overview.loadMoreError = false;
+                overview.canRetryCursor = false;
+                overview.refreshing = true;
+                overview.queryError = false;
+                overview.quickView = null;
+                overview.resultAnnouncement = "Catalogus wordt bijgewerkt.";
+                quickViewRevision += 1;
+                queryRoute(historyMethod);
+                renderOverview();
+
+                const requestRevision = catalogRevision + 1;
+                catalogRevision = requestRevision;
+                catalogController?.abort();
+                const requestController = abortControllerFactory();
+                catalogController = requestController;
+
+                try {
+                    const nextPayload = await api.get(
+                        catalogQueryPath(libraryId, query),
+                        { signal: requestController.signal }
+                    );
+                    if (
+                        requestRevision !== catalogRevision
+                        || catalogController !== requestController
+                        || requestController.signal.aborted
+                        || !isCurrent(runGeneration, controller)
+                    ) {
+                        return false;
+                    }
+                    const nextPage = readCatalogPage(nextPayload, libraryId);
+                    assertLibraryPresentation(nextPage.library);
+                    overview.library = nextPage.library;
+                    overview.items = [...nextPage.items];
+                    overview.nextCursor = nextPage.nextCursor;
+                    overview.refreshing = false;
+                    overview.queryError = false;
+                    overview.resultAnnouncement = nextPage.items.length === 0
+                        ? "Geen boeken gevonden."
+                        : `${nextPage.items.length} boeken geladen.`;
+                    renderOverview();
+                    return true;
+                } catch (error) {
+                    if (
+                        isAborted(error)
+                        || requestRevision !== catalogRevision
+                        || catalogController !== requestController
+                        || !isCurrent(runGeneration, controller)
+                    ) {
+                        return false;
+                    }
+                    overview.refreshing = false;
+                    overview.queryError = true;
+                    overview.items = [];
+                    overview.nextCursor = null;
+                    overview.resultAnnouncement = "Catalogus kon niet worden bijgewerkt.";
+                    renderOverview();
+                    return false;
+                }
+            }
+
+            function applySearch(value) {
+                const normalized = typeof value === "string" ? value.trim() : "";
+                if (normalized !== "" && (
+                    [...normalized].length < 2
+                    || [...normalized].length > 191
+                )) {
+                    overview.searchDraft = typeof value === "string" ? value : "";
+                    renderOverview();
+                    return Promise.resolve(false);
+                }
+                return requestFirstPage({ ...query, search: normalized });
+            }
+
+            function scheduleSearch(value) {
+                overview.searchDraft = typeof value === "string" ? value : "";
+                if (searchTimer !== null) {
+                    clearTimeoutImpl(searchTimer);
+                }
+                const normalized = overview.searchDraft.trim();
+                const searchLength = [...normalized].length;
+                if (searchLength === 1 || searchLength > 191) {
+                    searchTimer = null;
+                    renderOverview();
+                    return;
+                }
+                searchTimer = setTimeoutImpl(() => {
+                    searchTimer = null;
+                    void setIdle(applySearch(overview.searchDraft));
+                }, 250);
+            }
+
+            function setFilter(property, value, selected) {
+                const current = query[property];
+                if (!Array.isArray(current)) {
+                    return Promise.resolve(false);
+                }
+                const values = selected
+                    ? [...new Set([...current, value])]
+                    : current.filter((entry) => entry !== value);
+                return requestFirstPage({ ...query, [property]: values });
+            }
 
             async function openQuickView(itemId) {
                 const requestRevision = quickViewRevision + 1;
@@ -1689,7 +1850,70 @@ export function createLibraryApp(mount, {
                         retryLoadMore() {
                             return setIdle(loadMore(true));
                         },
-                        restart: beginNavigation,
+                        restart() {
+                            return setIdle(requestFirstPage(query, {
+                                historyMethod: "replace",
+                                force: true,
+                            }));
+                        },
+                        retryQuery() {
+                            return setIdle(requestFirstPage(query, {
+                                historyMethod: "replace",
+                                force: true,
+                            }));
+                        },
+                        searchInput: scheduleSearch,
+                        submitSearch(value) {
+                            if (searchTimer !== null) {
+                                clearTimeoutImpl(searchTimer);
+                                searchTimer = null;
+                            }
+                            return setIdle(applySearch(value));
+                        },
+                        clearSearch() {
+                            if (searchTimer !== null) {
+                                clearTimeoutImpl(searchTimer);
+                                searchTimer = null;
+                            }
+                            return setIdle(requestFirstPage({ ...query, search: "" }));
+                        },
+                        setSort(sort) {
+                            return setIdle(requestFirstPage({ ...query, sort }));
+                        },
+                        setFilter(property, value, selected) {
+                            return setIdle(setFilter(property, value, selected));
+                        },
+                        setWithoutCollection(selected) {
+                            return setIdle(requestFirstPage({
+                                ...query,
+                                collectionIds: selected ? [] : query.collectionIds,
+                                withoutCollection: selected,
+                            }));
+                        },
+                        setArchiveScope(selected) {
+                            return setIdle(requestFirstPage({
+                                ...query,
+                                archiveScope: selected
+                                    ? "active_and_archived"
+                                    : "active_only",
+                            }));
+                        },
+                        clearFilters() {
+                            return setIdle(requestFirstPage({
+                                ...query,
+                                readingStatuses: [],
+                                authorIds: [],
+                                seriesIds: [],
+                                locationIds: [],
+                                bookTypeIds: [],
+                                genreIds: [],
+                                subjectIds: [],
+                                collectionIds: [],
+                                withoutCollection: false,
+                                archiveScope: "active_only",
+                                sort: query.sort === "series" ? "title" : query.sort,
+                            }));
+                        },
                         openItem(itemId) {
                             return openDetail(
                                 resolution.library.library_id,
@@ -1733,6 +1957,8 @@ export function createLibraryApp(mount, {
                 }
 
                 const requestedCursor = overview.nextCursor;
+                const requestRevision = catalogRevision;
+                const requestController = catalogController;
                 overview.loadingMore = true;
                 overview.loadMoreError = false;
                 overview.canRetryCursor = false;
@@ -1740,28 +1966,37 @@ export function createLibraryApp(mount, {
 
                 try {
                     const nextPayload = await api.get(
-                        overviewPath(
-                            resolution.library.library_id,
-                            requestedCursor
-                        ),
-                        { signal: controller.signal }
+                        catalogQueryPath(libraryId, query, requestedCursor),
+                        { signal: requestController.signal }
                     );
 
-                    if (!isCurrent(runGeneration, controller)) {
+                    if (
+                        !isCurrent(runGeneration, controller)
+                        || requestRevision !== catalogRevision
+                        || catalogController !== requestController
+                        || requestController.signal.aborted
+                    ) {
                         return;
                     }
 
-                    const nextPage = readOverview(
+                    const nextPage = readCatalogPage(
                         nextPayload,
-                        resolution.library.library_id
+                        libraryId
                     );
+                    assertLibraryPresentation(nextPage.library);
                     overview.library = nextPage.library;
                     overview.items.push(...nextPage.items);
                     overview.nextCursor = nextPage.nextCursor;
                     overview.loadingMore = false;
+                    overview.resultAnnouncement = `${nextPage.items.length} boeken toegevoegd.`;
                     renderOverview();
                 } catch (error) {
-                    if (isAborted(error) || !isCurrent(runGeneration, controller)) {
+                    if (
+                        isAborted(error)
+                        || !isCurrent(runGeneration, controller)
+                        || requestRevision !== catalogRevision
+                        || catalogController !== requestController
+                    ) {
                         return;
                     }
 
@@ -1774,8 +2009,9 @@ export function createLibraryApp(mount, {
 
             renderOverview();
             activeRouteState = Object.freeze({
-                libraryId: resolution.library.library_id,
+                libraryId,
                 itemId: null,
+                catalogQuery: query,
             });
         } catch (error) {
             if (isAborted(error) || !isCurrent(runGeneration, controller)) {
@@ -1839,6 +2075,12 @@ export function createLibraryApp(mount, {
         privateNotesController?.destroy();
         privateNotesController = null;
         activeRouteState = null;
+        if (searchTimer !== null) {
+            clearTimeoutImpl(searchTimer);
+            searchTimer = null;
+        }
+        catalogController?.abort();
+        catalogController = null;
         mutationController?.abort();
         mutationController = null;
         currentController?.abort();

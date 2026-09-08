@@ -2752,3 +2752,37 @@ BOOK-API-03 is accepted when:
 
 Status: **GO / CLOSED**. Schema remains `1017`; Biblio UI is `0.10.0`. See
 `docs/58-book-api-03-book-detail-ratings-reviews-projection.md`.
+
+## 86. CAT-UI-01 Mijn Bibliotheek Search, Filter & Sort integration
+
+CAT-UI-01 is technically accepted when:
+
+- Grid and List read the same authorized `/catalog` query and a view switch
+  changes no Search/filter/sort/result/cursor state;
+- live Search starts at two trimmed Unicode characters, Enter is immediate,
+  clear is explicit and only the newest request may commit results;
+- Reading status, active Library-scoped Book Type, Genre and Subject options,
+  and the option-free `Zonder collectie` boolean serialize only established
+  REST parameters; unsupported option categories render no control;
+- multiple values and groups are passed to Core without client-side result
+  logic, and title/author/conditional-Series sort maps strictly to server keys;
+- query changes reset pagination, `Meer laden` reuses the exact query plus one
+  opaque cursor, and cursor failure retains the already loaded rows;
+- Search/filter/sort survives copied URL, Back/Forward, refresh and scoped
+  session fallback, while temporary archive inclusion resets on
+  refresh/navigation and never changes a permanent preference;
+- zero library, zero result, first-query failure and continuation failure are
+  distinct accessible states with calm live announcements and explicit retry;
+- archived rows are visibly identified and have no active Item action;
+- no Item N+1, provider request, client-side filtering/sorting, cross-Library
+  option read or invented metadata occurs;
+- deterministic fixtures cover more than one page plus a real archived Item,
+  guarded cleanup is idempotent and the non-fixture fingerprint is unchanged;
+- authenticated 1440, 1024, 768, 390 px and actual 200% browser-scale checks
+  show no horizontal overflow; and
+- full UI, Core, PHP syntax, PHPStan, Composer, WordPress/schema, manifest and
+  whitespace gates pass.
+
+Status: **TECHNICAL GO / HUMAN VISUAL ACCEPTANCE PENDING**. Schema remains
+`1017`; Biblio UI is `0.11.0`. See
+`docs/59-cat-ui-01-mijn-bibliotheek-search-filter-sort-integration.md`.

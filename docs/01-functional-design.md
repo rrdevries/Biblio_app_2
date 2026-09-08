@@ -881,6 +881,15 @@ Temporary `Ook in archief zoeken`:
 - does not change the personal `Archief tonen` preference;
 - resets on refresh/navigation.
 
+CAT-UI-01 activates this contract in Mijn Bibliotheek. The browser exposes the
+fixed Reading status values, the existing Library-scoped active Book Type,
+Genre and Subject option lists, and `Zonder collectie`, which needs no option
+list. Author, Series, Location and Collection controls stay absent until an
+approved Library-scoped option/read source exists; backend query support alone
+is not an option source.
+Search/filter/sort share one Grid/List query state. The temporary archive flag
+is not written to URL or session state.
+
 When personal `Archief tonen` or temporary `Ook in archief zoeken` is active,
 active and archived Items appear in the same result list. There is no parallel
 Archive result group. Archived hits are clearly marked `Archief`.

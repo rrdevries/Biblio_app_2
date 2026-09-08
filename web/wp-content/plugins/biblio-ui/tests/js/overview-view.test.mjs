@@ -4,17 +4,23 @@ import test from "node:test";
 import { createOverviewView } from "../../assets/js/overview-view.js";
 
 class FakeElement {
-    constructor(tagName) {
+    constructor(tagName, ownerDocument = null) {
         this.tagName = tagName.toUpperCase();
         this.attributes = new Map();
         this.children = [];
         this.className = "";
         this.textContent = "";
         this.disabled = false;
+        this.checked = false;
+        this.value = "";
+        this.selected = false;
         this.listeners = new Map();
         this.focused = false;
         this.open = false;
         this.parent = null;
+        this.ownerDocument = ownerDocument;
+        this.selectionStart = 0;
+        this.selectionEnd = 0;
     }
 
     setAttribute(name, value) {
@@ -47,21 +53,46 @@ class FakeElement {
         return this.listeners.get("click")?.(event);
     }
 
+    trigger(type, event = {}) {
+        return this.listeners.get(type)?.({ currentTarget: this, ...event });
+    }
+
     querySelector(selector) {
         return descendants(this, (node) => (
-            ["h1", "dialog"].includes(selector)
-            && node.tagName === selector.toUpperCase()
+            (["h1", "dialog"].includes(selector)
+                && node.tagName === selector.toUpperCase())
+            || (selector.startsWith("#")
+                && node.getAttribute("id") === selector.slice(1))
         ))[0] ?? null;
     }
 
     querySelectorAll(selector) {
-        return selector === "[data-quick-view-for]"
-            ? descendants(this, (node) => node.getAttribute("data-quick-view-for") !== null)
-            : [];
+        if (selector === "[data-quick-view-for]") {
+            return descendants(this, (node) => (
+                node.getAttribute("data-quick-view-for") !== null
+            ));
+        }
+        if (selector === "[data-biblio-focus-key]") {
+            return descendants(this, (node) => (
+                node.getAttribute("data-biblio-focus-key") !== null
+            ));
+        }
+        return [];
     }
 
     focus() {
+        if (this.ownerDocument?.activeElement) {
+            this.ownerDocument.activeElement.focused = false;
+        }
+        if (this.ownerDocument !== null) {
+            this.ownerDocument.activeElement = this;
+        }
         this.focused = true;
+    }
+
+    setSelectionRange(start, end) {
+        this.selectionStart = start;
+        this.selectionEnd = end;
     }
 
     showModal() {
@@ -81,8 +112,9 @@ class FakeElement {
 }
 
 const documentImpl = {
+    activeElement: null,
     createElement(tagName) {
-        return new FakeElement(tagName);
+        return new FakeElement(tagName, this);
     },
 };
 
@@ -175,11 +207,35 @@ function overviewModel(overrides = {}) {
         loadingMore: false,
         loadMoreError: false,
         canRetryCursor: false,
+        query: {
+            search: "",
+            readingStatuses: [],
+            authorIds: [],
+            seriesIds: [],
+            locationIds: [],
+            bookTypeIds: [],
+            genreIds: [],
+            subjectIds: [],
+            collectionIds: [],
+            withoutCollection: false,
+            sort: "title",
+            archiveScope: "active_only",
+        },
+        searchDraft: "",
+        filterOptions: {
+            bookTypes: [],
+            genres: [],
+            subjects: [],
+        },
+        refreshing: false,
+        queryError: false,
+        resultAnnouncement: "1 boek geladen.",
         ...overrides,
     };
 }
 
 function setup() {
+    documentImpl.activeElement = null;
     const root = new FakeElement("div");
     const itemUrls = [];
     const view = createOverviewView(root, {
@@ -400,21 +456,58 @@ test("empty overview and cursor controls follow the exact component states", () 
     );
 });
 
-test("toolbar reveals deferred filters, switches Grid/List and disables Bookshelf", () => {
+test("toolbar exposes working query controls, switches Grid/List and disables Bookshelf", () => {
     const { root, view } = setup();
-    const actions = { openItem() {}, quickView() {} };
+    const received = [];
+    const actions = {
+        openItem() {},
+        quickView() {},
+        searchInput(value) { received.push(["search", value]); },
+        submitSearch(value) { received.push(["submit", value]); },
+        clearSearch() {},
+        setFilter(property, value, selected) {
+            received.push([property, value, selected]);
+        },
+        setWithoutCollection(value) { received.push(["withoutCollection", value]); },
+        setArchiveScope(value) { received.push(["archive", value]); },
+        setSort(value) { received.push(["sort", value]); },
+        clearFilters() {},
+    };
 
-    view.render(overviewModel(), actions);
-    assert.equal(byTag(root, "input")[0].getAttribute("disabled"), "disabled");
-    assert.equal(byTag(root, "select")[0].getAttribute("disabled"), "disabled");
+    view.render(overviewModel({
+        filterOptions: {
+            bookTypes: [{ id: "type-book", label: "Boek" }],
+            genres: [],
+            subjects: [],
+        },
+    }), actions);
+    const search = byTag(root, "input")[0];
+    search.value = "Dune";
+    search.trigger("input");
+    assert.deepEqual(received[0], ["search", "Dune"]);
+    assert.equal(byTag(root, "select")[0].value, "title");
     assert.equal(
         byClass(root, "biblio-ui__catalog-list")[0].getAttribute("data-catalog-view"),
         "grid"
     );
 
     byTag(root, "button").find((button) => button.textContent === "Filters").click();
-    assert.match(text(root), /Gedetailleerde filters/);
-    assert.match(text(root), /Library-REST-contract/);
+    assert.match(text(root), /Leesstatus/);
+    assert.match(text(root), /Boeksoort/);
+    const reading = byTag(root, "input").find((control) => (
+        control.getAttribute("type") === "checkbox"
+    ));
+    reading.checked = true;
+    reading.trigger("change");
+    assert.deepEqual(received.at(-1), ["readingStatuses", "reading", true]);
+
+    const checkboxes = byTag(root, "input").filter((control) => (
+        control.getAttribute("type") === "checkbox"
+    ));
+    const withoutCollection = checkboxes.at(-2);
+    withoutCollection.checked = true;
+    withoutCollection.trigger("change");
+    assert.deepEqual(received.at(-1), ["withoutCollection", true]);
 
     byTag(root, "button").find((button) => button.textContent === "Lijst").click();
     assert.equal(
@@ -430,11 +523,97 @@ test("toolbar reveals deferred filters, switches Grid/List and disables Bookshel
         bookshelf.getAttribute("title"),
         "Boekenplank is nog niet beschikbaar"
     );
+    const bookshelfDescription = descendants(root, (node) => (
+        node.getAttribute("id") === "biblio-toolbar-contract-note"
+    ));
+    assert.equal(bookshelfDescription.length, 1);
+    assert.equal(
+        bookshelf.getAttribute("aria-describedby"),
+        bookshelfDescription[0].getAttribute("id")
+    );
     bookshelf.click();
     assert.equal(
         byClass(root, "biblio-ui__catalog-list")[0].getAttribute("data-catalog-view"),
         "list"
     );
+});
+
+test("live query rerenders preserve search focus and caret", () => {
+    const { root, view } = setup();
+    const actions = {
+        searchInput() {},
+        submitSearch() {},
+        clearSearch() {},
+        setFilter() {},
+        setWithoutCollection() {},
+        setArchiveScope() {},
+        setSort() {},
+        clearFilters() {},
+    };
+    view.render(overviewModel({ searchDraft: "Du" }), actions);
+    const firstSearch = byTag(root, "input")[0];
+    firstSearch.focus();
+    firstSearch.setSelectionRange(2, 2);
+
+    view.render(overviewModel({ searchDraft: "Dun", refreshing: true }), actions);
+
+    const nextSearch = byTag(root, "input")[0];
+    assert.notEqual(nextSearch, firstSearch);
+    assert.equal(nextSearch.focused, true);
+    assert.equal(nextSearch.selectionStart, 2);
+    assert.equal(nextSearch.selectionEnd, 2);
+});
+
+test("filter and sort rerenders preserve the active keyboard control", () => {
+    const { root, view } = setup();
+    const actions = {
+        searchInput() {},
+        submitSearch() {},
+        clearSearch() {},
+        setFilter() {},
+        setWithoutCollection() {},
+        setArchiveScope() {},
+        setSort() {},
+        clearFilters() {},
+    };
+    const filterOptions = {
+        bookTypes: [{ id: "type-book", label: "Boek" }],
+        genres: [],
+        subjects: [],
+    };
+    view.render(overviewModel({ filterOptions }), actions);
+
+    const sort = byTag(root, "select")[0];
+    sort.focus();
+    view.render(overviewModel({
+        filterOptions,
+        query: { ...overviewModel().query, sort: "author" },
+    }), actions);
+    assert.equal(byTag(root, "select")[0].focused, true);
+
+    const filterToggle = byTag(root, "button").find((button) => (
+        button.textContent === "Filters"
+    ));
+    filterToggle.focus();
+    filterToggle.click();
+    const reading = byTag(root, "input").find((control) => (
+        control.getAttribute("data-biblio-focus-key")
+            === "filter:readingStatuses:reading"
+    ));
+    reading.focus();
+    view.render(overviewModel({
+        filterOptions,
+        refreshing: true,
+        query: {
+            ...overviewModel().query,
+            readingStatuses: ["reading"],
+        },
+    }), actions);
+    const nextReading = byTag(root, "input").find((control) => (
+        control.getAttribute("data-biblio-focus-key")
+            === "filter:readingStatuses:reading"
+    ));
+    assert.equal(nextReading.focused, true);
 });
 
 test("Quick View is a modal overlay with status text and full-detail route", () => {
@@ -483,4 +662,7 @@ test("overview mirrors busy state and focuses its heading when requested", () =>
     assert.equal(root.getAttribute("aria-busy"), "false");
     assert.equal(byTag(root, "h1")[0].getAttribute("tabindex"), "-1");
     assert.equal(byTag(root, "h1")[0].focused, true);
+
+    view.render(overviewModel({ refreshing: true }));
+    assert.equal(root.getAttribute("aria-busy"), "true");
 });

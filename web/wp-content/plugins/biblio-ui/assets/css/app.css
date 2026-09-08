@@ -999,6 +999,9 @@ body.admin-bar.biblio-app-shell-page {
 }
 
 [data-biblio-ui-root] .biblio-ui__search {
+    align-items: center;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     position: relative;
 }
 
@@ -1019,7 +1022,24 @@ body.admin-bar.biblio-app-shell-page {
 }
 
 [data-biblio-ui-root] .biblio-ui__search input {
+    grid-column: 1 / -1;
+    grid-row: 1;
     padding-inline-start: var(--biblio-space-8);
+}
+
+[data-biblio-ui-root] .biblio-ui__search-clear {
+    grid-column: 2;
+    grid-row: 1;
+    margin-inline-end: var(--biblio-space-1);
+    min-block-size: 2.25rem;
+    padding-inline: var(--biblio-space-2);
+    position: relative;
+    z-index: 2;
+}
+
+[data-biblio-ui-root] .biblio-ui__search-help {
+    color: var(--biblio-color-text-muted);
+    font-size: 0.8125rem;
 }
 
 [data-biblio-ui-root] .biblio-ui__sort {
@@ -1076,6 +1096,44 @@ body.admin-bar.biblio-app-shell-page {
     display: grid;
     gap: var(--biblio-space-1);
     padding: var(--biblio-space-3) var(--biblio-space-4);
+}
+
+[data-biblio-ui-root] .biblio-ui__filter-group {
+    border: 0;
+    display: grid;
+    gap: var(--biblio-space-1);
+    margin: 0;
+    padding: var(--biblio-space-2) 0;
+}
+
+[data-biblio-ui-root] .biblio-ui__filter-group legend {
+    font-weight: 600;
+    padding: 0;
+}
+
+[data-biblio-ui-root] .biblio-ui__filter-option {
+    align-items: center;
+    display: flex;
+    gap: var(--biblio-space-2);
+    min-block-size: var(--biblio-control-min);
+}
+
+[data-biblio-ui-root] .biblio-ui__filter-option input {
+    block-size: 1.1rem;
+    inline-size: 1.1rem;
+}
+
+[data-biblio-ui-root] .biblio-ui__filter-chips {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--biblio-space-2);
+}
+
+[data-biblio-ui-root] .biblio-ui__query-loading {
+    border-block-start: var(--biblio-boundary-width) solid var(--biblio-color-border);
+    color: var(--biblio-color-text-secondary);
+    padding-block: var(--biblio-space-8);
 }
 
 [data-biblio-ui-root] .biblio-ui__empty-state {
@@ -1234,6 +1292,17 @@ body.admin-bar.biblio-app-shell-page {
 [data-biblio-ui-root] .biblio-ui__status--reading {
     background: var(--biblio-color-brass-subtle);
     border-color: color-mix(in srgb, var(--biblio-color-brass) 42%, var(--biblio-color-border));
+}
+
+[data-biblio-ui-root] .biblio-ui__status--archived {
+    color: var(--biblio-color-text-muted);
+    font-weight: 600;
+}
+
+[data-biblio-ui-root] .biblio-ui__contained-match {
+    color: var(--biblio-color-text-secondary);
+    flex-basis: 100%;
+    font-size: 0.8125rem;
 }
 
 [data-biblio-ui-root] .biblio-ui__quick-view-trigger {

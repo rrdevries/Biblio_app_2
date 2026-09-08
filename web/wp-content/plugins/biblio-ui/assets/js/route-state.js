@@ -1,3 +1,9 @@
+import {
+    defaultCatalogQuery,
+    readCatalogQueryFromUrl,
+    writeCatalogQueryToUrl,
+} from "biblio-ui/catalog-query";
+
 function routeIdentifier(value, key) {
     if (value !== null && typeof value !== "string") {
         throw new TypeError(`${key} must be a string or null.`);
@@ -8,6 +14,7 @@ function routeIdentifier(value, key) {
 
 export function readRouteState(url) {
     const parsedUrl = new URL(url);
+    const catalog = readCatalogQueryFromUrl(parsedUrl);
 
     return Object.freeze({
         libraryId: parsedUrl.searchParams.has("library_id")
@@ -16,12 +23,15 @@ export function readRouteState(url) {
         itemId: parsedUrl.searchParams.has("item_id")
             ? parsedUrl.searchParams.get("item_id")
             : null,
+        catalogQuery: catalog.query,
+        hasCatalogQuery: catalog.explicit,
     });
 }
 
 export function buildRouteUrl(overviewUrl, {
     libraryId = null,
     itemId = null,
+    catalogQuery = defaultCatalogQuery(),
 } = {}) {
     const url = new URL(overviewUrl);
     const normalizedLibraryId = routeIdentifier(libraryId, "libraryId");
@@ -37,6 +47,8 @@ export function buildRouteUrl(overviewUrl, {
     if (normalizedItemId !== null) {
         url.searchParams.set("item_id", normalizedItemId);
     }
+
+    writeCatalogQueryToUrl(url, catalogQuery);
 
     return url.toString();
 }

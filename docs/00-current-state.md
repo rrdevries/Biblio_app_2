@@ -2397,3 +2397,19 @@ open `Beoordelingen` list in server order. Escaped review content is displayed
 as literal text, with compact rating, subdued identity/date and no controls.
 Schema remains `1017`; Biblio UI is `0.10.0`. Detailed evidence:
 `docs/58-book-api-03-book-detail-ratings-reviews-projection.md`.
+
+### CAT-UI-01 — Mijn Bibliotheek Search, Filter & Sort integration
+
+Status: **TECHNICAL GO / HUMAN VISUAL ACCEPTANCE PENDING**
+
+Mijn Bibliotheek now uses the existing authorized composed catalog route for
+both Grid and List. Search, Reading status, Book Type, Genre, Subject, Without
+Collection, temporary archive inclusion and approved sort controls are
+server-driven. One strict query/request/result/cursor lifecycle owns URL
+History, scoped session
+fallback, stale-response protection, loading, zero-result and error states.
+
+Author, Series, Location and Collection controls remain hidden because no safe
+Library-scoped browser option route exists. Bookshelf remains disabled. Schema
+stays `1017`; Biblio UI is `0.11.0`. Detailed
+evidence: `docs/59-cat-ui-01-mijn-bibliotheek-search-filter-sort-integration.md`.

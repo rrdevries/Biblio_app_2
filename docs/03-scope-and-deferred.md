@@ -148,6 +148,9 @@ Migration from existing Biblio V1 data is a later controlled technical activity,
 - public/shared Hierna lezen;
 - full page-builder style Home customization;
 - search history/recent searches.
+- Mijn Bibliotheek Bookshelf rendering and safe browser option/read routes for
+  Author, Series, Location and Collection filters; CAT-UI-01 does not hardcode
+  or infer these Library-scoped values.
 
 ### Technical
 - final CPT/CCT/custom-table persistence mapping before spike;

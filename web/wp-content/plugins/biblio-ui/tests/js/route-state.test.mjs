@@ -1,11 +1,25 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import {
+import { defaultCatalogQuery } from "../../assets/js/catalog-query.js";
+
+const catalogQuerySource = await readFile(
+    new URL("../../assets/js/catalog-query.js", import.meta.url),
+    "utf8"
+);
+const routeSource = (await readFile(
+    new URL("../../assets/js/route-state.js", import.meta.url),
+    "utf8"
+)).replace(
+    '"biblio-ui/catalog-query"',
+    JSON.stringify(`data:text/javascript;base64,${Buffer.from(catalogQuerySource).toString("base64")}`)
+);
+const {
     buildRouteUrl,
     createRouteController,
     readRouteState,
-} from "../../assets/js/route-state.js";
+} = await import(`data:text/javascript;base64,${Buffer.from(routeSource).toString("base64")}`);
 
 test("route state reads opaque decoded identifiers and ignores other query data", () => {
     assert.deepEqual(
@@ -16,15 +30,27 @@ test("route state reads opaque decoded identifiers and ignores other query data"
         {
             libraryId: "library/one",
             itemId: "item one",
+            catalogQuery: defaultCatalogQuery(),
+            hasCatalogQuery: false,
         }
     );
     assert.deepEqual(
         readRouteState("https://example.test/mijn-bibliotheek/"),
-        { libraryId: null, itemId: null }
+        {
+            libraryId: null,
+            itemId: null,
+            catalogQuery: defaultCatalogQuery(),
+            hasCatalogQuery: false,
+        }
     );
     assert.deepEqual(
         readRouteState("https://example.test/mijn-bibliotheek/?library_id="),
-        { libraryId: "", itemId: null }
+        {
+            libraryId: "",
+            itemId: null,
+            catalogQuery: defaultCatalogQuery(),
+            hasCatalogQuery: false,
+        }
     );
 });
 
@@ -41,6 +67,28 @@ test("route URLs use only the canonical overview URL and encoded query state", (
         buildRouteUrl("https://example.test/mijn-bibliotheek/"),
         "https://example.test/mijn-bibliotheek/"
     );
+    const query = {
+        ...defaultCatalogQuery(),
+        search: "Dune",
+        readingStatuses: ["read", "reading"],
+        sort: "author",
+    };
+    const queryUrl = buildRouteUrl(
+        "https://example.test/mijn-bibliotheek/?old=yes#old",
+        { libraryId: "library-1", catalogQuery: query }
+    );
+    assert.equal(
+        queryUrl,
+        "https://example.test/mijn-bibliotheek/?library_id=library-1"
+            + "&catalog_search=Dune&catalog_sort=author"
+            + "&catalog_reading_status=read&catalog_reading_status=reading"
+    );
+    assert.deepEqual(readRouteState(queryUrl), {
+        libraryId: "library-1",
+        itemId: null,
+        catalogQuery: query,
+        hasCatalogQuery: true,
+    });
 });
 
 function browserDouble(initialUrl) {
@@ -98,7 +146,12 @@ test("route controller uses URL-only push and replace navigation", () => {
             "https://example.test/mijn-bibliotheek/?library_id=library-2",
         ],
     ]);
-    assert.deepEqual(routes.read(), { libraryId: "library-2", itemId: null });
+    assert.deepEqual(routes.read(), {
+        libraryId: "library-2",
+        itemId: null,
+        catalogQuery: defaultCatalogQuery(),
+        hasCatalogQuery: false,
+    });
 });
 
 test("popstate rereads the current URL and can be unsubscribed", () => {
@@ -116,7 +169,12 @@ test("popstate rereads the current URL and can be unsubscribed", () => {
         + "?library_id=library-1&item_id=item-1";
     browser.listeners.get("popstate")();
 
-    assert.deepEqual(received, [{ libraryId: "library-1", itemId: "item-1" }]);
+    assert.deepEqual(received, [{
+        libraryId: "library-1",
+        itemId: "item-1",
+        catalogQuery: defaultCatalogQuery(),
+        hasCatalogQuery: false,
+    }]);
     unsubscribe();
     assert.equal(browser.listeners.has("popstate"), false);
 });

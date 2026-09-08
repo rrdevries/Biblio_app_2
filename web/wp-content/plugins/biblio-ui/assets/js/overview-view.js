@@ -224,6 +224,18 @@ function itemCard(documentImpl, item, libraryId, itemUrl, actions) {
         className: `biblio-ui__status biblio-ui__status--${item.reading_status}`,
         text: readingStatusLabel(item.reading_status),
     }));
+    if (item.item_status === "archived") {
+        metadata.append(element(documentImpl, "span", {
+            className: "biblio-ui__status biblio-ui__status--archived",
+            text: "Archief",
+        }));
+    }
+    if (typeof item.contained_match_title === "string") {
+        metadata.append(element(documentImpl, "span", {
+            className: "biblio-ui__contained-match",
+            text: `Bevat: ${item.contained_match_title}`,
+        }));
+    }
     body.append(metadata);
     content.append(body);
     listItem.append(content);
@@ -246,12 +258,69 @@ function itemCard(documentImpl, item, libraryId, itemUrl, actions) {
     return listItem;
 }
 
-function renderToolbar(documentImpl, {
+function optionMap(options) {
+    return new Map(options.map((option) => [option.id, option.label]));
+}
+
+function activeFilterCount(query) {
+    return [
+        "readingStatuses",
+        "authorIds",
+        "seriesIds",
+        "locationIds",
+        "bookTypeIds",
+        "genreIds",
+        "subjectIds",
+        "collectionIds",
+    ].reduce((count, property) => count + query[property].length, 0)
+        + (query.withoutCollection ? 1 : 0)
+        + (query.archiveScope === "active_and_archived" ? 1 : 0);
+}
+
+function checkbox(documentImpl, label, checked, listener, focusKey = null) {
+    const wrapper = element(documentImpl, "label", {
+        className: "biblio-ui__filter-option",
+    });
+    const input = element(documentImpl, "input", {
+        attributes: {
+            type: "checkbox",
+            ...(focusKey === null ? {} : { "data-biblio-focus-key": focusKey }),
+        },
+    });
+    input.checked = checked;
+    input.addEventListener("change", (event) => listener(event.currentTarget.checked));
+    wrapper.append(input, element(documentImpl, "span", { text: label }));
+    return wrapper;
+}
+
+function filterGroup(documentImpl, legend, property, options, query, actions) {
+    if (options.length === 0) {
+        return null;
+    }
+    const fieldset = element(documentImpl, "fieldset", {
+        className: "biblio-ui__filter-group",
+    });
+    fieldset.append(element(documentImpl, "legend", { text: legend }));
+    for (const option of options) {
+        fieldset.append(checkbox(
+            documentImpl,
+            option.label,
+            query[property].includes(option.id),
+            (selected) => actions.setFilter(property, option.id, selected),
+            `filter:${property}:${option.id}`
+        ));
+    }
+    return fieldset;
+}
+
+function renderToolbar(documentImpl, model, actions, {
     filtersOpen,
     selectedView,
     setFiltersOpen,
     setView,
 }) {
+    const query = model.query;
+    const count = activeFilterCount(query);
     const region = element(documentImpl, "section", {
         className: "biblio-ui__toolbar-region",
         attributes: { "aria-label": "Bibliotheekweergave" },
@@ -259,31 +328,52 @@ function renderToolbar(documentImpl, {
     const toolbar = element(documentImpl, "div", {
         className: "biblio-ui__toolbar",
     });
-    const searchLabel = element(documentImpl, "label", {
+    const searchForm = element(documentImpl, "form", {
         className: "biblio-ui__search",
+        attributes: { role: "search" },
     });
-    searchLabel.append(
-        element(documentImpl, "span", {
+    const searchInput = element(documentImpl, "input", {
+        attributes: {
+            type: "search",
+            placeholder: "Zoeken in deze bibliotheek",
+            value: model.searchDraft,
+            "aria-describedby": "biblio-search-help",
+            "data-biblio-focus-key": "search",
+        },
+    });
+    searchInput.value = model.searchDraft;
+    searchInput.addEventListener("input", (event) => {
+        actions.searchInput(event.currentTarget.value);
+    });
+    searchForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        actions.submitSearch(searchInput.value);
+    });
+    searchForm.append(
+        element(documentImpl, "label", {
             className: "biblio-ui__visually-hidden",
-            text: "Zoeken",
+            text: "Zoeken in deze bibliotheek",
+            attributes: { for: "biblio-catalog-search" },
         }),
-        element(documentImpl, "input", {
-            attributes: {
-                type: "search",
-                placeholder: "Zoeken",
-                disabled: "disabled",
-                "aria-describedby": "biblio-toolbar-contract-note",
-            },
-        })
+        searchInput
     );
+    searchInput.setAttribute("id", "biblio-catalog-search");
+    if (model.searchDraft !== "") {
+        const clear = actionButton(documentImpl, "Wissen", actions.clearSearch, "tertiary");
+        clear.className += " biblio-ui__search-clear";
+        clear.setAttribute("aria-label", "Zoekopdracht wissen");
+        clear.setAttribute("data-biblio-focus-key", "search-clear");
+        searchForm.append(clear);
+    }
 
     const filterButton = actionButton(
         documentImpl,
-        "Filters",
+        count === 0 ? "Filters" : `Filters (${count})`,
         () => setFiltersOpen(!filtersOpen),
         "secondary"
     );
     filterButton.className += " biblio-ui__filter-toggle";
+    filterButton.setAttribute("data-biblio-focus-key", "filter-toggle");
     filterButton.setAttribute("aria-expanded", filtersOpen ? "true" : "false");
     filterButton.setAttribute("aria-controls", "biblio-filter-panel");
 
@@ -292,12 +382,26 @@ function renderToolbar(documentImpl, {
     });
     const sortSelect = element(documentImpl, "select", {
         attributes: {
-            disabled: "disabled",
-            "aria-describedby": "biblio-toolbar-contract-note",
             "aria-label": "Sorteren",
+            "data-biblio-focus-key": "sort",
         },
     });
-    sortSelect.append(element(documentImpl, "option", { text: "Titel A–Z" }));
+    for (const [value, label] of [
+        ["title", "Titel A–Z"],
+        ["author", "Auteur A–Z"],
+        ...(query.seriesIds.length > 0 ? [["series", "Serievolgorde"]] : []),
+    ]) {
+        const option = element(documentImpl, "option", {
+            text: label,
+            attributes: { value },
+        });
+        option.selected = query.sort === value;
+        sortSelect.append(option);
+    }
+    sortSelect.value = query.sort;
+    sortSelect.addEventListener("change", (event) => {
+        actions.setSort(event.currentTarget.value);
+    });
     sortLabel.append(
         element(documentImpl, "span", {
             className: "biblio-ui__visually-hidden",
@@ -318,6 +422,7 @@ function renderToolbar(documentImpl, {
             value === selectedView ? "active" : "tertiary"
         );
         button.setAttribute("aria-pressed", value === selectedView ? "true" : "false");
+        button.setAttribute("data-biblio-focus-key", `view:${value}`);
         if (value === "bookshelf") {
             button.disabled = true;
             button.setAttribute("aria-describedby", "biblio-toolbar-contract-note");
@@ -326,31 +431,139 @@ function renderToolbar(documentImpl, {
         switcher.append(button);
     }
 
-    toolbar.append(searchLabel, filterButton, sortLabel, switcher);
+    toolbar.append(searchForm, filterButton, sortLabel, switcher);
     region.append(toolbar);
+
+    const searchLength = [...model.searchDraft.trim()].length;
+    region.append(element(documentImpl, "p", {
+        className: "biblio-ui__search-help",
+        text: searchLength === 1
+            ? "Typ nog één teken om te zoeken."
+            : searchLength > 191
+                ? "Gebruik maximaal 191 tekens."
+                : "Zoeken start vanaf twee tekens.",
+        attributes: { id: "biblio-search-help" },
+    }));
+    region.append(element(documentImpl, "p", {
+        className: "biblio-ui__visually-hidden",
+        text: "Boekenplank is nog niet beschikbaar.",
+        attributes: { id: "biblio-toolbar-contract-note" },
+    }));
 
     if (filtersOpen) {
         const filterPanel = element(documentImpl, "div", {
             className: "biblio-ui__filter-panel",
             attributes: { id: "biblio-filter-panel" },
         });
-        filterPanel.append(
-            element(documentImpl, "p", {
-                className: "biblio-ui__filter-heading",
-                text: "Gedetailleerde filters",
-            }),
-            element(documentImpl, "p", {
-                text: "Filteropties worden actief zodra het Library-REST-contract zoeken en filteren ondersteunt.",
-            })
-        );
+        const readingOptions = [
+            { id: "reading", label: "Aan het lezen" },
+            { id: "read", label: "Uitgelezen" },
+            { id: "not_read", label: "Niet gelezen" },
+        ];
+        filterPanel.append(element(documentImpl, "p", {
+            className: "biblio-ui__filter-heading",
+            text: "Filters",
+        }));
+        for (const group of [
+            filterGroup(documentImpl, "Leesstatus", "readingStatuses", readingOptions, query, actions),
+            filterGroup(documentImpl, "Boeksoort", "bookTypeIds", model.filterOptions.bookTypes, query, actions),
+            filterGroup(documentImpl, "Genre", "genreIds", model.filterOptions.genres, query, actions),
+            filterGroup(documentImpl, "Onderwerp", "subjectIds", model.filterOptions.subjects, query, actions),
+        ]) {
+            if (group !== null) {
+                filterPanel.append(group);
+            }
+        }
+        filterPanel.append(checkbox(
+            documentImpl,
+            "Zonder collectie",
+            query.withoutCollection,
+            actions.setWithoutCollection,
+            "filter:without-collection"
+        ));
+        filterPanel.append(checkbox(
+            documentImpl,
+            "Ook in archief zoeken",
+            query.archiveScope === "active_and_archived",
+            actions.setArchiveScope,
+            "filter:archive"
+        ));
         region.append(filterPanel);
     }
 
-    region.append(element(documentImpl, "p", {
-        className: "biblio-ui__toolbar-note",
-        text: "Zoeken, filterwaarden en alternatieve sortering zijn nog niet beschikbaar voor de volledige catalogus.",
-        attributes: { id: "biblio-toolbar-contract-note" },
-    }));
+    if (count > 0) {
+        const labels = {
+            readingStatuses: new Map([
+                ["reading", "Aan het lezen"],
+                ["read", "Uitgelezen"],
+                ["not_read", "Niet gelezen"],
+            ]),
+            bookTypeIds: optionMap(model.filterOptions.bookTypes),
+            genreIds: optionMap(model.filterOptions.genres),
+            subjectIds: optionMap(model.filterOptions.subjects),
+            authorIds: new Map(),
+            seriesIds: new Map(),
+            locationIds: new Map(),
+            collectionIds: new Map(),
+        };
+        const prefixes = {
+            authorIds: "Auteur",
+            seriesIds: "Serie",
+            locationIds: "Locatie",
+            collectionIds: "Collectie",
+        };
+        const chips = element(documentImpl, "div", {
+            className: "biblio-ui__filter-chips",
+            attributes: { "aria-label": "Actieve filters" },
+        });
+        for (const property of Object.keys(labels)) {
+            for (const value of query[property]) {
+                const label = labels[property].get(value)
+                    ?? `${prefixes[property] ?? "Filter"}`;
+                const chip = actionButton(
+                    documentImpl,
+                    `${label} ×`,
+                    () => actions.setFilter(property, value, false),
+                    "tertiary"
+                );
+                chip.className += " biblio-ui__filter-chip";
+                chip.setAttribute("data-biblio-focus-key", `chip:${property}:${value}`);
+                chip.setAttribute("aria-label", `${label} verwijderen`);
+                chips.append(chip);
+            }
+        }
+        if (query.withoutCollection) {
+            const chip = actionButton(
+                documentImpl,
+                "Zonder collectie ×",
+                () => actions.setWithoutCollection(false),
+                "tertiary"
+            );
+            chip.className += " biblio-ui__filter-chip";
+            chip.setAttribute("data-biblio-focus-key", "chip:without-collection");
+            chips.append(chip);
+        }
+        if (query.archiveScope === "active_and_archived") {
+            const chip = actionButton(
+                documentImpl,
+                "Ook in archief ×",
+                () => actions.setArchiveScope(false),
+                "tertiary"
+            );
+            chip.className += " biblio-ui__filter-chip";
+            chip.setAttribute("data-biblio-focus-key", "chip:archive");
+            chips.append(chip);
+        }
+        const clearFilters = actionButton(
+            documentImpl,
+            "Alle filters wissen",
+            actions.clearFilters,
+            "tertiary"
+        );
+        clearFilters.setAttribute("data-biblio-focus-key", "clear-filters");
+        chips.append(clearFilters);
+        region.append(chips);
+    }
     return region;
 }
 
@@ -594,7 +807,11 @@ function renderLoadMore(documentImpl, model, actions) {
 }
 
 function renderOverview(documentImpl, model, actions, itemUrl, uiState) {
-    const view = page(documentImpl, "overview", model.loadingMore === true);
+    const view = page(
+        documentImpl,
+        "overview",
+        model.loadingMore === true || model.refreshing === true
+    );
     const header = element(documentImpl, "header", {
         className: "biblio-ui__page-header",
     });
@@ -626,7 +843,7 @@ function renderOverview(documentImpl, model, actions, itemUrl, uiState) {
     view.append(header);
 
     const rerender = () => uiState.render(model, actions);
-    view.append(renderToolbar(documentImpl, {
+    view.append(renderToolbar(documentImpl, model, actions, {
         filtersOpen: uiState.filtersOpen,
         selectedView: uiState.selectedView,
         setFiltersOpen(value) {
@@ -639,7 +856,41 @@ function renderOverview(documentImpl, model, actions, itemUrl, uiState) {
         },
     }));
 
+    view.append(element(documentImpl, "p", {
+        className: "biblio-ui__result-status biblio-ui__visually-hidden",
+        text: model.resultAnnouncement,
+        attributes: { "aria-live": "polite", role: "status" },
+    }));
+
+    if (model.refreshing === true) {
+        view.append(element(documentImpl, "p", {
+            className: "biblio-ui__query-loading",
+            text: "Boeken zoeken…",
+            attributes: { role: "status" },
+        }));
+        return view;
+    }
+
+    if (model.queryError === true) {
+        const error = element(documentImpl, "section", {
+            className: "biblio-ui__inline-error",
+        });
+        append(
+            error,
+            element(documentImpl, "h2", { text: "Catalogus kon niet worden bijgewerkt" }),
+            element(documentImpl, "p", {
+                text: "Je zoekopdracht en filters zijn bewaard.",
+                attributes: { role: "alert" },
+            }),
+            actionButton(documentImpl, "Opnieuw proberen", actions.retryQuery, "primary")
+        );
+        view.append(error);
+        return view;
+    }
+
     if (model.items.length === 0) {
+        const hasQuery = model.query.search !== ""
+            || activeFilterCount(model.query) > 0;
         const empty = element(documentImpl, "section", {
             className: "biblio-ui__empty-state",
             attributes: { "aria-labelledby": "biblio-empty-title" },
@@ -648,13 +899,21 @@ function renderOverview(documentImpl, model, actions, itemUrl, uiState) {
             empty,
             icon(documentImpl, "book-open"),
             element(documentImpl, "h2", {
-                text: "Nog geen actieve boeken",
+                text: hasQuery ? "Geen boeken gevonden" : "Nog geen actieve boeken",
                 attributes: { id: "biblio-empty-title" },
             }),
             element(documentImpl, "p", {
-                text: "Boeken die aan deze bibliotheek zijn toegevoegd verschijnen hier.",
+                text: hasQuery
+                    ? "Geen boeken passen bij deze zoekopdracht en filters."
+                    : "Boeken die aan deze bibliotheek zijn toegevoegd verschijnen hier.",
             })
         );
+        if (model.query.search !== "") {
+            empty.append(actionButton(documentImpl, "Zoekopdracht wissen", actions.clearSearch));
+        }
+        if (activeFilterCount(model.query) > 0) {
+            empty.append(actionButton(documentImpl, "Alle filters wissen", actions.clearFilters));
+        }
         view.append(empty);
         return view;
     }
@@ -666,7 +925,9 @@ function renderOverview(documentImpl, model, actions, itemUrl, uiState) {
     const list = element(documentImpl, "ul", {
         className: "biblio-ui__catalog-list",
         attributes: {
-            "aria-label": "Actieve boeken",
+            "aria-label": model.query.archiveScope === "active_and_archived"
+                ? "Boeken en archiefboeken"
+                : "Actieve boeken",
             "data-catalog-view": uiState.selectedView,
         },
     });
@@ -733,6 +994,11 @@ export function createOverviewView(root, {
     };
 
     function render(model, actions = {}) {
+        const activeElement = documentImpl.activeElement;
+        const focusKey = activeElement?.getAttribute?.("data-biblio-focus-key");
+        const restoreSearchFocus = focusKey === "search";
+        const selectionStart = restoreSearchFocus ? activeElement.selectionStart : null;
+        const selectionEnd = restoreSearchFocus ? activeElement.selectionEnd : null;
         let view;
 
         switch (model.state) {
@@ -771,6 +1037,32 @@ export function createOverviewView(root, {
             const heading = view.querySelector("h1");
             heading?.setAttribute("tabindex", "-1");
             heading?.focus();
+        } else if (typeof focusKey === "string") {
+            const focusTargets = view.querySelectorAll?.("[data-biblio-focus-key]") ?? [];
+            let nextFocus = [...focusTargets].find((candidate) => (
+                candidate.getAttribute("data-biblio-focus-key") === focusKey
+            ));
+            if (nextFocus === undefined && focusKey === "search-clear") {
+                nextFocus = [...focusTargets].find((candidate) => (
+                    candidate.getAttribute("data-biblio-focus-key") === "search"
+                ));
+            }
+            if (nextFocus === undefined && (
+                focusKey.startsWith("chip:") || focusKey === "clear-filters"
+            )) {
+                nextFocus = [...focusTargets].find((candidate) => (
+                    candidate.getAttribute("data-biblio-focus-key") === "filter-toggle"
+                ));
+            }
+            nextFocus?.focus?.({ preventScroll: true });
+            if (
+                restoreSearchFocus
+                && Number.isInteger(selectionStart)
+                && Number.isInteger(selectionEnd)
+                && typeof nextFocus?.setSelectionRange === "function"
+            ) {
+                nextFocus.setSelectionRange(selectionStart, selectionEnd);
+            }
         }
         return view;
     }

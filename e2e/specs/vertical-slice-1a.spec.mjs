@@ -50,8 +50,8 @@ test("primary flow logs in, starts reading once, rereads and survives reload", a
     await expect(page.getByText("E2E Privébibliotheek", { exact: true })).toBeVisible();
     expect(new URL(page.url()).searchParams.get("library_id")).toBe(IDS.actorLibrary);
     const cards = page.locator("[data-biblio-view='overview'] [data-biblio-item-id]");
-    await expect(cards).toHaveCount(9);
-    await expect(cards.locator("h3")).toHaveText([
+    await expect(cards).toHaveCount(24);
+    expect((await cards.locator("h3").allTextContents()).slice(0, 9)).toEqual([
         "Dagboek van een slecht jaar",
         "E2E Completed Flow",
         "E2E Idempotent Flow",
@@ -242,40 +242,6 @@ test("real-content responsive, target, keyboard and missing-metadata acceptance"
 });
 
 test("Deep Library shell, views, filters and Quick View recompose accessibly", async ({ page }, testInfo) => {
-    await page.route("**/wp-json/biblio/v1/libraries/*/items**", async (route) => {
-        if (route.request().method() !== "GET") {
-            await route.continue();
-            return;
-        }
-
-        const response = await route.fetch();
-        const body = await response.json();
-        const addCover = (record, index = 0) => record.item_id === IDS.missingItem
-            ? record
-            : ({
-            ...record,
-            cover_reference: {
-                state: "known",
-                value: "data:image/svg+xml," + encodeURIComponent(
-                    `<svg xmlns="http://www.w3.org/2000/svg" width="296" height="444" viewBox="0 0 296 444">`
-                    + `<rect width="296" height="444" fill="${index % 2 === 0 ? "#34425c" : "#866214"}"/>`
-                    + `<rect x="22" y="22" width="252" height="400" fill="none" stroke="#f7f4ed"/>`
-                    + `<text x="148" y="205" text-anchor="middle" fill="#f7f4ed" font-family="Georgia" font-size="24">Biblio</text>`
-                    + `<text x="148" y="245" text-anchor="middle" fill="#f7f4ed" font-family="sans-serif" font-size="14">Testomslag</text>`
-                    + "</svg>"
-                ),
-            },
-        });
-
-        if (Array.isArray(body?.data?.items)) {
-            body.data.items = body.data.items.map(addCover);
-        } else if (body?.data?.item_id) {
-            body.data = addCover(body.data);
-        }
-
-        await route.fulfill({ response, json: body });
-    });
-
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(libraryUrl());
     const shell = page.locator(".biblio-ui__shell");
@@ -293,11 +259,13 @@ test("Deep Library shell, views, filters and Quick View recompose accessibly", a
     expect(Math.round((await sidebar.boundingBox())?.width ?? 0)).toBe(224);
 
     const covers = page.locator("img.biblio-ui__cover--overview");
-    await expect(covers).toHaveCount(8);
+    const coverTiles = page.locator(".biblio-ui__cover--overview");
+    await expect(covers).toHaveCount(0);
+    await expect(coverTiles).toHaveCount(24);
     await expect(page.getByRole("img", {
         name: "Geen omslag beschikbaar voor The Secret Commonwealth",
     })).toBeVisible();
-    expect(Math.round((await covers.first().boundingBox())?.width ?? 0)).toBe(148);
+    expect(Math.round((await coverTiles.first().boundingBox())?.width ?? 0)).toBe(148);
     await page.screenshot({
         path: testInfo.outputPath("deep-library-desktop-grid.png"),
         fullPage: true,
@@ -317,10 +285,10 @@ test("Deep Library shell, views, filters and Quick View recompose accessibly", a
     await page.getByRole("button", { name: "Navigatie uitklappen" }).click();
 
     await page.getByRole("button", { name: "Filters" }).click();
-    await expect(page.getByText("Gedetailleerde filters")).toBeVisible();
-    await expect(page.getByRole("searchbox", { name: "Zoeken" })).toBeDisabled();
-    await expect(page.getByRole("combobox", { name: "Sorteren" })).toBeDisabled();
-    await expect(page.getByText(/Library-REST-contract/)).toBeVisible();
+    await expect(page.getByText("Leesstatus")).toBeVisible();
+    await expect(page.getByText("Boeksoort")).toBeVisible();
+    await expect(page.getByRole("searchbox", { name: "Zoeken in deze bibliotheek" })).toBeEnabled();
+    await expect(page.getByRole("combobox", { name: "Sorteren" })).toBeEnabled();
     await page.screenshot({
         path: testInfo.outputPath("deep-library-toolbar.png"),
         fullPage: true,
@@ -359,6 +327,7 @@ test("Deep Library shell, views, filters and Quick View recompose accessibly", a
     });
 
     await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(() => window.scrollTo(0, 0));
     await expectNoHorizontalOverflow(page);
     expect(Math.round((await shell.boundingBox())?.y ?? -1)).toBe(46);
     const menu = page.getByRole("button", { name: "Navigatie openen" });

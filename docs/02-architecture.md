@@ -1147,8 +1147,20 @@ non-enumerating error mapping. Core remains the only owner of Library Context,
 actor resolution, Search/filter/sort/archive behavior and HMAC cursor
 validation. Serialization performs no repository/service lookup, so the Core
 15-call first page and 16-call continuation profiles remain unchanged. Schema
-stays 1013. The older `/items` overview remains available unchanged for current
-UI compatibility until Slice 7B migrates the browser.
+stays 1013. The older `/items` overview remains available unchanged for
+compatibility. CAT-UI-01 migrates Mijn Bibliotheek Grid/List to `/catalog`
+through the strict `biblio-ui/catalog-query` browser adapter. That adapter
+normalizes one query, serializes only allowlisted REST/URL fields, decodes the
+exact page shape and coordinates abort/revision guards, URL History, scoped
+session fallback and opaque-cursor continuation. It adds no query semantics or
+authorization; those remain in `CatalogQueryService` and its Core
+collaborators.
+
+The UI requests active Library classification options once per overview for
+Book Type, Genre and Subject labels. It issues no Item-level enrichment reads.
+Categories without a safe Library-scoped option route are not rendered as
+controls. Temporary archive inclusion is sent to REST only for the current
+page lifetime and is absent from URL/session state. Schema remains `1017`.
 
 ## 29. Metadata Hub MH-B1 identity and schema 1014
 
