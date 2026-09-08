@@ -211,6 +211,97 @@ function collectionsSection(documentImpl, collections) {
     return section;
 }
 
+function ratingLabel(rating) {
+    return `${String(rating).replace(".", ",")} van 5`;
+}
+
+function reviewText(reviewHtml) {
+    return reviewHtml
+        .replaceAll("&lt;", "<")
+        .replaceAll("&gt;", ">")
+        .replaceAll("&quot;", "\"")
+        .replaceAll("&apos;", "'")
+        .replaceAll("&#039;", "'")
+        .replaceAll("&amp;", "&");
+}
+
+function publishedDateLabel(timestamp) {
+    const [, year, month, day] = /^(\d{4})-(\d{2})-(\d{2})T/u.exec(timestamp);
+    const months = [
+        "januari", "februari", "maart", "april", "mei", "juni",
+        "juli", "augustus", "september", "oktober", "november", "december",
+    ];
+
+    return `${Number(day)} ${months[Number(month) - 1]} ${year}`;
+}
+
+function assessmentsSection(documentImpl, assessments) {
+    if (assessments.contributions.length === 0) {
+        return null;
+    }
+
+    const section = element(documentImpl, "section", {
+        className: "biblio-ui__section biblio-ui__detail-section biblio-ui__assessments",
+        attributes: { id: "beoordelingen" },
+    });
+    section.append(
+        element(documentImpl, "p", {
+            className: "biblio-ui__section-kicker",
+            text: "In deze bibliotheek",
+        }),
+        element(documentImpl, "h2", { text: "Beoordelingen" })
+    );
+
+    if (assessments.aggregate.average !== null) {
+        section.append(element(documentImpl, "p", {
+            className: "biblio-ui__assessment-summary",
+            text: `${ratingLabel(assessments.aggregate.average)} · `
+                + `${assessments.aggregate.voter_count} `
+                + (assessments.aggregate.voter_count === 1
+                    ? "beoordeling"
+                    : "beoordelingen"),
+        }));
+    }
+
+    const list = element(documentImpl, "ol", {
+        className: "biblio-ui__assessment-list",
+    });
+    for (const contribution of assessments.contributions) {
+        const entry = element(documentImpl, "li", {
+            className: `biblio-ui__assessment biblio-ui__assessment--${contribution.type}`,
+        });
+        if (contribution.rating !== null) {
+            entry.append(element(documentImpl, "p", {
+                className: "biblio-ui__assessment-rating",
+                text: ratingLabel(contribution.rating),
+                attributes: { "aria-label": `${ratingLabel(contribution.rating)} sterren` },
+            }));
+        }
+        if (contribution.type === "review") {
+            entry.append(element(documentImpl, "blockquote", {
+                className: "biblio-ui__assessment-review",
+                text: reviewText(contribution.review_html),
+            }));
+        }
+        entry.append(element(documentImpl, "p", {
+            className: "biblio-ui__assessment-byline",
+            text: `${contribution.display_name} · `
+                + publishedDateLabel(contribution.published_at),
+        }));
+        list.append(entry);
+    }
+    section.append(list);
+
+    if (assessments.next_cursor !== null) {
+        section.append(element(documentImpl, "p", {
+            className: "biblio-ui__assessment-more",
+            text: "Er zijn meer beoordelingen beschikbaar.",
+        }));
+    }
+
+    return section;
+}
+
 function renderLoading(documentImpl) {
     const view = element(documentImpl, "section", {
         className: "biblio-ui__view",
@@ -430,10 +521,12 @@ function renderDetail(documentImpl, model, actions) {
         ["Beschikbaarheid", knownText(detail.availability)],
     ]);
     const collections = collectionsSection(documentImpl, detail.collections);
+    const assessments = assessmentsSection(documentImpl, detail.assessments);
 
     const navItems = [
         ["Overzicht", "overzicht"],
         ["Leesgeschiedenis", "leesgeschiedenis"],
+        ...(assessments === null ? [] : [["Beoordelingen", "beoordelingen"]]),
         ["Mijn notities", "mijn-notities"],
         ...(bookDetails === null ? [] : [["Boekdetails", "boekdetails"]]),
         ...(editionDetails === null ? [] : [["Uitgave", "uitgave"]]),
@@ -491,6 +584,10 @@ function renderDetail(documentImpl, model, actions) {
             id: "leesgeschiedenis",
         },
     }));
+
+    if (assessments !== null) {
+        content.append(assessments);
+    }
 
     content.append(element(documentImpl, "div", {
         className: "biblio-ui__private-notes-region biblio-ui__detail-section",

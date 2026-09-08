@@ -1767,6 +1767,56 @@ body.admin-bar.biblio-app-shell-page {
     padding: var(--biblio-space-4);
 }
 
+[data-biblio-ui-root] .biblio-ui__assessment-summary {
+    color: var(--biblio-color-text-secondary);
+    font-weight: 600;
+    margin-block-start: var(--biblio-space-2);
+}
+
+[data-biblio-ui-root] .biblio-ui__assessment-list {
+    display: grid;
+    gap: var(--biblio-space-8);
+    list-style: none;
+    margin: var(--biblio-space-6) 0 0;
+    padding: 0;
+}
+
+[data-biblio-ui-root] .biblio-ui__assessment {
+    border-inline-start: 2px solid color-mix(in srgb, var(--biblio-color-brass) 48%, var(--biblio-color-border));
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+    padding-inline-start: var(--biblio-space-4);
+}
+
+[data-biblio-ui-root] .biblio-ui__assessment-rating {
+    color: var(--biblio-color-brass);
+    font-size: 0.875rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+}
+
+[data-biblio-ui-root] .biblio-ui__assessment-review {
+    border: 0;
+    color: var(--biblio-color-text-primary);
+    font-family: var(--biblio-font-serif);
+    font-size: clamp(1.05rem, 1rem + 0.2vw, 1.2rem);
+    line-height: 1.65;
+    margin: var(--biblio-space-3) 0;
+    max-inline-size: var(--biblio-reading-max);
+    padding: 0;
+    white-space: pre-wrap;
+}
+
+[data-biblio-ui-root] .biblio-ui__assessment-byline,
+[data-biblio-ui-root] .biblio-ui__assessment-more {
+    color: var(--biblio-color-text-muted);
+    font-size: 0.8125rem;
+}
+
+[data-biblio-ui-root] .biblio-ui__assessment-more {
+    margin-block-start: var(--biblio-space-6);
+}
+
 [data-biblio-ui-root] .biblio-ui__private-notes > .biblio-ui__control {
     justify-self: start;
 }

@@ -281,12 +281,21 @@ final class ProductionComposition
             $libraryContexts,
             $collectionRepository
         );
+        $publicationRepository = new WpdbPublicationRepository(
+            $database,
+            $tableNames
+        );
+        $libraryPublicAssessments = new GetLibraryPublicAssessmentsService(
+            $libraryContexts,
+            $publicationRepository
+        );
         $catalogUiReads = new CatalogUiReadService(
             $authenticatedUser,
             $libraryContexts,
             new WpdbCatalogUiReadRepository($database, $tableNames),
             $libraryClassifications,
-            $libraryCollections
+            $libraryCollections,
+            $libraryPublicAssessments
         );
         $bibliographicRelationships = new BibliographicRelationshipQueryService(
             $authorRepository,
@@ -482,7 +491,6 @@ final class ProductionComposition
         $assessmentClock = new SystemAssessmentClock();
         $ratingRepository = new WpdbRatingRepository($database, $tableNames);
         $reviewRepository = new WpdbReviewRepository($database, $tableNames);
-        $publicationRepository = new WpdbPublicationRepository($database, $tableNames);
         $assessmentSources = new SourceContributionService(
             $authenticatedUser,
             $workRepository,
@@ -768,10 +776,7 @@ final class ProductionComposition
             new ModerateContributionPublicationService($publicationLifecycle),
             new RestoreContributionPublicationService($publicationLifecycle),
             $assessmentQueries,
-            new GetLibraryPublicAssessmentsService(
-                $libraryContexts,
-                $publicationRepository
-            ),
+            $libraryPublicAssessments,
             $nextReadingAdd,
             $nextReadingRemove,
             $nextReadingUndo,

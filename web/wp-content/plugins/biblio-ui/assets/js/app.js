@@ -290,6 +290,113 @@ function assertDetailCollections(collections) {
     }
 }
 
+function isPublicAssessmentRating(value) {
+    return typeof value === "number"
+        && Number.isFinite(value)
+        && value >= 1
+        && value <= 5
+        && Number.isInteger(value * 2);
+}
+
+function isPublicAssessmentTimestamp(value) {
+    const match = typeof value === "string"
+        ? /^(?<year>[0-9]{4})-(?<month>[0-9]{2})-(?<day>[0-9]{2})T(?<hour>[0-9]{2}):(?<minute>[0-9]{2}):(?<second>[0-9]{2})\.(?<microsecond>[0-9]{6})Z$/u.exec(value)
+        : null;
+
+    if (match === null) {
+        return false;
+    }
+
+    const parts = Object.fromEntries(Object.entries(match.groups).map(
+        ([key, part]) => [key, Number(part)]
+    ));
+    const instant = new Date(Date.UTC(
+        parts.year,
+        parts.month - 1,
+        parts.day,
+        parts.hour,
+        parts.minute,
+        parts.second
+    ));
+
+    return instant.getUTCFullYear() === parts.year
+        && instant.getUTCMonth() === parts.month - 1
+        && instant.getUTCDate() === parts.day
+        && instant.getUTCHours() === parts.hour
+        && instant.getUTCMinutes() === parts.minute
+        && instant.getUTCSeconds() === parts.second;
+}
+
+function assertDetailAssessments(assessments) {
+    if (
+        !isRecord(assessments)
+        || !hasExactFields(assessments, [
+            "contributions",
+            "aggregate",
+            "next_cursor",
+        ])
+        || !Array.isArray(assessments.contributions)
+        || !assessments.contributions.every((contribution) => {
+            if (
+                !isRecord(contribution)
+                || typeof contribution.display_name !== "string"
+                || contribution.display_name.trim().length === 0
+                || !isPublicAssessmentTimestamp(contribution.published_at)
+            ) {
+                return false;
+            }
+
+            if (contribution.type === "rating") {
+                return hasExactFields(contribution, [
+                    "type",
+                    "display_name",
+                    "published_at",
+                    "rating",
+                ]) && isPublicAssessmentRating(contribution.rating);
+            }
+
+            return contribution.type === "review"
+                && hasExactFields(contribution, [
+                    "type",
+                    "display_name",
+                    "published_at",
+                    "rating",
+                    "review_html",
+                ])
+                && (
+                    contribution.rating === null
+                    || isPublicAssessmentRating(contribution.rating)
+                )
+                && typeof contribution.review_html === "string";
+        })
+        || !isRecord(assessments.aggregate)
+        || !hasExactFields(assessments.aggregate, ["average", "voter_count"])
+        || !Number.isInteger(assessments.aggregate.voter_count)
+        || assessments.aggregate.voter_count < 0
+        || !(
+            assessments.aggregate.average === null
+            || (
+                typeof assessments.aggregate.average === "number"
+                && Number.isFinite(assessments.aggregate.average)
+                && assessments.aggregate.average >= 1
+                && assessments.aggregate.average <= 5
+                && Number.isInteger(assessments.aggregate.average * 10)
+            )
+        )
+        || (assessments.aggregate.voter_count === 0)
+            !== (assessments.aggregate.average === null)
+        || !(
+            assessments.next_cursor === null
+            || (
+                typeof assessments.next_cursor === "string"
+                && assessments.next_cursor.length > 0
+            )
+        )
+    ) {
+        throw new TypeError("The Biblio Item assessments contract is invalid.");
+    }
+}
+
 function readDetail(payload, selectedLibraryId, requestedItemId) {
     const textFields = [
         "cover_reference",
@@ -320,6 +427,7 @@ function readDetail(payload, selectedLibraryId, requestedItemId) {
         || !textFields.every((field) => assertTextValue(payload[field]))
         || !isRecord(payload.classification)
         || !Array.isArray(payload.collections)
+        || !isRecord(payload.assessments)
         || typeof payload.item_status !== "string"
         || !isRecord(payload.capabilities)
         || typeof payload.capabilities.view_item !== "boolean"
@@ -332,6 +440,7 @@ function readDetail(payload, selectedLibraryId, requestedItemId) {
     assertLibraryPresentation(payload.library);
     assertDetailClassification(payload.classification);
     assertDetailCollections(payload.collections);
+    assertDetailAssessments(payload.assessments);
     assertReadingSummary(payload.reading);
     assertActiveReadingRound(payload.active_reading_round);
 

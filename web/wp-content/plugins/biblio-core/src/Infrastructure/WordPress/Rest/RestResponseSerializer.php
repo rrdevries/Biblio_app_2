@@ -318,12 +318,37 @@ final readonly class RestResponseSerializer
                 ],
                 $detail->collections()
             ),
+            "assessments" => $this->assessmentProjection(
+                $detail->assessments()
+            ),
             "item_status" => $detail->itemStatus()->value,
             "reading" => $this->readingSummary($detail->reading()),
             "active_reading_round" => $this->activeReadingRound(
                 $detail->activeReadingRound()
             ),
             "capabilities" => $this->detailCapabilities($detail->capabilities()),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function assessmentProjection(PublicAssessmentPage $page): array
+    {
+        $aggregate = $page->aggregate();
+
+        return [
+            "contributions" => array_map(
+                $this->publicAssessment(...),
+                $page->contributions()
+            ),
+            "aggregate" => [
+                "average" => $aggregate->average(),
+                "voter_count" => $aggregate->uniqueUsers(),
+            ],
+            "next_cursor" => $page->nextCursor() === null
+                ? null
+                : $this->publicAssessmentCursorCodec()->encode(
+                    $page->nextCursor()
+                ),
         ];
     }
 

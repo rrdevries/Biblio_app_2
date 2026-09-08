@@ -135,6 +135,28 @@ function detail(overrides = {}) {
             collection_id: "collection-second",
             display_name: "Een lange tweede collectienaam die rustig moet kunnen afbreken",
         }],
+        assessments: {
+            contributions: [{
+                type: "review",
+                display_name: "Lezer A",
+                published_at: "2026-09-08T10:20:30.123456Z",
+                rating: 4.5,
+                review_html: "Een rustige &amp; lange review\nmet een tweede regel en &lt;script&gt; als tekst.",
+            }, {
+                type: "review",
+                display_name: "Lezer A",
+                published_at: "2026-08-07T09:00:00.000000Z",
+                rating: null,
+                review_html: "Een tweede leesronde.",
+            }, {
+                type: "rating",
+                display_name: "Lezer B",
+                published_at: "2026-07-06T08:00:00.000000Z",
+                rating: 3,
+            }],
+            aggregate: { average: 3.8, voter_count: 2 },
+            next_cursor: "opaque-cursor",
+        },
         item_status: "active",
         reading: {
             status: "reading",
@@ -177,6 +199,7 @@ test("detail renders the allowlisted known contract and canonical back link", ()
     assert.equal(byTag(root, "h1")[0].textContent, "Het bekende boek");
     assert.deepEqual(byTag(root, "h2").map((node) => node.textContent), [
         "Overzicht",
+        "Beoordelingen",
         "Boekdetails",
         "Uitgave",
         "Exemplaar",
@@ -208,6 +231,7 @@ test("detail renders the allowlisted known contract and canonical back link", ()
         [
             "Overzicht",
             "Leesgeschiedenis",
+            "Beoordelingen",
             "Mijn notities",
             "Boekdetails",
             "Uitgave",
@@ -230,6 +254,14 @@ test("detail renders the allowlisted known contract and canonical back link", ()
     assert.match(text(root), /Onderwerpen Een lang onderwerp/);
     assert.match(text(root), /In collecties Eerste collectie/);
     assert.match(text(root), /Een lange tweede collectienaam/);
+    assert.match(text(root), /3,8 van 5 · 2 beoordelingen/);
+    assert.match(text(root), /4,5 van 5/);
+    assert.match(text(root), /Een rustige & lange review/);
+    assert.match(text(root), /<script> als tekst/);
+    assert.match(text(root), /Lezer A · 8 september 2026/);
+    assert.match(text(root), /Een tweede leesronde/);
+    assert.match(text(root), /Lezer B · 6 juli 2026/);
+    assert.match(text(root), /Er zijn meer beoordelingen beschikbaar/);
     assert.deepEqual(
         descendants(root, (node) => (
             node.className === "biblio-ui__collection-memberships"
@@ -285,6 +317,11 @@ test("unknown, missing and not-applicable values omit labels and sections", () =
             subjects: [],
         },
         collections: [],
+        assessments: {
+            contributions: [],
+            aggregate: { average: null, voter_count: 0 },
+            next_cursor: null,
+        },
         reading: {
             status: "not_read",
             active_rounds: 0,
@@ -322,6 +359,7 @@ test("unknown, missing and not-applicable values omit labels and sections", () =
         /Locatie|Conditie|Verwerving|Beschikbaarheid|undefined|null|Onbekend/);
     assert.doesNotMatch(text(root), /Genres|Onderwerpen|Leesboek/);
     assert.doesNotMatch(text(root), /In collecties/);
+    assert.doesNotMatch(text(root), /Beoordelingen/);
 });
 
 test("Start Reading is presentation-only and focuses authoritative updates", () => {

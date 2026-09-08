@@ -245,6 +245,68 @@ final class RatingsReviewsPublicRestApiTest extends PersistenceIntegrationTestCa
         );
     }
 
+    public function testBookDetailComposesTheAuthorizedLibraryAssessmentPage(): void
+    {
+        $this->seedPublicScenario();
+        $this->seedReview(
+            "review-own-private",
+            $this->actorId,
+            null,
+            "Own private review"
+        );
+
+        $detailRequest = new WP_REST_Request(
+            "GET",
+            "/biblio/v1/libraries/library-a/items/item-a"
+        );
+        $detail = $this->data($this->dispatchAs(
+            $this->actorId,
+            $detailRequest
+        ));
+        $standalone = $this->readScenario();
+
+        self::assertSame([
+            "contributions",
+            "aggregate",
+            "next_cursor",
+        ], array_keys($detail["assessments"]));
+        self::assertSame(
+            $standalone["contributions"],
+            $detail["assessments"]["contributions"]
+        );
+        self::assertSame(
+            $standalone["aggregate"],
+            $detail["assessments"]["aggregate"]
+        );
+        self::assertNull($detail["assessments"]["next_cursor"]);
+        self::assertCount(5, $detail["assessments"]["contributions"]);
+        self::assertCount(2, array_filter(
+            $detail["assessments"]["contributions"],
+            static fn (array $row): bool =>
+                $row["type"] === "rating"
+                && $row["display_name"] === "Author A"
+        ));
+        self::assertSame([
+            "book_types" => [],
+            "genres" => [],
+            "subjects" => [],
+        ], $detail["classification"]);
+        self::assertSame([], $detail["collections"]);
+
+        $serialized = (string) wp_json_encode($detail["assessments"]);
+        foreach ([
+            "Own private review",
+            "Private review",
+            "Library B only",
+            "review-own-private",
+            "reading_round_id",
+            "user_id",
+            "moderation",
+        ] as $privateValue) {
+            self::assertStringNotContainsString($privateValue, $serialized);
+        }
+    }
+
     public function testDeletingNewestRatingCascadesAndFallsBack(): void
     {
         $this->seedPublicScenario();
