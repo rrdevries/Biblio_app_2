@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Biblio\Core\Application\Catalog\Classification\Read;
 
 use Biblio\Core\Application\Library\LibraryContextQueryService;
-use Biblio\Core\Catalog\Classification\{LibraryBookType,LibraryCatalogSelection,LibraryClassificationReadRepository,LibraryGenre,LibrarySubject};
+use Biblio\Core\Catalog\Classification\{LibraryBookType,LibraryCatalogClassification,LibraryCatalogSelection,LibraryClassificationReadRepository,LibraryGenre,LibrarySubject};
 use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Exception\ValidationException;
 use Biblio\Core\Library\LibraryId;
@@ -50,6 +50,24 @@ final readonly class LibraryClassificationQueryService
         $this->libraryContexts->get($libraryId);
         $this->assertWorkBatch($workIds);
         return $this->classifications->classificationsForWorks($libraryId, $workIds);
+    }
+
+    /**
+     * Returns the actual assigned terms, including retained inactive terms.
+     *
+     * @param list<WorkId> $workIds
+     * @return array<string, LibraryCatalogClassification|null>
+     */
+    public function assignedClassificationsForWorks(
+        LibraryId $libraryId,
+        array $workIds
+    ): array {
+        $this->libraryContexts->get($libraryId);
+        $this->assertWorkBatch($workIds);
+        return $this->classifications->assignedClassificationsForWorks(
+            $libraryId,
+            $workIds
+        );
     }
 
     /** @param array<mixed> $workIds */

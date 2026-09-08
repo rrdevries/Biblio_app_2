@@ -799,6 +799,12 @@ No generic `Categorie`.
 
 Tags deferred.
 
+Book Detail reads this classification from the current Library + Work context,
+not from Edition or Item and not from the active-option list. It may show the
+assigned Book Type, Genres and Subjects with their Library-local display names.
+An assigned term remains visible after deactivation; deactivation only removes
+it from new choices. A context-free legacy Work shows no classification.
+
 ## Search inside a Library
 
 Strictly scoped to the current Library.

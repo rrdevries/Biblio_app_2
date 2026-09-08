@@ -2302,7 +2302,7 @@ Renée has given human visual **GO**. Detailed evidence:
 
 ### UI-BOOK-01 — Book Detail D-BOOK-01 composition baseline
 
-Status: **TECHNICAL GO / HUMAN VISUAL ACCEPTANCE PENDING**
+Status: **TECHNICAL GO / HUMAN VISUAL GO**
 
 Book Detail now implements the approved D-BOOK-01 structure inside the existing
 `[biblio_library_app]` shell: a compact neutral Atmosphere hero, deterministic
@@ -2313,12 +2313,33 @@ Book, Edition and Library Item fields stay in the right context column.
 
 The UI consumes only the existing authorized Item detail, Work history and
 owner-scoped Notes contracts. Missing description data is stated honestly.
-Reviews, Collections, Library classification and other mockup-only fields are
-not rendered because Book Detail has no approved composed contract for them.
+Reviews, Collections, Library classification and other mockup-only fields were
+not rendered in UI-BOOK-01 because Book Detail then had no approved composed
+contract for them.
 Core authorization, Library Context, REST payloads and schema remain unchanged.
 
 Biblio UI is `0.7.0`; schema remains `1017`. Automated responsive evidence
 covers 1440px, 1024px, 768px, 390px and the repository's 720px
-200%-reflow-equivalent. Actual 200% browser zoom and final production-browser/
-device visual acceptance remain with Renée. Detailed evidence:
+200%-reflow-equivalent. Renée has given final human visual **GO**. Detailed evidence:
 `docs/55-ui-book-01-book-detail-visual-baseline.md`.
+
+### BOOK-API-01 — Book Detail classification projection
+
+Status: **GO / CLOSED**
+
+The existing authorized Item-detail response now composes the real
+Library×Work `LibraryCatalogContext` assignment. It projects type-specific
+Library-local IDs and display names for one Book Type plus zero-or-more Genres
+and Subjects. All lists are stable and empty when a legacy represented Work has
+no context. Assigned inactive terms remain readable; options for new Add Book
+selection remain active-only and unchanged.
+
+The detail flow authorizes the explicit Library and Item before the
+assignment read. Assignment and term joins retain the same Library predicate,
+with no cross-Library fallback. The strict frontend decoder rejects malformed
+classification. D-BOOK-01 shows Book Type as a restrained hero chip and Genres
+and Subjects in the right-hand Bookdetails group, omitting empty UI.
+
+Schema remains `1017`; Biblio UI is `0.8.0`. There is no classification
+editing, provider mapping, schema change or second detail endpoint. Detailed
+evidence: `docs/56-book-api-01-book-detail-classification-projection.md`.

@@ -471,10 +471,13 @@ besluiten. Bestaande canonieke product- en domeinbesluiten blijven leidend.
 UI-BOOK-01 implementeert deze compositie met uitsluitend het bestaande
 geautoriseerde Item-detailcontract, Reading History en Private Notes. Een
 neutrale token-gedreven hero draagt de visuele rol zolang er geen production
-Atmospherebron is. Secties voor beschrijving, beoordelingen, collecties en
-classificatie verschijnen pas wanneer een afzonderlijk goedgekeurd
-Book-Detail-contract daarvoor echte gegevens levert; afwezigheid wordt niet
-met mockupcopy of clientdata gemaskeerd.
+Atmospherebron is. Secties voor beschrijving, beoordelingen en collecties
+verschijnen pas wanneer een afzonderlijk goedgekeurd Book-Detail-contract
+daarvoor echte gegevens levert; afwezigheid wordt niet met mockupcopy of
+clientdata gemaskeerd. BOOK-API-01 levert inmiddels de echte
+Library×Work-classificatie: Boeksoort staat als rustige chip in de hero en
+Genres/Onderwerpen staan zonder dubbele weergave in Boekdetails. Lege
+classificatie levert geen placeholder op.
 
 #### D-ADD-02 — Add Book vervolgcontext
 

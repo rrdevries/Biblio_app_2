@@ -925,6 +925,14 @@ the DTO honest and lets B3/B4 enrich persistence later without making
 Elementor or REST depend on table shape. F2.11 adds no schema, REST, WordPress
 Ability, serializer, cache or UI.
 
+BOOK-API-01 later composes the existing classification A2 boundary into Item
+detail after the authorized Item read. The Item-derived Work ID and the same
+explicit Library ID are passed to an assigned-term query whose context,
+junction and term predicates remain Library-scoped. Unlike the active-only
+`classification-options` read, this projection intentionally includes linked
+inactive terms. REST receives a small immutable allowlist of IDs and current
+display names; no persistence rows or status fields cross the adapter.
+
 ## 22. F2.12 WordPress REST adapter boundary
 
 The versioned `biblio/v1` adapter is WordPress infrastructure around existing

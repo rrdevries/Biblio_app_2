@@ -23,4 +23,13 @@ interface LibraryClassificationReadRepository
      * @return array<string, LibraryCatalogSelection|null>
      */
     public function classificationsForWorks(LibraryId $libraryId, array $workIds): array;
+
+    /**
+     * @param list<WorkId> $workIds
+     * @return array<string, LibraryCatalogClassification|null>
+     */
+    public function assignedClassificationsForWorks(
+        LibraryId $libraryId,
+        array $workIds
+    ): array;
 }

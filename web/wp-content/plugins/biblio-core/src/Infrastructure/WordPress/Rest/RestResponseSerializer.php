@@ -28,7 +28,7 @@ use Biblio\Core\Application\Reading\History\ReadingHistoryPage;
 use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Catalog\Author;
 use Biblio\Core\Catalog\IsbnRules;
-use Biblio\Core\Catalog\Classification\{LibraryGenreId,LibrarySubjectId};
+use Biblio\Core\Catalog\Classification\{LibraryCatalogClassification,LibraryGenreId,LibrarySubjectId};
 use Biblio\Core\Catalog\Classification\{LibraryBookType,LibraryGenre,LibrarySubject};
 use Biblio\Core\Collections\CollectionId;
 use Biblio\Core\Library\LibraryId;
@@ -308,12 +308,41 @@ final readonly class RestResponseSerializer
             "condition" => $this->text($detail->condition()),
             "acquisition" => $this->text($detail->acquisition()),
             "availability" => $this->text($detail->availability()),
+            "classification" => $this->detailClassification(
+                $detail->classification()
+            ),
             "item_status" => $detail->itemStatus()->value,
             "reading" => $this->readingSummary($detail->reading()),
             "active_reading_round" => $this->activeReadingRound(
                 $detail->activeReadingRound()
             ),
             "capabilities" => $this->detailCapabilities($detail->capabilities()),
+        ];
+    }
+
+    /** @return array<string, list<array<string, string>>> */
+    private function detailClassification(
+        ?LibraryCatalogClassification $classification
+    ): array {
+        return [
+            "book_types" => $classification === null ? [] : [[
+                "book_type_id" => $classification->bookType()->id()->value(),
+                "display_name" => $classification->bookType()->name()->value(),
+            ]],
+            "genres" => array_map(
+                static fn (LibraryGenre $term): array => [
+                    "genre_id" => $term->id()->value(),
+                    "display_name" => $term->name()->value(),
+                ],
+                $classification?->genres() ?? []
+            ),
+            "subjects" => array_map(
+                static fn (LibrarySubject $term): array => [
+                    "subject_id" => $term->id()->value(),
+                    "display_name" => $term->name()->value(),
+                ],
+                $classification?->subjects() ?? []
+            ),
         ];
     }
 

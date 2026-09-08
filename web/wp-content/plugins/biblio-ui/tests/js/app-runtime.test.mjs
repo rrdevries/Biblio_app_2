@@ -143,6 +143,11 @@ function detail(selectedLibrary, itemId, overrides = {}) {
         condition: unknown,
         acquisition: unknown,
         availability: unknown,
+        classification: {
+            book_types: [],
+            genres: [],
+            subjects: [],
+        },
         item_status: "active",
         reading: {
             status: "not_read",
@@ -888,6 +893,63 @@ test("Item detail strictly validates active ReadingRound and end capability", as
         payload: activeDetail(selected, "item-1", {
             ...activeRound(),
             user_id: "other",
+        }),
+        expectedState: "request-error",
+    }, {
+        name: "valid assigned classification",
+        payload: detail(selected, "item-1", {
+            classification: {
+                book_types: [{
+                    book_type_id: "book-reading",
+                    display_name: "Leesboek",
+                }],
+                genres: [{ genre_id: "genre-history", display_name: "Historisch" }],
+                subjects: [],
+            },
+        }),
+        expectedState: "detail",
+    }, {
+        name: "classification must be an exact object",
+        payload: detail(selected, "item-1", { classification: "Leesboek" }),
+        expectedState: "request-error",
+    }, {
+        name: "classification term IDs are not coerced",
+        payload: detail(selected, "item-1", {
+            classification: {
+                book_types: [{ book_type_id: 42, display_name: "Leesboek" }],
+                genres: [],
+                subjects: [],
+            },
+        }),
+        expectedState: "request-error",
+    }, {
+        name: "classification terms reject extra fields",
+        payload: detail(selected, "item-1", {
+            classification: {
+                book_types: [],
+                genres: [{
+                    genre_id: "genre-history",
+                    display_name: "Historisch",
+                    term_status: "inactive",
+                }],
+                subjects: [],
+            },
+        }),
+        expectedState: "request-error",
+    }, {
+        name: "classification rejects multiple Book Types",
+        payload: detail(selected, "item-1", {
+            classification: {
+                book_types: [{
+                    book_type_id: "book-reading",
+                    display_name: "Leesboek",
+                }, {
+                    book_type_id: "book-reference",
+                    display_name: "Naslagwerk",
+                }],
+                genres: [],
+                subjects: [],
+            },
         }),
         expectedState: "request-error",
     }];

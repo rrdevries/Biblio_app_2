@@ -32,6 +32,14 @@ final class ExistingSourceClassificationRepositoryStub implements LibraryClassif
         ++$this->calls;
         return array_fill_keys(array_map(static fn (WorkId $id): string => $id->value(), $workIds), null);
     }
+    public function assignedClassificationsForWorks(LibraryId $libraryId, array $workIds): array
+    {
+        ++$this->calls;
+        return array_fill_keys(
+            array_map(static fn (WorkId $id): string => $id->value(), $workIds),
+            null
+        );
+    }
 }
 
 final class ExistingSourceActorLibraryContextRepositoryStub implements ActorLibraryContextRepository
@@ -95,13 +103,14 @@ final class ExistingSourceReadServicesTest extends TestCase
         self::assertSame([], $service->activeGenres($libraryId));
         self::assertSame([], $service->activeSubjects($libraryId));
         self::assertSame(['work-a' => null], $service->classificationsForWorks($libraryId, [new WorkId('work-a')]));
-        self::assertSame(4, $repository->calls);
+        self::assertSame(['work-a' => null], $service->assignedClassificationsForWorks($libraryId, [new WorkId('work-a')]));
+        self::assertSame(5, $repository->calls);
 
         try {
             $service->activeGenres(new LibraryId('foreign-library'));
             self::fail('Foreign Library classification options were readable.');
         } catch (AuthorizationException) {
-            self::assertSame(4, $repository->calls, 'Authorization must run before classification persistence.');
+            self::assertSame(5, $repository->calls, 'Authorization must run before classification persistence.');
         }
     }
 

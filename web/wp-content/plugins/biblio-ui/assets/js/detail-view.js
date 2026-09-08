@@ -45,6 +45,12 @@ function knownList(value) {
         : null;
 }
 
+function classificationNames(terms) {
+    return Array.isArray(terms) && terms.length > 0
+        ? terms.map((term) => term.display_name).join(", ")
+        : null;
+}
+
 function icon(documentImpl, name) {
     return element(documentImpl, "span", {
         className: "biblio-ui__icon",
@@ -320,13 +326,19 @@ function renderDetail(documentImpl, model, actions) {
 
     const heroMeta = element(documentImpl, "div", {
         className: "biblio-ui__detail-hero-meta",
-        attributes: { "aria-label": "Boekstatus", role: "group" },
+        attributes: { "aria-label": "Leesstatus en boeksoort", role: "group" },
     });
     heroMeta.append(element(documentImpl, "span", {
         className: `biblio-ui__status biblio-ui__status--${detail.reading.status}`,
         text: readingStatusLabel(detail.reading.status),
     }));
-    if (knownText(detail.form) === "physical_book") {
+    const bookType = detail.classification.book_types[0] ?? null;
+    if (bookType !== null) {
+        heroMeta.append(element(documentImpl, "span", {
+            className: "biblio-ui__detail-chip biblio-ui__detail-chip--classification",
+            text: bookType.display_name,
+        }));
+    } else if (knownText(detail.form) === "physical_book") {
         heroMeta.append(element(documentImpl, "span", {
             className: "biblio-ui__detail-chip",
             text: "Boek",
@@ -374,6 +386,8 @@ function renderDetail(documentImpl, model, actions) {
     const bookDetails = metadataSection(documentImpl, "boekdetails", "Boekdetails", [
         ["Auteur", knownList(detail.authors)],
         ["Serie", knownText(detail.series)],
+        ["Genres", classificationNames(detail.classification.genres)],
+        ["Onderwerpen", classificationNames(detail.classification.subjects)],
     ]);
     const editionDetails = metadataSection(documentImpl, "uitgave", "Uitgave", [
         ["Titel", detail.title],

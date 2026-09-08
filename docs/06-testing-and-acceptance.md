@@ -2653,7 +2653,35 @@ UI-BOOK-01 is technically accepted when:
 - no Core, REST, schema, migration, authorization, provider, classification,
   Elementor or production Atmosphere behavior enters the slice.
 
-Status: **TECHNICAL GO / HUMAN VISUAL ACCEPTANCE PENDING**. Schema remains
-`1017`; Biblio UI is `0.7.0`. Actual 200% zoom and final production-browser/
-device visual acceptance remain with Renée. See
+Status: **TECHNICAL GO / HUMAN VISUAL GO**. Schema remains `1017`; Biblio UI
+is `0.7.0`. Renée has given final human visual GO. See
 `docs/55-ui-book-01-book-detail-visual-baseline.md`.
+
+## 83. BOOK-API-01 Book Detail classification projection
+
+BOOK-API-01 is accepted when:
+
+- Item detail reads the existing `Library + Work` assignment, not the active
+  `classification-options` choice list;
+- exactly the assigned Book Type and zero-or-more assigned Genres/Subjects are
+  projected with stable Library-local IDs and current display names;
+- retained inactive assignments remain readable, while Add Book options remain
+  active-only and unchanged;
+- empty legacy contexts produce stable empty lists with no null/list ambiguity;
+- authorization precedes assignment reads and every persistence predicate is
+  constrained to the same Library, including a shared Work/Edition with
+  different classifications in two Libraries;
+- the strict frontend decoder rejects malformed containers, IDs, names and
+  extra term fields without coercion;
+- D-BOOK-01 shows at most one Book Type chip in the hero, Genres/Subjects once
+  in Boekdetails and no empty classification UI;
+- long/multiple values wrap without horizontal overflow at 1440px, 1024px,
+  390px and the 200%-reflow equivalent;
+- Book Detail, Add Book, Core, REST, UI and guarded browser regressions pass;
+  and
+- no schema, mutation, provider mapping, classification governance, search,
+  Collection, Review, cover, description, Elementor or Librarian behavior is
+  added.
+
+Status: **GO / CLOSED**. Schema remains `1017`; Biblio UI is `0.8.0`. See
+`docs/56-book-api-01-book-detail-classification-projection.md`.

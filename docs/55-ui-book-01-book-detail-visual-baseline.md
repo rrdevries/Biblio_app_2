@@ -1,6 +1,6 @@
 # 55 — UI-BOOK-01 Book Detail D-BOOK-01 composition baseline
 
-Status: **TECHNICAL GO / HUMAN VISUAL ACCEPTANCE PENDING**
+Status: **TECHNICAL GO / HUMAN VISUAL GO**
 
 Date: 2026-09-07
 
@@ -52,12 +52,16 @@ remote cover, inferred palette, persistence or Atmosphere engine was added.
 
 ## 3. Deliberately absent or deferred
 
-Reviews/ratings, Collections, Library classification, description, subtitle,
+Reviews/ratings, Collections, description, subtitle,
 binding, page count, printing statement, Edition contributors and richer
 acquisition information are not rendered. Adding any of them requires an
 explicitly approved Book Detail composition contract and, where necessary, a
 separately authorized backend slice. D-ADD-02 Book Detail edit mode and
 collector-local fields remain unimplemented.
+
+Library classification was deliberately absent from UI-BOOK-01 itself and is
+now added by the separately approved BOOK-API-01 contract; see
+`docs/56-book-api-01-book-detail-classification-projection.md`.
 
 ## 4. Responsive, accessibility and privacy contract
 
@@ -110,11 +114,9 @@ Verified in the final implementation tree:
 - explicit independent second review against scope, canon, architecture,
   authorization/privacy, accessibility and regression risk: no blocker.
 
-## 8. Version and remaining human QA
+## 8. Version and human visual acceptance
 
 Biblio UI is `0.7.0` so browsers request the changed shared assets.
 
-Renée retains final visual acceptance on intended production browsers/devices,
-including actual 200% zoom, keyboard/focus inspection and comparison with the
-approved D-BOOK-01 reference. A **GO** from that review authorizes the prepared
-local commit for push; no push is part of UI-BOOK-01.
+Renée has given human visual **GO** for the D-BOOK-01 baseline. No push was part
+of UI-BOOK-01.

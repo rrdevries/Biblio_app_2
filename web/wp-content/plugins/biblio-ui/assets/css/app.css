@@ -1618,6 +1618,13 @@ body.admin-bar.biblio-app-shell-page {
     padding: 0.1rem var(--biblio-space-2);
 }
 
+[data-biblio-ui-root] .biblio-ui__detail-chip--classification {
+    border-color: color-mix(in srgb, var(--biblio-color-brass) 42%, var(--biblio-color-border));
+    color: var(--biblio-color-text-primary);
+    max-inline-size: 28ch;
+    overflow-wrap: anywhere;
+}
+
 [data-biblio-ui-root] .biblio-ui__detail-actions {
     margin-block-start: var(--biblio-space-2);
 }
