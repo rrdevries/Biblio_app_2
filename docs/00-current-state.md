@@ -2343,3 +2343,25 @@ and Subjects in the right-hand Bookdetails group, omitting empty UI.
 Schema remains `1017`; Biblio UI is `0.8.0`. There is no classification
 editing, provider mapping, schema change or second detail endpoint. Detailed
 evidence: `docs/56-book-api-01-book-detail-classification-projection.md`.
+
+### BOOK-API-02 — Book Detail Collection membership projection
+
+Status: **GO / CLOSED**
+
+The existing authorized Item-detail response now projects the active
+Collection memberships of that exact physical Item. Output contains only
+Library-local Collection ID and display name, ordered by manual Collection
+position. Zero memberships is a stable empty list.
+
+The read uses the existing Library-scoped Collection boundary after Item-detail
+authorization. Active membership joins require the same Library plus active
+Item, membership and Collection state. No membership is inferred from Edition,
+Work or sibling Items; archived Collections and inactive historical membership
+periods are absent.
+
+The strict frontend decoder rejects malformed or duplicate entries. D-BOOK-01
+shows a compact text-only `In collecties` list in the right context column and
+omits the section when empty. There is no Collection route, mutation, reorder,
+wishlist grouping or schema change. Schema remains `1017`; Biblio UI is
+`0.9.0`. Detailed evidence:
+`docs/57-book-api-02-book-detail-collection-membership-projection.md`.

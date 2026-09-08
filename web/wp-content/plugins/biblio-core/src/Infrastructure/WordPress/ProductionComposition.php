@@ -277,11 +277,16 @@ final class ProductionComposition
             $libraryContexts,
             new WpdbLibraryClassificationReadRepository($database, $tableNames)
         );
+        $libraryCollections = new LibraryCollectionQueryService(
+            $libraryContexts,
+            $collectionRepository
+        );
         $catalogUiReads = new CatalogUiReadService(
             $authenticatedUser,
             $libraryContexts,
             new WpdbCatalogUiReadRepository($database, $tableNames),
-            $libraryClassifications
+            $libraryClassifications,
+            $libraryCollections
         );
         $bibliographicRelationships = new BibliographicRelationshipQueryService(
             $authorRepository,
@@ -302,10 +307,6 @@ final class ProductionComposition
             $libraryContexts,
             $itemRepository,
             $itemArchiveRepository
-        );
-        $libraryCollections = new LibraryCollectionQueryService(
-            $libraryContexts,
-            $collectionRepository
         );
         $activityFactory = new WordPressActivityEventFactory(
             new ActivityEventSource("core.classification")

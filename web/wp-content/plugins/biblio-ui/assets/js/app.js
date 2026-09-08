@@ -272,6 +272,24 @@ function assertDetailClassification(classification) {
     }
 }
 
+function assertDetailCollections(collections) {
+    if (
+        !Array.isArray(collections)
+        || !collections.every((collection) => (
+            isRecord(collection)
+            && hasExactFields(collection, ["collection_id", "display_name"])
+            && typeof collection.collection_id === "string"
+            && collection.collection_id.length > 0
+            && typeof collection.display_name === "string"
+            && collection.display_name.length > 0
+        ))
+        || new Set(collections.map((collection) => collection.collection_id)).size
+            !== collections.length
+    ) {
+        throw new TypeError("The Biblio Item collections contract is invalid.");
+    }
+}
+
 function readDetail(payload, selectedLibraryId, requestedItemId) {
     const textFields = [
         "cover_reference",
@@ -301,6 +319,7 @@ function readDetail(payload, selectedLibraryId, requestedItemId) {
         || !assertTextListValue(payload.authors)
         || !textFields.every((field) => assertTextValue(payload[field]))
         || !isRecord(payload.classification)
+        || !Array.isArray(payload.collections)
         || typeof payload.item_status !== "string"
         || !isRecord(payload.capabilities)
         || typeof payload.capabilities.view_item !== "boolean"
@@ -312,6 +331,7 @@ function readDetail(payload, selectedLibraryId, requestedItemId) {
 
     assertLibraryPresentation(payload.library);
     assertDetailClassification(payload.classification);
+    assertDetailCollections(payload.collections);
     assertReadingSummary(payload.reading);
     assertActiveReadingRound(payload.active_reading_round);
 

@@ -52,7 +52,7 @@ remote cover, inferred palette, persistence or Atmosphere engine was added.
 
 ## 3. Deliberately absent or deferred
 
-Reviews/ratings, Collections, description, subtitle,
+Reviews/ratings, description, subtitle,
 binding, page count, printing statement, Edition contributors and richer
 acquisition information are not rendered. Adding any of them requires an
 explicitly approved Book Detail composition contract and, where necessary, a
@@ -62,6 +62,10 @@ collector-local fields remain unimplemented.
 Library classification was deliberately absent from UI-BOOK-01 itself and is
 now added by the separately approved BOOK-API-01 contract; see
 `docs/56-book-api-01-book-detail-classification-projection.md`.
+
+Collection membership was deliberately absent from UI-BOOK-01 itself and is
+now added by the separately approved BOOK-API-02 contract; see
+`docs/57-book-api-02-book-detail-collection-membership-projection.md`.
 
 ## 4. Responsive, accessibility and privacy contract
 

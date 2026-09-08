@@ -1466,6 +1466,7 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             "genres" => [],
             "subjects" => [],
         ], $detail["classification"]);
+        self::assertSame([], $detail["collections"]);
         self::assertSame("not_read", $detail["reading"]["status"]);
         self::assertNull($detail["active_reading_round"]);
         self::assertFalse($detail["capabilities"]["end_reading"]);
@@ -1551,6 +1552,61 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         );
         self::assertArrayNotHasKey("term_status", $detailA["classification"]["book_types"][0]);
         self::assertArrayNotHasKey("normalized_name", $detailA["classification"]["genres"][0]);
+    }
+
+    public function testDetailProjectsOnlyActiveCollectionsForExactItemAndLibrary(): void
+    {
+        $this->seedLibrary("detail-collections-a", "Collecties A", $this->actorId, "owner");
+        $this->seedLibrary("detail-collections-b", "Collecties B", $this->actorId, "owner");
+        $this->seedItem("detail-collection-item-a", "detail-collections-a", "detail-collection-work", "Gedeeld boek");
+        $this->database->insert($this->tableNames->items(), [
+            "item_id" => "detail-collection-sibling",
+            "library_id" => "detail-collections-a",
+            "edition_id" => "edition-detail-collection-item-a",
+            "item_status" => "active",
+        ]);
+        $this->database->insert($this->tableNames->items(), [
+            "item_id" => "detail-collection-item-b",
+            "library_id" => "detail-collections-b",
+            "edition_id" => "edition-detail-collection-item-a",
+            "item_status" => "active",
+        ]);
+        $this->seedDetailCollection("detail-collections-a", "detail-collection-second", "Tweede", 2);
+        $this->seedDetailCollection("detail-collections-a", "detail-collection-first", "Eerste", 1);
+        $this->seedDetailCollection("detail-collections-a", "detail-collection-sibling-only", "Ander exemplaar", 3);
+        $this->seedDetailCollection("detail-collections-a", "detail-collection-archived", "Archief", 4, "archived");
+        $this->seedDetailCollection("detail-collections-b", "detail-collection-foreign", "Andere Library", 1);
+        $this->seedDetailCollectionMembership("detail-collections-a", "detail-membership-second", "detail-collection-second", "detail-collection-item-a", 1);
+        $this->seedDetailCollectionMembership("detail-collections-a", "detail-membership-first", "detail-collection-first", "detail-collection-item-a", 1);
+        $this->seedDetailCollectionMembership("detail-collections-a", "detail-membership-sibling", "detail-collection-sibling-only", "detail-collection-sibling", 1);
+        $this->seedDetailCollectionMembership("detail-collections-a", "detail-membership-archived", "detail-collection-archived", "detail-collection-item-a", 1);
+        $this->seedDetailCollectionMembership("detail-collections-b", "detail-membership-foreign", "detail-collection-foreign", "detail-collection-item-b", 1);
+
+        $detail = $this->successData($this->dispatchAsActor(new WP_REST_Request(
+            "GET",
+            "/biblio/v1/libraries/detail-collections-a/items/detail-collection-item-a"
+        )));
+
+        self::assertSame([
+            ["collection_id" => "detail-collection-first", "display_name" => "Eerste"],
+            ["collection_id" => "detail-collection-second", "display_name" => "Tweede"],
+        ], $detail["collections"]);
+        self::assertSame(
+            ["collection_id", "display_name"],
+            array_keys($detail["collections"][0])
+        );
+        self::assertStringNotContainsString(
+            "detail-collection-foreign",
+            (string) wp_json_encode($detail)
+        );
+        self::assertStringNotContainsString(
+            "detail-collection-sibling-only",
+            (string) wp_json_encode($detail)
+        );
+        self::assertStringNotContainsString(
+            "detail-collection-archived",
+            (string) wp_json_encode($detail)
+        );
     }
 
     public function testReadingHistoryRequiresCookieNonceAndReturnsEmptyWithoutOracle(): void
@@ -1960,6 +2016,7 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             "acquisition",
             "availability",
             "classification",
+            "collections",
             "item_status",
             "reading",
             "active_reading_round",
@@ -3627,6 +3684,44 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             "library_id" => $libraryId,
             "edition_id" => "edition-{$itemId}",
             "item_status" => "active",
+        ]);
+    }
+
+    private function seedDetailCollection(
+        string $libraryId,
+        string $collectionId,
+        string $name,
+        int $position,
+        string $status = "active"
+    ): void {
+        $this->database->insert($this->tableNames->collections(), [
+            "library_id" => $libraryId,
+            "collection_id" => $collectionId,
+            "collection_name" => $name,
+            "normalized_name" => strtolower($name),
+            "collection_status" => $status,
+            "collection_position" => $position,
+            "collection_version" => 1,
+            "created_at" => "2026-09-08 08:00:00.000000",
+            "updated_at" => "2026-09-08 08:00:00.000000",
+        ]);
+    }
+
+    private function seedDetailCollectionMembership(
+        string $libraryId,
+        string $membershipId,
+        string $collectionId,
+        string $itemId,
+        int $position
+    ): void {
+        $this->database->insert($this->tableNames->collectionMemberships(), [
+            "library_id" => $libraryId,
+            "membership_id" => $membershipId,
+            "collection_id" => $collectionId,
+            "item_id" => $itemId,
+            "membership_status" => "active",
+            "item_position" => $position,
+            "added_at" => "2026-09-08 08:01:00.000000",
         ]);
     }
 

@@ -69,6 +69,11 @@ const BIBLIO_E2E_C7_PAGE_SLUG = "hierna-lezen";
 const BIBLIO_E2E_C7_UNAVAILABLE_ITEM = "e2e-item-c7-unavailable";
 const BIBLIO_E2E_C7_LOAN = "e2e-external-loan-c7";
 const BIBLIO_E2E_C7_FOREIGN_LOAN = "e2e-external-loan-c7-foreign";
+const BIBLIO_E2E_HISTORY_COLLECTION_FIRST = "e2e-collection-history-first";
+const BIBLIO_E2E_HISTORY_COLLECTION_SECOND = "e2e-collection-history-second";
+const BIBLIO_E2E_HISTORY_COLLECTION_SIBLING = "e2e-collection-history-sibling";
+const BIBLIO_E2E_HISTORY_COLLECTION_ARCHIVED = "e2e-collection-history-archived";
+const BIBLIO_E2E_HISTORY_COLLECTION_REMOVED = "e2e-collection-history-removed";
 
 /** @return never */
 function biblioE2eFail(string $message): void
@@ -216,6 +221,30 @@ function biblioE2eItems(): array
 }
 
 /** @return list<string> */
+function biblioE2eCollections(): array
+{
+    return [
+        BIBLIO_E2E_HISTORY_COLLECTION_FIRST,
+        BIBLIO_E2E_HISTORY_COLLECTION_SECOND,
+        BIBLIO_E2E_HISTORY_COLLECTION_SIBLING,
+        BIBLIO_E2E_HISTORY_COLLECTION_ARCHIVED,
+        BIBLIO_E2E_HISTORY_COLLECTION_REMOVED,
+    ];
+}
+
+/** @return list<string> */
+function biblioE2eCollectionMemberships(): array
+{
+    return [
+        "e2e-membership-history-first",
+        "e2e-membership-history-second",
+        "e2e-membership-history-sibling",
+        "e2e-membership-history-archived",
+        "e2e-membership-history-removed",
+    ];
+}
+
+/** @return list<string> */
 function biblioE2ePrivateNoteIds(): array
 {
     $ids = [
@@ -310,6 +339,18 @@ function biblioE2eCleanupCore(wpdb $database): void
         biblioE2eDeleteIn($database, $tables->privateNotes(), "work_id", $works);
         biblioE2eDeleteIn($database, $tables->ratings(), "work_id", $works);
         biblioE2eDeleteIn($database, $tables->reviews(), "work_id", $works);
+        biblioE2eDeleteIn(
+            $database,
+            $tables->collectionMemberships(),
+            "membership_id",
+            biblioE2eCollectionMemberships()
+        );
+        biblioE2eDeleteIn(
+            $database,
+            $tables->collections(),
+            "collection_id",
+            biblioE2eCollections()
+        );
         biblioE2eDeleteIn($database, $tables->libraryCatalogContextGenres(), "library_id", $libraries);
         biblioE2eDeleteIn($database, $tables->libraryCatalogContextSubjects(), "library_id", $libraries);
         biblioE2eDeleteIn($database, $tables->libraryCatalogContexts(), "library_id", $libraries);
@@ -485,6 +526,59 @@ function biblioE2eAddItem(
             new LibraryCatalogSelection($bookType->id())
         )
     );
+}
+
+function biblioE2eSeedCollections(wpdb $database): void
+{
+    $tables = new CoreTableNames($database->prefix);
+    $createdAt = "2026-09-08 08:00:00.000000";
+    $collections = [
+        [BIBLIO_E2E_HISTORY_COLLECTION_FIRST, "Literaire favorieten met een lange collectienaam", "literaire favorieten met een lange collectienaam", "active", 1],
+        [BIBLIO_E2E_HISTORY_COLLECTION_SECOND, "Historische romans", "historische romans", "active", 2],
+        [BIBLIO_E2E_HISTORY_COLLECTION_SIBLING, "Alleen het andere exemplaar", "alleen het andere exemplaar", "active", 3],
+        [BIBLIO_E2E_HISTORY_COLLECTION_ARCHIVED, "Gearchiveerde selectie", "gearchiveerde selectie", "archived", 4],
+        [BIBLIO_E2E_HISTORY_COLLECTION_REMOVED, "Verwijderde membership", "verwijderde membership", "active", 5],
+    ];
+
+    foreach ($collections as [$collectionId, $name, $normalized, $status, $position]) {
+        if ($database->insert($tables->collections(), [
+            "library_id" => BIBLIO_E2E_OTHER_LIBRARY,
+            "collection_id" => $collectionId,
+            "collection_name" => $name,
+            "normalized_name" => $normalized,
+            "collection_status" => $status,
+            "collection_position" => $position,
+            "collection_version" => 1,
+            "created_at" => $createdAt,
+            "updated_at" => $createdAt,
+        ]) !== 1) {
+            throw new RuntimeException("Could not create exact Collection fixture.");
+        }
+    }
+
+    $memberships = [
+        ["e2e-membership-history-first", BIBLIO_E2E_HISTORY_COLLECTION_FIRST, BIBLIO_E2E_HISTORY_ITEM, "active", 1, null, null],
+        ["e2e-membership-history-second", BIBLIO_E2E_HISTORY_COLLECTION_SECOND, BIBLIO_E2E_HISTORY_ITEM, "active", 1, null, null],
+        ["e2e-membership-history-sibling", BIBLIO_E2E_HISTORY_COLLECTION_SIBLING, BIBLIO_E2E_HISTORY_SAME_EDITION_ITEM, "active", 1, null, null],
+        ["e2e-membership-history-archived", BIBLIO_E2E_HISTORY_COLLECTION_ARCHIVED, BIBLIO_E2E_HISTORY_ITEM, "active", 1, null, null],
+        ["e2e-membership-history-removed", BIBLIO_E2E_HISTORY_COLLECTION_REMOVED, BIBLIO_E2E_HISTORY_ITEM, "inactive", 1, "2026-09-08 08:02:00.000000", "removed"],
+    ];
+
+    foreach ($memberships as [$membershipId, $collectionId, $itemId, $status, $position, $endedAt, $reason]) {
+        if ($database->insert($tables->collectionMemberships(), [
+            "library_id" => BIBLIO_E2E_OTHER_LIBRARY,
+            "membership_id" => $membershipId,
+            "collection_id" => $collectionId,
+            "item_id" => $itemId,
+            "membership_status" => $status,
+            "item_position" => $position,
+            "added_at" => "2026-09-08 08:01:00.000000",
+            "ended_at" => $endedAt,
+            "end_reason" => $reason,
+        ]) !== 1) {
+            throw new RuntimeException("Could not create exact Collection membership fixture.");
+        }
+    }
 }
 
 function biblioE2eStartRound(
@@ -877,6 +971,20 @@ function biblioE2eCounts(wpdb $database): array
         "editions" => (int) $database->get_var($database->prepare(
             "SELECT COUNT(*) FROM `{$tables->editions()}` WHERE edition_id IN ({$editionSql})",
             ...$editionValues
+        )),
+        "collections" => (int) $database->get_var($database->prepare(
+            "SELECT COUNT(*) FROM `{$tables->collections()}` "
+                . "WHERE collection_id IN ("
+                . implode(",", array_fill(0, count(biblioE2eCollections()), "%s"))
+                . ")",
+            ...biblioE2eCollections()
+        )),
+        "collection_memberships" => (int) $database->get_var($database->prepare(
+            "SELECT COUNT(*) FROM `{$tables->collectionMemberships()}` "
+                . "WHERE membership_id IN ("
+                . implode(",", array_fill(0, count(biblioE2eCollectionMemberships()), "%s"))
+                . ")",
+            ...biblioE2eCollectionMemberships()
         )),
         "external_loans" => (int) $database->get_var($database->prepare(
             "SELECT COUNT(*) FROM `{$tables->externalLoans()}` "
@@ -1345,6 +1453,7 @@ function biblioE2eSetup(wpdb $database): void
     biblioE2eAddItem($database, $composition, BIBLIO_E2E_OTHER_LIBRARY, BIBLIO_E2E_HISTORY_REFRESH_ITEM, "e2e-work-history-refresh", "E2E History Refresh Failure", "e2e-edition-history-refresh");
     biblioE2eAddItem($database, $composition, BIBLIO_E2E_OTHER_LIBRARY, BIBLIO_E2E_HISTORY_RAPID_ITEM, "e2e-work-history-rapid", "E2E Andere Geschiedenis", "e2e-edition-history-rapid");
     biblioE2eAddItem($database, $composition, BIBLIO_E2E_OTHER_LIBRARY, BIBLIO_E2E_FOREIGN_ITEM, "e2e-work-foreign", "Ripper", "e2e-edition-foreign");
+    biblioE2eSeedCollections($database);
 
     biblioE2eStartRound($database, $actorName, BIBLIO_E2E_ACTOR_LIBRARY, BIBLIO_E2E_END_COMPLETED_ITEM, ReadingDate::exact(2026, 8, 2));
     biblioE2eStartRound($database, $actorName, BIBLIO_E2E_ACTOR_LIBRARY, BIBLIO_E2E_END_STOPPED_ITEM, ReadingDate::exact(2026, 8, 3));

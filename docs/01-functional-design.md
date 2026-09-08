@@ -1280,6 +1280,13 @@ Description:
 
 Manual Collection order and manual Item order.
 
+Book Detail projects only the active Collection memberships of its concrete
+Item in manual Collection order. It does not infer membership from the Work,
+Edition, Series or another Item. The projection is Library-scoped; archived
+Collections and inactive membership history remain absent from the active
+detail read. `In collecties` is read-only and is omitted when the Item has no
+active memberships.
+
 Automatic cover can use up to first four active visible Items by saved order.
 
 `Collectie beheren` is draft-state editing:

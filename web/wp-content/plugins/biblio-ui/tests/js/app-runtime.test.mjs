@@ -148,6 +148,7 @@ function detail(selectedLibrary, itemId, overrides = {}) {
             genres: [],
             subjects: [],
         },
+        collections: [],
         item_status: "active",
         reading: {
             status: "not_read",
@@ -908,6 +909,50 @@ test("Item detail strictly validates active ReadingRound and end capability", as
             },
         }),
         expectedState: "detail",
+    }, {
+        name: "valid ordered collections",
+        payload: detail(selected, "item-1", {
+            collections: [{
+                collection_id: "collection-first",
+                display_name: "Eerste collectie",
+            }, {
+                collection_id: "collection-second",
+                display_name: "Tweede collectie",
+            }],
+        }),
+        expectedState: "detail",
+    }, {
+        name: "collections must be a list",
+        payload: detail(selected, "item-1", { collections: null }),
+        expectedState: "request-error",
+    }, {
+        name: "collection IDs are not coerced",
+        payload: detail(selected, "item-1", {
+            collections: [{ collection_id: 42, display_name: "Collectie" }],
+        }),
+        expectedState: "request-error",
+    }, {
+        name: "collections reject extra fields",
+        payload: detail(selected, "item-1", {
+            collections: [{
+                collection_id: "collection-first",
+                display_name: "Collectie",
+                collection_status: "active",
+            }],
+        }),
+        expectedState: "request-error",
+    }, {
+        name: "collections reject duplicate memberships",
+        payload: detail(selected, "item-1", {
+            collections: [{
+                collection_id: "collection-first",
+                display_name: "Collectie",
+            }, {
+                collection_id: "collection-first",
+                display_name: "Dubbel",
+            }],
+        }),
+        expectedState: "request-error",
     }, {
         name: "classification must be an exact object",
         payload: detail(selected, "item-1", { classification: "Leesboek" }),

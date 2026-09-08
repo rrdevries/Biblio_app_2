@@ -128,6 +128,13 @@ function detail(overrides = {}) {
                 display_name: "Een lang onderwerp dat in de utilitykolom moet kunnen afbreken",
             }],
         },
+        collections: [{
+            collection_id: "collection-first",
+            display_name: "Eerste collectie",
+        }, {
+            collection_id: "collection-second",
+            display_name: "Een lange tweede collectienaam die rustig moet kunnen afbreken",
+        }],
         item_status: "active",
         reading: {
             status: "reading",
@@ -173,6 +180,7 @@ test("detail renders the allowlisted known contract and canonical back link", ()
         "Boekdetails",
         "Uitgave",
         "Exemplaar",
+        "In collecties",
     ]);
     assert.equal(
         byAttribute(root, "data-biblio-reading-history", "true").length,
@@ -204,6 +212,7 @@ test("detail renders the allowlisted known contract and canonical back link", ()
             "Boekdetails",
             "Uitgave",
             "Exemplaar",
+            "In collecties",
         ]
     );
     assert.match(text(root), /Auteur A, Auteur B/);
@@ -219,6 +228,17 @@ test("detail renders the allowlisted known contract and canonical back link", ()
     assert.match(text(root), /Leesboek/);
     assert.match(text(root), /Genres Literatuur, Historisch/);
     assert.match(text(root), /Onderwerpen Een lang onderwerp/);
+    assert.match(text(root), /In collecties Eerste collectie/);
+    assert.match(text(root), /Een lange tweede collectienaam/);
+    assert.deepEqual(
+        descendants(root, (node) => (
+            node.className === "biblio-ui__collection-memberships"
+        ))[0].children.map((node) => node.textContent),
+        [
+            "Eerste collectie",
+            "Een lange tweede collectienaam die rustig moet kunnen afbreken",
+        ]
+    );
     assert.doesNotMatch(text(root),
         /work-internal|edition-internal|never render this/);
 
@@ -264,6 +284,7 @@ test("unknown, missing and not-applicable values omit labels and sections", () =
             genres: [],
             subjects: [],
         },
+        collections: [],
         reading: {
             status: "not_read",
             active_rounds: 0,
@@ -300,6 +321,7 @@ test("unknown, missing and not-applicable values omit labels and sections", () =
     assert.doesNotMatch(text(root),
         /Locatie|Conditie|Verwerving|Beschikbaarheid|undefined|null|Onbekend/);
     assert.doesNotMatch(text(root), /Genres|Onderwerpen|Leesboek/);
+    assert.doesNotMatch(text(root), /In collecties/);
 });
 
 test("Start Reading is presentation-only and focuses authoritative updates", () => {

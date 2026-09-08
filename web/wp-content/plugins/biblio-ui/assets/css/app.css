@@ -1725,6 +1725,21 @@ body.admin-bar.biblio-app-shell-page {
     margin-block-start: 0;
 }
 
+[data-biblio-ui-root] .biblio-ui__collection-memberships {
+    display: grid;
+    gap: var(--biblio-space-2);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+[data-biblio-ui-root] .biblio-ui__collection-memberships li {
+    border-inline-start: 2px solid color-mix(in srgb, var(--biblio-color-brass) 48%, var(--biblio-color-border));
+    color: var(--biblio-color-text-secondary);
+    overflow-wrap: anywhere;
+    padding-inline-start: var(--biblio-space-3);
+}
+
 [data-biblio-ui-root] .biblio-ui__section-kicker {
     color: var(--biblio-color-brass);
     font-size: 0.75rem;

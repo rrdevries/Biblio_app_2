@@ -2685,3 +2685,30 @@ BOOK-API-01 is accepted when:
 
 Status: **GO / CLOSED**. Schema remains `1017`; Biblio UI is `0.8.0`. See
 `docs/56-book-api-01-book-detail-classification-projection.md`.
+
+## 84. BOOK-API-02 Book Detail Collection membership projection
+
+BOOK-API-02 is accepted when:
+
+- Item detail projects only the active memberships of the exact physical Item,
+  never inferred Edition-, Work-, Series- or sibling-Item membership;
+- actor and explicit Library Context authorization precede the Collection read,
+  and all Collection, membership and Item predicates retain the same Library;
+- zero, one and multiple memberships return a stable list of exact
+  `collection_id`/`display_name` objects in manual Collection order;
+- inactive membership history and archived Collections remain absent, with no
+  status or internal position exposed;
+- the strict decoder rejects wrong containers/types, empty identifiers/names,
+  extra fields and duplicate Collection IDs without coercion or silent drops;
+- D-BOOK-01 renders a quiet text-only `In collecties` section only when data is
+  present and creates no Collection route or mutation control;
+- same-Edition multiple-Item and cross-Library fixtures prove isolation;
+- long/multiple names wrap without overflow at 1440px, 1024px, 390px and the
+  200%-reflow equivalent;
+- classification, Collection lifecycle, Add Book, Core, REST, UI and guarded
+  browser regressions pass with clean fixture state; and
+- no schema, Collection editing/reorder, wishlist grouping, provider, review,
+  description, Elementor or other Book Detail scope is added.
+
+Status: **GO / CLOSED**. Schema remains `1017`; Biblio UI is `0.9.0`. See
+`docs/57-book-api-02-book-detail-collection-membership-projection.md`.

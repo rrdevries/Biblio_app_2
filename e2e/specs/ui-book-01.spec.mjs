@@ -6,7 +6,7 @@ const ITEM_ID = "e2e-item-history";
 const DETAIL_URL = `/mijn-bibliotheek/?library_id=${LIBRARY_ID}&item_id=${ITEM_ID}`;
 
 async function capture(page, name, locator = null) {
-    const directory = ".local/book-api-01-screenshots/after";
+    const directory = ".local/book-api-02-screenshots/after";
     await mkdir(directory, { recursive: true });
     const target = locator ?? page;
     await target.screenshot({
@@ -82,6 +82,7 @@ test("UI-BOOK-01 composes authoritative Book Detail data across responsive layou
         "Boekdetails",
         "Uitgave",
         "Exemplaar",
+        "In collecties",
     ]);
     await expect(hero.locator(".biblio-ui__control--primary")).toHaveCount(0);
     await expect(hero.getByRole("button", { name: "Leesronde afronden" })).toBeVisible();
@@ -91,6 +92,7 @@ test("UI-BOOK-01 composes authoritative Book Detail data across responsive layou
     await expect(page.getByRole("heading", { name: "Boekdetails", level: 2 })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Uitgave", level: 2 })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Exemplaar", level: 2 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "In collecties", level: 2 })).toBeVisible();
     await expect(page.getByText("9780306406157", { exact: true })).toBeVisible();
     await expect(page.getByText("Kast B", { exact: true })).toBeVisible();
     await expect(hero.getByText("Leesboek", { exact: true })).toBeVisible();
@@ -99,9 +101,14 @@ test("UI-BOOK-01 composes authoritative Book Detail data across responsive layou
         "Europese familiegeschiedenis in de twintigste eeuw",
         { exact: true }
     )).toBeVisible();
+    const collections = page.locator(".biblio-ui__detail-collections");
+    await expect(collections.locator("li")).toHaveText([
+        "Literaire favorieten met een lange collectienaam",
+        "Historische romans",
+    ]);
+    await expect(collections.locator("a")).toHaveCount(0);
     await expect(page.locator("body")).not.toContainText("Classificatie onbekend");
     await expect(page.locator("body")).not.toContainText("Beoordelingen");
-    await expect(page.locator("body")).not.toContainText("In collecties");
     await expectNoHorizontalOverflow(page);
 
     const heroBox = await hero.boundingBox();

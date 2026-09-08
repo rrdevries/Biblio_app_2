@@ -9,6 +9,7 @@ use Biblio\Core\Application\Catalog\Read\CatalogItemNotAvailable;
 use Biblio\Core\Application\Catalog\Read\CatalogOverviewPageSize;
 use Biblio\Core\Application\Catalog\Read\CatalogUiReadService;
 use Biblio\Core\Application\Catalog\Classification\Read\LibraryClassificationQueryService;
+use Biblio\Core\Application\Collections\Read\LibraryCollectionQueryService;
 use Biblio\Core\Application\Library\LibraryContextQueryService;
 use Biblio\Core\Authorization\LibraryAuthorizationPolicy;
 use Biblio\Core\Catalog\ItemId;
@@ -16,6 +17,7 @@ use Biblio\Core\Exception\AuthorizationException;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbActorLibraryContextRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbCatalogUiReadRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbCollectionRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryClassificationReadRepository;
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Reading\PersonalWorkReadingStatus;
@@ -194,6 +196,66 @@ final class CatalogUiReadModelsTest extends PersistenceIntegrationTestCase
                 $detailB->classification()?->genres() ?? []
             )
         );
+    }
+
+    public function testDetailCollectionsAreItemSpecificOrderedAndLibraryIsolated(): void
+    {
+        $actor = new UserId("511");
+        $libraryA = new LibraryId("collection-detail-a");
+        $libraryB = new LibraryId("collection-detail-b");
+        $this->seedLibrary($libraryA->value(), "Collecties A", $actor, "direct");
+        $this->seedLibrary($libraryB->value(), "Collecties B", $actor, "direct");
+        $this->seedItem("collection-item-a", $libraryA->value(), "collection-work", "Gedeelde uitgave");
+        $this->database->insert($this->tableNames->items(), [
+            "item_id" => "collection-item-sibling",
+            "library_id" => $libraryA->value(),
+            "edition_id" => "edition-collection-item-a",
+            "item_status" => "active",
+        ]);
+        $this->database->insert($this->tableNames->items(), [
+            "item_id" => "collection-item-b",
+            "library_id" => $libraryB->value(),
+            "edition_id" => "edition-collection-item-a",
+            "item_status" => "active",
+        ]);
+        $this->seedItem("collection-item-empty", $libraryA->value(), "empty-work", "Zonder collectie");
+
+        $this->seedCollection($libraryA->value(), "collection-a-second", "Tweede collectie", 2);
+        $this->seedCollection($libraryA->value(), "collection-a-first", "Eerste collectie", 1);
+        $this->seedCollection($libraryA->value(), "collection-a-sibling", "Alleen ander exemplaar", 3);
+        $this->seedCollection($libraryA->value(), "collection-a-archived", "Gearchiveerd", 4, "archived");
+        $this->seedCollection($libraryA->value(), "collection-a-removed", "Verwijderd", 5);
+        $this->seedCollection($libraryB->value(), "collection-b", "Andere Library", 1);
+        $this->seedCollectionMembership($libraryA->value(), "membership-a-second", "collection-a-second", "collection-item-a", 1);
+        $this->seedCollectionMembership($libraryA->value(), "membership-a-first", "collection-a-first", "collection-item-a", 1);
+        $this->seedCollectionMembership($libraryA->value(), "membership-a-sibling", "collection-a-sibling", "collection-item-sibling", 1);
+        $this->seedCollectionMembership($libraryA->value(), "membership-a-archived", "collection-a-archived", "collection-item-a", 1);
+        $this->seedCollectionMembership($libraryA->value(), "membership-a-removed", "collection-a-removed", "collection-item-a", 1, "inactive");
+        $this->seedCollectionMembership($libraryB->value(), "membership-b", "collection-b", "collection-item-b", 1);
+
+        $service = $this->service($actor);
+        $detailA = $service->itemDetail($libraryA, new ItemId("collection-item-a"));
+        $sibling = $service->itemDetail($libraryA, new ItemId("collection-item-sibling"));
+        $detailB = $service->itemDetail($libraryB, new ItemId("collection-item-b"));
+        $empty = $service->itemDetail($libraryA, new ItemId("collection-item-empty"));
+
+        self::assertSame(
+            ["collection-a-first", "collection-a-second"],
+            array_map(static fn ($collection): string => $collection->collectionId()->value(), $detailA->collections())
+        );
+        self::assertSame(
+            ["Eerste collectie", "Tweede collectie"],
+            array_map(static fn ($collection): string => $collection->displayName(), $detailA->collections())
+        );
+        self::assertSame(["collection-a-sibling"], array_map(
+            static fn ($collection): string => $collection->collectionId()->value(),
+            $sibling->collections()
+        ));
+        self::assertSame(["collection-b"], array_map(
+            static fn ($collection): string => $collection->collectionId()->value(),
+            $detailB->collections()
+        ));
+        self::assertSame([], $empty->collections());
     }
 
     public function testOverviewSortCursorAndDetailUseTheConcreteEditionTitle(): void
@@ -419,8 +481,54 @@ final class CatalogUiReadModelsTest extends PersistenceIntegrationTestCase
                     $this->database,
                     $this->tableNames
                 )
+            ),
+            new LibraryCollectionQueryService(
+                $contexts,
+                new WpdbCollectionRepository($this->database, $this->tableNames)
             )
         );
+    }
+
+    private function seedCollection(
+        string $libraryId,
+        string $collectionId,
+        string $name,
+        int $position,
+        string $status = "active"
+    ): void {
+        $this->database->insert($this->tableNames->collections(), [
+            "library_id" => $libraryId,
+            "collection_id" => $collectionId,
+            "collection_name" => $name,
+            "normalized_name" => strtolower($name),
+            "collection_status" => $status,
+            "collection_position" => $position,
+            "collection_version" => 1,
+            "created_at" => "2026-09-08 08:00:00.000000",
+            "updated_at" => "2026-09-08 08:00:00.000000",
+        ]);
+    }
+
+    private function seedCollectionMembership(
+        string $libraryId,
+        string $membershipId,
+        string $collectionId,
+        string $itemId,
+        int $position,
+        string $status = "active"
+    ): void {
+        $inactive = $status === "inactive";
+        $this->database->insert($this->tableNames->collectionMemberships(), [
+            "library_id" => $libraryId,
+            "membership_id" => $membershipId,
+            "collection_id" => $collectionId,
+            "item_id" => $itemId,
+            "membership_status" => $status,
+            "item_position" => $position,
+            "added_at" => "2026-09-08 08:01:00.000000",
+            "ended_at" => $inactive ? "2026-09-08 08:02:00.000000" : null,
+            "end_reason" => $inactive ? "removed" : null,
+        ]);
     }
 
     private function seedLibrary(

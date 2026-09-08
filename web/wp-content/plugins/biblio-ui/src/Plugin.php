@@ -6,7 +6,7 @@ namespace Biblio\UI;
 
 final class Plugin
 {
-    public const VERSION = "0.8.0";
+    public const VERSION = "0.9.0";
     public const PAGE_BODY_CLASS = "biblio-app-shell-page";
     public const SCRIPT_MODULE_ID = "biblio-ui/app";
     public const ADD_BOOK_SCRIPT_MODULE_ID = "biblio-ui/add-book-wizard";

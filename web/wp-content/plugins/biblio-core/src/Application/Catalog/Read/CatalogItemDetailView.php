@@ -32,6 +32,8 @@ final readonly class CatalogItemDetailView
         private CatalogTextValue $acquisition,
         private CatalogTextValue $availability,
         private ?LibraryCatalogClassification $classification,
+        /** @var list<CatalogItemCollectionView> */
+        private array $collections,
         private ItemStatus $itemStatus,
         private CatalogReadingSummary $reading,
         private ?CatalogActiveReadingRoundView $activeReadingRound,
@@ -60,6 +62,8 @@ final readonly class CatalogItemDetailView
     {
         return $this->classification;
     }
+    /** @return list<CatalogItemCollectionView> */
+    public function collections(): array { return $this->collections; }
     public function itemStatus(): ItemStatus { return $this->itemStatus; }
     public function reading(): CatalogReadingSummary { return $this->reading; }
     public function activeReadingRound(): ?CatalogActiveReadingRoundView
