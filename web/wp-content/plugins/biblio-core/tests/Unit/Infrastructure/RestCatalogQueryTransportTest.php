@@ -176,6 +176,7 @@ final class RestCatalogQueryTransportTest extends TestCase
             'item_id', 'work_id', 'edition_id', 'title', 'item_status',
             'inventory_number', 'authors', 'series', 'location',
             'classification', 'collection_ids', 'reading_status',
+            'read_date_known',
             'contained_match_title',
         ], array_keys($data['items'][0]));
         self::assertSame('archived', $data['items'][0]['item_status']);

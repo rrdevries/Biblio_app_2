@@ -192,6 +192,7 @@ function item(id, overrides = {}) {
         form: { state: "known", value: "physical_book" },
         location_or_source: { state: "unknown", value: null },
         reading_status: "not_read",
+        read_date_known: null,
         item_status: "active",
         capabilities: { view_item: true, start_reading: true },
         ...overrides,
@@ -323,6 +324,22 @@ test("overview rendering uses only allowlisted known Item presentation", () => {
     assert.match(text(root), /Boek · Kast B Aan het lezen/);
     assert.match(text(root), /Zonder metadata Auteur onbekend Uitgelezen/);
     assert.doesNotMatch(text(root), /never render|work-one|edition-one/);
+});
+
+test("overview distinguishes date-unknown read truth and explicit unknown", () => {
+    const { root, view } = setup();
+    view.render(overviewModel({
+        items: [
+            item("read-undated", {
+                reading_status: "read",
+                read_date_known: false,
+            }),
+            item("unknown", { reading_status: "unknown" }),
+        ],
+    }));
+
+    assert.match(text(root), /Uitgelezen · datum onbekend/);
+    assert.match(text(root), /Leesstatus onbekend/);
 });
 
 test("all Library bootstrap, chooser, unavailable and request states render safely", () => {

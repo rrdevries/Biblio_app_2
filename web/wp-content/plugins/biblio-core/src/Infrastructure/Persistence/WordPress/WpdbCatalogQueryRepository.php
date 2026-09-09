@@ -189,15 +189,29 @@ final readonly class WpdbCatalogQueryRepository implements CatalogQueryRepositor
             foreach ($filters->readingStatuses() as $status) {
                 $active = "EXISTS (SELECT 1 FROM `{$this->tables->readingRounds()}` rr_a WHERE rr_a.user_id=%s AND rr_a.work_id=w.work_id AND rr_a.round_outcome IS NULL)";
                 $completed = "EXISTS (SELECT 1 FROM `{$this->tables->readingRounds()}` rr_c WHERE rr_c.user_id=%s AND rr_c.work_id=w.work_id AND rr_c.round_outcome='completed')";
+                $truthRead = "EXISTS (SELECT 1 FROM `{$this->tables->personalReadingTruths()}` prt_r WHERE prt_r.user_id=%s AND prt_r.work_id=w.work_id AND prt_r.truth_state='read_known_date_unknown')";
+                $truthNotRead = "EXISTS (SELECT 1 FROM `{$this->tables->personalReadingTruths()}` prt_n WHERE prt_n.user_id=%s AND prt_n.work_id=w.work_id AND prt_n.truth_state='explicit_not_read')";
+                $truthAbsent = "NOT EXISTS (SELECT 1 FROM `{$this->tables->personalReadingTruths()}` prt_a WHERE prt_a.user_id=%s AND prt_a.work_id=w.work_id)";
                 if ($status === PersonalWorkReadingStatus::Reading) {
                     $predicates[] = $active;
                     $parameters[] = $actorId->value();
                 } elseif ($status === PersonalWorkReadingStatus::Read) {
-                    $predicates[] = "NOT {$active} AND {$completed}";
-                    array_push($parameters, $actorId->value(), $actorId->value());
+                    $predicates[] = "NOT {$active} AND ({$completed} OR {$truthRead})";
+                    array_push(
+                        $parameters,
+                        $actorId->value(),
+                        $actorId->value(),
+                        $actorId->value()
+                    );
                 } else {
-                    $predicates[] = "NOT {$active} AND NOT {$completed}";
-                    array_push($parameters, $actorId->value(), $actorId->value());
+                    $predicates[] = "NOT {$active} AND NOT {$completed} AND ({$truthNotRead} OR {$truthAbsent})";
+                    array_push(
+                        $parameters,
+                        $actorId->value(),
+                        $actorId->value(),
+                        $actorId->value(),
+                        $actorId->value()
+                    );
                 }
             }
             $where[] = '(' . implode(' OR ', array_map(static fn (string $sql): string => "({$sql})", $predicates)) . ')';

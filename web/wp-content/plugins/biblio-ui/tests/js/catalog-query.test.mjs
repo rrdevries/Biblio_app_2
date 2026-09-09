@@ -42,6 +42,7 @@ function item(overrides = {}) {
         },
         collection_ids: ["collection-1"],
         reading_status: "reading",
+        read_date_known: null,
         contained_match_title: null,
         ...overrides,
     };

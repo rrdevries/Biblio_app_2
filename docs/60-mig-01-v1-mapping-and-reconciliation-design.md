@@ -247,6 +247,7 @@ MIG-FND-01 verhoogt runtime, migratieregister en schema health van `1017` naar
 | Goals | user | feature V2.002+ | geen actief target; preserve-only toegestaan |
 | Cover/assets | bibliografisch/Item | feature V2.002+ | geen Biblio-owned target; preserve-only toegestaan |
 | Migration run/source map/quarantine/preservation | technisch bewijs | stabiele source→target ledger en payload evidence | **actief source-neutraal fundament in schema 1018; geen importer/executor** |
+| Personal Reading Truth | user | source-neutrale user×Work waarheid zonder concrete leesdatum of ronde | **actief target in schema 1019; exact read-known/date-unknown, explicit-not-read en unknown** |
 
 De huidige metadata-user-observationstabel accepteert uitsluitend
 `physical_copy_add_book` als source context. V1-importdata daarin schrijven zou
@@ -281,9 +282,9 @@ eindstatus.
 | Uitgebreide Author metadata (aliases/bio/name parts/photo/links/provenance) | Author-linked evidence | PRESERVED_DEFERRED | alleen huidige Author identity/displayrelatie is actief gemapt |
 | 52 ReadingRounds | ReadingRound | TRANSFORMED | 48 completed, 2 stopped, 2 active; known precision behouden |
 | 3 partial-finish registrations | historical ReadingRound | TRANSFORMED | completed, maandprecisie, source-free |
-| 392 unknown-date registrations | toekomstige truth-preserving read target | PRESERVED_DEFERRED | huidig ReadingRound vereist einddatum; blocks cutover totdat actief target bestaat |
-| 331 explicit `no` read markers | ledger + afgeleide status | TRANSFORMED | expliciete negatieve bronwaarheid blijft traceerbaar; geen ronde wordt aangemaakt |
-| 360 `unknown` read markers | toekomstige truth-preserving status-target | PRESERVED_DEFERRED | absence of round mag unknown niet stil in expliciet not-read veranderen |
+| Historical unknown-date registrations from the audited snapshot | PersonalReadingTruth `read_known_date_unknown` | TRANSFORMED | owner×Work target is representable without a ReadingRound or invented date; current counts require a newly designated source |
+| Historical explicit `no` markers from the audited snapshot | PersonalReadingTruth `explicit_not_read` | TRANSFORMED | explicit negative truth remains distinct; completed-round contradiction must quarantine; no round is created |
+| Historical `unknown` markers from the audited snapshot | PersonalReadingTruth `unknown` | TRANSFORMED | explicit unknown remains distinct from explicit not-read and absence; current counts require a newly designated source |
 | `readHistory`/snapshot compat | preservation/audit link | PRESERVED_DEFERRED | niet als tweede ReadingRound-eventbron gebruiken |
 | 17 Notes | Private Note | TRANSFORMED | user-owned Work note; existing note-ID in source ledger |
 | 15 Ratings | Rating | TRANSFORMED | score ×2 naar V2 half-step integer; geen round-link/publication; timestamp gap oplossen vóór writes |
@@ -827,16 +828,16 @@ fixturemutatie of V1-write.
 | Gap | V1 evidence | Waarom cutover-blocker | Minimum oplossing | Volledige feature deferred? |
 |---|---|---|---|---|
 | Basis Wishlist-target | 41 actieve records | dagelijkse lijst kan niet worden gemigreerd/gebruikt | user-owned Work/Edition-intent met stable ID, view/add/remove en migration binding | grouping/smart groups ja |
-| Onbekende leesdatum/-status | 392 read registrations met unknown date; 360 unknown versus 331 explicit no | huidige ReadingRound vereist einddatum en V2-status wist unknown/no-distinctie | truth-preserving migrated read fact of beperkte ReadingRound/date-statusuitbreiding + owner readprojectie | rijke history UI nee; doel is V1-parity |
+| **RESOLVED by READ-MIG-01 — onbekende leesdatum/-status** | historische audit bewees read/date-unknown, unknown en explicit no; geen count is actuele V1-waarheid | schema 1019 Personal Reading Truth bewaart de drie user×Work states zonder fictieve ronde/datum en met ownerprojectie | actief source-neutraal target + MIG-FND participant; normale write-UI volgt gericht als READ-UI-01 | rijke history-management UI ja |
 | Item acquisition/local evidence | 77 acquisitions, 3 copy notes, 1 exemplar photo, 1 disposal | bronfeiten hebben geen actief target en mogen niet verdwijnen | minimale Item-data persistence/read of traceerbare actieve migration-evidence volgens bestaande ownershipgrens | specialist collector/cover ja |
 | Legacy archive reason | 23 archived Items, 0 reason matches | archived state kan niet eerlijk via huidige archiveperiode worden geschreven | legacy reason/evidence zonder vertaling naar onware enum; archived Item blijft vindbaar | volledige archive-managementuitbreiding ja |
 | Private migrated assessments leesbaar | 15 ratings, 1 review; V1 kent geen publication | huidige Book Detail toont alleen publicaties; publishing zou waarheid veranderen | owner-scoped read-only projection en unknown-rating-timebeleid | nieuwe writes/publication/moderation ja |
 | Migration evidence storage | alle bronpopulaties, plus deferred/quarantine | zonder durable ledger/payloadbewijs geen idempotency of no-loss proof | **MIG-FND-01 gerealiseerd in schema 1018** | generieke import-UI ja |
 | Open circulation settlement | 8 open rounds | preserved-only kan dagelijkse beëindiging blokkeren | alleen na Renée-besluit: minimale read/end lifecycle voor bestaande rounds | volledige lending ja |
 
-Migration evidence storage is no longer a gap; the remaining five domain
-targets are technical/product prerequisites. Open circulation remains first a
-product decision. Unknown taxonomy requires daarnaast een gereviewde
+Migration evidence storage and Personal Reading Truth are no longer gaps; the
+remaining four domain targets are technical/product prerequisites. Open
+circulation remains first a product decision. Unknown taxonomy requires daarnaast een gereviewde
 migration allowlist/termset; dit is data-curation en geen toestemming voor
 automatische termcreatie.
 
@@ -844,9 +845,9 @@ automatische termcreatie.
 
 | Classificatie | Prerequisite |
 |---|---|
-| BLOCKS MIG-02 WRITES | basis Wishlist persistence; truth-preserving unknown read target; archive reason contract; rating timestamp/import contract. MIG-FND-01 ledger/preservation is no longer in this row. |
+| BLOCKS MIG-02 WRITES | basis Wishlist persistence; archive reason contract; rating timestamp/import contract. MIG-FND-01 ledger/preservation and READ-MIG-01 Personal Reading Truth are no longer in this row. |
 | BLOCKS FIRST FULL TRIAL IMPORT | Item acquisition/local evidence target; taxonomy mapping/termset voor 74 Book Types en overige gewenste labels; private assessment import/read boundary; circulation mapping na productbesluit |
-| BLOCKS FINAL CUTOVER | basis Wishlist view/add/remove; unknown/read-history parity; archived Item discoverability; private ratings/review readability; gekozen behandeling van 8 open loans; volledige zero-silent-drop reconciliation |
+| BLOCKS FINAL CUTOVER | basis Wishlist view/add/remove; remaining concrete read-history migration; archived Item discoverability; private ratings/review readability; chosen treatment of open loans based on a newly designated source; complete zero-silent-drop reconciliation |
 | DOES NOT BLOCK MIGRATION | rich Goals/Home/Stats/Timeline/Audit UI; cover acquisition/management; Wishlist grouping; smart Collections; Authors/Series dedicated UI; new assessment writes/publication; full lending; general import UI; CAT-UI/QA-ADD human follow-up |
 
 ## 24. Product decisions voor Renée
@@ -863,7 +864,12 @@ automatische termcreatie.
    non-Owner/inactive membership. Cleanliness is een aparte read-only gate;
    non-empty targets vereisen operatorreview en worden nooit automatisch
    opgeschoond.
-2. **Acht actieve/open loans.** Kies of V2.001 ze alleen preserved toont, of
+2. **RESOLVED — Personal Reading Truth.** READ-MIG-01 kiest één normale,
+   source-neutrale user×Work state met exact `read_known_date_unknown`,
+   `explicit_not_read` en `unknown`. Dit is geen ReadingRound en bewaart geen
+   migratieprovenance; schema 1019 en MIG-FND-integratie zijn actief.
+3. **Actieve/open loans.** Kies, na inventarisatie van een nieuw aangewezen
+   actuele bron, of V2.001 ze alleen preserved toont, of
    dat bestaande rounds ook beëindigd moeten kunnen worden. Technisch
    aanbevolen voor dagelijkse continuïteit: het kleine read+end-contract uit
    §12; volledige lending blijft V2.002+.
@@ -901,7 +907,9 @@ De verplichte tweede pass controleert na de docdiff opnieuw:
   `INTENTIONALLY_DROPPED_WITH_REASON` zonder expliciet besluit en reden;
 - Work/Edition/Item volgt ISBN, explicit variant en CAT-T1 zonder fuzzy merge;
 - user-/Library-ownership en targetbinding blijven expliciet;
-- 52 rounds, 395 registrations en compat history worden niet dubbel geteld;
+- de in de historische audit aangetroffen rounds, registrations en compat
+  history worden niet dubbel geteld; actuele aantallen komen alleen uit een
+  nieuw aangewezen bron;
 - Wishlist, Archive, Notes, assessments, circulation, Goals en assets blijven
   traceerbaar;
 - iedere source population kan exact naar één disposition reconciliëren;
@@ -912,11 +920,12 @@ De verplichte tweede pass controleert na de docdiff opnieuw:
 
 Bronzekerheid, inventaris, mappings, preservation, quarantine, reconciliation,
 identity/idempotency, dry-run en MIG-02-fasen zijn voldoende concreet.
-IDENTITY-01 heeft de expliciete user+Library-binding uit §24 opgelost. De
-huidige targetlaag voldoet nog niet aan de exitcriteria voor writes of cutover
-door de overige gaps in §22. MIG-FND-01 heeft nu uitsluitend de source-neutrale
-schema-1018 ledger, transactionele recordboundary, reconciliation en
-traceability gerealiseerd. Er is geen V1-parser, import, domeincleanup of
-broninhoudelijke mappingregel gebouwd.
+IDENTITY-01 heeft de expliciete user+Library-binding uit §24 opgelost.
+READ-MIG-01 heeft de unknown-date/status targetgap opgelost met normale
+source-neutrale Personal Reading Truth in schema 1019. De huidige targetlaag
+voldoet nog niet aan de exitcriteria voor writes of cutover door de overige
+gaps in §22. MIG-FND-01 blijft de source-neutrale schema-1018 ledger,
+transactionele recordboundary, reconciliation en traceability. Er is geen
+V1-parser, import, domeincleanup of broninhoudelijke mappingregel gebouwd.
 
 **MIGRATION DESIGN BLOCKED BY REMAINING DOMAIN TARGET GAPS**

@@ -2910,3 +2910,41 @@ MIG-FND-01 is accepted when:
 Status: **GO / CLOSED**. Schema is `1018`; Biblio UI remains `0.11.0`. No
 frontend or human UI acceptance is required. See
 `docs/62-mig-fnd-01-migration-ledger-foundation.md`.
+
+## 89. READ-MIG-01 personal Reading Truth
+
+READ-MIG-01 is accepted when:
+
+- schema 1018 upgrades additively to healthy 1019 and fresh install, retry and
+  unknown-partial-state checks cover both User + Work tables;
+- exactly `read_known_date_unknown`, `explicit_not_read` and `unknown` are
+  durable normal V2 product states with one owner-scoped row per User + Work;
+- no marker creates a ReadingRound, reading date, source or migration
+  provenance, and no marker increments concrete round/date-based counts;
+- effective status follows active round, completed round, read-known,
+  explicit-not-read, explicit-unknown and no-record default precedence;
+- read-known supplies prior-read evidence for a later concrete reread while
+  the concrete round count remains unchanged and the marker is retained;
+- a new explicit-not-read beside an existing completed round fails closed,
+  including under concurrent Reading Truth/ReadingRound mutation;
+- repeated identical writes are idempotent, divergent updates are versioned,
+  and missing/inactive users or missing Works fail closed;
+- owner reads and batches cannot expose another user's truth, including when
+  the same Work appears through multiple Libraries or Items;
+- the source-neutral recorder participates transactionally in MIG-FND source
+  observation, product write and source-to-Work mapping; rollback leaves no
+  target or false mapping, retry reuses the outcome and contradiction can be
+  quarantined;
+- Book Detail and Mijn Bibliotheek show read/date-unknown and explicit unknown
+  consistently, while the three-value catalog filter contract is unchanged;
+- synthetic fixtures only are used: no historical MIG-01/DATA-01 counts or V1
+  copy is treated as current truth;
+- Core unit/integration/concurrency/schema, PHP syntax, PHPStan, WordPress/UI
+  smoke, manifest and whitespace gates pass; and
+- an independent review finds no architecture, authorization, privacy,
+  concurrency or regression blocker.
+
+Status: **GO / CLOSED** when all gates above pass. Target schema is `1019`;
+Biblio UI is `0.12.0`. The source-neutral Core write contract is present; a
+normal end-user edit control is deferred to focused follow-up `READ-UI-01`.
+See `docs/63-read-mig-01-personal-reading-truth.md`.

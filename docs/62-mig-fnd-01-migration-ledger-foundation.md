@@ -154,3 +154,21 @@ Wishlist/ReadingRound/Loan/Goal/cover/review behavior and remaining cutover
 decisions remain outside scope.
 
 Schema is `1018`. Biblio UI remains `0.11.0`.
+
+## 12. READ-MIG-01 domain participant
+
+READ-MIG-01 adds a source-neutral `PersonalReadingTruthRecorder` that can run
+inside `CommitMigrationRecordService`'s existing transaction. A synthetic
+observation can therefore write one User + Work truth and commit a mapping to
+target type `personal_reading_truth` with the Work ID as target identity; a
+rollback leaves neither product truth nor false mapping. An identical already
+committed observation reuses the existing MIG-FND outcome without repeating
+the product write. A completed-round versus new `explicit_not_read`
+contradiction is a product conflict and may be committed as MIG-FND quarantine
+instead.
+
+Reading Truth itself stores no source identity, payload hash or provenance.
+Those remain exclusively in this ledger. READ-MIG-01 uses synthetic fixtures
+and changes none of the rule that any later source-dependent run needs a newly
+designated current V1 export. See
+`docs/63-read-mig-01-personal-reading-truth.md`.

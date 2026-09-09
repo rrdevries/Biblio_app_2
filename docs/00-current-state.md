@@ -33,15 +33,17 @@ copies are never presumed current.
 
 MIG-FND-01 has implemented the source-neutral migration ledger, preservation,
 quarantine, idempotency, target locking, transaction and reconciliation
-foundation in schema `1018`. IDENTITY-01 remains its mandatory explicit
-personal target validator. The mapping design is still **MIGRATION DESIGN
-BLOCKED BY REMAINING DOMAIN TARGET GAPS**: Wishlist, unknown-date/status reading
-truth, legacy archive reasons, Item local evidence and private migrated
+foundation introduced in schema `1018`. READ-MIG-01 adds normal source-neutral
+Personal Reading Truth and advances the current schema to `1019`; IDENTITY-01
+remains the mandatory explicit personal target validator. The mapping design
+is still **MIGRATION DESIGN BLOCKED BY REMAINING DOMAIN TARGET GAPS**:
+Wishlist, legacy archive reasons, Item local evidence and private migrated
 assessment reads still need bounded targets, while open circulation still
 needs Renée's cutover decision. No V1 parser, source profiling, import,
 domain cleanup or production-data mutation is included. See
 `docs/60-mig-01-v1-mapping-and-reconciliation-design.md` and
-`docs/62-mig-fnd-01-migration-ledger-foundation.md`.
+`docs/62-mig-fnd-01-migration-ledger-foundation.md` plus
+`docs/63-read-mig-01-personal-reading-truth.md`.
 
 ## Product model
 
@@ -2507,3 +2509,29 @@ is deterministic and bounded; payload data is not logged or committed to Git.
 No V1 schema/parser, import executor, CLI, product-domain migration or UI is
 present. Biblio UI remains `0.11.0`. Detailed evidence:
 `docs/62-mig-fnd-01-migration-ledger-foundation.md`.
+
+### READ-MIG-01 — Personal Reading Truth
+
+Status: **GO / CLOSED** after all recorded gates and independent review pass.
+
+Schema `1019` adds one source-neutral, private Personal Reading Truth per
+`user + Work` with exactly `read_known_date_unknown`, `explicit_not_read` or
+`unknown`, plus a shared user+Work lock for truth/ReadingRound mutations. It is
+normal V2 product state, not a ReadingRound or migration record: it stores no
+reading date, concrete source, Library scope or provenance and never increases
+round/date-based counts.
+
+Effective status now applies active-round, completed-round, read-known,
+explicit-not-read, explicit-unknown and no-record-default precedence. A
+read-known marker proves an earlier Work-level read and makes a later concrete
+round a reread without creating a fictive first round. A new explicit-not-read
+beside a completed round fails closed. MIG-FND alone stores source evidence and
+can transactionally map a successful truth write or quarantine a
+contradiction.
+
+Book Detail and Mijn Bibliotheek project `read_date_known` and render read with
+unknown date plus explicit unknown consistently. Their request filter remains
+the existing three values; a normal end-user write control is focused
+follow-up `READ-UI-01`. Biblio UI is `0.12.0`. No current V1 source or reported
+historical count was used. Detailed evidence:
+`docs/63-read-mig-01-personal-reading-truth.md`.

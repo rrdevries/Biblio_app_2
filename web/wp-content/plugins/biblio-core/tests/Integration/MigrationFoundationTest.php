@@ -23,14 +23,25 @@ use Biblio\Core\Application\Migration\MigrationTargetMapping;
 use Biblio\Core\Application\Migration\MigrationTraceabilityQuery;
 use Biblio\Core\Application\Migration\ObserveSourceRecordService;
 use Biblio\Core\Application\Migration\QuarantineReason;
+use Biblio\Core\Application\Reading\PersonalReadingTruthRecorder;
+use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Exception\ConflictException;
 use Biblio\Core\Exception\ValidationException;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbMigrationLedgerRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPersonalReadingTruthRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPersonalWorkReadingMutationLock;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbReadingRoundRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionManager;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbWorkRepository;
+use Biblio\Core\Infrastructure\WordPress\Identity\WordPressPlatformUserDirectory;
 use Biblio\Core\Infrastructure\WordPress\ProductionComposition;
 use Biblio\Core\Library\LibraryId;
+use Biblio\Core\Reading\PersonalReadingTruthClock;
+use Biblio\Core\Reading\PersonalReadingTruthContradiction;
+use Biblio\Core\Reading\PersonalReadingTruthState;
 use DateTimeImmutable;
+use DateTimeZone;
 use RuntimeException;
 
 final class FoundationMigrationClock implements MigrationClock
@@ -48,6 +59,17 @@ final class FoundationMigrationIds implements MigrationRunIdGenerator
     public function next(): string
     {
         return "migration-run-test-" . $this->next++;
+    }
+}
+
+final class FoundationPersonalReadingTruthClock implements PersonalReadingTruthClock
+{
+    public function now(): DateTimeImmutable
+    {
+        return new DateTimeImmutable(
+            "2026-09-09 12:30:00.123456",
+            new DateTimeZone("UTC")
+        );
     }
 }
 
@@ -291,6 +313,141 @@ final class MigrationFoundationTest extends PersistenceIntegrationTestCase
         $this->beginApply($begin, $target, "competing-snapshot", "f");
     }
 
+    public function testPersonalReadingTruthWriteAndContradictionUseTheMigFndTransactionAndLedger(): void
+    {
+        [$begin, $observe, $commit, , $target] = $this->foundation("reading-truth");
+        $workId = new WorkId("migration-reading-truth-work");
+        self::assertSame(1, $this->database->insert(
+            $this->tableNames->works(),
+            ["work_id" => $workId->value(), "work_title" => "Synthetic migrated truth"]
+        ));
+        $truths = new WpdbPersonalReadingTruthRepository($this->database, $this->tableNames);
+        $recorder = new PersonalReadingTruthRecorder(
+            new WordPressPlatformUserDirectory(),
+            new WpdbWorkRepository($this->database, $this->tableNames),
+            new WpdbReadingRoundRepository($this->database, $this->tableNames),
+            $truths,
+            new WpdbPersonalWorkReadingMutationLock($this->database, $this->tableNames),
+            new FoundationPersonalReadingTruthClock()
+        );
+        $run = $this->beginApply($begin, $target, "snapshot-reading-truth", "a");
+        $readObservation = $this->observation(
+            $observe,
+            $run,
+            "reading_truth",
+            "reading-truth/known-read"
+        );
+
+        $readOutcome = $commit->commit(
+            $run,
+            $readObservation,
+            function () use ($recorder, $target, $workId): MigrationRecordOutcome {
+                $recorder->recordForOwner(
+                    $target->userId(),
+                    $workId,
+                    PersonalReadingTruthState::ReadKnownDateUnknown
+                );
+                return MigrationRecordOutcome::mapped([
+                    new MigrationTargetMapping(
+                        "personal_reading_truth",
+                        $workId->value(),
+                        MappingDisposition::Created
+                    ),
+                ]);
+            }
+        );
+        self::assertSame(MigrationDisposition::Mapped, $readOutcome->disposition());
+        self::assertSame(
+            PersonalReadingTruthState::ReadKnownDateUnknown,
+            $truths->findForUserAndWork($target->userId(), $workId)?->state()
+        );
+        $retryWrites = 0;
+        try {
+            $commit->commit(
+                $run,
+                $readObservation,
+                static function () use (&$retryWrites): MigrationRecordOutcome {
+                    ++$retryWrites;
+                    return MigrationRecordOutcome::failed("unexpected_retry", false);
+                }
+            );
+            self::fail("A committed Reading Truth observation was processed twice.");
+        } catch (ValidationException) {
+            self::assertSame(0, $retryWrites);
+        }
+
+        $rollbackWork = new WorkId("migration-reading-truth-rollback-work");
+        self::assertSame(1, $this->database->insert(
+            $this->tableNames->works(),
+            ["work_id" => $rollbackWork->value(), "work_title" => "Synthetic rollback truth"]
+        ));
+        $rollbackObservation = $this->observation(
+            $observe,
+            $run,
+            "reading_truth",
+            "reading-truth/rollback"
+        );
+        try {
+            $commit->commit(
+                $run,
+                $rollbackObservation,
+                function () use ($recorder, $target, $rollbackWork): MigrationRecordOutcome {
+                    $recorder->recordForOwner(
+                        $target->userId(),
+                        $rollbackWork,
+                        PersonalReadingTruthState::Unknown
+                    );
+                    throw new RuntimeException("synthetic Reading Truth rollback");
+                }
+            );
+            self::fail("Synthetic Reading Truth rollback was hidden.");
+        } catch (RuntimeException $exception) {
+            self::assertSame("synthetic Reading Truth rollback", $exception->getMessage());
+        }
+        self::assertNull($truths->findForUserAndWork($target->userId(), $rollbackWork));
+        self::assertSame(1, $this->countRows($this->tableNames->migrationTargetMappings()));
+
+        $this->insertCompletedRound(
+            "migration-truth-completed",
+            $target->userId(),
+            $workId
+        );
+        $conflictObservation = $this->observation(
+            $observe,
+            $run,
+            "reading_truth",
+            "reading-truth/contradiction"
+        );
+        $conflictOutcome = $commit->commit(
+            $run,
+            $conflictObservation,
+            function () use ($recorder, $target, $workId): MigrationRecordOutcome {
+                try {
+                    $recorder->recordForOwner(
+                        $target->userId(),
+                        $workId,
+                        PersonalReadingTruthState::ExplicitNotRead
+                    );
+                } catch (PersonalReadingTruthContradiction) {
+                    return MigrationRecordOutcome::quarantined(
+                        QuarantineReason::ReadingTruthConflict,
+                        "Synthetic explicit-not-read truth contradicts a completed round.",
+                        ["work_id" => $workId->value()]
+                    );
+                }
+                self::fail("Migration contradiction was not quarantined.");
+            }
+        );
+
+        self::assertSame(MigrationDisposition::Quarantined, $conflictOutcome->disposition());
+        self::assertSame(1, $this->countRows($this->tableNames->migrationQuarantine()));
+        self::assertSame(1, $this->countRows($this->tableNames->migrationTargetMappings()));
+        self::assertSame(
+            PersonalReadingTruthState::ReadKnownDateUnknown,
+            $truths->findForUserAndWork($target->userId(), $workId)?->state()
+        );
+    }
+
     private function beginApply(
         BeginMigrationRunService $begin,
         PersonalMigrationTarget $target,
@@ -354,5 +511,35 @@ final class MigrationFoundationTest extends PersistenceIntegrationTestCase
     private function countRows(string $table): int
     {
         return (int) $this->database->get_var("SELECT COUNT(*) FROM " . $table);
+    }
+
+    private function insertCompletedRound(
+        string $roundId,
+        UserId $userId,
+        WorkId $workId
+    ): void {
+        self::assertSame(1, $this->database->insert(
+            $this->tableNames->readingRounds(),
+            [
+                "reading_round_id" => $roundId,
+                "user_id" => $userId->value(),
+                "work_id" => $workId->value(),
+                "item_id" => null,
+                "external_loan_id" => null,
+                "started_at" => null,
+                "round_outcome" => "completed",
+                "provenance" => "historical_manual",
+                "reading_started_year" => null,
+                "reading_started_month" => null,
+                "reading_started_day" => null,
+                "reading_finished_year" => 2025,
+                "reading_finished_month" => null,
+                "reading_finished_day" => null,
+                "created_at" => "2026-09-09 12:31:00.000000",
+                "updated_at" => "2026-09-09 12:31:00.000000",
+                "ended_at" => "2026-09-09 12:31:00.000000",
+                "round_version" => 1,
+            ]
+        ), $this->database->last_error);
     }
 }

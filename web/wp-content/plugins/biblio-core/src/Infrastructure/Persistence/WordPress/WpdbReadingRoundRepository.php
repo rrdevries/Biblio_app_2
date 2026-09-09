@@ -14,6 +14,7 @@ use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Persistence\PersistenceException;
 use Biblio\Core\Reading\ActiveReadingRoundAlreadyExists;
 use Biblio\Core\Reading\PersonalWorkReadingStatusSource;
+use Biblio\Core\Reading\PersonalReadingTruthRoundEvidence;
 use Biblio\Core\Reading\ReadingDate;
 use Biblio\Core\Reading\ReadingPeriod;
 use Biblio\Core\Reading\ReadingRound;
@@ -32,7 +33,8 @@ use wpdb;
 
 final readonly class WpdbReadingRoundRepository implements
     WritableReadingRoundRepository,
-    PersonalWorkReadingStatusSource
+    PersonalWorkReadingStatusSource,
+    PersonalReadingTruthRoundEvidence
 {
     private const DATABASE_DATE_FORMAT = "Y-m-d H:i:s.u";
     private WpdbTransactionConnection $transactionConnection;
@@ -293,6 +295,38 @@ final readonly class WpdbReadingRoundRepository implements
         ));
 
         return array_map($this->hydrate(...), $rows);
+    }
+
+    public function hasCompletedForUserAndWorkForUpdate(
+        UserId $userId,
+        WorkId $workId
+    ): bool {
+        $this->assertTransactionActive();
+        $table = $this->tableNames->readingRounds();
+        $previous = $this->database->suppress_errors(true);
+        try {
+            $id = $this->database->get_var($this->database->prepare(
+                "SELECT reading_round_id FROM `{$table}` "
+                    . "WHERE user_id=%s AND work_id=%s "
+                    . "AND round_outcome='completed' LIMIT 1 FOR UPDATE",
+                $userId->value(),
+                $workId->value()
+            ));
+            $error = $this->database->last_error;
+        } finally {
+            $this->database->suppress_errors($previous);
+        }
+
+        if ($error !== "") {
+            throw new PersistenceException(
+                "Could not inspect completed Reading Round evidence.",
+                0,
+                WpdbErrorTranslator::diagnostic("wpdb read", $error),
+                FailureReason::PersistenceReadFailed
+            );
+        }
+
+        return is_string($id) && $id !== "";
     }
 
     public function findAllForUserAndWorks(UserId $userId, array $workIds): array

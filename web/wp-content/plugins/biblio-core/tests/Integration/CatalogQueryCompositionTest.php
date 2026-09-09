@@ -19,7 +19,7 @@ use Biblio\Core\Catalog\{AuthorId,ItemId,LocationId,SeriesId};
 use Biblio\Core\Collections\CollectionId;
 use Biblio\Core\Exception\AuthorizationException;
 use Biblio\Core\Identity\UserId;
-use Biblio\Core\Infrastructure\Persistence\WordPress\{WpdbActorLibraryContextRepository,WpdbAuthorRepository,WpdbCatalogQueryRepository,WpdbCollectionRepository,WpdbLibraryClassificationReadRepository,WpdbLocationRepository,WpdbReadingRoundRepository,WpdbSeriesRepository};
+use Biblio\Core\Infrastructure\Persistence\WordPress\{WpdbActorLibraryContextRepository,WpdbAuthorRepository,WpdbCatalogQueryRepository,WpdbCollectionRepository,WpdbLibraryClassificationReadRepository,WpdbLocationRepository,WpdbPersonalReadingTruthRepository,WpdbReadingRoundRepository,WpdbSeriesRepository};
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Reading\PersonalWorkReadingStatus;
 use Biblio\Core\Tests\Support\ControllableAuthenticatedUser;
@@ -369,6 +369,41 @@ final class CatalogQueryCompositionTest extends PersistenceIntegrationTestCase
         self::assertSame([], $this->ids($read));
     }
 
+    public function testReadingStatusFiltersIncludeKnownReadExcludeUnknownAndStayActorScoped(): void
+    {
+        foreach ([
+            ['item-known-read', 'work-known-read', 'Known read'],
+            ['item-unknown', 'work-unknown', 'Unknown'],
+            ['item-default', 'work-default', 'Default'],
+        ] as [$item, $work, $title]) {
+            $this->seedItem($item, 'library-a', $work, $title);
+        }
+        $this->seedTruth('501', 'work-known-read', 'read_known_date_unknown');
+        $this->seedTruth('501', 'work-unknown', 'unknown');
+        $this->seedTruth('777', 'work-default', 'read_known_date_unknown');
+
+        $read = $this->repository->page(
+            $this->library,
+            $this->actor,
+            new CatalogQuery(filters: new CatalogFilters(
+                readingStatuses: [PersonalWorkReadingStatus::Read]
+            )),
+            null
+        );
+        self::assertSame(['item-known-read'], $this->ids($read));
+
+        $notRead = $this->repository->page(
+            $this->library,
+            $this->actor,
+            new CatalogQuery(filters: new CatalogFilters(
+                readingStatuses: [PersonalWorkReadingStatus::NotRead]
+            )),
+            null
+        );
+        self::assertSame(['item-default'], $this->ids($notRead));
+        self::assertNotContains('item-unknown', $this->ids($notRead));
+    }
+
     public function testAuthorAndSeriesSortsUseStableNullBucketsAndKeysetTieBreakers(): void
     {
         $this->seedItem('item-author-b', 'library-a', 'work-author-b', 'Same');
@@ -443,11 +478,15 @@ final class CatalogQueryCompositionTest extends PersistenceIntegrationTestCase
             new LibraryClassificationQueryService($contexts, new WpdbLibraryClassificationReadRepository($this->database, $this->tableNames)),
             new LibraryItemLocationQueryService($contexts, new WpdbLocationRepository($this->database, $this->tableNames)),
             new LibraryCollectionQueryService($contexts, new WpdbCollectionRepository($this->database, $this->tableNames)),
-            new GetPersonalWorkReadingStatusService($authenticated, new WpdbReadingRoundRepository($this->database, $this->tableNames))
+            new GetPersonalWorkReadingStatusService(
+                $authenticated,
+                new WpdbReadingRoundRepository($this->database, $this->tableNames),
+                new WpdbPersonalReadingTruthRepository($this->database, $this->tableNames)
+            )
         );
         $before = $this->database->num_queries;
         $page = $service->query($this->library, new CatalogQuery(pageSize: new CatalogOverviewPageSize(1)));
-        self::assertSame(15, $this->database->num_queries - $before);
+        self::assertSame(16, $this->database->num_queries - $before);
         self::assertSame(['item-service-a'], array_map(static fn ($item): string => $item->itemId()->value(), $page->items()));
         self::assertSame('Author', $page->items()[0]->authors()[0]->displayName());
         self::assertSame('Series', $page->items()[0]->series()[0]->series()->displayName());
@@ -460,7 +499,7 @@ final class CatalogQueryCompositionTest extends PersistenceIntegrationTestCase
         $nextQuery = new CatalogQuery(pageSize: new CatalogOverviewPageSize(1), cursor: $page->nextCursor());
         $before = $this->database->num_queries;
         $nextPage = $service->query($this->library, $nextQuery);
-        self::assertSame(16, $this->database->num_queries - $before);
+        self::assertSame(17, $this->database->num_queries - $before);
         self::assertSame(['item-service-b'], array_map(static fn ($item): string => $item->itemId()->value(), $nextPage->items()));
 
         self::assertSame(1, $this->database->update(
@@ -577,5 +616,20 @@ final class CatalogQueryCompositionTest extends PersistenceIntegrationTestCase
             'ended_at' => $outcome === null ? null : '2026-09-04 10:00:00.000000', 'round_version' => 1,
         ]);
         self::assertSame(1, $inserted, $this->database->last_error);
+    }
+
+    private function seedTruth(string $actor, string $work, string $state): void
+    {
+        self::assertSame(1, $this->database->insert(
+            $this->tableNames->personalReadingTruths(),
+            [
+                'user_id' => $actor,
+                'work_id' => $work,
+                'truth_state' => $state,
+                'truth_version' => 1,
+                'created_at' => '2026-09-09 10:00:00.000000',
+                'updated_at' => '2026-09-09 10:00:00.000000',
+            ]
+        ), $this->database->last_error);
     }
 }

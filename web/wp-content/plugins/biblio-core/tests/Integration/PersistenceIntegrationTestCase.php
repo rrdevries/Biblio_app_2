@@ -78,6 +78,8 @@ abstract class PersistenceIntegrationTestCase extends TestCase
         $migrationObservations = $this->tableNames->migrationSourceObservations();
         $migrationRunLocks = $this->tableNames->migrationRunLocks();
         $migrationRuns = $this->tableNames->migrationRuns();
+        $personalReadingTruths = $this->tableNames->personalReadingTruths();
+        $personalWorkReadingLocks = $this->tableNames->personalWorkReadingLocks();
         $locations = $this->tableNames->locations();
         $editions = $this->tableNames->editions();
         $works = $this->tableNames->works();
@@ -102,6 +104,11 @@ abstract class PersistenceIntegrationTestCase extends TestCase
         ] as $migrationTable) {
             if ($this->tableExists($migrationTable)) {
                 $this->database->query("DELETE FROM " . $migrationTable);
+            }
+        }
+        foreach ([$personalReadingTruths, $personalWorkReadingLocks] as $readingTable) {
+            if ($this->tableExists($readingTable)) {
+                $this->database->query("DELETE FROM `{$readingTable}`");
             }
         }
 

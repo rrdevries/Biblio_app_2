@@ -92,6 +92,11 @@ final readonly class WpdbPersonalMigrationTargetContentRepository implements
                 "user_id",
                 $userId->value()
             ),
+            "user_personal_reading_truths" => $this->countBy(
+                $this->tables->personalReadingTruths(),
+                "user_id",
+                $userId->value()
+            ),
             "user_private_notes" => $this->countBy(
                 $this->tables->privateNotes(),
                 "user_id",

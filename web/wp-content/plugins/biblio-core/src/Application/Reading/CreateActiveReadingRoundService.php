@@ -18,6 +18,7 @@ use Biblio\Core\Reading\ReadingRound;
 use Biblio\Core\Reading\ReadingRoundClock;
 use Biblio\Core\Reading\ReadingRoundId;
 use Biblio\Core\Reading\ReadingRoundIdGenerator;
+use Biblio\Core\Reading\PersonalWorkReadingMutationLock;
 use Biblio\Core\Reading\ReadingSource;
 use Biblio\Core\Reading\ReadingSourceUnavailable;
 use Biblio\Core\Reading\WritableReadingRoundRepository;
@@ -33,7 +34,8 @@ final readonly class CreateActiveReadingRoundService
         ReadingRoundIdGenerator $ids,
         private ReadingRoundClock $clock,
         private TransactionManager $transactions,
-        private ConsumeNextReadingAfterStartService $nextReadingConsumption
+        private ConsumeNextReadingAfterStartService $nextReadingConsumption,
+        private ?PersonalWorkReadingMutationLock $readingLock = null
     ) {
         $this->creation = new ReadingRoundCreation(
             $ids,
@@ -95,6 +97,7 @@ final readonly class CreateActiveReadingRoundService
             $nextReadingEntryId
         ): ReadingRound {
             $lockedList = $this->nextReadingConsumption->lock($authenticatedUserId);
+            $this->readingLock?->acquire($authenticatedUserId, $sourceWorkId);
             $this->nextReadingConsumption->assertExplicitEntry(
                 $lockedList,
                 $nextReadingEntryId,

@@ -248,6 +248,24 @@ v2.001 boundary, distinct future Series collection/reading goals and the
 whole-record metadata-conflict UX. Runtime, schema and final open governance/UI
 implementation choices remain outside this documentation source.
 
+## Approved READ-MIG-01 Personal Reading Truth decision — 2026-09-09
+Status: `ACTUEEL`
+
+Canonicalized in:
+
+- `docs/01-functional-design.md` §6;
+- `docs/02-architecture.md` §18;
+- `docs/decisions/ADR-007-f2-6-reading-round-lifecycle-and-historical-truth.md`;
+- `docs/60-mig-01-v1-mapping-and-reconciliation-design.md`;
+- `docs/62-mig-fnd-01-migration-ledger-foundation.md`;
+- `docs/63-read-mig-01-personal-reading-truth.md`.
+
+The approved rule adds normal source-neutral Personal Reading Truth per user +
+Work with exactly read-known/date-unknown, explicit-not-read and unknown. It is
+not a ReadingRound and migration provenance stays in MIG-FND. The supplied
+decision text is product authority; historical MIG-01/DATA-01 source snapshots
+and counts remain evidence only and are not current V1 truth.
+
 ## Authority rule
 
 Historical timestamps do not determine authority.

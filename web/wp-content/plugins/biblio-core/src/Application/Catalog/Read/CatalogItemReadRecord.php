@@ -9,6 +9,7 @@ use Biblio\Core\Catalog\ItemId;
 use Biblio\Core\Catalog\ItemStatus;
 use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Reading\PersonalWorkReadingStatus;
+use Biblio\Core\Reading\PersonalReadingTruthState;
 
 final readonly class CatalogItemReadRecord
 {
@@ -22,7 +23,8 @@ final readonly class CatalogItemReadRecord
         private int $completedRoundCount,
         private int $stoppedRoundCount,
         private int $historicalCompletedRoundCount,
-        private ?CatalogActiveReadingRoundView $activeReadingRound
+        private ?CatalogActiveReadingRoundView $activeReadingRound,
+        private ?PersonalReadingTruthState $truthState = null
     ) {
     }
 
@@ -57,6 +59,33 @@ final readonly class CatalogItemReadRecord
             return PersonalWorkReadingStatus::Read;
         }
 
-        return PersonalWorkReadingStatus::NotRead;
+        return match ($this->truthState) {
+            PersonalReadingTruthState::ReadKnownDateUnknown =>
+                PersonalWorkReadingStatus::Read,
+            PersonalReadingTruthState::Unknown =>
+                PersonalWorkReadingStatus::Unknown,
+            PersonalReadingTruthState::ExplicitNotRead, null =>
+                PersonalWorkReadingStatus::NotRead,
+        };
+    }
+
+    public function truthState(): ?PersonalReadingTruthState
+    {
+        return $this->truthState;
+    }
+
+    public function readDateKnown(): ?bool
+    {
+        if ($this->completedRoundCount > 0) {
+            return true;
+        }
+        if (
+            $this->activeRoundCount === 0
+            && $this->truthState === PersonalReadingTruthState::ReadKnownDateUnknown
+        ) {
+            return false;
+        }
+
+        return null;
     }
 }

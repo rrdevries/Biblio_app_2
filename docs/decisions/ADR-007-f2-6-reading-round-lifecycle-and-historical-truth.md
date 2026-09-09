@@ -174,19 +174,42 @@ nul bewezen eerste lezingen zijn. Een deterministische lijstsortering gebruikt
 laatste tie-break is alleen presentatie-orde en mag nooit als eerste
 lezing/herlezing worden uitgelegd.
 
-### 6. Persoonlijke Work-read-status
+### 6. Persoonlijke Work-read-status en Reading Truth
 
 `PersonalWorkReadingStatus` wordt per User + Work afgeleid en niet redundant
-op Work opgeslagen:
+op Work opgeslagen. READ-MIG-01 voegt daarnaast één normale, source-neutrale
+`PersonalReadingTruth` per User + Work toe met exact
+`read_known_date_unknown`, `explicit_not_read` of `unknown`.
+
+De effectieve precedence is:
 
 1. minstens één active ronde: `reading` / Aan het lezen;
 2. anders minstens één completed ronde: `read` / Uitgelezen;
-3. anders: `not_read` / Niet gelezen.
+3. anders `read_known_date_unknown`: `read` / Uitgelezen, datum onbekend;
+4. anders `explicit_not_read`: `not_read` / Niet gelezen;
+5. anders `unknown`: `unknown` / Onbekend;
+6. anders: het bestaande defaultgedrag `not_read` / Niet gelezen.
 
 Een of meer gestopte rondes zonder completed ronde blijven `not_read`. Een
 gestopte herlezing wist een eerdere completion niet. Historische en normale
 completed rondes tellen gelijk. Een active herlezing heeft door regel 1 status
 `reading`; first/reread is een afzonderlijke historische projectie.
+
+Reading Truth is private user-owned state, niet Library-owned en niet
+migration-only. Het bevat geen Library, Edition, Item, bron, leesdatum,
+ReadingRound of migration provenance. `read_known_date_unknown` bewijst wel een
+eerdere lezing op Work-niveau: een latere concrete ronde geldt daardoor als
+herlezing, zonder een fictieve eerste ronde of datum en zonder verhoging van
+het aantal concrete rondes. De marker blijft na latere echte rondes bestaan;
+active/completed rondes bepalen dan de effectieve status.
+
+Een nieuwe `explicit_not_read` write naast een bestaande completed ronde is
+een contradiction en faalt gesloten. Een read-known marker naast een completed
+ronde is toegestaan, maar wordt niet dubbel geteld. Work-level features mogen
+read-known als gelezen bewijs gebruiken; jaar-/maandstatistiek, timeline,
+streaks, round-based goals en concrete reread-counts mogen alleen werkelijke
+ReadingRounds gebruiken. MIG-FND bewaart alle migratieprovenance los van dit
+domainobject.
 
 ### 7. Application boundaries en authorization
 

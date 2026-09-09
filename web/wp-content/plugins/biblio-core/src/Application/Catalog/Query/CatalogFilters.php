@@ -34,6 +34,11 @@ final readonly class CatalogFilters
     ) {
         $this->collections = $collections ?? CatalogCollectionFilter::any();
         self::assertEnumList($readingStatuses, PersonalWorkReadingStatus::class, 'reading status');
+        if (in_array(PersonalWorkReadingStatus::Unknown, $readingStatuses, true)) {
+            throw new ValidationException(
+                'Explicit unknown is a projection status, not a catalog request filter.'
+            );
+        }
         self::assertIdList($authorIds, AuthorId::class, 'Author');
         self::assertIdList($seriesIds, SeriesId::class, 'Series');
         self::assertIdList($locationIds, LocationId::class, 'Location');

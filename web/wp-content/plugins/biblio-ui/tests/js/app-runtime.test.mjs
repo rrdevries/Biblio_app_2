@@ -119,6 +119,7 @@ function item(id, title = `Book ${id}`) {
         form: { state: "known", value: "physical_book" },
         location_or_source: { state: "known", value: "Library source" },
         reading_status: "not_read",
+        read_date_known: null,
         item_status: "active",
         capabilities: { view_item: true, start_reading: false },
     };
@@ -148,6 +149,7 @@ function overview(selectedLibrary, items, nextCursor = null) {
             classification: null,
             collection_ids: [],
             reading_status: entry.reading_status,
+            read_date_known: entry.read_date_known,
             contained_match_title: null,
         })),
         next_cursor: nextCursor,
@@ -207,6 +209,7 @@ function detail(selectedLibrary, itemId, overrides = {}) {
         item_status: "active",
         reading: {
             status: "not_read",
+            read_date_known: null,
             active_rounds: 0,
             completed_rounds: 0,
             stopped_rounds: 0,
@@ -262,6 +265,7 @@ function activeDetail(
         },
         reading: {
             status: "reading",
+            read_date_known: null,
             active_rounds: 1,
             completed_rounds: 0,
             stopped_rounds: 0,
@@ -1362,6 +1366,7 @@ test("Start Reading posts the exact contract then renders only reread truth", as
     resolveRefresh(detail(selected, "item/one", {
         reading: {
             status: "reading",
+            read_date_known: null,
             active_rounds: 1,
             completed_rounds: 0,
             stopped_rounds: 0,
@@ -1507,6 +1512,7 @@ test("active-source conflict announces change and rereads authoritative detail",
             return detail(selected, "item-1", detailGets === 1 ? {} : {
                 reading: {
                     status: "reading",
+                    read_date_known: null,
                     active_rounds: 1,
                     completed_rounds: 0,
                     stopped_rounds: 0,
@@ -1720,6 +1726,7 @@ test("End Reading completed and stopped post server detail identity then reread"
                 },
                 reading: {
                     status: outcome === "completed" ? "read" : "not_read",
+                    read_date_known: outcome === "completed" ? true : null,
                     active_rounds: 0,
                     completed_rounds: outcome === "completed" ? 1 : 0,
                     stopped_rounds: outcome === "stopped" ? 1 : 0,
@@ -1931,6 +1938,7 @@ test("End Reading 409 and 404 reconcile without retry or stale payload trust", a
                         : detail(selected, "item-1", {
                             reading: {
                                 status: "read",
+                                read_date_known: true,
                                 active_rounds: 0,
                                 completed_rounds: 1,
                                 stopped_rounds: 0,
@@ -2854,6 +2862,7 @@ test("End Reading rereads detail then replaces history from page one only", asyn
                 : detail(selected, "item-end-history", {
                     reading: {
                         status: "read",
+                        read_date_known: true,
                         active_rounds: 0,
                         completed_rounds: 1,
                         stopped_rounds: 0,

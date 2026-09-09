@@ -54,7 +54,7 @@ final readonly class CatalogQueryService
         $classifications = $this->classifications->classificationsForWorks($libraryId, $workIds);
         $locations = $this->locations->locationsForItems($libraryId, $itemIds);
         $collections = $this->collections->activeCollectionsForItems($libraryId, $itemIds);
-        $statuses = $this->readingStatuses->getMany($workIds);
+        $statuses = $this->readingStatuses->getManyDetails($workIds);
 
         $items = [];
         foreach ($records as $record) {
@@ -85,8 +85,9 @@ final readonly class CatalogQueryService
                 $locations[$record->itemId()->value()] ?? null,
                 $classifications[$workKey] ?? null,
                 $collections[$record->itemId()->value()] ?? [],
-                $statuses[$workKey],
-                $record->containedMatchTitle()
+                $statuses[$workKey]->status(),
+                $record->containedMatchTitle(),
+                $statuses[$workKey]->readDateKnown()
             );
         }
 

@@ -1032,9 +1032,31 @@ Derived for current user:
 
 1. at least one active round → `Aan het lezen`;
 2. else at least one historical `Uitgelezen = ja` → `Uitgelezen`;
-3. else → `Niet gelezen`.
+3. else a Personal Reading Truth `read_known_date_unknown` → `Uitgelezen`,
+   with the reading date explicitly unknown;
+4. else Personal Reading Truth `explicit_not_read` → `Niet gelezen`;
+5. else Personal Reading Truth `unknown` → `Onbekend`;
+6. else → the existing default `Niet gelezen`.
 
 A stopped reread does not erase previous read completion.
+
+Personal Reading Truth is normal, private V2 state for exactly one user +
+Work. It is not tied to a Library, Edition or Item and has exactly three
+states: `read_known_date_unknown`, `explicit_not_read` and `unknown`. It is not
+a ReadingRound, carries no reading date, source or migration provenance and
+never increases a round count. A `read_known_date_unknown` marker does prove a
+prior Work-level read, so a later concrete round can be classified as a
+reread even when it is the first persisted ReadingRound. The marker remains
+after later active or completed rounds, while those concrete rounds take
+precedence in the effective status.
+
+A new `explicit_not_read` write is contradictory when an owned completed
+ReadingRound already exists and fails closed. Normal V2 may use the
+source-neutral write contract for a future “Mark as read — date unknown” action;
+READ-MIG-01 does not add that edit UI. Work-level future features may treat
+`read_known_date_unknown` as read evidence. Year/month timelines, streaks,
+round-based goals and concrete reading/reread counts may use only actual
+ReadingRounds and their known dates.
 
 ## Multiple copies
 

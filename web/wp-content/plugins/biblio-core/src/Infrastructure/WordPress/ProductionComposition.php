@@ -70,6 +70,8 @@ use Biblio\Core\Application\Reading\StartReadingFromExternalLoanService;
 use Biblio\Core\Application\Reading\StartReadingFromLibraryItemService;
 use Biblio\Core\Application\Reading\StartReadingFromNextReadingEntryService;
 use Biblio\Core\Application\Reading\StopReadingRoundService;
+use Biblio\Core\Application\Reading\PersonalReadingTruthRecorder;
+use Biblio\Core\Application\Reading\RecordPersonalReadingTruthService;
 use Biblio\Core\Authorization\LibraryAuthorizationPolicy;
 use Biblio\Core\Audit\ActivityEventSource;
 use Biblio\Core\Catalog\Classification\ClassificationNameNormalizer;
@@ -112,6 +114,8 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbRatingRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbReviewRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbReadingRoundRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbReadingHistoryReadRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPersonalReadingTruthRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPersonalWorkReadingMutationLock;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionConnection;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionManager;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbWorkRepository;
@@ -150,6 +154,7 @@ final class ProductionComposition
             $tableNames
         );
         $authenticatedUser = new WordPressAuthenticatedUser();
+        $platformUsers = new WordPressPlatformUserDirectory();
         $transactionConnection = new WpdbTransactionConnection($database);
         $transactionManager = new WpdbTransactionManager(
             $transactionConnection
@@ -240,6 +245,27 @@ final class ProductionComposition
             $database,
             $tableNames
         );
+        $personalReadingTruthRepository = new WpdbPersonalReadingTruthRepository(
+            $database,
+            $tableNames
+        );
+        $personalWorkReadingLock = new WpdbPersonalWorkReadingMutationLock(
+            $database,
+            $tableNames
+        );
+        $personalReadingTruthRecorder = new PersonalReadingTruthRecorder(
+            $platformUsers,
+            $workRepository,
+            $readingRoundRepository,
+            $personalReadingTruthRepository,
+            $personalWorkReadingLock,
+            new SystemPersonalReadingTruthClock()
+        );
+        $personalReadingTruthRecording = new RecordPersonalReadingTruthService(
+            $authenticatedUser,
+            $personalReadingTruthRecorder,
+            $transactionManager
+        );
         $nextReadingRepository = new WpdbNextReadingRepository($database, $tableNames);
         $nextReadingClock = new SystemNextReadingClock();
         $nextReadingConsumption = new ConsumeNextReadingAfterStartService(
@@ -271,7 +297,7 @@ final class ProductionComposition
             $personalLibraryProvisioner
         );
         $personalMigrationTargets = new PersonalMigrationTargetService(
-            new WordPressPlatformUserDirectory(),
+            $platformUsers,
             $personalLibraryRepository,
             $libraryRepository,
             $membershipRepository,
@@ -457,7 +483,8 @@ final class ProductionComposition
             $readingRoundIds,
             $readingRoundClock,
             $transactionManager,
-            $nextReadingConsumption
+            $nextReadingConsumption,
+            $personalWorkReadingLock
         );
         $ownedReadingRounds = new GetOwnedReadingRoundService(
             $authenticatedUser,
@@ -480,7 +507,8 @@ final class ProductionComposition
             $authenticatedUser,
             $readingRoundRepository,
             $readingRoundClock,
-            $transactionManager
+            $transactionManager,
+            $personalWorkReadingLock
         );
         $finishReadingRound = new FinishReadingRoundService($readingRoundEnd);
         $stopReadingRound = new StopReadingRoundService($readingRoundEnd);
@@ -489,13 +517,15 @@ final class ProductionComposition
             $workRepository,
             $readingRoundCreation,
             $readingRoundClock,
-            $transactionManager
+            $transactionManager,
+            $personalWorkReadingLock
         );
         $endedReadingRoundCorrection = new CorrectEndedReadingRoundService(
             $authenticatedUser,
             $readingRoundRepository,
             $readingRoundClock,
-            $transactionManager
+            $transactionManager,
+            $personalWorkReadingLock
         );
         $readingRoundSourceCorrection = new CorrectReadingRoundSourceService(
             $authenticatedUser,
@@ -538,11 +568,13 @@ final class ProductionComposition
             $transactionManager,
             $ratingRepository,
             $reviewRepository,
-            $assessmentClock
+            $assessmentClock,
+            $personalWorkReadingLock
         );
         $personalWorkReadingStatus = new GetPersonalWorkReadingStatusService(
             $authenticatedUser,
-            $readingRoundRepository
+            $readingRoundRepository,
+            $personalReadingTruthRepository
         );
         $catalogQuery = new CatalogQueryService(
             $authenticatedUser,
@@ -557,7 +589,8 @@ final class ProductionComposition
         );
         $readingSequence = new GetReadingSequenceService(
             $authenticatedUser,
-            $readingRoundRepository
+            $readingRoundRepository,
+            $personalReadingTruthRepository
         );
         $readingHistory = new GetMyReadingHistoryForWorkService(
             $authenticatedUser,
@@ -804,7 +837,8 @@ final class ProductionComposition
             $myNextReadingList,
             $nextReadingHome,
             $workDiscovery,
-            $nextReadingDiscovery
+            $nextReadingDiscovery,
+            $personalReadingTruthRecording
         );
         $this->lifecycle = new CoreLifecycleCoordinator(
             new CoreSchemaMigrator(

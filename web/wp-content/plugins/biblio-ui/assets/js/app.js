@@ -70,7 +70,9 @@ const METADATA_STATES = new Set([
     "not_applicable",
     "unknown",
 ]);
-const READING_STATUSES = new Set(["not_read", "reading", "read"]);
+const READING_STATUSES = new Set([
+    "not_read", "reading", "read", "unknown",
+]);
 const READING_ROUND_END_OUTCOMES = new Set(["completed", "stopped"]);
 
 function mountValue(mount, key) {
@@ -120,6 +122,8 @@ function assertReadingSummary(reading) {
     if (
         !isRecord(reading)
         || !READING_STATUSES.has(reading.status)
+        || !(reading.read_date_known === null
+            || typeof reading.read_date_known === "boolean")
         || ![
             "active_rounds",
             "completed_rounds",

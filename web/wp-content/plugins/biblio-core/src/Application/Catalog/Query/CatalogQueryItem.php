@@ -29,7 +29,8 @@ final readonly class CatalogQueryItem
         private ?LibraryCatalogSelection $classification,
         private array $collectionIds,
         private PersonalWorkReadingStatus $readingStatus,
-        private ?string $containedMatchTitle
+        private ?string $containedMatchTitle,
+        private ?bool $readDateKnown = null
     ) {
     }
 
@@ -46,4 +47,5 @@ final readonly class CatalogQueryItem
     /** @return list<CollectionId> */ public function collectionIds(): array { return $this->collectionIds; }
     public function readingStatus(): PersonalWorkReadingStatus { return $this->readingStatus; }
     public function containedMatchTitle(): ?string { return $this->containedMatchTitle; }
+    public function readDateKnown(): ?bool { return $this->readDateKnown; }
 }

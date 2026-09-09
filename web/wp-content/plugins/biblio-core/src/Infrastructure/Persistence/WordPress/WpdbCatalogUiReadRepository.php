@@ -21,6 +21,7 @@ use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Reading\ReadingDate;
 use Biblio\Core\Reading\ReadingRoundId;
 use Biblio\Core\Reading\ReadingRoundVersion;
+use Biblio\Core\Reading\PersonalReadingTruthState;
 use Throwable;
 use wpdb;
 
@@ -40,6 +41,7 @@ final readonly class WpdbCatalogUiReadRepository implements CatalogUiReadReposit
     ): CatalogItemReadRecordPage {
         $where = "i.library_id = %s AND i.item_status = 'active'";
         $parameters = [
+            $actorId->value(),
             $actorId->value(),
             $actorId->value(),
             $libraryId->value(),
@@ -87,6 +89,7 @@ final readonly class WpdbCatalogUiReadRepository implements CatalogUiReadReposit
             . "AND i.item_status = 'active'",
             $actorId->value(),
             $actorId->value(),
+            $actorId->value(),
             $libraryId->value(),
             $itemId->value()
         ));
@@ -100,6 +103,7 @@ final readonly class WpdbCatalogUiReadRepository implements CatalogUiReadReposit
         $editions = $this->tableNames->editions();
         $works = $this->tableNames->works();
         $rounds = $this->tableNames->readingRounds();
+        $truths = $this->tableNames->personalReadingTruths();
 
         $itemIndex = $overview ? " FORCE INDEX (items_by_library)" : "";
 
@@ -114,7 +118,8 @@ final readonly class WpdbCatalogUiReadRepository implements CatalogUiReadReposit
             . "sr.round_version AS active_round_version, "
             . "sr.reading_started_year AS active_round_started_year, "
             . "sr.reading_started_month AS active_round_started_month, "
-            . "sr.reading_started_day AS active_round_started_day "
+            . "sr.reading_started_day AS active_round_started_day, "
+            . "prt.truth_state AS personal_reading_truth_state "
             . "FROM `{$items}` i{$itemIndex} "
             . "INNER JOIN `{$editions}` e ON e.edition_id = i.edition_id "
             . "INNER JOIN `{$works}` w ON w.work_id = e.work_id "
@@ -129,7 +134,9 @@ final readonly class WpdbCatalogUiReadRepository implements CatalogUiReadReposit
             . "ON rs.work_id = w.work_id "
             . "LEFT JOIN `{$rounds}` sr "
             . "ON sr.user_id = %s AND sr.item_id = i.item_id "
-            . "AND sr.round_outcome IS NULL";
+            . "AND sr.round_outcome IS NULL "
+            . "LEFT JOIN `{$truths}` prt ON prt.user_id = %s "
+            . "AND prt.work_id = w.work_id";
     }
 
     private function hydrate(object $row): CatalogItemReadRecord
@@ -145,7 +152,12 @@ final readonly class WpdbCatalogUiReadRepository implements CatalogUiReadReposit
                 (int) $row->completed_rounds,
                 (int) $row->stopped_rounds,
                 (int) $row->historical_completed_rounds,
-                $this->hydrateActiveReadingRound($row)
+                $this->hydrateActiveReadingRound($row),
+                $row->personal_reading_truth_state === null
+                    ? null
+                    : PersonalReadingTruthState::from(
+                        (string) $row->personal_reading_truth_state
+                    )
             );
         } catch (Throwable $exception) {
             throw new PersistenceException(

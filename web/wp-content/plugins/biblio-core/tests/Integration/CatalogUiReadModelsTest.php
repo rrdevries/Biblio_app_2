@@ -125,6 +125,57 @@ final class CatalogUiReadModelsTest extends PersistenceIntegrationTestCase
         self::assertNull($detail->activeReadingRound());
     }
 
+    public function testOverviewAndDetailProjectOnlyTheActorsTruthWithDateQualifier(): void
+    {
+        $actor = new UserId("511");
+        $other = new UserId("512");
+        $library = new LibraryId("truth-view-library");
+        $secondLibrary = new LibraryId("truth-second-library");
+        $this->seedLibrary($library->value(), "Truth view", $actor, "direct");
+        $this->seedLibrary($secondLibrary->value(), "Truth second", $actor, "direct");
+        $this->seedItem("truth-read-item", $library->value(), "truth-read-work", "Read truth");
+        $this->seedItem(
+            "truth-read-second-item",
+            $secondLibrary->value(),
+            "truth-read-work",
+            "Read truth second copy"
+        );
+        $this->seedItem("truth-unknown-item", $library->value(), "truth-unknown-work", "Unknown truth");
+        $this->seedTruth($actor, "truth-read-work", "read_known_date_unknown");
+        $this->seedTruth($actor, "truth-unknown-work", "unknown");
+        $this->seedTruth($other, "truth-read-work", "explicit_not_read");
+
+        $overview = $this->service($actor)->activeOverview($library);
+        $byId = [];
+        foreach ($overview->items() as $item) {
+            $byId[$item->itemId()->value()] = $item;
+        }
+        self::assertSame(PersonalWorkReadingStatus::Read, $byId["truth-read-item"]->readingStatus());
+        self::assertFalse($byId["truth-read-item"]->readDateKnown());
+        self::assertSame(PersonalWorkReadingStatus::Unknown, $byId["truth-unknown-item"]->readingStatus());
+        self::assertNull($byId["truth-unknown-item"]->readDateKnown());
+
+        $detail = $this->service($actor)->itemDetail(
+            $library,
+            new ItemId("truth-read-item")
+        );
+        self::assertSame(PersonalWorkReadingStatus::Read, $detail->reading()->status());
+        self::assertFalse($detail->reading()->readDateKnown());
+
+        $secondOverview = $this->service($actor)->activeOverview($secondLibrary);
+        self::assertCount(1, $secondOverview->items());
+        self::assertSame(
+            PersonalWorkReadingStatus::Read,
+            $secondOverview->items()[0]->readingStatus()
+        );
+        self::assertFalse($secondOverview->items()[0]->readDateKnown());
+        self::assertSame(1, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->personalReadingTruths()}` "
+                . "WHERE user_id='511' AND work_id='truth-read-work'"
+        ));
+        self::assertSame(0, $detail->reading()->completedRounds());
+    }
+
     public function testDetailClassificationUsesAssignedTermsForExactLibraryAndWork(): void
     {
         $actor = new UserId("510");
@@ -585,6 +636,21 @@ final class CatalogUiReadModelsTest extends PersistenceIntegrationTestCase
             "edition_id" => "edition-{$itemId}",
             "item_status" => "active",
         ]);
+    }
+
+    private function seedTruth(UserId $userId, string $workId, string $state): void
+    {
+        self::assertSame(1, $this->database->insert(
+            $this->tableNames->personalReadingTruths(),
+            [
+                "user_id" => $userId->value(),
+                "work_id" => $workId,
+                "truth_state" => $state,
+                "truth_version" => 1,
+                "created_at" => "2026-09-09 10:00:00.000000",
+                "updated_at" => "2026-09-09 10:00:00.000000",
+            ]
+        ), $this->database->last_error);
     }
 
     /**

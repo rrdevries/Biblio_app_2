@@ -136,7 +136,15 @@ Items and contained Works. It is separate from reading progress.
 
 ## Leesdekking
 Private platform-wide Work-level coverage derived from the user's completed
-ReadingRounds, independently of possession or source.
+ReadingRounds and `read_known_date_unknown` Personal Reading Truth,
+independently of possession or source. A Reading Truth marker does not count as
+a concrete or dated ReadingRound.
+
+## Personal Reading Truth
+Private, source-neutral product truth for exactly one user + Work when there is
+not enough reliable information for a concrete ReadingRound. The exact states
+are `read_known_date_unknown`, `explicit_not_read` and `unknown`. It is not
+Library-, Edition-, Item- or migration-owned and stores no reading date.
 
 ## Acquisition gap
 A canonical-confirmed, relevant and already released Series member that is not

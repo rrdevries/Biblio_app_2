@@ -13,7 +13,8 @@ final readonly class CatalogReadingSummary
         private int $activeRounds,
         private int $completedRounds,
         private int $stoppedRounds,
-        private int $historicalCompletedRounds
+        private int $historicalCompletedRounds,
+        private ?bool $readDateKnown = null
     ) {
     }
 
@@ -25,4 +26,5 @@ final readonly class CatalogReadingSummary
     {
         return $this->historicalCompletedRounds;
     }
+    public function readDateKnown(): ?bool { return $this->readDateKnown; }
 }

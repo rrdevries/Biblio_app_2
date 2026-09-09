@@ -9,4 +9,5 @@ enum PersonalWorkReadingStatus: string
     case Reading = "reading";
     case Read = "read";
     case NotRead = "not_read";
+    case Unknown = "unknown";
 }

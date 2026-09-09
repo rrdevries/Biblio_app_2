@@ -13,6 +13,9 @@ final class Schema1018MigrationFoundationTest extends PersistenceIntegrationTest
 {
     protected function tearDown(): void
     {
+        foreach (array_reverse($this->tableNames->schema1019Additions()) as $table) {
+            $this->database->query("DROP TABLE IF EXISTS " . $table);
+        }
         foreach (array_reverse($this->tableNames->schema1018Additions()) as $table) {
             $this->database->query("DROP TABLE IF EXISTS " . $table);
         }
@@ -31,6 +34,9 @@ final class Schema1018MigrationFoundationTest extends PersistenceIntegrationTest
 
     public function testMigrationCreatesHealthyAdditiveFoundationAndIsRetrySafe(): void
     {
+        foreach (array_reverse($this->tableNames->schema1019Additions()) as $table) {
+            $this->database->query("DROP TABLE IF EXISTS " . $table);
+        }
         foreach (array_reverse($this->tableNames->schema1018Additions()) as $table) {
             $this->database->query("DROP TABLE IF EXISTS " . $table);
         }
@@ -51,6 +57,9 @@ final class Schema1018MigrationFoundationTest extends PersistenceIntegrationTest
 
     public function testUnknownPartialFoundationFailsClosed(): void
     {
+        foreach (array_reverse($this->tableNames->schema1019Additions()) as $table) {
+            $this->database->query("DROP TABLE IF EXISTS " . $table);
+        }
         foreach (array_reverse($this->tableNames->schema1018Additions()) as $table) {
             $this->database->query("DROP TABLE IF EXISTS " . $table);
         }

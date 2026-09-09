@@ -861,6 +861,34 @@ ReadingRounds. Date intervals determine only provable chronology; overlap is
 `chronology_indeterminate`. Presentation tie-breaks remain deterministic but
 have no historical meaning.
 
+READ-MIG-01 adds source-neutral `PersonalReadingTruth` as a distinct,
+user-owned aggregate keyed by User + Work. Its closed state set is
+`read_known_date_unknown`, `explicit_not_read` and `unknown`; it contains no
+Library, Edition, Item, reading date, ReadingRound or migration provenance.
+Schema 1019 stores this aggregate and a persistent User + Work mutation-lock
+row. Reading Truth and every status-/outcome-affecting ReadingRound write for
+the same owner and Work acquire that shared lock, so the completed-round versus
+`explicit_not_read` contradiction cannot pass through a race. Writes are versioned and owner-
+scoped; actor identity is resolved server-side and Work/platform-user
+existence is validated fail closed.
+
+`GetPersonalWorkReadingStatusService` combines the two owner-scoped sources in
+one deterministic projection: active round, completed round,
+`read_known_date_unknown`, `explicit_not_read`, `unknown`, then the pre-existing
+no-record default. Its detailed projection retains source, truth state and the
+`read_date_known` qualifier. Catalog overview/detail reads join Reading Truth
+only on the authenticated user and Work. The public filter vocabulary stays
+the existing three states; explicit `unknown` is therefore not silently
+treated as `not_read`. A read-known marker contributes prior-read evidence to
+sequence classification but never creates, counts or dates a ReadingRound.
+
+The source-neutral `PersonalReadingTruthRecorder` is a non-transaction-owning
+participant for MIG-FND's `CommitMigrationRecordService`; the self-service
+facade owns a normal Core transaction. MIG-FND alone owns source observation,
+payload hash, source-to-target mapping, preservation, quarantine and migration
+provenance. A contradiction can be routed to quarantine in the same ledger
+transaction without persisting a false product target or mapping.
+
 ## 19. F2.7 Private Notes
 
 PrivateNote is a user-owned Core aggregate with server-generated identity,
