@@ -9,6 +9,7 @@ use Biblio\Core\Application\Catalog\Classification\Read\LibraryClassificationQue
 use Biblio\Core\Application\Catalog\Query\CatalogQueryService;
 use Biblio\Core\Application\CoreApplication;
 use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
+use Biblio\Core\Application\Identity\PersonalMigrationTargetService;
 use Biblio\Core\Application\Library\GetAccessibleLibraryItemService;
 use Biblio\Core\Application\Reading\GetOwnedReadingRoundService;
 use Biblio\Core\Application\Reading\StartReadingFromExternalLoanService;
@@ -400,6 +401,10 @@ final class ProductionLifecycleTest extends PersistenceIntegrationTestCase
             $application->personalLibraries()
         );
         self::assertInstanceOf(
+            PersonalMigrationTargetService::class,
+            $application->personalMigrationTargets()
+        );
+        self::assertInstanceOf(
             GetAccessibleLibraryItemService::class,
             $application->accessibleLibraryItems()
         );
@@ -437,7 +442,10 @@ final class ProductionLifecycleTest extends PersistenceIntegrationTestCase
         self::assertSame(
             $this->privateProperty(
                 $this->privateProperty(
-                    $application->personalLibraries(),
+                    $this->privateProperty(
+                        $application->personalLibraries(),
+                        "provisioner"
+                    ),
                     "createLibraryService"
                 ),
                 "membershipRepository"

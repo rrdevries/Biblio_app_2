@@ -7,6 +7,7 @@ namespace Biblio\Core\Tests\Integration;
 use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Application\Library\CreateLibraryService;
 use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
+use Biblio\Core\Application\Library\ProvisionPersonalPrivateLibraryService;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Persistence\PersistenceException;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMembershipRepository;
@@ -311,8 +312,10 @@ final class PersonalLibraryProvisioningTest extends
 
         return new EnsurePersonalPrivateLibraryService(
             new ControllableAuthenticatedUser($userId),
-            $personalLibraryRepository,
-            $this->createLibraryService($membershipRepository)
+            new ProvisionPersonalPrivateLibraryService(
+                $personalLibraryRepository,
+                $this->createLibraryService($membershipRepository)
+            )
         );
     }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Biblio\Core\Application\Library\CreateLibraryService;
 use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
+use Biblio\Core\Application\Library\ProvisionPersonalPrivateLibraryService;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Persistence\WordPress\CoreTableNames;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMembershipRepository;
@@ -73,8 +74,10 @@ $createLibraryService = new CreateLibraryService(
 );
 $service = new EnsurePersonalPrivateLibraryService(
     new ControllableAuthenticatedUser(new UserId($userValue)),
-    $barrierRepository,
-    $createLibraryService
+    new ProvisionPersonalPrivateLibraryService(
+        $barrierRepository,
+        $createLibraryService
+    )
 );
 
 try {
