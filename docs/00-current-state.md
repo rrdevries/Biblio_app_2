@@ -24,6 +24,21 @@ reference data only, not a V1-to-V2 migration fixture, provider fixture,
 schema seed or V2 transformation. Its format and validation entry point are
 documented in `testdata/data-01-v1/README.md`.
 
+MIG-01 has now pinned and profiled the full approved V1 migration source as
+`.local/fixture-source/data.zip`, Biblio `507.0.13`, books schema `29`, SHA-256
+`b2ce31c76401ad929fe539259cb0252523f1749218df3985b4991e9f77eb298f`.
+The mapping/reconciliation design is complete enough to identify its blockers,
+but is **MIGRATION DESIGN BLOCKED BY TARGET GAP**. Actual V1 evidence proves
+that schema 1017 cannot yet truthfully receive all release-required data:
+41 active Wishlist entries, 392 read registrations with an unknown date,
+360 explicit unknown read markers, 23 unsupported legacy archive reasons,
+Item acquisition/local evidence, private migrated assessment reads and durable
+migration/quarantine/preservation traceability all need bounded target work.
+Eight open circulation rounds additionally require the existing small Renée
+decision about cutover settlement. Canonical evidence and the MIG-02 contract
+are in `docs/60-mig-01-v1-mapping-and-reconciliation-design.md`. No migrator,
+schema, import or data mutation has been performed.
+
 ## Product model
 
 Biblio is one application. Every platform user has one private, platform-wide environment: `Mijn Biblio`.
