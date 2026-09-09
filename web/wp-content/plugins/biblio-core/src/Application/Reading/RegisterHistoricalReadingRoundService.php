@@ -13,6 +13,7 @@ use Biblio\Core\Reading\ReadingPeriod;
 use Biblio\Core\Reading\ReadingRound;
 use Biblio\Core\Reading\ReadingRoundClock;
 use Biblio\Core\Reading\ReadingRoundId;
+use Biblio\Core\Reading\PersonalWorkReadingMutationLock;
 
 final readonly class RegisterHistoricalReadingRoundService
 {
@@ -21,7 +22,8 @@ final readonly class RegisterHistoricalReadingRoundService
         private WorkRepository $works,
         private ReadingRoundCreation $creation,
         private ReadingRoundClock $clock,
-        private TransactionManager $transactions
+        private TransactionManager $transactions,
+        private ?PersonalWorkReadingMutationLock $readingLock = null
     ) {
     }
 
@@ -45,6 +47,8 @@ final readonly class RegisterHistoricalReadingRoundService
                     "Historical Reading Round requires a finish date."
                 );
             }
+
+            $this->readingLock?->acquire($actorId, $workId);
 
             return $this->creation->create(
                 $actorId,

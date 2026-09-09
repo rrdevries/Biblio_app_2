@@ -18,6 +18,7 @@ use Biblio\Core\Reading\ReadingRoundOutcome;
 use Biblio\Core\Reading\ReadingRoundStale;
 use Biblio\Core\Reading\ReadingRoundVersion;
 use Biblio\Core\Reading\WritableReadingRoundRepository;
+use Biblio\Core\Reading\PersonalWorkReadingMutationLock;
 
 final readonly class ReadingRoundEnd
 {
@@ -25,7 +26,8 @@ final readonly class ReadingRoundEnd
         private AuthenticatedUser $authenticatedUser,
         private WritableReadingRoundRepository $rounds,
         private ReadingRoundClock $clock,
-        private TransactionManager $transactions
+        private TransactionManager $transactions,
+        private ?PersonalWorkReadingMutationLock $readingLock = null
     ) {
     }
 
@@ -70,6 +72,11 @@ final readonly class ReadingRoundEnd
             $finishedOn,
             $outcome
         ): ReadingRound {
+            $snapshot = $this->rounds->findForUser($id, $actorId);
+            if ($snapshot === null) {
+                throw new ReadingRoundNotAvailable();
+            }
+            $this->readingLock?->acquire($actorId, $snapshot->workId());
             $current = $this->rounds->findForUserForUpdate($id, $actorId);
 
             if ($current === null) {

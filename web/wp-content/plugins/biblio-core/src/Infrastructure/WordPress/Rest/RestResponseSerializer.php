@@ -692,6 +692,7 @@ final readonly class RestResponseSerializer
             "form" => $this->text($item->form()),
             "location_or_source" => $this->text($item->locationOrSource()),
             "reading_status" => $item->readingStatus()->value,
+            "read_date_known" => $item->readDateKnown(),
             "item_status" => $item->itemStatus()->value,
             "capabilities" => $this->itemCapabilities($item->capabilities()),
         ];
@@ -745,6 +746,7 @@ final readonly class RestResponseSerializer
                 $item->collectionIds()
             ),
             "reading_status" => $item->readingStatus()->value,
+            "read_date_known" => $item->readDateKnown(),
             "contained_match_title" => $item->containedMatchTitle(),
         ];
     }
@@ -804,11 +806,12 @@ final readonly class RestResponseSerializer
         ];
     }
 
-    /** @return array<string, int|string> */
+    /** @return array<string, bool|int|string|null> */
     private function readingSummary(CatalogReadingSummary $reading): array
     {
         return [
             "status" => $reading->status()->value,
+            "read_date_known" => $reading->readDateKnown(),
             "active_rounds" => $reading->activeRounds(),
             "completed_rounds" => $reading->completedRounds(),
             "stopped_rounds" => $reading->stoppedRounds(),

@@ -1101,6 +1101,7 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             "form",
             "location_or_source",
             "reading_status",
+            "read_date_known",
             "item_status",
             "capabilities",
         ], array_keys($firstData["items"][0]));
@@ -1199,6 +1200,7 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             "item_id", "work_id", "edition_id", "title", "item_status",
             "inventory_number", "authors", "series", "location",
             "classification", "collection_ids", "reading_status",
+            "read_date_known",
             "contained_match_title",
         ], array_keys($firstData["items"][0]));
         self::assertArrayNotHasKey("user_id", $firstData["items"][0]);
@@ -1417,7 +1419,7 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         $firstData = $this->successData($first);
 
         self::assertSame(200, $first->get_status());
-        self::assertSame(15, $firstCalls);
+        self::assertSame(16, $firstCalls);
         self::assertSame("author-work-rich-a", $firstData["items"][0]["authors"][0]["author_id"]);
         self::assertSame("series-work-rich-a", $firstData["items"][0]["series"][0]["series_id"]);
         self::assertSame("location-query-count", $firstData["items"][0]["location"]["location_id"]);
@@ -1435,7 +1437,7 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         $nextCalls = $this->database->num_queries - $before;
 
         self::assertSame(200, $next->get_status());
-        self::assertSame(16, $nextCalls);
+        self::assertSame(17, $nextCalls);
         self::assertSame(["item-rich-b"], array_column(
             $this->successData($next)["items"],
             "item_id"

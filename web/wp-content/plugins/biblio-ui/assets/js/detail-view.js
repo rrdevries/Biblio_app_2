@@ -2,6 +2,7 @@ const READING_STATUS_LABELS = Object.freeze({
     not_read: "Niet gelezen",
     reading: "Aan het lezen",
     read: "Uitgelezen",
+    unknown: "Leesstatus onbekend",
 });
 
 function element(documentImpl, tagName, {
@@ -93,14 +94,16 @@ function coverPresentation(documentImpl, detail) {
     return placeholder;
 }
 
-function readingStatusLabel(status) {
+function readingStatusLabel(status, readDateKnown = null) {
     const label = READING_STATUS_LABELS[status];
 
     if (label === undefined) {
         throw new TypeError("The Biblio Item reading status is invalid.");
     }
 
-    return label;
+    return status === "read" && readDateKnown === false
+        ? "Uitgelezen · datum onbekend"
+        : label;
 }
 
 function readingDateLabel(value) {
@@ -379,7 +382,7 @@ function renderReading(documentImpl, reading, activeRound) {
         documentImpl,
         list,
         "Leesstatus",
-        readingStatusLabel(reading.status)
+        readingStatusLabel(reading.status, reading.read_date_known)
     );
 
     for (const [key, label] of [
@@ -446,7 +449,10 @@ function renderDetail(documentImpl, model, actions) {
     });
     heroMeta.append(element(documentImpl, "span", {
         className: `biblio-ui__status biblio-ui__status--${detail.reading.status}`,
-        text: readingStatusLabel(detail.reading.status),
+        text: readingStatusLabel(
+            detail.reading.status,
+            detail.reading.read_date_known
+        ),
     }));
     const bookType = detail.classification.book_types[0] ?? null;
     if (bookType !== null) {

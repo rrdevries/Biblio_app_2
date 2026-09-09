@@ -48,6 +48,7 @@ final readonly class CoreSchemaHealthChecker
             1016 => $this->inspectTables($this->tableNames->schema1016(), true, 1016),
             1017 => $this->inspectTables($this->tableNames->schema1017(), true, 1017),
             1018 => $this->inspectTables($this->tableNames->schema1018(), true, 1018),
+            1019 => $this->inspectTables($this->tableNames->schema1019(), true, 1019),
             default => throw new CoreSchemaMigrationException(
                 "No explicit Biblio Core schema-health contract exists for "
                 . "schema version {$expectedVersion}."
@@ -205,6 +206,15 @@ final readonly class CoreSchemaHealthChecker
             $this->tableNames->schema1018Additions(),
             false,
             1018
+        );
+    }
+
+    public function inspectExistingSchema1019Additions(): CoreSchemaHealth
+    {
+        return $this->inspectTables(
+            $this->tableNames->schema1019Additions(),
+            false,
+            1019
         );
     }
 
@@ -1266,6 +1276,22 @@ final readonly class CoreSchemaHealthChecker
                 "created_at" => ["type" => "datetime(6)", "nullable" => "NO"],
                 "processed_at" => ["type" => "datetime(6)", "nullable" => "YES"],
             ],
+            $this->tableNames->personalWorkReadingLocks() => [
+                "user_id" => $id,
+                "work_id" => $id,
+                "created_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+            ],
+            $this->tableNames->personalReadingTruths() => [
+                "user_id" => $id,
+                "work_id" => $id,
+                "truth_state" => $ascii("varchar(32)"),
+                "truth_version" => [
+                    "type" => "bigint(20) unsigned",
+                    "nullable" => "NO",
+                ],
+                "created_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "updated_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+            ],
         ];
     }
 
@@ -1691,6 +1717,26 @@ final readonly class CoreSchemaHealthChecker
                     "columns" => ["run_id", "processing_status", "reason_code", "observation_id"],
                 ],
             ],
+            $this->tableNames->personalWorkReadingLocks() => [
+                "PRIMARY" => [
+                    "unique" => true,
+                    "columns" => ["user_id", "work_id"],
+                ],
+                "personal_work_reading_locks_by_work" => [
+                    "unique" => false,
+                    "columns" => ["work_id", "user_id"],
+                ],
+            ],
+            $this->tableNames->personalReadingTruths() => [
+                "PRIMARY" => [
+                    "unique" => true,
+                    "columns" => ["user_id", "work_id"],
+                ],
+                "personal_reading_truths_by_work" => [
+                    "unique" => false,
+                    "columns" => ["work_id", "user_id"],
+                ],
+            ],
         ];
     }
 
@@ -1971,6 +2017,12 @@ final readonly class CoreSchemaHealthChecker
                 $restrict(["run_id"], $this->tableNames->migrationRuns(), ["run_id"]),
                 $restrict(["observation_id"], $this->tableNames->migrationSourceObservations(), ["observation_id"]),
             ],
+            $this->tableNames->personalWorkReadingLocks() => [
+                $restrict(["work_id"], $this->tableNames->works(), ["work_id"]),
+            ],
+            $this->tableNames->personalReadingTruths() => [
+                $restrict(["work_id"], $this->tableNames->works(), ["work_id"]),
+            ],
         ];
     }
 
@@ -2242,6 +2294,15 @@ final readonly class CoreSchemaHealthChecker
                 "processing_status IN ('awaiting_future_processing','processed')",
                 "evidence_json IS NULL OR JSON_VALID(evidence_json) AND CHAR_LENGTH(evidence_json) <= 65535",
                 "processing_status = 'awaiting_future_processing' AND processed_at IS NULL OR processing_status = 'processed' AND processed_at IS NOT NULL AND processed_at >= created_at",
+            ],
+            $this->tableNames->personalWorkReadingLocks() => [
+                "CHAR_LENGTH(TRIM(user_id)) > 0",
+            ],
+            $this->tableNames->personalReadingTruths() => [
+                "truth_state IN ('read_known_date_unknown','explicit_not_read','unknown')",
+                "truth_version >= 1",
+                "CHAR_LENGTH(TRIM(user_id)) > 0",
+                "updated_at >= created_at",
             ],
         ];
     }

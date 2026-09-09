@@ -14,7 +14,7 @@ use Biblio\Core\Exception\AuthorizationException;
 use Biblio\Core\Exception\ValidationException;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Library\{Library,LibraryId,LibraryMembership,LibraryMembershipAssignment};
-use Biblio\Core\Reading\{PersonalWorkReadingStatus,PersonalWorkReadingStatusSource,ReadingDate,ReadingPeriod,ReadingRound,ReadingRoundId};
+use Biblio\Core\Reading\{EffectivePersonalReadingStatusSource,PersonalReadingTruth,PersonalReadingTruthRepository,PersonalReadingTruthState,PersonalWorkReadingStatus,PersonalWorkReadingStatusSource,ReadingDate,ReadingPeriod,ReadingRound,ReadingRoundId};
 use Biblio\Core\Tests\Support\ControllableAuthenticatedUser;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -75,6 +75,32 @@ final class ExistingSourceReadingStatusSourceStub implements PersonalWorkReading
             $result[$workId->value()] = $this->rounds[$workId->value()] ?? [];
         }
         return $result;
+    }
+}
+
+final class ExistingSourceReadingTruthRepositoryStub implements PersonalReadingTruthRepository
+{
+    public ?UserId $queriedUser = null;
+
+    /** @param array<string, PersonalReadingTruth> $truths */
+    public function __construct(private array $truths) {}
+
+    public function findForUserAndWork(UserId $userId, WorkId $workId): ?PersonalReadingTruth
+    {
+        $this->queriedUser = $userId;
+        return $this->truths[$workId->value()] ?? null;
+    }
+
+    public function findAllForUserAndWorks(UserId $userId, array $workIds): array
+    {
+        $this->queriedUser = $userId;
+        return array_intersect_key(
+            $this->truths,
+            array_fill_keys(array_map(
+                static fn (WorkId $workId): string => $workId->value(),
+                $workIds
+            ), true)
+        );
     }
 }
 
@@ -150,6 +176,93 @@ final class ExistingSourceReadServicesTest extends TestCase
         self::assertTrue($actorId->equals($source->queriedUser ?? new UserId('unexpected')));
         self::assertSame(PersonalWorkReadingStatus::Read, $service->get($read));
         self::assertSame([], $service->getMany([]));
+    }
+
+    public function testPersonalReadingTruthUsesExactPrecedenceAndDateQualifier(): void
+    {
+        $actor = new UserId('actor');
+        $now = new DateTimeImmutable('2026-09-09 10:00:00.123456', new DateTimeZone('UTC'));
+        $workIds = [];
+        foreach ([
+            'active-with-marker',
+            'completed-with-explicit-not-read',
+            'marker-only',
+            'explicit-not-read-only',
+            'unknown-only',
+            'default-only',
+        ] as $value) {
+            $workIds[$value] = new WorkId($value);
+        }
+        $rounds = new ExistingSourceReadingStatusSourceStub([
+            'active-with-marker' => [ReadingRound::legacyActive(
+                new ReadingRoundId('active-round'),
+                $actor,
+                $workIds['active-with-marker'],
+                null,
+                $now
+            )],
+            'completed-with-explicit-not-read' => [ReadingRound::historical(
+                new ReadingRoundId('completed-round'),
+                $actor,
+                $workIds['completed-with-explicit-not-read'],
+                ReadingPeriod::ended(null, ReadingDate::year(2025)),
+                $now
+            )],
+        ]);
+        $truths = new ExistingSourceReadingTruthRepositoryStub([
+            'active-with-marker' => PersonalReadingTruth::record(
+                $actor,
+                $workIds['active-with-marker'],
+                PersonalReadingTruthState::ReadKnownDateUnknown,
+                $now
+            ),
+            'completed-with-explicit-not-read' => PersonalReadingTruth::record(
+                $actor,
+                $workIds['completed-with-explicit-not-read'],
+                PersonalReadingTruthState::ExplicitNotRead,
+                $now
+            ),
+            'marker-only' => PersonalReadingTruth::record(
+                $actor,
+                $workIds['marker-only'],
+                PersonalReadingTruthState::ReadKnownDateUnknown,
+                $now
+            ),
+            'explicit-not-read-only' => PersonalReadingTruth::record(
+                $actor,
+                $workIds['explicit-not-read-only'],
+                PersonalReadingTruthState::ExplicitNotRead,
+                $now
+            ),
+            'unknown-only' => PersonalReadingTruth::record(
+                $actor,
+                $workIds['unknown-only'],
+                PersonalReadingTruthState::Unknown,
+                $now
+            ),
+        ]);
+        $service = new GetPersonalWorkReadingStatusService(
+            new ControllableAuthenticatedUser($actor),
+            $rounds,
+            $truths
+        );
+
+        $statuses = $service->getManyDetails(array_values($workIds));
+
+        self::assertSame(PersonalWorkReadingStatus::Reading, $statuses['active-with-marker']->status());
+        self::assertSame(EffectivePersonalReadingStatusSource::ActiveReadingRound, $statuses['active-with-marker']->source());
+        self::assertTrue($statuses['active-with-marker']->hasPriorReadEvidence());
+        self::assertNull($statuses['active-with-marker']->readDateKnown());
+        self::assertSame(PersonalWorkReadingStatus::Read, $statuses['completed-with-explicit-not-read']->status());
+        self::assertSame(EffectivePersonalReadingStatusSource::CompletedReadingRound, $statuses['completed-with-explicit-not-read']->source());
+        self::assertTrue($statuses['completed-with-explicit-not-read']->readDateKnown());
+        self::assertSame(PersonalWorkReadingStatus::Read, $statuses['marker-only']->status());
+        self::assertFalse($statuses['marker-only']->readDateKnown());
+        self::assertSame(PersonalWorkReadingStatus::NotRead, $statuses['explicit-not-read-only']->status());
+        self::assertSame(PersonalWorkReadingStatus::Unknown, $statuses['unknown-only']->status());
+        self::assertSame(PersonalWorkReadingStatus::NotRead, $statuses['default-only']->status());
+        self::assertSame(EffectivePersonalReadingStatusSource::Default, $statuses['default-only']->source());
+        self::assertTrue($actor->equals($truths->queriedUser ?? new UserId('unexpected')));
     }
 
     public function testReadBatchesAreTypedAndBoundedAfterAuthorization(): void

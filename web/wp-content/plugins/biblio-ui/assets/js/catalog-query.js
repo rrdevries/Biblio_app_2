@@ -1,5 +1,8 @@
 const QUERY_SORTS = new Set(["title", "author", "series"]);
-const READING_STATUSES = new Set(["not_read", "reading", "read"]);
+const QUERY_READING_STATUSES = new Set(["not_read", "reading", "read"]);
+const PRESENTATION_READING_STATUSES = new Set([
+    "not_read", "reading", "read", "unknown",
+]);
 const ARCHIVE_SCOPES = new Set(["active_only", "active_and_archived"]);
 const FILTER_FIELDS = Object.freeze({
     readingStatuses: "reading_statuses",
@@ -37,6 +40,7 @@ const ITEM_FIELDS = [
     "classification",
     "collection_ids",
     "reading_status",
+    "read_date_known",
     "contained_match_title",
 ];
 const PAGE_FIELDS = ["library", "items", "next_cursor"];
@@ -119,7 +123,10 @@ export function normalizeCatalogQuery(value) {
 
     const query = {
         search,
-        readingStatuses: normalizedList(value.readingStatuses ?? [], READING_STATUSES),
+        readingStatuses: normalizedList(
+            value.readingStatuses ?? [],
+            QUERY_READING_STATUSES
+        ),
         authorIds: normalizedList(value.authorIds ?? []),
         seriesIds: normalizedList(value.seriesIds ?? []),
         locationIds: normalizedList(value.locationIds ?? []),
@@ -305,7 +312,9 @@ function readCatalogItem(value, libraryName) {
         || !identifier(value.title)
         || !["active", "archived"].includes(value.item_status)
         || !(value.inventory_number === null || identifier(value.inventory_number))
-        || !READING_STATUSES.has(value.reading_status)
+        || !PRESENTATION_READING_STATUSES.has(value.reading_status)
+        || !(value.read_date_known === null
+            || typeof value.read_date_known === "boolean")
         || !(value.contained_match_title === null || identifier(value.contained_match_title))
         || !uniqueIdentifiers(value.collection_ids)
     ) {
@@ -334,6 +343,7 @@ function readCatalogItem(value, libraryName) {
             start_reading: false,
         }),
         reading_status: value.reading_status,
+        read_date_known: value.read_date_known,
         item_status: value.item_status,
     };
     readSeries(value.series);

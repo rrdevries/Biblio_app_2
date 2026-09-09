@@ -10,12 +10,15 @@ use Biblio\Core\Reading\ReadingRound;
 use Biblio\Core\Reading\ReadingRoundOutcome;
 use Biblio\Core\Reading\ReadingRoundRepository;
 use Biblio\Core\Reading\ReadingSequenceClassification;
+use Biblio\Core\Reading\PersonalReadingTruthRepository;
+use Biblio\Core\Reading\PersonalReadingTruthState;
 
 final readonly class GetReadingSequenceService
 {
     public function __construct(
         private AuthenticatedUser $authenticatedUser,
-        private ReadingRoundRepository $rounds
+        private ReadingRoundRepository $rounds,
+        private ?PersonalReadingTruthRepository $truths = null
     ) {
     }
 
@@ -23,6 +26,9 @@ final readonly class GetReadingSequenceService
     public function forWork(WorkId $workId): array
     {
         $actorId = $this->authenticatedUser->requireUserId();
+        $hasUndatedPriorRead = $this->truths
+            ?->findForUserAndWork($actorId, $workId)
+            ?->state() === PersonalReadingTruthState::ReadKnownDateUnknown;
         $completed = array_values(array_filter(
             $this->rounds->findAllForUserAndWork($actorId, $workId),
             static fn (ReadingRound $round): bool =>
@@ -46,7 +52,11 @@ final readonly class GetReadingSequenceService
             fn (ReadingRound $round): ClassifiedReadingRound =>
                 new ClassifiedReadingRound(
                     $round,
-                    $this->classify($round, $completed)
+                    $this->classify(
+                        $round,
+                        $completed,
+                        $hasUndatedPriorRead
+                    )
                 ),
             $completed
         );
@@ -55,8 +65,13 @@ final readonly class GetReadingSequenceService
     /** @param list<ReadingRound> $completed */
     private function classify(
         ReadingRound $round,
-        array $completed
+        array $completed,
+        bool $hasUndatedPriorRead
     ): ReadingSequenceClassification {
+        if ($hasUndatedPriorRead) {
+            return ReadingSequenceClassification::Reread;
+        }
+
         if (count($completed) === 1) {
             return ReadingSequenceClassification::FirstRead;
         }

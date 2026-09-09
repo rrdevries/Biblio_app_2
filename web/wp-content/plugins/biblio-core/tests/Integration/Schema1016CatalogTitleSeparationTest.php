@@ -28,7 +28,7 @@ final class Schema1016CatalogTitleSeparationTest extends PersistenceIntegrationT
         try {
             $this->migrator()->migrate();
 
-            self::assertSame(1018, $this->migrator()->installedVersion());
+            self::assertSame(1019, $this->migrator()->installedVersion());
             self::assertTrue($this->migrator()->health()->isHealthy());
             self::assertSame("Bestaande titel", $this->database->get_var(
                 "SELECT edition_title FROM `{$editions}` WHERE edition_id='edition-a'"
@@ -75,7 +75,7 @@ final class Schema1016CatalogTitleSeparationTest extends PersistenceIntegrationT
             $migration->assertPostcondition();
             $this->migrator()->migrate();
 
-            self::assertSame(1018, $this->migrator()->installedVersion());
+            self::assertSame(1019, $this->migrator()->installedVersion());
             self::assertTrue($this->migrator()->health()->isHealthy());
         } finally {
             $this->restoreCurrentSchema();

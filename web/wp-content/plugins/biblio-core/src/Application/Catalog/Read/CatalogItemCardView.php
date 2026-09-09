@@ -23,7 +23,8 @@ final readonly class CatalogItemCardView
         private CatalogTextValue $locationOrSource,
         private PersonalWorkReadingStatus $readingStatus,
         private ItemStatus $itemStatus,
-        private CatalogItemCapabilities $capabilities
+        private CatalogItemCapabilities $capabilities,
+        private ?bool $readDateKnown = null
     ) {
     }
 
@@ -38,4 +39,5 @@ final readonly class CatalogItemCardView
     public function readingStatus(): PersonalWorkReadingStatus { return $this->readingStatus; }
     public function itemStatus(): ItemStatus { return $this->itemStatus; }
     public function capabilities(): CatalogItemCapabilities { return $this->capabilities; }
+    public function readDateKnown(): ?bool { return $this->readDateKnown; }
 }

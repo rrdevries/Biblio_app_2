@@ -2,6 +2,7 @@ const READING_STATUS_LABELS = Object.freeze({
     not_read: "Niet gelezen",
     reading: "Aan het lezen",
     read: "Uitgelezen",
+    unknown: "Leesstatus onbekend",
 });
 
 const VIEW_LABELS = Object.freeze({
@@ -111,14 +112,16 @@ function authorLine(item) {
         : null;
 }
 
-function readingStatusLabel(status) {
+function readingStatusLabel(status, readDateKnown = null) {
     const label = READING_STATUS_LABELS[status];
 
     if (label === undefined) {
         throw new TypeError("The Biblio Item reading status is invalid.");
     }
 
-    return label;
+    return status === "read" && readDateKnown === false
+        ? "Uitgelezen · datum onbekend"
+        : label;
 }
 
 function contextLine(item) {
@@ -222,7 +225,7 @@ function itemCard(documentImpl, item, libraryId, itemUrl, actions) {
     }
     metadata.append(element(documentImpl, "span", {
         className: `biblio-ui__status biblio-ui__status--${item.reading_status}`,
-        text: readingStatusLabel(item.reading_status),
+        text: readingStatusLabel(item.reading_status, item.read_date_known),
     }));
     if (item.item_status === "archived") {
         metadata.append(element(documentImpl, "span", {
@@ -627,7 +630,10 @@ function quickViewDetail(
         }
         dialog.append(element(documentImpl, "p", {
             className: "biblio-ui__status-line",
-            text: `Leesstatus: ${readingStatusLabel(detail.reading.status)}`,
+            text: `Leesstatus: ${readingStatusLabel(
+                detail.reading.status,
+                detail.reading.read_date_known
+            )}`,
         }));
         const fullDetail = element(documentImpl, "a", {
             className: "biblio-ui__control biblio-ui__control--primary",

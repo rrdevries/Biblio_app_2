@@ -56,6 +56,7 @@ use Biblio\Core\Application\Reading\StartReadingFromExternalLoanService;
 use Biblio\Core\Application\Reading\StartReadingFromLibraryItemService;
 use Biblio\Core\Application\Reading\StartReadingFromNextReadingEntryService;
 use Biblio\Core\Application\Reading\StopReadingRoundService;
+use Biblio\Core\Application\Reading\RecordPersonalReadingTruthService;
 
 /**
  * The deliberately small adapter-facing boundary of the production Core.
@@ -139,7 +140,8 @@ final readonly class CoreApplication
         private GetMyNextReadingListService $myNextReadingList,
         private GetNextReadingHomeProjectionService $nextReadingHome,
         private WorkDiscoveryService $workDiscovery,
-        private NextReadingDiscoveryService $nextReadingDiscovery
+        private NextReadingDiscoveryService $nextReadingDiscovery,
+        private RecordPersonalReadingTruthService $personalReadingTruthRecording
     ) {
     }
 
@@ -291,6 +293,11 @@ final readonly class CoreApplication
     public function personalWorkReadingStatus(): GetPersonalWorkReadingStatusService
     {
         return $this->personalWorkReadingStatus;
+    }
+
+    public function personalReadingTruthRecording(): RecordPersonalReadingTruthService
+    {
+        return $this->personalReadingTruthRecording;
     }
 
     public function readingSequence(): GetReadingSequenceService

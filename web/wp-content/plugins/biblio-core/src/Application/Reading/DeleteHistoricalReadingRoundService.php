@@ -17,6 +17,7 @@ use Biblio\Core\Reading\ReadingRoundProvenance;
 use Biblio\Core\Reading\ReadingRoundStale;
 use Biblio\Core\Reading\ReadingRoundVersion;
 use Biblio\Core\Reading\WritableReadingRoundRepository;
+use Biblio\Core\Reading\PersonalWorkReadingMutationLock;
 
 final readonly class DeleteHistoricalReadingRoundService
 {
@@ -26,7 +27,8 @@ final readonly class DeleteHistoricalReadingRoundService
         private TransactionManager $transactions,
         private ?WritableRatingRepository $ratings = null,
         private ?WritableReviewRepository $reviews = null,
-        private ?AssessmentClock $assessmentClock = null
+        private ?AssessmentClock $assessmentClock = null,
+        private ?PersonalWorkReadingMutationLock $readingLock = null
     ) {
     }
 
@@ -45,6 +47,11 @@ final readonly class DeleteHistoricalReadingRoundService
             ,$ratingChoice
             ,$reviewChoice
         ): void {
+            $snapshot = $this->rounds->findForUser($id, $actorId);
+            if ($snapshot === null) {
+                throw new ReadingRoundNotAvailable();
+            }
+            $this->readingLock?->acquire($actorId, $snapshot->workId());
             $current = $this->rounds->findForUserForUpdate($id, $actorId);
 
             if ($current === null) {

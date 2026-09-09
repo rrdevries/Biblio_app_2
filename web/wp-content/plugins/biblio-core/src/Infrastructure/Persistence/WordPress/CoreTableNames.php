@@ -60,6 +60,8 @@ final readonly class CoreTableNames
     private string $migrationTargetMappings;
     private string $migrationQuarantine;
     private string $migrationPreservations;
+    private string $personalWorkReadingLocks;
+    private string $personalReadingTruths;
 
     public function __construct(string $prefix)
     {
@@ -124,8 +126,12 @@ final readonly class CoreTableNames
         $this->migrationQuarantine = $prefix . "biblio_migration_quarantine";
         $this->migrationPreservations = $prefix
             . "biblio_migration_preservations";
+        $this->personalWorkReadingLocks = $prefix
+            . "biblio_personal_work_reading_locks";
+        $this->personalReadingTruths = $prefix
+            . "biblio_personal_reading_truths";
 
-        foreach ($this->schema1018() as $tableName) {
+        foreach ($this->schema1019() as $tableName) {
             $this->assertSafe($tableName);
         }
         $this->assertSafe($this->nextReadingInsertTrigger);
@@ -508,6 +514,31 @@ final readonly class CoreTableNames
     public function schema1018(): array
     {
         return [...$this->schema1017(), ...$this->schema1018Additions()];
+    }
+
+    public function personalWorkReadingLocks(): string
+    {
+        return $this->personalWorkReadingLocks;
+    }
+
+    public function personalReadingTruths(): string
+    {
+        return $this->personalReadingTruths;
+    }
+
+    /** @return list<string> */
+    public function schema1019Additions(): array
+    {
+        return [
+            $this->personalWorkReadingLocks,
+            $this->personalReadingTruths,
+        ];
+    }
+
+    /** @return list<string> */
+    public function schema1019(): array
+    {
+        return [...$this->schema1018(), ...$this->schema1019Additions()];
     }
 
     private function assertSafe(string $tableName): void

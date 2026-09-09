@@ -123,7 +123,8 @@ final readonly class CatalogUiReadService
                 $record->activeRoundCount(),
                 $record->completedRoundCount(),
                 $record->stoppedRoundCount(),
-                $record->historicalCompletedRoundCount()
+                $record->historicalCompletedRoundCount(),
+                $record->readDateKnown()
             ),
             $record->activeReadingRound(),
             $this->capabilities($record, $library)
@@ -145,7 +146,8 @@ final readonly class CatalogUiReadService
             CatalogTextValue::known($library->name()->value()),
             $record->readingStatus(),
             $record->itemStatus(),
-            $this->capabilities($record, $library)
+            $this->capabilities($record, $library),
+            $record->readDateKnown()
         );
     }
 

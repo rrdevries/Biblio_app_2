@@ -160,6 +160,7 @@ function detail(overrides = {}) {
         item_status: "active",
         reading: {
             status: "reading",
+            read_date_known: null,
             active_rounds: 1,
             completed_rounds: 3,
             stopped_rounds: 2,
@@ -324,6 +325,7 @@ test("unknown, missing and not-applicable values omit labels and sections", () =
         },
         reading: {
             status: "not_read",
+            read_date_known: null,
             active_rounds: 0,
             completed_rounds: 0,
             stopped_rounds: 0,
@@ -360,6 +362,42 @@ test("unknown, missing and not-applicable values omit labels and sections", () =
     assert.doesNotMatch(text(root), /Genres|Onderwerpen|Leesboek/);
     assert.doesNotMatch(text(root), /In collecties/);
     assert.doesNotMatch(text(root), /Beoordelingen/);
+});
+
+test("detail distinguishes date-unknown read truth and explicit unknown", () => {
+    const { root, view } = setup();
+
+    view.render({
+        state: "detail",
+        detail: detail({
+            reading: {
+                status: "read",
+                read_date_known: false,
+                active_rounds: 0,
+                completed_rounds: 0,
+                stopped_rounds: 0,
+                historical_completed_rounds: 0,
+            },
+        }),
+        backUrl: "https://example.test/mijn-bibliotheek/?library_id=library-1",
+    });
+    assert.match(text(root), /Uitgelezen · datum onbekend/);
+
+    view.render({
+        state: "detail",
+        detail: detail({
+            reading: {
+                status: "unknown",
+                read_date_known: null,
+                active_rounds: 0,
+                completed_rounds: 0,
+                stopped_rounds: 0,
+                historical_completed_rounds: 0,
+            },
+        }),
+        backUrl: "https://example.test/mijn-bibliotheek/?library_id=library-1",
+    });
+    assert.match(text(root), /Leesstatus onbekend/);
 });
 
 test("Start Reading is presentation-only and focuses authoritative updates", () => {

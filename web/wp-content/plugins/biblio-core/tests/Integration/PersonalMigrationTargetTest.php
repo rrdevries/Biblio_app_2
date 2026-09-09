@@ -279,6 +279,17 @@ final class PersonalMigrationTargetTest extends PersistenceIntegrationTestCase
                 "item_status" => "active",
             ]
         );
+        $this->database->insert(
+            $this->tableNames->personalReadingTruths(),
+            [
+                "user_id" => (string) $personalId,
+                "work_id" => "identity-work",
+                "truth_state" => "unknown",
+                "truth_version" => 1,
+                "created_at" => "2026-09-09 10:00:00.000000",
+                "updated_at" => "2026-09-09 10:00:00.000000",
+            ]
+        );
 
         $readiness = $application->personalMigrationTargets()->validate(
             new UserId((string) $personalId),
@@ -291,6 +302,10 @@ final class PersonalMigrationTargetTest extends PersistenceIntegrationTestCase
             $readiness->status()
         );
         self::assertSame(1, $readiness->counts()["library_items"]);
+        self::assertSame(
+            1,
+            $readiness->counts()["user_personal_reading_truths"]
+        );
         self::assertSame(1, $this->countRows($this->tableNames->items()));
     }
 
