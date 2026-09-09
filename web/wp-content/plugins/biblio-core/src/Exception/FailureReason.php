@@ -49,6 +49,8 @@ enum FailureReason: string
         "personal_library_designation_conflict";
     case PersonalMigrationTargetInvalid =
         "personal_migration_target_invalid";
+    case MigrationRunConflict = "migration_run_conflict";
+    case MigrationRecordConflict = "migration_record_conflict";
     case CatalogRecordAlreadyExists = "catalog_record_already_exists";
     case CatalogItemNotAvailable = "catalog_item_not_available";
     case MetadataLookupSnapshotUnavailable =

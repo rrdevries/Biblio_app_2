@@ -2871,3 +2871,42 @@ Status: **TECHNICAL GO WITH HUMAN SETUP PENDING** until Renée supplies the
 local login/e-mail values and performs the login check. Schema remains `1017`;
 Biblio UI remains `0.11.0`. See
 `docs/61-identity-01-personal-migration-target.md`.
+
+## 88. MIG-FND-01 migration ledger and preservation foundation
+
+MIG-FND-01 is accepted when:
+
+- schema 1017 upgrades additively to healthy 1018, fresh install reaches the
+  same structure, known partial retry is safe and unknown partial state fails;
+- runs durably pin source snapshot/fingerprint/version, migrator version,
+  explicit validated target user+Library, mode, lifecycle and summary state;
+- dry-run validates the same target but writes neither product nor ledger data;
+- logical identity and snapshot+payload observation identity are deterministic,
+  identical observations/edges do not duplicate, and changed later payload is
+  a new observation with no automatic reuse/delete;
+- one source can map to multiple committed targets; reuse requires identical
+  payload and the same target context;
+- mapped, transformed, preserved-deferred, quarantined, intentionally dropped
+  and failed remain distinct, required reasons are enforced, and quarantine
+  uses the fixed MIG-01 vocabulary;
+- preservation/quarantine keep bounded deterministic evidence or a durable
+  reference, with no personal payload in logs, exceptions, fixtures or Git;
+- apply serializes competing runs for one target while another user+Library
+  remains isolated;
+- product and ledger outcome share one transaction, rollback records no false
+  success, and a committed observation cannot be reprocessed;
+- interrupt/fail/resume is representable; completion requires exact counts,
+  zero uncommitted observations and zero failures;
+- source-to-target and target-to-source queries are bidirectional and
+  target-scoped; reconciliation counts each observation once regardless of
+  edge cardinality;
+- synthetic cases represent all MIG-01 preservation/conflict categories and
+  multiple Work/Edition/Item edges without implementing those domains;
+- Core unit/integration, schema, target validation, PHP syntax, PHPStan,
+  Composer/platform, WordPress smoke, manifest and whitespace gates pass; and
+- an independent second review finds no architecture, security, privacy or
+  regression blocker.
+
+Status: **GO / CLOSED**. Schema is `1018`; Biblio UI remains `0.11.0`. No
+frontend or human UI acceptance is required. See
+`docs/62-mig-fnd-01-migration-ledger-foundation.md`.

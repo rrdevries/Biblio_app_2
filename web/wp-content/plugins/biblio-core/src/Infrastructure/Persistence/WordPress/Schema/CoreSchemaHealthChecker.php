@@ -47,6 +47,7 @@ final readonly class CoreSchemaHealthChecker
             1015 => $this->inspectTables($this->tableNames->schema1015(), true, 1015),
             1016 => $this->inspectTables($this->tableNames->schema1016(), true, 1016),
             1017 => $this->inspectTables($this->tableNames->schema1017(), true, 1017),
+            1018 => $this->inspectTables($this->tableNames->schema1018(), true, 1018),
             default => throw new CoreSchemaMigrationException(
                 "No explicit Biblio Core schema-health contract exists for "
                 . "schema version {$expectedVersion}."
@@ -195,6 +196,15 @@ final readonly class CoreSchemaHealthChecker
             $this->tableNames->schema1017Additions(),
             false,
             1017
+        );
+    }
+
+    public function inspectExistingSchema1018Additions(): CoreSchemaHealth
+    {
+        return $this->inspectTables(
+            $this->tableNames->schema1018Additions(),
+            false,
+            1018
         );
     }
 
@@ -1151,6 +1161,111 @@ final readonly class CoreSchemaHealthChecker
                 "related_entities_json" => ["type" => "longtext", "nullable" => "NO"],
                 "changes_json" => ["type" => "longtext", "nullable" => "NO"],
             ],
+            $this->tableNames->migrationRuns() => [
+                "run_id" => $id,
+                "source_family" => $ascii("varchar(64)"),
+                "source_snapshot" => $id,
+                "source_fingerprint" => $ascii("char(64)"),
+                "source_version" => [
+                    "type" => "varchar(64)",
+                    "nullable" => "YES",
+                    "collation" => "utf8mb4_bin",
+                ],
+                "migrator_version" => $ascii("varchar(64)"),
+                "target_user_id" => $id,
+                "target_library_id" => $id,
+                "run_mode" => $ascii("varchar(16)"),
+                "run_status" => $ascii("varchar(16)"),
+                "summary_status" => $ascii("varchar(32)"),
+                "created_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "started_at" => ["type" => "datetime(6)", "nullable" => "YES"],
+                "finished_at" => ["type" => "datetime(6)", "nullable" => "YES"],
+            ],
+            $this->tableNames->migrationRunLocks() => [
+                "target_user_id" => $id,
+                "target_library_id" => $id,
+                "run_id" => $id,
+                "acquired_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+            ],
+            $this->tableNames->migrationSourceObservations() => [
+                "observation_id" => $ascii("char(64)"),
+                "run_id" => $id,
+                "source_family" => $ascii("varchar(64)"),
+                "source_type" => $ascii("varchar(64)"),
+                "source_id" => $id,
+                "source_snapshot" => $id,
+                "payload_hash" => $ascii("char(64)"),
+                "payload_json" => ["type" => "longtext", "nullable" => "YES"],
+                "payload_reference" => [
+                    "type" => "varchar(1024)",
+                    "nullable" => "YES",
+                    "collation" => "utf8mb4_bin",
+                ],
+                "processing_status" => $ascii("varchar(24)"),
+                "disposition" => [
+                    "type" => "varchar(40)",
+                    "nullable" => "YES",
+                    "collation" => "ascii_bin",
+                ],
+                "reason_code" => [
+                    "type" => "varchar(64)",
+                    "nullable" => "YES",
+                    "collation" => "ascii_bin",
+                ],
+                "retryable" => ["type" => "tinyint(3) unsigned", "nullable" => "NO"],
+                "created_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "updated_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+            ],
+            $this->tableNames->migrationTargetMappings() => [
+                "mapping_id" => $ascii("char(64)"),
+                "run_id" => $id,
+                "observation_id" => $ascii("char(64)"),
+                "target_entity_type" => $ascii("varchar(64)"),
+                "target_entity_id" => $id,
+                "mapping_disposition" => $ascii("varchar(16)"),
+                "mapping_status" => $ascii("varchar(16)"),
+                "reason_code" => [
+                    "type" => "varchar(64)",
+                    "nullable" => "YES",
+                    "collation" => "ascii_bin",
+                ],
+                "created_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+            ],
+            $this->tableNames->migrationQuarantine() => [
+                "quarantine_id" => $ascii("char(64)"),
+                "run_id" => $id,
+                "observation_id" => $ascii("char(64)"),
+                "reason_code" => $ascii("varchar(64)"),
+                "explanation" => [
+                    "type" => "varchar(1024)",
+                    "nullable" => "NO",
+                    "collation" => "utf8mb4_bin",
+                ],
+                "resolution_status" => $ascii("varchar(16)"),
+                "evidence_json" => ["type" => "longtext", "nullable" => "YES"],
+                "evidence_reference" => [
+                    "type" => "varchar(1024)",
+                    "nullable" => "YES",
+                    "collation" => "utf8mb4_bin",
+                ],
+                "created_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "resolved_at" => ["type" => "datetime(6)", "nullable" => "YES"],
+            ],
+            $this->tableNames->migrationPreservations() => [
+                "preservation_id" => $ascii("char(64)"),
+                "run_id" => $id,
+                "observation_id" => $ascii("char(64)"),
+                "reason_code" => $ascii("varchar(64)"),
+                "processing_status" => $ascii("varchar(32)"),
+                "evidence_json" => ["type" => "longtext", "nullable" => "YES"],
+                "evidence_reference" => [
+                    "type" => "varchar(1024)",
+                    "nullable" => "YES",
+                    "collation" => "utf8mb4_bin",
+                ],
+                "created_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "processed_at" => ["type" => "datetime(6)", "nullable" => "YES"],
+            ],
         ];
     }
 
@@ -1515,6 +1630,67 @@ final readonly class CoreSchemaHealthChecker
                     "columns" => ["library_id", "occurred_at", "event_id"],
                 ],
             ],
+            $this->tableNames->migrationRuns() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["run_id"]],
+                "migration_run_identity_unique" => [
+                    "unique" => true,
+                    "columns" => ["source_family", "source_snapshot", "source_fingerprint", "migrator_version", "target_user_id", "target_library_id", "run_mode"],
+                ],
+                "migration_runs_by_target_status" => [
+                    "unique" => false,
+                    "columns" => ["target_user_id", "target_library_id", "run_status", "created_at", "run_id"],
+                ],
+            ],
+            $this->tableNames->migrationRunLocks() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["target_user_id", "target_library_id"]],
+                "migration_run_lock_by_run" => ["unique" => true, "columns" => ["run_id"]],
+            ],
+            $this->tableNames->migrationSourceObservations() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["observation_id"]],
+                "migration_observation_run_source_unique" => [
+                    "unique" => true,
+                    "columns" => ["run_id", "source_family", "source_type", "source_id"],
+                ],
+                "migration_observations_by_logical_source" => [
+                    "unique" => false,
+                    "columns" => ["source_family", "source_type", "source_id", "source_snapshot", "payload_hash"],
+                ],
+                "migration_observations_by_run_disposition" => [
+                    "unique" => false,
+                    "columns" => ["run_id", "disposition", "processing_status", "observation_id"],
+                ],
+            ],
+            $this->tableNames->migrationTargetMappings() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["mapping_id"]],
+                "migration_mapping_edge_unique" => [
+                    "unique" => true,
+                    "columns" => ["run_id", "observation_id", "target_entity_type", "target_entity_id"],
+                ],
+                "migration_mappings_by_source" => [
+                    "unique" => false,
+                    "columns" => ["observation_id", "target_entity_type", "target_entity_id"],
+                ],
+                "migration_mappings_by_target" => [
+                    "unique" => false,
+                    "columns" => ["target_entity_type", "target_entity_id", "run_id", "observation_id"],
+                ],
+            ],
+            $this->tableNames->migrationQuarantine() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["quarantine_id"]],
+                "migration_quarantine_observation_unique" => ["unique" => true, "columns" => ["observation_id"]],
+                "migration_quarantine_by_run_resolution" => [
+                    "unique" => false,
+                    "columns" => ["run_id", "resolution_status", "reason_code", "observation_id"],
+                ],
+            ],
+            $this->tableNames->migrationPreservations() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["preservation_id"]],
+                "migration_preservation_observation_unique" => ["unique" => true, "columns" => ["observation_id"]],
+                "migration_preservations_by_run_status" => [
+                    "unique" => false,
+                    "columns" => ["run_id", "processing_status", "reason_code", "observation_id"],
+                ],
+            ],
         ];
     }
 
@@ -1773,6 +1949,28 @@ final readonly class CoreSchemaHealthChecker
                     ["library_id"]
                 ),
             ],
+            $this->tableNames->migrationRuns() => [
+                $restrict(["target_library_id"], $this->tableNames->libraries(), ["library_id"]),
+            ],
+            $this->tableNames->migrationRunLocks() => [
+                $cascade(["run_id"], $this->tableNames->migrationRuns(), ["run_id"]),
+                $restrict(["target_library_id"], $this->tableNames->libraries(), ["library_id"]),
+            ],
+            $this->tableNames->migrationSourceObservations() => [
+                $restrict(["run_id"], $this->tableNames->migrationRuns(), ["run_id"]),
+            ],
+            $this->tableNames->migrationTargetMappings() => [
+                $restrict(["run_id"], $this->tableNames->migrationRuns(), ["run_id"]),
+                $restrict(["observation_id"], $this->tableNames->migrationSourceObservations(), ["observation_id"]),
+            ],
+            $this->tableNames->migrationQuarantine() => [
+                $restrict(["run_id"], $this->tableNames->migrationRuns(), ["run_id"]),
+                $restrict(["observation_id"], $this->tableNames->migrationSourceObservations(), ["observation_id"]),
+            ],
+            $this->tableNames->migrationPreservations() => [
+                $restrict(["run_id"], $this->tableNames->migrationRuns(), ["run_id"]),
+                $restrict(["observation_id"], $this->tableNames->migrationSourceObservations(), ["observation_id"]),
+            ],
         ];
     }
 
@@ -2001,6 +2199,49 @@ final readonly class CoreSchemaHealthChecker
                     . "CHAR_LENGTH(TRIM(actor_display_name)) > 0",
                 "JSON_VALID(related_entities_json)",
                 "JSON_VALID(changes_json)",
+            ],
+            $this->tableNames->migrationRuns() => [
+                "source_fingerprint REGEXP '^[0-9a-f]{64}$'",
+                "run_mode IN ('dry_run','apply')",
+                "run_status IN ('planned','running','interrupted','failed','completed')",
+                "summary_status IN ('pending','reconciled','failed')",
+                "CHAR_LENGTH(TRIM(source_family)) > 0 AND CHAR_LENGTH(TRIM(source_snapshot)) > 0 AND CHAR_LENGTH(TRIM(migrator_version)) > 0 AND CHAR_LENGTH(TRIM(target_user_id)) > 0",
+                "(started_at IS NULL OR started_at >= created_at) AND (finished_at IS NULL OR started_at IS NOT NULL AND finished_at >= started_at)",
+                "run_status <> 'completed' OR finished_at IS NOT NULL AND summary_status = 'reconciled'",
+                "summary_status <> 'failed' OR run_status = 'failed'",
+            ],
+            $this->tableNames->migrationSourceObservations() => [
+                "observation_id REGEXP '^[0-9a-f]{64}$'",
+                "payload_hash REGEXP '^[0-9a-f]{64}$'",
+                "payload_json IS NULL OR JSON_VALID(payload_json) AND CHAR_LENGTH(payload_json) <= 65535",
+                "CHAR_LENGTH(TRIM(source_family)) > 0 AND CHAR_LENGTH(TRIM(source_type)) > 0 AND CHAR_LENGTH(TRIM(source_id)) > 0 AND CHAR_LENGTH(TRIM(source_snapshot)) > 0",
+                "processing_status IN ('observed','processing','committed','retryable_failure','terminal')",
+                "disposition IS NULL OR disposition IN ('mapped','transformed','preserved_deferred','quarantined','intentionally_dropped','failed')",
+                "retryable IN (0,1)",
+                "processing_status IN ('observed','processing') AND disposition IS NULL OR processing_status IN ('committed','retryable_failure','terminal') AND disposition IS NOT NULL",
+                "disposition NOT IN ('intentionally_dropped','failed') OR reason_code IS NOT NULL AND CHAR_LENGTH(TRIM(reason_code)) > 0",
+                "updated_at >= created_at",
+            ],
+            $this->tableNames->migrationTargetMappings() => [
+                "mapping_id REGEXP '^[0-9a-f]{64}$'",
+                "CHAR_LENGTH(TRIM(target_entity_type)) > 0 AND CHAR_LENGTH(TRIM(target_entity_id)) > 0",
+                "mapping_disposition IN ('created','reused')",
+                "mapping_status = 'committed'",
+            ],
+            $this->tableNames->migrationQuarantine() => [
+                "quarantine_id REGEXP '^[0-9a-f]{64}$'",
+                "reason_code IN ('invalid_isbn_claim','canonical_isbn_identity_conflict','source_identity_conflict','missing_required_target_field','orphan_reference','reading_truth_conflict','unknown_taxonomy_mapping','unresolved_work_identity','structural_ambiguity','ambiguous_contributor','ambiguous_circulation_semantics','unsupported_target_representation')",
+                "CHAR_LENGTH(TRIM(explanation)) > 0",
+                "resolution_status IN ('open','resolved','dismissed')",
+                "evidence_json IS NULL OR JSON_VALID(evidence_json) AND CHAR_LENGTH(evidence_json) <= 65535",
+                "resolution_status = 'open' AND resolved_at IS NULL OR resolution_status <> 'open' AND resolved_at IS NOT NULL AND resolved_at >= created_at",
+            ],
+            $this->tableNames->migrationPreservations() => [
+                "preservation_id REGEXP '^[0-9a-f]{64}$'",
+                "CHAR_LENGTH(TRIM(reason_code)) > 0",
+                "processing_status IN ('awaiting_future_processing','processed')",
+                "evidence_json IS NULL OR JSON_VALID(evidence_json) AND CHAR_LENGTH(evidence_json) <= 65535",
+                "processing_status = 'awaiting_future_processing' AND processed_at IS NULL OR processing_status = 'processed' AND processed_at IS NOT NULL AND processed_at >= created_at",
             ],
         ];
     }

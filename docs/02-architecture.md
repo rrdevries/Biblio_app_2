@@ -1379,3 +1379,48 @@ Authentication proves only access to discovery; MH-B5B independently validates
 the selected Work, explicit Library Context and `catalog.item_add` at commit.
 No original language is projected because the current model has no Work-level
 source for it. Schema remains 1017.
+
+## 34. MIG-FND-01 migration ledger and preservation boundary
+
+Schema 1018 adds a source-neutral Core migration subsystem without exposing a
+V1 parser, import command, REST route or UI. It follows ADR-004/ADR-005: named
+InnoDB tables, explicit columns/checks/indexes, restrictive ownership FKs,
+ordered single-step migration, structural health and fail-closed partial retry.
+
+The aggregate chain is:
+
+```text
+MigrationRun + target lock
+  -> SourceObservation
+     -> zero-to-many committed MigrationTargetMapping edges
+     -> optional Quarantine or Preservation detail
+```
+
+A run owns immutable source snapshot/fingerprint/migrator context and one
+explicit IDENTITY-01 user+Library target. Logical source identity remains
+family+type+ID; a deterministic observation additionally binds run, snapshot
+and payload hash. Runs and observations have separate lifecycles. Six closed
+source dispositions prevent silent success or loss; intentionally dropped and
+failed require reasons, and a run with failed/uncommitted records cannot
+complete.
+
+`BeginMigrationRunService` validates the exact personal target. Apply runs
+acquire one DB-backed lock per target context. Dry-run creates no ledger or
+product writes. `CommitMigrationRecordService` locks one observation, executes
+the future domain write participant and commits mapping/preservation/quarantine
+plus disposition in the same existing Core transaction. A rollback therefore
+cannot leave a false successful mapping. MIG-02 must compose non-nested domain
+participants inside this boundary.
+
+Trace queries join mappings through their run and require a run context; both
+directions are restricted to that run's target user+Library. Unchanged mapping
+reuse additionally requires the same logical source and payload hash. The
+reconciliation query groups observations separately from target edges, so a
+single source split into Work, Edition and Item counts once.
+
+Canonical evidence JSON is opt-in, deterministic and limited to 65,535 bytes;
+a bounded durable reference may be used instead. Payload contents never belong
+in normal logs/exceptions or Git. Historical MIG-01 snapshots and DATA-01 are
+evidence only. Every source-dependent phase requires a current `/data/` or
+export explicitly designated by Renée, and every run pins that source itself.
+See `docs/62-mig-fnd-01-migration-ledger-foundation.md`.

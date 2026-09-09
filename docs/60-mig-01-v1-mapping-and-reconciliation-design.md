@@ -1,15 +1,23 @@
 # MIG-01 — V1 mapping and reconciliation design
 
-Status: **MIGRATION DESIGN BLOCKED BY REMAINING TARGET GAPS**
+Status: **MIGRATION DESIGN BLOCKED BY REMAINING DOMAIN TARGET GAPS**
 
-Scope: read-only ontwerp/audit; geen migrator, import, schema- of datawijziging
+Scope: mapping/reconciliation design. MIG-FND-01 has since implemented only the
+source-neutral ledger foundation; no V1 parser, import or product-domain write.
 
 V1 blijft source of truth tot de finale cutover.
 
+> **Actual-source rule (2026-09-09):** the export profiled below is historical
+> design and regression evidence. It is not automatically the current or final
+> migration source. Every source-dependent dry-run, trial, reconciliation,
+> migration or release decision must use a fresh `/data/` directory/export that
+> Renée explicitly supplies or designates. Every run pins its own snapshot and
+> hash. DATA-01 remains regression coverage only.
+
 ## 1. Besluit en harde grens
 
-De goedgekeurde V1-bron is eenduidig vastgesteld en volledig read-only
-geprofileerd. De mapping-, identity-, preservation-, quarantine-,
+De toen voor de audit aangewezen V1-bron is eenduidig vastgesteld en volledig
+read-only geprofileerd. De mapping-, identity-, preservation-, quarantine-,
 reconciliation-, dry-run-, retry- en MIG-02-contracten zijn hieronder
 uitgewerkt. MIG-02-writes mogen nog niet worden gebouwd: meerdere door echte
 V1-data bewezen V2.001-doelen ontbreken of kunnen de bronwaarheid niet
@@ -20,8 +28,8 @@ De harde regel is:
 > Unknown is not disposable.
 
 Ieder source record krijgt in MIG-02 exact één eindclassificatie:
-`MAPPED`, `TRANSFORMED`, `PRESERVED_DEFERRED`, `QUARANTINED` of
-`INTENTIONALLY_NOT_MIGRATED`. De laatste klasse blijft leeg totdat Renée per
+`MAPPED`, `TRANSFORMED`, `PRESERVED_DEFERRED`, `QUARANTINED`, `FAILED` of
+`INTENTIONALLY_DROPPED_WITH_REASON`. De laatste klasse blijft leeg totdat Renée per
 concrete categorie, reden en bronpopulatie expliciet akkoord geeft.
 
 Een source entity is een top-level record of een embedded subrecord/slot met
@@ -35,10 +43,11 @@ target. Preservation en quarantine zijn nooit impliciete target-skips.
 
 ## 2. Autoriteit, methode en reproduceerbaarheid
 
-Deze audit gebruikte uitsluitend de actuele Git-state, de actuele canonieke
-projectdocumenten, de actuele V2-code en schema-1017-contracten, de hieronder
-gepinde V1-export en DATA-01. Historische chats en oude overdrachten zijn niet
-gebruikt. Er zijn geen providers aangeroepen.
+Deze historische audit gebruikte de toen actuele Git-state, canonieke
+projectdocumenten, V2-code en schema-1017-contracten, de hieronder beschreven
+V1-export en DATA-01. Die bronkwalificatie is niet overdraagbaar naar een
+toekomstige run; de actual-source rule hierboven is leidend. Historische chats
+en oude overdrachten zijn niet gebruikt. Er zijn geen providers aangeroepen.
 
 De V1-JSON en assets zijn vanuit het archief naar een tijdelijke read-only
 analysemap geëxtraheerd. Alle tellingen gebruiken de volledige array of map in
@@ -62,16 +71,16 @@ De detailtellingen zijn definities voor de latere MIG-02-profiler. MIG-02 moet
 ze opnieuw uit dezelfde bytes berekenen en met zijn machine-readable dry-run
 publiceren; de getallen hieronder zijn geen handmatige importparameters.
 
-## 3. Source baseline
+## 3. Historical audit source baseline
 
 | Eigenschap | Vastgestelde waarde |
 |---|---|
-| Goedgekeurd bestand | `.local/fixture-source/data.zip` |
+| Toen aangewezen auditbestand | `.local/fixture-source/data.zip` |
 | V1-pakket/baseline | Biblio `507.0.13` |
 | Hoofddata | `Biblio/data/books.json`, schemaVersion `29` |
 | Auteurdata | `Biblio/data/authors.json`, schemaVersion `2` |
 | SHA-256 | `b2ce31c76401ad929fe539259cb0252523f1749218df3985b4991e9f77eb298f` |
-| Waarom deze bron | `docs/05-source-register.md` noemt v507 actuele data als migratiereferentie; `scripts/build-data-01.sh` pint precies dit pad, deze hash en deze members; de lokale bytes voldoen exact aan die pin. |
+| Waarom deze bron toen bruikbaar was | De MIG-01-audit valideerde precies dit pad, deze hash en deze members. Dit maakt de tellingen reproduceerbaar als historisch bewijs, niet actueel. |
 | DATA-01 | 47 exact geselecteerde `books[].bookNumber`-cases uit hetzelfde archief; regressiebewijs, geen volledige migratiebron of V2-transformatie. |
 
 De volledige export bevat 1.138 boeken tegenover 47 DATA-01-boeken. DATA-01
@@ -139,7 +148,7 @@ blijven `QUARANTINED`; de migrator corrigeert geen checksum automatisch.
 | Genre | 1.037 op 444 boeken | 28 | 280 | 757 |
 | Legacy category | 1.262 op 1.030 boeken | 9 | 0 als besloten Subject-mapping | 1.262 |
 
-Alle labels bestaan in de actuele V1 managed lists; er zijn geen orphan
+Alle labels bestonden in de geprofileerde auditsnapshot managed lists; daarin waren geen orphan
 labels of duplicaten binnen één boek. Dat maakt ze niet automatisch een V2
 term. ADR-006 verbiedt een technische `Onbekend`/`Overig`-fallback en
 automatische semantische gelijkstelling. Exacte bestaande Book Types en Genres
@@ -209,7 +218,8 @@ read-registration, terwijl `readHistory` audit/compat-evidence blijft.
 
 ## 5. Actuele V2-target inventory
 
-Runtime, migratieregister en schema health wijzen alle op schema `1017`.
+MIG-FND-01 verhoogt runtime, migratieregister en schema health van `1017` naar
+`1018`. Alle bestaande domeintargets hieronder behouden hun eerdere status.
 
 | Target | Ownership/scope | Kernconstraints | V2.001-status |
 |---|---|---|---|
@@ -236,7 +246,7 @@ Runtime, migratieregister en schema health wijzen alle op schema `1017`.
 | InternalLoan | Library/user relation | nodig voor `lent_out` en mogelijk ReadingRound source | **geen huidig target** |
 | Goals | user | feature V2.002+ | geen actief target; preserve-only toegestaan |
 | Cover/assets | bibliografisch/Item | feature V2.002+ | geen Biblio-owned target; preserve-only toegestaan |
-| Migration run/source map/quarantine/preservation | technisch bewijs | stabiele source→target ledger en payload evidence | **geen huidige canonieke voorziening** |
+| Migration run/source map/quarantine/preservation | technisch bewijs | stabiele source→target ledger en payload evidence | **actief source-neutraal fundament in schema 1018; geen importer/executor** |
 
 De huidige metadata-user-observationstabel accepteert uitsluitend
 `physical_copy_add_book` als source context. V1-importdata daarin schrijven zou
@@ -297,7 +307,7 @@ eindstatus.
 | Taxonomy queue/aliases/reports | deferred governance evidence | PRESERVED_DEFERRED | pending/ignored/source/status en reports intact bewaren |
 | Import/migration reports | migration provenance | PRESERVED_DEFERRED | source audit-evidence, geen domeinentity |
 
-Er is in MIG-01 geen categorie `INTENTIONALLY_NOT_MIGRATED` gebruikt.
+Er is in MIG-01 geen categorie `INTENTIONALLY_DROPPED_WITH_REASON` gebruikt.
 
 ## 7. Work / Edition / Item identity
 
@@ -349,7 +359,7 @@ is `structural_ambiguity` en wordt quarantined.
 ## 8. Authors en Series
 
 Bestaande V1-author IDs zijn leidend. Embedded namen zonder ID mogen alleen
-via de actuele conservatieve V1-normalisatie aan precies één registry record
+via de in de auditsnapshot gebruikte conservatieve V1-normalisatie aan precies één registry record
 worden gekoppeld. Bij nul of meer dan één match volgt
 `ambiguous_contributor`-quarantine totdat een expliciet gereviewde
 migration-mapping een bestaande of nieuw aan te maken Author aanwijst. V2 kent
@@ -371,7 +381,7 @@ afgeleid.
 
 ## 9. Reading reconciliation en transformatie
 
-De actuele V1-bron zelf bepaalt de authorityvolgorde:
+De per run aangewezen actuele V1-bron bepaalt zelf de authorityvolgorde:
 
 1. `readingRounds[]` is canoniek voor concrete leesrondes;
 2. `readMarker` + `readRegistration` is canoniek voor leeswaarheid zonder
@@ -389,7 +399,7 @@ De 48 completed en 2 stopped rounds behouden exact hun day/month precision.
 De 2 active rounds hebben ieder precies één actieve owned copy en kunnen na
 targetbinding die Item-bron krijgen. De 3 `partial_finish`-registraties worden
 source-free `historical_manual` completed rounds met maandprecisie. Rereads
-zouden afzonderlijke round-ID's blijven; de actuele export bevat geen Work met
+zouden afzonderlijke round-ID's blijven; de auditsnapshot bevatte geen Work met
 meer dan één canonieke ronde.
 
 De 392 `unknown_date`-registraties zijn wel gelezentrouw maar kunnen niet naar
@@ -451,7 +461,7 @@ uit Wishlist, Reading Goals of recommendations.
 
 Alle 23 archived copies blijven dezelfde Item-identiteit houden, blijven
 terugvindbaar en behouden history, Notes/Reading-relaties en voormalige
-Collectionrelaties (actueel nul). Zij mogen niet in de actieve catalogus
+Collectionrelaties (nul in de auditsnapshot). Zij mogen niet in de actieve catalogus
 terugkomen. Omdat geen van de drie V1-reasons in de huidige V2-enum past, mag
 MIG-02 geen `sold`, `donated` of andere onware reason kiezen. Een minimale
 legacy-reason/evidence-uitbreiding is vóór archive-writes nodig.
@@ -554,7 +564,7 @@ gewijzigde payload expliciet als nieuwe observation/conflict wordt beoordeeld.
 | reading round | `books/<book.id>/readingRounds/<round.id>` |
 | read registration/marker/rating | singleton slot onder `books/<book.id>/<field>` |
 | note | `books/<book.id>/notes/<note.id>` |
-| review zonder ID | voor de huidige één-recordpopulatie `books/<book.id>/review`; payloadhash blijft een aparte observation, toekomstige multi-review parent-set zonder IDs wordt quarantined |
+| review zonder ID | voor de één-recordpopulatie in de auditsnapshot `books/<book.id>/review`; payloadhash blijft een aparte observation, toekomstige multi-review parent-set zonder IDs wordt quarantined |
 | circulation | `copies/<copy.id>/circulationRounds/<round.id>` |
 | contained work zonder ID | parent-ID + SHA-256 van exact canonical child JSON; wijziging tussen snapshots quarantinet de parent-set zolang correlatie ontbreekt |
 | Series/term zonder ID | source category + SHA-256 van exacte UTF-8 displaywaarde |
@@ -586,21 +596,21 @@ een gecontroleerde target-reuse, nooit uit importvolgorde.
 |---|---|---|---|
 | Duplicate valid ISBN, gelijke/additive identiteit | ja | TRANSFORMED: één Edition, meerdere Items | dry-run meldt group |
 | Same ISBN, conflicting non-empty bibliography | nee | QUARANTINED | identity review; blocks affected chain |
-| Malforme/conflicting ISBN claims | nee | QUARANTINED | 2 actuele records; blocks affected chain |
+| Malforme/conflicting ISBN claims | nee | QUARANTINED | 2 records in auditsnapshot; blocks affected chain |
 | Same bookNumber/copyNumber, conflicting payload | nee | QUARANTINED | source blocker |
-| Missing required Edition title | nee | QUARANTINED | actueel 0 |
-| Orphan copy/author/membership | nee | QUARANTINED | actueel copy/author 0; membership population 0 |
+| Missing required Edition title | nee | QUARANTINED | 0 in auditsnapshot |
+| Orphan copy/author/membership | nee | QUARANTINED | copy/author 0 in auditsnapshot; membership population 0 |
 | Duplicate read event in compat naast round | ja bij exact bewezen overlap | TRANSFORMED to evidence | geen tweede ronde |
 | Conflicting read date/outcome | nee | QUARANTINED | human review |
-| Duplicate Wishlist stable ID | nee | QUARANTINED | actueel 0 |
-| Active + archived Item conflict | nee | QUARANTINED | actueel geen onoplosbare source conflict |
-| Malformed/orphan circulation | nee | QUARANTINED | actueel 0 |
+| Duplicate Wishlist stable ID | nee | QUARANTINED | 0 in auditsnapshot |
+| Active + archived Item conflict | nee | QUARANTINED | geen onoplosbaar conflict in auditsnapshot |
+| Malformed/orphan circulation | nee | QUARANTINED | 0 in auditsnapshot |
 | Unknown taxonomy | nee | QUARANTINED assignment | 1.075 books hebben minstens één unresolved classificatiedimensie |
 | Unresolved Work identity | nee | QUARANTINED | geen fuzzy merge |
-| Omnibusflag zonder children | nee | QUARANTINED | 1 actueel record |
+| Omnibusflag zonder children | nee | QUARANTINED | 1 record in auditsnapshot |
 | Ambiguous contributor/reflection | nee | QUARANTINED | exact source value behouden |
 
-De kleine reason-taxonomie die door actuele conflicts wordt gerechtvaardigd:
+De kleine reason-taxonomie die door MIG-01-conflicttypen wordt gerechtvaardigd:
 
 - `invalid_isbn_claim`;
 - `canonical_isbn_identity_conflict`;
@@ -631,10 +641,12 @@ Per preserved source entity moet later reconstrueerbaar blijven:
 - migration-run en bronversie;
 - de eindclassificatie en latere activation/resolution state.
 
-Schema 1017 biedt hiervoor geen geschikte generieke voorziening. MIG-01 kiest
-geen JSON-dumptabel. Een afzonderlijke technische prerequisite moet het
-Core-owned migration-run-, source-map-, quarantine- en preservationcontract
-ontwerpen voordat MIG-02 production-writes kan doen.
+Schema 1018 biedt hiervoor het afzonderlijke, Core-owned MIG-FND-01-contract:
+runs, observations, target edges, quarantine en preservation zijn expliciete
+records. Bounded canonical JSON of een durable reference is alleen evidence bij
+een observation; het is geen generieke JSON-dumptabel en vervangt identiteit,
+status of relaties niet. Dit fundament neemt de overige domeintargetgaps niet
+weg en bouwt geen MIG-02-writes.
 
 ## 18. Reconciliationmodel
 
@@ -657,12 +669,14 @@ source_total
  + transformed
  + preserved_deferred
  + quarantined
- + intentionally_not_migrated
+ + intentionally_dropped_with_reason
+ + failed
 ```
 
 `skipped_by_explicit_rule` is alleen een target-actioncount en moet naar een
-van de vijf source-eindklassen verwijzen; het is geen zesde disposition.
-Iedere failed relationship verwijst naar een quarantine entry. Parent- en
+van de zes source-eindklassen verwijzen; het is geen extra disposition.
+`FAILED` blijft afzonderlijk van terminale quarantine, vereist een reden en
+blokkeert succesvolle run completion. Parent- en
 childpopulaties worden afzonderlijk gereconcileerd, zodat één V1-book met
 Work+Edition+Item niet driemaal in de book-total telt.
 
@@ -757,13 +771,16 @@ volledig rapporteren zonder eerdere categorieën te verbergen.
 
 ### Inputs
 
-- immutable V1 archive path + verwachte SHA-256;
-- allowed package version `507.0.13`, books schema `29`, authors schema `2`;
+- een actuele V1 `/data/`-folder of export die Renée expliciet voor deze fase
+  aanwijst, plus de door die run vastgelegde immutable snapshot en SHA-256;
+- package- en schemaversies die uit die aangewezen actuele bron zijn gelezen en
+  expliciet door de betreffende migratorversie worden ondersteund; de
+  historische `507.0.13`/`29`/`2` waarden zijn geen toekomstige allowlist;
 - verplichte `target_user_id` en `target_library_id` voor apply/write/resume;
 - IDENTITY-01-validatie van actieve bestaande V2 user, exact designated
   personal Library en actieve Owner/direct membership/context;
-- target schema version/health (`1017` of latere expliciet ondersteunde
-  prerequisiteversie);
+- target schema version/health (minimaal de expliciet ondersteunde
+  MIG-FND-01-versie `1018`);
 - migration mode `dry-run|write|resume`;
 - optionele bestaande migration-run-ID voor resume/retry;
 - versiegebonden, gereviewde taxonomy mapping allowlist.
@@ -780,12 +797,12 @@ volledig rapporteren zonder eerdere categorieën te verbergen.
 8. Items + verplichte LibraryCatalogContext/classification + Item evidence +
    archive current state en period/history in één aggregate-transactie;
 9. read-only post-commitreconciliation van Item/context/classification-relaties;
-10. Collections/memberships (actueel lege source population);
+10. Collections/memberships (alleen overslaan als de actuele profiler nul bevestigt);
 11. ReadingRounds/read-truth reconciliation;
 12. Private Notes;
 13. Ratings/Reviews zonder publication;
 14. Wishlist;
-15. Hierna lezen (actueel leeg);
+15. Hierna lezen (alleen overslaan als de actuele profiler nul bevestigt);
 16. circulation volgens het goedgekeurde minimumcontract;
 17. preserved-deferred/quarantine payloads en targetlinks;
 18. complete reconciliation/postconditions en run finalization.
@@ -814,11 +831,12 @@ fixturemutatie of V1-write.
 | Item acquisition/local evidence | 77 acquisitions, 3 copy notes, 1 exemplar photo, 1 disposal | bronfeiten hebben geen actief target en mogen niet verdwijnen | minimale Item-data persistence/read of traceerbare actieve migration-evidence volgens bestaande ownershipgrens | specialist collector/cover ja |
 | Legacy archive reason | 23 archived Items, 0 reason matches | archived state kan niet eerlijk via huidige archiveperiode worden geschreven | legacy reason/evidence zonder vertaling naar onware enum; archived Item blijft vindbaar | volledige archive-managementuitbreiding ja |
 | Private migrated assessments leesbaar | 15 ratings, 1 review; V1 kent geen publication | huidige Book Detail toont alleen publicaties; publishing zou waarheid veranderen | owner-scoped read-only projection en unknown-rating-timebeleid | nieuwe writes/publication/moderation ja |
-| Migration evidence storage | alle bronpopulaties, plus deferred/quarantine | zonder durable ledger/payloadbewijs geen idempotency of no-loss proof | Core-owned run/source-map/disposition/quarantine/preservationcontract | generieke import-UI ja |
+| Migration evidence storage | alle bronpopulaties, plus deferred/quarantine | zonder durable ledger/payloadbewijs geen idempotency of no-loss proof | **MIG-FND-01 gerealiseerd in schema 1018** | generieke import-UI ja |
 | Open circulation settlement | 8 open rounds | preserved-only kan dagelijkse beëindiging blokkeren | alleen na Renée-besluit: minimale read/end lifecycle voor bestaande rounds | volledige lending ja |
 
-De eerste zes zijn target-/technische gaps. De zevende is eerst een
-productbeslissing. Unknown taxonomy vereist daarnaast een gereviewde
+Migration evidence storage is no longer a gap; the remaining five domain
+targets are technical/product prerequisites. Open circulation remains first a
+product decision. Unknown taxonomy requires daarnaast een gereviewde
 migration allowlist/termset; dit is data-curation en geen toestemming voor
 automatische termcreatie.
 
@@ -826,7 +844,7 @@ automatische termcreatie.
 
 | Classificatie | Prerequisite |
 |---|---|
-| BLOCKS MIG-02 WRITES | migration run/source-map/quarantine/preservation target; basis Wishlist persistence; truth-preserving unknown read target; archive reason contract; rating timestamp/import contract |
+| BLOCKS MIG-02 WRITES | basis Wishlist persistence; truth-preserving unknown read target; archive reason contract; rating timestamp/import contract. MIG-FND-01 ledger/preservation is no longer in this row. |
 | BLOCKS FIRST FULL TRIAL IMPORT | Item acquisition/local evidence target; taxonomy mapping/termset voor 74 Book Types en overige gewenste labels; private assessment import/read boundary; circulation mapping na productbesluit |
 | BLOCKS FINAL CUTOVER | basis Wishlist view/add/remove; unknown/read-history parity; archived Item discoverability; private ratings/review readability; gekozen behandeling van 8 open loans; volledige zero-silent-drop reconciliation |
 | DOES NOT BLOCK MIGRATION | rich Goals/Home/Stats/Timeline/Audit UI; cover acquisition/management; Wishlist grouping; smart Collections; Authors/Series dedicated UI; new assessment writes/publication; full lending; general import UI; CAT-UI/QA-ADD human follow-up |
@@ -863,9 +881,9 @@ circulationsemantiek zijn human data-review, geen nieuw productbesluit.
 | D. Duplicate/conflict | same ISBN safe reuse versus conflicting identity; duplicate source ID; read conflict |
 | E. Idempotency | tweede identieke run creëert nul nieuwe targets en behoudt dezelfde mappings/counts |
 | F. Interruption/resume | crash op iedere phase/batchgrens; geen half chain; committed checkpoint herbruikbaar |
-| G. Full V1 dry-run | exacte approved archive hash; alle category counts en blocker artifacts |
+| G. Full V1 dry-run | exacte hash van de voor die run door Renée aangewezen actuele source; alle category counts en blocker artifacts |
 | H. Clean trial import | schone V2 database, vooraf gevalideerde target context, geen V1/runtime mutation |
-| I. Reconciliation | source totals exact gelijk aan vijf dispositions; relation expected=created+reused+failed |
+| I. Reconciliation | source totals exact gelijk aan zes dispositions; relation expected=created+reused+failed |
 | J. Second full import | nul duplicates, gelijke ledger edges en artifactchecksums waar context gelijk is |
 | K. Newer export rehearsal | same/changed/new/missing source records expliciet gedifferentieerd; geen delete by absence |
 | L. Final cutover rehearsal | V1 freeze, dry-run, backup/restore, timed write, functional reads, signed reconciliation |
@@ -879,7 +897,8 @@ V1-bron.
 De verplichte tweede pass controleert na de docdiff opnieuw:
 
 - alle top-level files, embedded structures en unknown fields zijn ingedeeld;
-- geen categorie valt impliciet weg of gebruikt `INTENTIONALLY_NOT_MIGRATED`;
+- geen categorie valt impliciet weg of gebruikt
+  `INTENTIONALLY_DROPPED_WITH_REASON` zonder expliciet besluit en reden;
 - Work/Edition/Item volgt ISBN, explicit variant en CAT-T1 zonder fuzzy merge;
 - user-/Library-ownership en targetbinding blijven expliciet;
 - 52 rounds, 395 registrations en compat history worden niet dubbel geteld;
@@ -895,9 +914,9 @@ Bronzekerheid, inventaris, mappings, preservation, quarantine, reconciliation,
 identity/idempotency, dry-run en MIG-02-fasen zijn voldoende concreet.
 IDENTITY-01 heeft de expliciete user+Library-binding uit §24 opgelost. De
 huidige targetlaag voldoet nog niet aan de exitcriteria voor writes of cutover
-door de overige gaps in §22. Daarom is geen `MIGRATION DESIGN READY` gegeven en
-mag er nog geen migratorcode, schema of import ontstaan. De recovery-review mag
-dit geblokkeerde maar inhoudelijk afgeronde ontwerp wel met één docs-only
-closurecommit vastleggen; dat commit verleent geen implementatieautorisatie.
+door de overige gaps in §22. MIG-FND-01 heeft nu uitsluitend de source-neutrale
+schema-1018 ledger, transactionele recordboundary, reconciliation en
+traceability gerealiseerd. Er is geen V1-parser, import, domeincleanup of
+broninhoudelijke mappingregel gebouwd.
 
-**MIGRATION DESIGN BLOCKED BY REMAINING TARGET GAPS**
+**MIGRATION DESIGN BLOCKED BY REMAINING DOMAIN TARGET GAPS**

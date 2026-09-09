@@ -24,23 +24,24 @@ reference data only, not a V1-to-V2 migration fixture, provider fixture,
 schema seed or V2 transformation. Its format and validation entry point are
 documented in `testdata/data-01-v1/README.md`.
 
-MIG-01 has now pinned and profiled the full approved V1 migration source as
-`.local/fixture-source/data.zip`, Biblio `507.0.13`, books schema `29`, SHA-256
-`b2ce31c76401ad929fe539259cb0252523f1749218df3985b4991e9f77eb298f`.
-The mapping/reconciliation design is complete enough to identify its blockers,
-but is **MIGRATION DESIGN BLOCKED BY REMAINING TARGET GAPS**. IDENTITY-01 has
-resolved the explicit personal target-user/Library decision and validation;
-the required local account creation and login QA still await Renée's exact
-login/e-mail input. Actual V1 evidence proves
-that schema 1017 cannot yet truthfully receive all release-required data:
-41 active Wishlist entries, 392 read registrations with an unknown date,
-360 explicit unknown read markers, 23 unsupported legacy archive reasons,
-Item acquisition/local evidence, private migrated assessment reads and durable
-migration/quarantine/preservation traceability all need bounded target work.
-Eight open circulation rounds additionally require the existing small Renée
-decision about cutover settlement. Canonical evidence and the MIG-02 contract
-are in `docs/60-mig-01-v1-mapping-and-reconciliation-design.md`. No migrator,
-schema, import or data mutation has been performed.
+MIG-01's historical audit snapshot remains design/regression evidence only.
+V1 is still active and remains source of truth; every future source-dependent
+dry-run, trial, reconciliation, migration or release decision must ask Renée
+for a current `/data/` directory/export that she explicitly designates. Each
+migration run pins its own snapshot and hash. DATA-01 and earlier ZIP/local
+copies are never presumed current.
+
+MIG-FND-01 has implemented the source-neutral migration ledger, preservation,
+quarantine, idempotency, target locking, transaction and reconciliation
+foundation in schema `1018`. IDENTITY-01 remains its mandatory explicit
+personal target validator. The mapping design is still **MIGRATION DESIGN
+BLOCKED BY REMAINING DOMAIN TARGET GAPS**: Wishlist, unknown-date/status reading
+truth, legacy archive reasons, Item local evidence and private migrated
+assessment reads still need bounded targets, while open circulation still
+needs Renée's cutover decision. No V1 parser, source profiling, import,
+domain cleanup or production-data mutation is included. See
+`docs/60-mig-01-v1-mapping-and-reconciliation-design.md` and
+`docs/62-mig-fnd-01-migration-ledger-foundation.md`.
 
 ## Product model
 
@@ -2486,3 +2487,23 @@ Author, Series, Location and Collection controls remain hidden because no safe
 Library-scoped browser option route exists. Bookshelf remains disabled. Schema
 stays `1017`; Biblio UI is `0.11.0`. Detailed
 evidence: `docs/59-cat-ui-01-mijn-bibliotheek-search-filter-sort-integration.md`.
+
+### MIG-FND-01 — Migration ledger and preservation foundation
+
+Status: **GO / CLOSED**
+
+Schema `1018` adds explicit Core-owned migration runs and target locks, source
+observations, committed target mappings, quarantine and preservation records.
+The application boundary validates the explicit IDENTITY-01 target, represents
+dry-run without writes, serializes apply per target context and commits a
+product participant plus its ledger outcome in one transaction. Identical
+observations and edges are DB-constrained; unchanged prior mappings are reused
+only within the same user+Library context, while changed payloads become new
+observations.
+
+All six loss-policy dispositions, retry/resume state, exact source-count
+reconciliation and target-scoped bidirectional trace are implemented. Evidence
+is deterministic and bounded; payload data is not logged or committed to Git.
+No V1 schema/parser, import executor, CLI, product-domain migration or UI is
+present. Biblio UI remains `0.11.0`. Detailed evidence:
+`docs/62-mig-fnd-01-migration-ledger-foundation.md`.
