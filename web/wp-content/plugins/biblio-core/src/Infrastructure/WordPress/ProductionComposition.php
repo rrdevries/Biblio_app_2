@@ -32,9 +32,11 @@ use Biblio\Core\Application\Catalog\Classification\ManageLibrarySubjectsService;
 use Biblio\Core\Application\Catalog\Classification\SaveLibraryCatalogContextService;
 use Biblio\Core\Application\Collections\ManageLibraryCollectionsService;
 use Biblio\Core\Application\Collections\Read\LibraryCollectionQueryService;
+use Biblio\Core\Application\Identity\PersonalMigrationTargetService;
 use Biblio\Core\Application\CoreApplication;
 use Biblio\Core\Application\Library\CreateLibraryService;
 use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
+use Biblio\Core\Application\Library\ProvisionPersonalPrivateLibraryService;
 use Biblio\Core\Application\Library\GetAccessibleLibraryItemService;
 use Biblio\Core\Application\Library\LibraryAccessService;
 use Biblio\Core\Application\Library\LibraryContextQueryService;
@@ -100,6 +102,7 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbCatalogUiReadRepository
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbCatalogQueryRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPersonalLibraryRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPersonalMigrationTargetContentRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPrivateNoteRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbNextReadingRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbNextReadingDiscoveryRepository;
@@ -126,6 +129,7 @@ use Biblio\Core\Infrastructure\WordPress\Lifecycle\CoreLifecycleCoordinator;
 use Biblio\Core\Infrastructure\WordPress\Lifecycle\LifecycleStateStore;
 use Biblio\Core\Infrastructure\WordPress\Lifecycle\WpTransientLifecycleStateStore;
 use Biblio\Core\Infrastructure\WordPress\Identity\WordPressAuthenticatedUser;
+use Biblio\Core\Infrastructure\WordPress\Identity\WordPressPlatformUserDirectory;
 use Biblio\Core\Notes\StrictPrivateNoteContentPolicy;
 use wpdb;
 
@@ -258,10 +262,24 @@ final class ProductionComposition
             $seedEvolution,
             $transactionManager
         );
-        $personalLibraries = new EnsurePersonalPrivateLibraryService(
-            $authenticatedUser,
+        $personalLibraryProvisioner = new ProvisionPersonalPrivateLibraryService(
             $personalLibraryRepository,
             $createLibrary
+        );
+        $personalLibraries = new EnsurePersonalPrivateLibraryService(
+            $authenticatedUser,
+            $personalLibraryProvisioner
+        );
+        $personalMigrationTargets = new PersonalMigrationTargetService(
+            new WordPressPlatformUserDirectory(),
+            $personalLibraryRepository,
+            $libraryRepository,
+            $membershipRepository,
+            $personalLibraryProvisioner,
+            new WpdbPersonalMigrationTargetContentRepository(
+                $database,
+                $tableNames
+            )
         );
         $authorizationPolicy = new LibraryAuthorizationPolicy();
         $libraryAccess = new LibraryAccessService(
@@ -714,6 +732,7 @@ final class ProductionComposition
 
         $this->application = new CoreApplication(
             $personalLibraries,
+            $personalMigrationTargets,
             $libraryContexts,
             $catalogUiReads,
             $catalogQuery,

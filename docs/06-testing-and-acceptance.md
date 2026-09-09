@@ -2831,3 +2831,43 @@ CAT-UI-01 is technically accepted when:
 Status: **TECHNICAL GO / HUMAN VISUAL ACCEPTANCE PENDING**. Schema remains
 `1017`; Biblio UI is `0.11.0`. See
 `docs/59-cat-ui-01-mijn-bibliotheek-search-filter-sort-integration.md`.
+
+## 87. IDENTITY-01 personal user and migration target
+
+IDENTITY-01 is technically accepted when:
+
+- a new explicitly named/e-mailed local user is created with only the normal
+  `subscriber` role, without a supplied/logged password or committed secret;
+- the existing Core transaction creates exactly one `Mijn Bibliotheek`, one
+  active Owner/direct membership, one personal designation and the standard
+  classification seeds;
+- an identical second run returns the same user and Library IDs and creates no
+  duplicates or privilege changes;
+- existing account, designation, Owner and membership conflicts fail closed
+  without silent repair;
+- DDEV admin and personal user IDs remain distinct and the current WP-CLI actor
+  is never used as a target fallback;
+- the personal user resolves the designated Library Context and receives the
+  normal Owner view, catalog and Add Book capabilities without platform-admin
+  capabilities;
+- platform-role changes on that same user leave designation, membership,
+  ReadingRounds, Notes, Ratings/Reviews, Wishlist and other personal data
+  unchanged;
+- `validate` requires both `--target-user-id` and `--target-library-id`, then
+  rechecks active user, exact designation, supported Library and active
+  Owner/direct membership server-side;
+- missing, inactive, cross-user, cross-Library and non-Owner targets fail
+  closed;
+- the read-only readiness report returns `empty` only when every counted
+  target-owned content class is zero; otherwise it returns
+  `non_empty_requires_operator_review`, and `--require-empty` exits non-zero;
+- no V1 archive, source data, migration ledger, cleanup, schema or UI is added;
+- Core unit/integration, identity, authorization, Library Context, WordPress
+  smoke, PHP syntax, PHPStan and whitespace gates pass; and
+- human login still confirms the normal Owner flow and absence of admin-only
+  privileges.
+
+Status: **TECHNICAL GO WITH HUMAN SETUP PENDING** until Renée supplies the
+local login/e-mail values and performs the login check. Schema remains `1017`;
+Biblio UI remains `0.11.0`. See
+`docs/61-identity-01-personal-migration-target.md`.

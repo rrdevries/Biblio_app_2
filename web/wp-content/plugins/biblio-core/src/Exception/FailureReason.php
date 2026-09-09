@@ -47,6 +47,8 @@ enum FailureReason: string
         "personal_library_already_provisioned";
     case PersonalLibraryDesignationConflict =
         "personal_library_designation_conflict";
+    case PersonalMigrationTargetInvalid =
+        "personal_migration_target_invalid";
     case CatalogRecordAlreadyExists = "catalog_record_already_exists";
     case CatalogItemNotAvailable = "catalog_item_not_available";
     case MetadataLookupSnapshotUnavailable =

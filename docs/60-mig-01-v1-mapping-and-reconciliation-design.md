@@ -1,6 +1,6 @@
 # MIG-01 — V1 mapping and reconciliation design
 
-Status: **MIGRATION DESIGN BLOCKED BY TARGET GAP**
+Status: **MIGRATION DESIGN BLOCKED BY REMAINING TARGET GAPS**
 
 Scope: read-only ontwerp/audit; geen migrator, import, schema- of datawijziging
 
@@ -759,7 +759,9 @@ volledig rapporteren zonder eerdere categorieën te verbergen.
 
 - immutable V1 archive path + verwachte SHA-256;
 - allowed package version `507.0.13`, books schema `29`, authors schema `2`;
-- expliciete bestaande V2 user-ID, personal Library-ID en membership/context;
+- verplichte `target_user_id` en `target_library_id` voor apply/write/resume;
+- IDENTITY-01-validatie van actieve bestaande V2 user, exact designated
+  personal Library en actieve Owner/direct membership/context;
 - target schema version/health (`1017` of latere expliciet ondersteunde
   prerequisiteversie);
 - migration mode `dry-run|write|resume`;
@@ -824,19 +826,25 @@ automatische termcreatie.
 
 | Classificatie | Prerequisite |
 |---|---|
-| BLOCKS MIG-02 WRITES | migration run/source-map/quarantine/preservation target; expliciete user+Library binding; basis Wishlist persistence; truth-preserving unknown read target; archive reason contract; rating timestamp/import contract |
+| BLOCKS MIG-02 WRITES | migration run/source-map/quarantine/preservation target; basis Wishlist persistence; truth-preserving unknown read target; archive reason contract; rating timestamp/import contract |
 | BLOCKS FIRST FULL TRIAL IMPORT | Item acquisition/local evidence target; taxonomy mapping/termset voor 74 Book Types en overige gewenste labels; private assessment import/read boundary; circulation mapping na productbesluit |
 | BLOCKS FINAL CUTOVER | basis Wishlist view/add/remove; unknown/read-history parity; archived Item discoverability; private ratings/review readability; gekozen behandeling van 8 open loans; volledige zero-silent-drop reconciliation |
 | DOES NOT BLOCK MIGRATION | rich Goals/Home/Stats/Timeline/Audit UI; cover acquisition/management; Wishlist grouping; smart Collections; Authors/Series dedicated UI; new assessment writes/publication; full lending; general import UI; CAT-UI/QA-ADD human follow-up |
 
 ## 24. Product decisions voor Renée
 
-1. **V1 source owner → V2 user + target Library.** De repo/config noemt geen
-   expliciete migratie-owner/Library. De huidige developmentdatabase bevat een
-   kandidaat, maar runtime testdata is geen productautorisatie. Veilige opties:
-   een bestaande user + designated personal Library aanwijzen, of die context
-   vóór migration gecontroleerd provisionen. Aanbevolen: wijs expliciete
-   bestaande IDs aan in een cutoverconfig; nooit naam/e-mail heuristiek.
+1. **RESOLVED — V1 source owner → V2 user + target Library.** D-IDENTITY-01
+   kiest één blijvende normale Renée-user en haar afzonderlijke designated
+   personal `Mijn Bibliotheek`. De bestaande DDEV/platform admin is niet het
+   target. IDENTITY-01 provisiont de context uitsluitend uit expliciete lokale
+   login/e-mailinput en geeft environment-specifieke IDs terug; canonical docs
+   hardcoden die IDs niet. Iedere MIG-02 apply/write/resume-run vereist
+   `--target-user-id=<id>` en `--target-library-id=<id>`. Servervalidatie kent
+   geen current-actor-, first-user-, admin- of display-namefallback en weigert
+   ontbrekende/inactieve users, designationmismatch, vreemde Library of
+   non-Owner/inactive membership. Cleanliness is een aparte read-only gate;
+   non-empty targets vereisen operatorreview en worden nooit automatisch
+   opgeschoond.
 2. **Acht actieve/open loans.** Kies of V2.001 ze alleen preserved toont, of
    dat bestaande rounds ook beëindigd moeten kunnen worden. Technisch
    aanbevolen voor dagelijkse continuïteit: het kleine read+end-contract uit
@@ -884,11 +892,12 @@ De verplichte tweede pass controleert na de docdiff opnieuw:
 ## 27. MIG-01 exit
 
 Bronzekerheid, inventaris, mappings, preservation, quarantine, reconciliation,
-identity/idempotency, dry-run en MIG-02-fasen zijn voldoende concreet. De
-huidige targetlaag voldoet echter niet aan de exitcriteria voor writes of
-cutover door de gaps in §22. Daarom is geen `MIGRATION DESIGN READY` gegeven en
+identity/idempotency, dry-run en MIG-02-fasen zijn voldoende concreet.
+IDENTITY-01 heeft de expliciete user+Library-binding uit §24 opgelost. De
+huidige targetlaag voldoet nog niet aan de exitcriteria voor writes of cutover
+door de overige gaps in §22. Daarom is geen `MIGRATION DESIGN READY` gegeven en
 mag er nog geen migratorcode, schema of import ontstaan. De recovery-review mag
 dit geblokkeerde maar inhoudelijk afgeronde ontwerp wel met één docs-only
 closurecommit vastleggen; dat commit verleent geen implementatieautorisatie.
 
-**MIGRATION DESIGN BLOCKED BY TARGET GAP**
+**MIGRATION DESIGN BLOCKED BY REMAINING TARGET GAPS**

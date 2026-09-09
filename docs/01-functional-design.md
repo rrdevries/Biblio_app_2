@@ -131,6 +131,21 @@ Only Platformbeheer creates new Mijn Biblio accounts in v2.001.
 
 One person uses one platform-wide account across all Libraries.
 
+D-IDENTITY-01 applies this rule explicitly to Renée and migration: her normal
+personal account is the durable identity for ReadingRounds, Notes,
+Ratings/Reviews, Wishlist and other user-owned data. The same account may later
+receive or lose `Admin`, `Super admin` and/or `Biblio Librarian` privileges.
+Those platform privileges and the account's Library memberships are
+independent dimensions; no second admin persona is created and privilege
+changes never transfer or rewrite personal data or Library ownership.
+
+The local DDEV/platform admin is a separate account and is not the migration
+target. MIG-02 write/apply mode always requires an explicitly supplied
+`target_user_id` plus `target_library_id`; neither the current actor, first
+user, an admin nor a Library display name may provide a default. The target
+must be an active platform user and the active Owner with Directe toegang of
+that exact designated personal Library. Any mismatch fails closed.
+
 A newly created platform account may temporarily have no Library.
 
 For v2.001, Biblio automatically creates the user's one designated personal Privébibliotheek on the first relevant reading or borrowing action when that Library does not yet exist. That action creates the membership as:
@@ -141,6 +156,12 @@ The automatically provisioned Library is named `Mijn Bibliotheek`. Library
 names are required, trimmed, whitespace-normalized UTF-8 text of at most 191
 characters and are not globally unique. Existing supported Libraries without
 a usable name receive `Mijn Bibliotheek` through the formal F2.10 migration.
+
+For local operator provisioning, the stable bootstrap identity is the existing
+user→Library personal designation, never the non-unique display name. A rerun
+reuses only an exactly matching normal WordPress account and its designation;
+conflicting account, designation, membership or Library state fails without
+automatic repair.
 
 This automatic Library creation does not move personal ReadingRounds, external loans, ratings, goals or other Mijn Biblio data into Library ownership.
 

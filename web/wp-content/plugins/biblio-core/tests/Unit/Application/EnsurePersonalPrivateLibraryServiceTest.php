@@ -6,6 +6,7 @@ namespace Biblio\Core\Tests\Unit\Application;
 
 use Biblio\Core\Application\Library\CreateLibraryService;
 use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
+use Biblio\Core\Application\Library\ProvisionPersonalPrivateLibraryService;
 use Biblio\Core\Application\TransactionManager;
 use Biblio\Core\Catalog\Classification\ClassificationSeedAdoptionAmbiguity;
 use Biblio\Core\Catalog\Classification\ClassificationSeedEvolution;
@@ -181,8 +182,10 @@ final class EnsurePersonalPrivateLibraryServiceTest extends TestCase
         );
         $service = new EnsurePersonalPrivateLibraryService(
             new ControllableAuthenticatedUser($userId),
-            $repositories[2],
-            $createLibraryService
+            new ProvisionPersonalPrivateLibraryService(
+                $repositories[2],
+                $createLibraryService
+            )
         );
 
         $personalLibraryId = $service->ensure();
@@ -210,10 +213,12 @@ final class EnsurePersonalPrivateLibraryServiceTest extends TestCase
     ): EnsurePersonalPrivateLibraryService {
         return new EnsurePersonalPrivateLibraryService(
             new ControllableAuthenticatedUser($userId),
-            $designationRepository,
-            $this->createLibraryService(
-                $libraryRepository,
-                $membershipRepository
+            new ProvisionPersonalPrivateLibraryService(
+                $designationRepository,
+                $this->createLibraryService(
+                    $libraryRepository,
+                    $membershipRepository
+                )
             )
         );
     }

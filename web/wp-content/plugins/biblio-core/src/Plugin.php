@@ -8,6 +8,7 @@ use Biblio\Core\Application\CoreApplication;
 use Biblio\Core\Exception\CoreFailure;
 use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Infrastructure\WordPress\Lifecycle\CoreLifecycleException;
+use Biblio\Core\Infrastructure\WordPress\Cli\PersonalIdentityCommand;
 use Biblio\Core\Infrastructure\WordPress\ProductionComposition;
 use Biblio\Core\Infrastructure\WordPress\Rest\RestApi;
 use Closure;
@@ -60,6 +61,7 @@ final class Plugin
         add_action("init", [$this, "initialize"], 1);
         add_action("admin_notices", [$this, "renderAdminNotice"]);
         $this->restApi->boot();
+        $this->registerCli();
         $this->hooksRegistered = true;
     }
 
@@ -133,6 +135,19 @@ final class Plugin
     private function composition(): ProductionComposition
     {
         return $this->composition ??= ($this->compositionFactory)();
+    }
+
+    private function registerCli(): void
+    {
+        if (!defined("WP_CLI") || !constant("WP_CLI")) {
+            return;
+        }
+
+        call_user_func(
+            ["WP_CLI", "add_command"],
+            "biblio identity",
+            new PersonalIdentityCommand(fn () => $this->application())
+        );
     }
 
     private function recordFailure(Throwable $exception): void

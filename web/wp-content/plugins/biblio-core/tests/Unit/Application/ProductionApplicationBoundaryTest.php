@@ -185,6 +185,7 @@ final class ProductionApplicationBoundaryTest extends TestCase
             "ownedExternalLoans",
             "ownedReadingRounds",
             "personalLibraries",
+            "personalMigrationTargets",
             "personalWorkReadingStatus",
             "privateNoteContentUpdate",
             "privateNoteContextCorrection",

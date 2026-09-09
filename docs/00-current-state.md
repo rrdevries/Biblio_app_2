@@ -28,7 +28,10 @@ MIG-01 has now pinned and profiled the full approved V1 migration source as
 `.local/fixture-source/data.zip`, Biblio `507.0.13`, books schema `29`, SHA-256
 `b2ce31c76401ad929fe539259cb0252523f1749218df3985b4991e9f77eb298f`.
 The mapping/reconciliation design is complete enough to identify its blockers,
-but is **MIGRATION DESIGN BLOCKED BY TARGET GAP**. Actual V1 evidence proves
+but is **MIGRATION DESIGN BLOCKED BY REMAINING TARGET GAPS**. IDENTITY-01 has
+resolved the explicit personal target-user/Library decision and validation;
+the required local account creation and login QA still await Renée's exact
+login/e-mail input. Actual V1 evidence proves
 that schema 1017 cannot yet truthfully receive all release-required data:
 41 active Wishlist entries, 392 read registrations with an unknown date,
 360 explicit unknown read markers, 23 unsupported legacy archive reasons,
@@ -171,6 +174,29 @@ toegang.
 ## Accounts
 
 Only Platform `Super admin`, or an `Admin` with explicit platform `Gebruikersbeheer`, creates platform-wide Mijn Biblio accounts in v2.001.
+
+### D-IDENTITY-01 — persistent personal identity and migration target
+
+Renée uses one persistent normal WordPress/Biblio user identity for personal
+data and every later platform role. Library ownership is a separate dimension:
+the user owns the one explicitly designated personal `Mijn Bibliotheek`
+through an active `Eigenaar` + `Directe toegang` membership. Adding or removing
+`Admin`, `Super admin` or `Biblio Librarian` privileges never creates another
+Renée identity and never rewrites Library ownership or user-owned data.
+
+The DDEV/platform admin remains a separate identity and is not the V1 migration
+target. IDENTITY-01 provides a local-DDEV-only `wp biblio identity bootstrap`
+operator command. It requires explicit login and email input, creates new users
+as `subscriber`, generates no logged password, sends the normal password-reset
+notification and uses the existing transactional Core Library provisioner.
+
+MIG-02 apply/write mode must receive both `target_user_id` and
+`target_library_id`. The Core validator rechecks the active WordPress user,
+the exact user→Library personal designation and active Owner/direct membership.
+It has no current-actor, first-user, admin or display-name fallback. A read-only
+cleanliness report counts target-owned Library and personal data; non-empty
+means `non_empty_requires_operator_review` and causes `--require-empty` to fail
+without cleanup.
 
 A newly created account may temporarily have no Library.
 

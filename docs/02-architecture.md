@@ -110,9 +110,30 @@ For v2.001, the first relevant reading or borrowing action auto-creates one desi
 
 The designation is stored explicitly as user→Library data and is not inferred heuristically from Library ownership.
 
+D-IDENTITY-01 reuses that designation as the stable local bootstrap key. A
+local-DDEV-only WP-CLI adapter creates or exactly matches a normal WordPress
+`subscriber`, never accepts a password argument or logs a generated password,
+and delegates Library creation to the existing Core transaction. The Core
+operator service accepts an explicit target `UserId`; it does not impersonate
+or derive the target from the WP-CLI actor.
+
+MIG-02 receives separate mandatory `target_user_id` and `target_library_id`
+values. Server-side validation rechecks an active WordPress user, the exact
+personal designation, existing supported Library and active Owner/direct
+membership. Repository-backed readiness then counts target-owned content
+without mutation. A zero total is `empty`; every non-zero total is
+`non_empty_requires_operator_review`, because the system has no trustworthy
+provenance with which to guess test data versus real data.
+
 The provisioning primitive is transactional, idempotent and concurrency-safe. It is invoked by relevant application use-cases, not at login or account registration.
 
 This Library provides a stable collection/authorization anchor but does not own personal Mijn Biblio data.
+
+WordPress roles/capabilities are not stored in the Library membership tables.
+Consequently a later platform-role change on the same `wp_users.ID` neither
+changes the designation nor the Owner membership. `Biblio Librarian` remains a
+separate canonical platform capability; IDENTITY-01 does not implement or
+assign that deferred governance role.
 
 The model permits additional Library memberships and additional Privébibliotheken.
 

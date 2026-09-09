@@ -26,6 +26,7 @@ use Biblio\Core\Application\Catalog\Classification\SaveLibraryCatalogContextServ
 use Biblio\Core\Application\Catalog\Classification\Read\LibraryClassificationQueryService;
 use Biblio\Core\Application\Collections\ManageLibraryCollectionsService;
 use Biblio\Core\Application\Collections\Read\LibraryCollectionQueryService;
+use Biblio\Core\Application\Identity\PersonalMigrationTargetService;
 use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
 use Biblio\Core\Application\Library\GetAccessibleLibraryItemService;
 use Biblio\Core\Application\Library\LibraryContextQueryService;
@@ -66,6 +67,7 @@ final readonly class CoreApplication
 {
     public function __construct(
         private EnsurePersonalPrivateLibraryService $personalLibraries,
+        private PersonalMigrationTargetService $personalMigrationTargets,
         private LibraryContextQueryService $libraryContexts,
         private CatalogUiReadService $catalogUiReads,
         private CatalogQueryService $catalogQuery,
@@ -149,6 +151,11 @@ final readonly class CoreApplication
     public function personalLibraries(): EnsurePersonalPrivateLibraryService
     {
         return $this->personalLibraries;
+    }
+
+    public function personalMigrationTargets(): PersonalMigrationTargetService
+    {
+        return $this->personalMigrationTargets;
     }
 
     public function libraryContexts(): LibraryContextQueryService
