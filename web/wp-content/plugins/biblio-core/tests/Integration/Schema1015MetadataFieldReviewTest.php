@@ -39,7 +39,7 @@ final class Schema1015MetadataFieldReviewTest extends PersistenceIntegrationTest
             $migration->assertPostcondition();
             $this->migrator()->migrate();
 
-            self::assertSame(1017, $this->migrator()->installedVersion());
+            self::assertSame(1018, $this->migrator()->installedVersion());
             self::assertTrue($this->migrator()->health()->isHealthy());
         } finally {
             $this->restoreCurrentSchema();

@@ -72,6 +72,12 @@ abstract class PersistenceIntegrationTestCase extends TestCase
         $metadataLookupCandidates = $this->tableNames->metadataLookupCandidates();
         $metadataLookupSnapshots = $this->tableNames->metadataLookupSnapshots();
         $metadataUserObservations = $this->tableNames->metadataUserObservations();
+        $migrationMappings = $this->tableNames->migrationTargetMappings();
+        $migrationQuarantine = $this->tableNames->migrationQuarantine();
+        $migrationPreservations = $this->tableNames->migrationPreservations();
+        $migrationObservations = $this->tableNames->migrationSourceObservations();
+        $migrationRunLocks = $this->tableNames->migrationRunLocks();
+        $migrationRuns = $this->tableNames->migrationRuns();
         $locations = $this->tableNames->locations();
         $editions = $this->tableNames->editions();
         $works = $this->tableNames->works();
@@ -85,6 +91,19 @@ abstract class PersistenceIntegrationTestCase extends TestCase
             ->personalLibraryDesignations();
         $memberships = $this->tableNames->memberships();
         $libraries = $this->tableNames->libraries();
+
+        foreach ([
+            $migrationMappings,
+            $migrationQuarantine,
+            $migrationPreservations,
+            $migrationObservations,
+            $migrationRunLocks,
+            $migrationRuns,
+        ] as $migrationTable) {
+            if ($this->tableExists($migrationTable)) {
+                $this->database->query("DELETE FROM " . $migrationTable);
+            }
+        }
 
         foreach ([
             $activityEvents,

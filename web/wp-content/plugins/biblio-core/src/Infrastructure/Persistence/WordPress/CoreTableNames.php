@@ -54,6 +54,12 @@ final readonly class CoreTableNames
     private string $metadataLookupSnapshots;
     private string $metadataLookupCandidates;
     private string $metadataUserObservations;
+    private string $migrationRuns;
+    private string $migrationRunLocks;
+    private string $migrationSourceObservations;
+    private string $migrationTargetMappings;
+    private string $migrationQuarantine;
+    private string $migrationPreservations;
 
     public function __construct(string $prefix)
     {
@@ -109,8 +115,17 @@ final readonly class CoreTableNames
         $this->metadataLookupSnapshots = $prefix . "biblio_metadata_lookup_snapshots";
         $this->metadataLookupCandidates = $prefix . "biblio_metadata_lookup_candidates";
         $this->metadataUserObservations = $prefix . "biblio_metadata_user_observations";
+        $this->migrationRuns = $prefix . "biblio_migration_runs";
+        $this->migrationRunLocks = $prefix . "biblio_migration_run_locks";
+        $this->migrationSourceObservations = $prefix
+            . "biblio_migration_source_observations";
+        $this->migrationTargetMappings = $prefix
+            . "biblio_migration_target_mappings";
+        $this->migrationQuarantine = $prefix . "biblio_migration_quarantine";
+        $this->migrationPreservations = $prefix
+            . "biblio_migration_preservations";
 
-        foreach ($this->schema1017() as $tableName) {
+        foreach ($this->schema1018() as $tableName) {
             $this->assertSafe($tableName);
         }
         $this->assertSafe($this->nextReadingInsertTrigger);
@@ -455,6 +470,44 @@ final readonly class CoreTableNames
     public function schema1017(): array
     {
         return [...$this->schema1016(), ...$this->schema1017Additions()];
+    }
+
+    public function migrationRuns(): string { return $this->migrationRuns; }
+    public function migrationRunLocks(): string { return $this->migrationRunLocks; }
+    public function migrationSourceObservations(): string
+    {
+        return $this->migrationSourceObservations;
+    }
+    public function migrationTargetMappings(): string
+    {
+        return $this->migrationTargetMappings;
+    }
+    public function migrationQuarantine(): string
+    {
+        return $this->migrationQuarantine;
+    }
+    public function migrationPreservations(): string
+    {
+        return $this->migrationPreservations;
+    }
+
+    /** @return list<string> */
+    public function schema1018Additions(): array
+    {
+        return [
+            $this->migrationRuns,
+            $this->migrationRunLocks,
+            $this->migrationSourceObservations,
+            $this->migrationTargetMappings,
+            $this->migrationQuarantine,
+            $this->migrationPreservations,
+        ];
+    }
+
+    /** @return list<string> */
+    public function schema1018(): array
+    {
+        return [...$this->schema1017(), ...$this->schema1018Additions()];
     }
 
     private function assertSafe(string $tableName): void
