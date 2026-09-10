@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Tests\Unit\Application;
 
-use Biblio\Core\Application\Catalog\{ItemArchiveActivity,ItemArchiveNotAvailable,ManageLibraryItemArchiveService};
+use Biblio\Core\Application\Catalog\{HistoricalItemArchiveRecorder,ItemArchiveActivity,ItemArchiveNotAvailable,ManageLibraryItemArchiveService};
 use Biblio\Core\Application\Library\LibraryAccessService;
 use Biblio\Core\Application\TransactionManager;
 use Biblio\Core\Audit\{ActivityActorSnapshot,ActivityEntityIdentity,ActivityEvent,ActivityEventAppender,ActivityEventFactory,ActivityEventId,ActivityEventKey,ActivityEventSource,ActivityLabel};
 use Biblio\Core\Authorization\LibraryAuthorizationPolicy;
-use Biblio\Core\Catalog\{EditionId,Item,ItemArchiveClock,ItemArchivePeriod,ItemArchiveReason,ItemArchiveStale,ItemArchiveTransitionUnavailable,ItemId,ItemStatus,ItemVersion,WritableItemArchiveRepository};
+use Biblio\Core\Catalog\{EditionId,Item,ItemArchiveClock,ItemArchivePeriod,ItemArchiveReason,ItemArchiveReasonKind,ItemArchiveStale,ItemArchiveTransitionUnavailable,ItemId,ItemStatus,ItemVersion,PreservedHistoricalArchiveReason,WritableItemArchiveRepository};
 use Biblio\Core\Collections\CollectionMembershipArchivePort;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Library\{LibraryId,LibraryMembership,LibraryMembershipAssignment,LibraryMembershipRepository,ManagementRole,MembershipStatus,UseAccess};
@@ -98,6 +98,86 @@ final class ManageLibraryItemArchiveServiceTest extends TestCase
         $restoreRetry = $service->restore($item->libraryId(), $item->id(), $archived->version());
         self::assertSame($restored->version()->value(), $restoreRetry->version()->value());
         self::assertCount(2, $events->events);
+    }
+
+    public function testHistoricalRestoreAndNativeRearchiveKeepSeparateReasons(): void
+    {
+        [$service, $repository, $events, , $item] = $this->fixture(
+            ManagementRole::Owner
+        );
+        $recorder = new HistoricalItemArchiveRecorder(
+            $repository,
+            $repository
+        );
+        $reason = new PreservedHistoricalArchiveReason(
+            "historical reason A",
+            "source-code-a"
+        );
+        $archivedAt = new DateTimeImmutable(
+            "2026-09-03 09:00:00.000001+00:00"
+        );
+
+        $archived = $recorder->recordForLibrary(
+            $item->libraryId(),
+            $item->id(),
+            $reason,
+            $archivedAt,
+            $item->version()
+        );
+        $retry = $recorder->recordForLibrary(
+            $item->libraryId(),
+            $item->id(),
+            new PreservedHistoricalArchiveReason(
+                "historical reason A",
+                "source-code-a"
+            ),
+            $archivedAt,
+            $item->version()
+        );
+        self::assertSame($archived->version()->value(), $retry->version()->value());
+        self::assertCount(1, $repository->periods);
+        self::assertCount(0, $events->events);
+
+        $restored = $service->restore(
+            $item->libraryId(),
+            $item->id(),
+            $archived->version()
+        );
+        $again = $service->archive(
+            $item->libraryId(),
+            $item->id(),
+            ItemArchiveReason::Donated,
+            $restored->version()
+        );
+
+        self::assertSame(ItemStatus::Archived, $again->status());
+        self::assertCount(2, $repository->periods);
+        self::assertFalse($repository->periods[0]->isOpen());
+        self::assertSame(
+            ItemArchiveReasonKind::PreservedHistorical,
+            $repository->periods[0]->reason()->kind()
+        );
+        self::assertTrue($repository->periods[0]->reason()->equals($reason));
+        self::assertSame(ItemArchiveReason::Donated, $repository->periods[1]->reason());
+        self::assertCount(2, $events->events);
+    }
+
+    public function testHistoricalRecorderDoesNotCrossLibraryBoundary(): void
+    {
+        [, $repository, , , $item] = $this->fixture(ManagementRole::Owner);
+        $recorder = new HistoricalItemArchiveRecorder(
+            $repository,
+            $repository
+        );
+
+        $this->expectException(ItemArchiveNotAvailable::class);
+        $recorder->recordForLibrary(
+            new LibraryId("foreign-library"),
+            $item->id(),
+            new PreservedHistoricalArchiveReason("historical reason A"),
+            new DateTimeImmutable("2026-09-03 09:00:00+00:00"),
+            $item->version()
+        );
     }
 
     public function testStaleAndDivergentTransitionsAreTyped(): void

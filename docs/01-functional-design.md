@@ -1312,6 +1312,21 @@ Reasons:
 - Beschadigd/afgedankt
 - Niet teruggebracht
 
+These six values are the native V2 reason taxonomy for archive actions carried
+out in V2. A historical or imported archive period whose original reason has
+no explicitly approved meaning-equivalent mapping keeps that original reason
+as a `preserved historical` reason instead. It has no native V2 reason and is
+never guessed into `anders` or another approximately matching value. The
+preserved original text is required, bounded plain text; an original source
+code/value may accompany it when needed. Migration provenance remains outside
+the Item lifecycle in the migration ledger.
+
+Every archive period has exactly one reason form: native V2 or preserved
+historical. The reason belongs to the concrete Item and period, never to its
+Work, Edition or sibling Items. Archive state remains independent: an Item can
+be archived with only a preserved historical reason, while such a reason never
+archives an active Item by itself.
+
 Ordinary archiving is blocked while an internal loan is active.
 
 Special `Niet teruggebracht` / `Weggegeven` flows settle the loan first.
@@ -1332,6 +1347,10 @@ Archiving never deletes private ReadingRounds, ratings, notes or goals and never
 Archived Item is not an available Leesvoorraad source.
 
 Restore reuses the same Item.
+
+Restore closes the current archive period without deleting its reason. A later
+V2 re-archive creates a new period with the then-selected native V2 reason;
+the earlier preserved historical reason remains unchanged in history.
 
 Past active Collection memberships may be offered unchecked for explicit re-add, never silently restored.
 

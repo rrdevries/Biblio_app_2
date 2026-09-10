@@ -2948,3 +2948,43 @@ Status: **GO / CLOSED** when all gates above pass. Target schema is `1019`;
 Biblio UI is `0.12.0`. The source-neutral Core write contract is present; a
 normal end-user edit control is deferred to focused follow-up `READ-UI-01`.
 See `docs/63-read-mig-01-personal-reading-truth.md`.
+
+## 90. ARCH-MIG-01 historical archive reasons
+
+ARCH-MIG-01 is accepted when:
+
+- schema 1019 upgrades additively to healthy 1020, fresh install reaches the
+  same structure, exact target retry succeeds and unknown partial shape fails;
+- every archive period stores exactly one reason form: a closed native V2 enum
+  or a preserved historical reason with required bounded plain UTF-8 text and
+  optional bounded original code/value;
+- existing native rows remain native without destructive backfill, and normal
+  authorized V2 archive writes remain enum-only with their existing activity
+  audit behavior;
+- archive state and reason remain separate and Item-specific, including two
+  Items of one Edition with different states/reasons;
+- restore closes but never rewrites the preserved historical period, and a
+  later normal V2 archive creates a distinct period with its new native reason;
+- empty, whitespace-only, overlong, invalid UTF-8, control-character and
+  HTML-like historical input fails before persistence;
+- tenant-scoped Core history reads preserve the native/historical distinction,
+  and cross-Library reads and writes expose no foreign Item or reason;
+- the MIG-FND participant commits observation, product write and Item mapping
+  in one transaction; rollback leaves no product state or false mapping,
+  committed retry is idempotent and unrepresentable input can quarantine;
+- active/archived catalog behavior is unchanged and no reason-based search or
+  filter is introduced;
+- synthetic fixtures only are used: no MIG-01 snapshot, DATA-01, earlier
+  `/data/`, concrete old reason or reported count is current V1 truth;
+- Core unit/integration, archive/catalog/schema/MIG-FND regressions, PHP syntax,
+  PHPStan, Composer/platform, WordPress smoke, manifest and whitespace pass;
+  and
+- an independent review finds no architecture, authorization, privacy,
+  historical-truth or regression blocker.
+
+Status: **GO / CLOSED** when all gates above pass. Target schema is `1020`;
+Biblio Core remains `2.1.0` and Biblio UI remains `0.12.0`. No frontend changed.
+The authorized Core history contract carries the distinction; a user-visible
+archived Book Detail reason is a focused follow-up because archived Book Detail
+is not currently a reachable reason surface. See
+`docs/64-arch-mig-01-historical-archive-reasons.md`.

@@ -7,7 +7,7 @@ namespace Biblio\Core\Tests\Unit\Application;
 use Biblio\Core\Application\Catalog\Read\LibraryItemArchiveQueryService;
 use Biblio\Core\Application\Library\{ActorLibraryContext,ActorLibraryContextRepository,LibraryContextQueryService};
 use Biblio\Core\Authorization\LibraryAuthorizationPolicy;
-use Biblio\Core\Catalog\{Item,ItemArchivePeriod,ItemArchiveReason,ItemArchiveRepository,ItemId,ItemRepository,ItemVersion};
+use Biblio\Core\Catalog\{Item,ItemArchivePeriod,ItemArchiveReason,ItemArchiveReasonKind,ItemArchiveRepository,ItemId,ItemRepository,ItemVersion,PreservedHistoricalArchiveReason};
 use Biblio\Core\Exception\AuthorizationException;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Library\{Library,LibraryId,LibraryMembership,LibraryMembershipAssignment};
@@ -47,11 +47,22 @@ final class LibraryItemArchiveQueryServiceTest extends TestCase
         $libraryId = new LibraryId("library-a"); $userId = new UserId("user-a"); $itemId = new ItemId("item-a");
         $item = Item::active($itemId, $libraryId, new \Biblio\Core\Catalog\EditionId("edition-a"))->archive();
         $items = new ArchiveQueryItems($item);
-        $archives = new ArchiveQueryPeriods(new ItemArchivePeriod($libraryId, $itemId, $item->version(), ItemArchiveReason::Sold, new DateTimeImmutable("2026-09-04 10:00:00.123456+00:00")));
+        $archives = new ArchiveQueryPeriods(new ItemArchivePeriod(
+            $libraryId,
+            $itemId,
+            $item->version(),
+            new PreservedHistoricalArchiveReason("historical reason A"),
+            new DateTimeImmutable("2026-09-04 10:00:00.123456+00:00")
+        ));
         $service = new LibraryItemArchiveQueryService($this->contexts($libraryId, $userId), $items, $archives);
 
         self::assertSame($item, $service->items($libraryId, [$itemId, new ItemId("missing")])["item-a"]);
-        self::assertCount(1, $service->periods($libraryId, [$itemId])["item-a"]);
+        $periods = $service->periods($libraryId, [$itemId])["item-a"];
+        self::assertCount(1, $periods);
+        self::assertSame(
+            ItemArchiveReasonKind::PreservedHistorical,
+            $periods[0]->reason()->kind()
+        );
         self::assertSame(1, $items->batchCalls);
         self::assertSame(1, $archives->batchCalls);
     }

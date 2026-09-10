@@ -218,8 +218,10 @@ read-registration, terwijl `readHistory` audit/compat-evidence blijft.
 
 ## 5. Actuele V2-target inventory
 
-MIG-FND-01 verhoogt runtime, migratieregister en schema health van `1017` naar
-`1018`. Alle bestaande domeintargets hieronder behouden hun eerdere status.
+MIG-FND-01 verhoogde runtime, migratieregister en schema health van `1017` naar
+`1018`; READ-MIG-01 en ARCH-MIG-01 hebben de lineaire baseline vervolgens naar
+`1019` en `1020` gebracht. Alle overige domeintargets hieronder behouden hun
+eerdere status.
 
 | Target | Ownership/scope | Kernconstraints | V2.001-status |
 |---|---|---|---|
@@ -240,7 +242,7 @@ MIG-FND-01 verhoogt runtime, migratieregister en schema health van `1017` naar
 | Rating / WrittenReview | user | Work, optioneel owner-/Work-matching round; eigen lifecycle | actief |
 | Assessment publication/readmodel | user source + Library publication | huidige Book Detail leest alleen Library-public contributions | actief public read; private migrated read ontbreekt |
 | Hierna lezen | user | Work-based, optionele preferred source, manual order, duplicates toegestaan | actief; bronpopulatie 0 |
-| Item archive period | Library | Item state/history; closed reason vocabulary | actief maar V1 reasons niet representabel |
+| Item archive period | Library | Item state/history; native of preserved historical reason per periode | **actief source-neutraal target in schema 1020; geen semantische guessing** |
 | Metadata Hub evidence | platform/Library evidence | provider/user-observation source contexts zijn gesloten allowlists | actief, niet geschikt als generieke V1-preservationstore |
 | Wishlist | user | vereist door V2.001-scope | **geen huidig entity/table/service-target** |
 | InternalLoan | Library/user relation | nodig voor `lent_out` en mogelijk ReadingRound source | **geen huidig target** |
@@ -294,11 +296,11 @@ eindstatus.
 | 41 Wishlist entries | vereist persoonlijk Wishlist-target | PRESERVED_DEFERRED | basisdata intact houden tot ontbrekend V2.001-target bestaat |
 | 41 `titleGroupKey` hints | toekomstige Wishlist grouping | PRESERVED_DEFERRED | geen grouping/completeness activeren |
 | 0 Hierna-lezen entries | Hierna lezen | MAPPED | expliciete lege bron; geen afleiding uit Wishlist |
-| 23 archived copies | Item + archive period | TRANSFORMED | Item mag niet actief terugkomen; reason gap eerst oplossen |
+| Archived copies uit een per run aangewezen actuele bron | Item + archive period | TRANSFORMED | Item blijft archived; expliciet betekenisgelijke mapping wordt native, anders blijft de oorspronkelijke reden preserved historical; actuele aantallen volgen alleen uit die gepinde bron |
 | 77 Item acquisitions | toekomstig actief Item target | PRESERVED_DEFERRED | exacte type/date precision/source behouden; target gap blokkeert trial import |
 | 3 copy notes | toekomstig Item-local note target | PRESERVED_DEFERRED | niet naar user-owned Private Notes verplaatsen |
 | 1 exemplar photo | deferred Item asset target | PRESERVED_DEFERRED | bytes/reference/provenance behouden; geen cover-engine bouwen |
-| 1 disposal payload | archive/disposal evidence | PRESERVED_DEFERRED | geen onware V2 archive reason kiezen |
+| Disposal payloads uit een per run aangewezen actuele bron | archive period of Item-linked evidence | PRESERVED_DEFERRED | geen onware V2 archive reason kiezen; archive reason is nu representeerbaar, overige lokale evidence blijft een aparte targetgap |
 | 1 closed borrowed circulation round op owned copy | circulation evidence/quarantine | QUARANTINED | ExternalLoan versus Library Item/circulation is niet uit de bron beslisbaar |
 | 8 open circulation rounds | minimum lifecycle of preservation | PRESERVED_DEFERRED | productbesluit vereist; geen automatische beëindiging |
 | 2 Reading Goals | deferred preservation | PRESERVED_DEFERRED | volledige config/status/timestamps behouden; geen engine |
@@ -460,12 +462,15 @@ uit Wishlist, Reading Goals of recommendations.
 
 ### Archive
 
-Alle 23 archived copies blijven dezelfde Item-identiteit houden, blijven
-terugvindbaar en behouden history, Notes/Reading-relaties en voormalige
-Collectionrelaties (nul in de auditsnapshot). Zij mogen niet in de actieve catalogus
-terugkomen. Omdat geen van de drie V1-reasons in de huidige V2-enum past, mag
-MIG-02 geen `sold`, `donated` of andere onware reason kiezen. Een minimale
-legacy-reason/evidence-uitbreiding is vóór archive-writes nodig.
+De archived copies uit de historische auditsnapshot blijven dezelfde
+Item-identiteit houden, blijven terugvindbaar en behouden history,
+Notes/Reading-relaties en voormalige Collectionrelaties. Die historische count
+is geen actuele V1-waarheid; iedere latere run profileert uitsluitend de nieuw
+aangewezen bron. Archived Items mogen niet in de actieve catalogus terugkomen.
+Alleen een expliciet canonieke betekenisgelijke mapping mag een native V2
+reason opleveren. Anders schrijft ARCH-MIG-01's schema-1020 target de begrensde
+oorspronkelijke reden als preserved historical, zonder `sold`, `donated`,
+`anders` of een andere onware reason te kiezen.
 
 ## 12. Circulation — kritiek beslispunt
 
@@ -780,8 +785,8 @@ volledig rapporteren zonder eerdere categorieën te verbergen.
 - verplichte `target_user_id` en `target_library_id` voor apply/write/resume;
 - IDENTITY-01-validatie van actieve bestaande V2 user, exact designated
   personal Library en actieve Owner/direct membership/context;
-- target schema version/health (minimaal de expliciet ondersteunde
-  MIG-FND-01-versie `1018`);
+- target schema version/health: de actuele lineaire Core-baseline `1020`, met
+  MIG-FND-01 ledger `1018`, READ-MIG-01 `1019` en ARCH-MIG-01 `1020` gezond;
 - migration mode `dry-run|write|resume`;
 - optionele bestaande migration-run-ID voor resume/retry;
 - versiegebonden, gereviewde taxonomy mapping allowlist.
@@ -830,13 +835,14 @@ fixturemutatie of V1-write.
 | Basis Wishlist-target | 41 actieve records | dagelijkse lijst kan niet worden gemigreerd/gebruikt | user-owned Work/Edition-intent met stable ID, view/add/remove en migration binding | grouping/smart groups ja |
 | **RESOLVED by READ-MIG-01 — onbekende leesdatum/-status** | historische audit bewees read/date-unknown, unknown en explicit no; geen count is actuele V1-waarheid | schema 1019 Personal Reading Truth bewaart de drie user×Work states zonder fictieve ronde/datum en met ownerprojectie | actief source-neutraal target + MIG-FND participant; normale write-UI volgt gericht als READ-UI-01 | rijke history-management UI ja |
 | Item acquisition/local evidence | 77 acquisitions, 3 copy notes, 1 exemplar photo, 1 disposal | bronfeiten hebben geen actief target en mogen niet verdwijnen | minimale Item-data persistence/read of traceerbare actieve migration-evidence volgens bestaande ownershipgrens | specialist collector/cover ja |
-| Legacy archive reason | 23 archived Items, 0 reason matches | archived state kan niet eerlijk via huidige archiveperiode worden geschreven | legacy reason/evidence zonder vertaling naar onware enum; archived Item blijft vindbaar | volledige archive-managementuitbreiding ja |
+| **RESOLVED by ARCH-MIG-01 — historical archive reason** | historische audit bewees niet-mappable archive reasons; geen count of waarde is actuele V1-waarheid | schema 1020 bewaart archived state en per Item/per periode exact native of preserved historical zonder onware enum | actief source-neutraal target + MIG-FND participant; Core-historyread draagt het type, archived Book Detail-copy volgt gericht | volledige archive-managementuitbreiding ja |
 | Private migrated assessments leesbaar | 15 ratings, 1 review; V1 kent geen publication | huidige Book Detail toont alleen publicaties; publishing zou waarheid veranderen | owner-scoped read-only projection en unknown-rating-timebeleid | nieuwe writes/publication/moderation ja |
 | Migration evidence storage | alle bronpopulaties, plus deferred/quarantine | zonder durable ledger/payloadbewijs geen idempotency of no-loss proof | **MIG-FND-01 gerealiseerd in schema 1018** | generieke import-UI ja |
 | Open circulation settlement | 8 open rounds | preserved-only kan dagelijkse beëindiging blokkeren | alleen na Renée-besluit: minimale read/end lifecycle voor bestaande rounds | volledige lending ja |
 
-Migration evidence storage and Personal Reading Truth are no longer gaps; the
-remaining four domain targets are technical/product prerequisites. Open
+Migration evidence storage, Personal Reading Truth and historical archive
+reasons are no longer gaps; the remaining three domain targets are
+technical/product prerequisites. Open
 circulation remains first a product decision. Unknown taxonomy requires daarnaast een gereviewde
 migration allowlist/termset; dit is data-curation en geen toestemming voor
 automatische termcreatie.
@@ -845,7 +851,7 @@ automatische termcreatie.
 
 | Classificatie | Prerequisite |
 |---|---|
-| BLOCKS MIG-02 WRITES | basis Wishlist persistence; archive reason contract; rating timestamp/import contract. MIG-FND-01 ledger/preservation and READ-MIG-01 Personal Reading Truth are no longer in this row. |
+| BLOCKS MIG-02 WRITES | basis Wishlist persistence; rating timestamp/import contract. MIG-FND-01 ledger/preservation, READ-MIG-01 Personal Reading Truth en ARCH-MIG-01 historical archive reasons zijn niet langer blockers in deze rij. |
 | BLOCKS FIRST FULL TRIAL IMPORT | Item acquisition/local evidence target; taxonomy mapping/termset voor 74 Book Types en overige gewenste labels; private assessment import/read boundary; circulation mapping na productbesluit |
 | BLOCKS FINAL CUTOVER | basis Wishlist view/add/remove; remaining concrete read-history migration; archived Item discoverability; private ratings/review readability; chosen treatment of open loans based on a newly designated source; complete zero-silent-drop reconciliation |
 | DOES NOT BLOCK MIGRATION | rich Goals/Home/Stats/Timeline/Audit UI; cover acquisition/management; Wishlist grouping; smart Collections; Authors/Series dedicated UI; new assessment writes/publication; full lending; general import UI; CAT-UI/QA-ADD human follow-up |
@@ -868,7 +874,13 @@ automatische termcreatie.
    source-neutrale user×Work state met exact `read_known_date_unknown`,
    `explicit_not_read` en `unknown`. Dit is geen ReadingRound en bewaart geen
    migratieprovenance; schema 1019 en MIG-FND-integratie zijn actief.
-3. **Actieve/open loans.** Kies, na inventarisatie van een nieuw aangewezen
+3. **RESOLVED — historical archive reasons.** ARCH-MIG-01 kiest per
+   Item-archiveperiode exact één source-neutrale vorm: native V2 of preserved
+   historical. Alleen een expliciet canonieke betekenisgelijke mapping mag
+   native worden; anders blijven de begrensde oorspronkelijke tekst en
+   optionele oorspronkelijke code/value intact. MIG-FND bewaart provenance en
+   levert de expliciet gevalideerde target Library; schema 1020 is actief.
+4. **Actieve/open loans.** Kies, na inventarisatie van een nieuw aangewezen
    actuele bron, of V2.001 ze alleen preserved toont, of
    dat bestaande rounds ook beëindigd moeten kunnen worden. Technisch
    aanbevolen voor dagelijkse continuïteit: het kleine read+end-contract uit
@@ -922,10 +934,12 @@ Bronzekerheid, inventaris, mappings, preservation, quarantine, reconciliation,
 identity/idempotency, dry-run en MIG-02-fasen zijn voldoende concreet.
 IDENTITY-01 heeft de expliciete user+Library-binding uit §24 opgelost.
 READ-MIG-01 heeft de unknown-date/status targetgap opgelost met normale
-source-neutrale Personal Reading Truth in schema 1019. De huidige targetlaag
-voldoet nog niet aan de exitcriteria voor writes of cutover door de overige
-gaps in §22. MIG-FND-01 blijft de source-neutrale schema-1018 ledger,
-transactionele recordboundary, reconciliation en traceability. Er is geen
+source-neutrale Personal Reading Truth in schema 1019. ARCH-MIG-01 heeft de
+archive-reasongap opgelost met per Item/per periode native of preserved
+historical truth in schema 1020, zonder actuele V1-data te gebruiken. De
+huidige targetlaag voldoet nog niet aan de exitcriteria voor writes of cutover
+door de overige gaps in §22. MIG-FND-01 blijft de source-neutrale schema-1018
+ledger, transactionele recordboundary, reconciliation en traceability. Er is geen
 V1-parser, import, domeincleanup of broninhoudelijke mappingregel gebouwd.
 
 **MIGRATION DESIGN BLOCKED BY REMAINING DOMAIN TARGET GAPS**

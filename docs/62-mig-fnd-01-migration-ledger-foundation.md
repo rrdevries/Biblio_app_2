@@ -172,3 +172,23 @@ Those remain exclusively in this ledger. READ-MIG-01 uses synthetic fixtures
 and changes none of the rule that any later source-dependent run needs a newly
 designated current V1 export. See
 `docs/63-read-mig-01-personal-reading-truth.md`.
+
+## 13. ARCH-MIG-01 domain participant
+
+ARCH-MIG-01 adds a source-neutral `HistoricalItemArchiveRecorder` that can run
+inside `CommitMigrationRecordService`'s existing transaction. The participant
+receives the already IDENTITY-01-validated target Library, exact Item,
+expected version, original archive instant and a typed preserved historical
+reason. It writes Item state plus the matching archive period; the same
+transaction commits the source-to-Item mapping. Rollback leaves neither an
+archive period nor false mapping, while an identical committed observation is
+reused without repeating the product write. Malformed or unrepresentable input
+can be recorded with the existing quarantine vocabulary.
+
+The archive aggregate stores no source family, source ID, run or payload hash;
+those remain in this ledger. Native mapped reasons and preserved historical
+reasons stay reliably distinguishable in schema 1020 for later reconciliation.
+No current V1 source, old count or concrete historical reason was used: all
+integration fixtures are synthetic. Any later source-dependent run still needs
+a current export explicitly designated and pinned by Renée. See
+`docs/64-arch-mig-01-historical-archive-reasons.md`.

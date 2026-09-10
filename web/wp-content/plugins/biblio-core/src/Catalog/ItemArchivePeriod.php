@@ -15,7 +15,7 @@ final readonly class ItemArchivePeriod
         private LibraryId $libraryId,
         private ItemId $itemId,
         private ItemVersion $archiveVersion,
-        private ItemArchiveReason $reason,
+        private ItemArchiveReasonValue $reason,
         private DateTimeImmutable $archivedAt,
         private ?ItemVersion $restoreVersion = null,
         private ?DateTimeImmutable $restoredAt = null
@@ -39,7 +39,7 @@ final readonly class ItemArchivePeriod
     public function libraryId(): LibraryId { return $this->libraryId; }
     public function itemId(): ItemId { return $this->itemId; }
     public function archiveVersion(): ItemVersion { return $this->archiveVersion; }
-    public function reason(): ItemArchiveReason { return $this->reason; }
+    public function reason(): ItemArchiveReasonValue { return $this->reason; }
     public function archivedAt(): DateTimeImmutable { return $this->archivedAt; }
     public function restoreVersion(): ?ItemVersion { return $this->restoreVersion; }
     public function restoredAt(): ?DateTimeImmutable { return $this->restoredAt; }

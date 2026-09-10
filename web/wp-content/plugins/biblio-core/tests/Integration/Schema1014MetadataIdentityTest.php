@@ -74,7 +74,7 @@ final class Schema1014MetadataIdentityTest extends PersistenceIntegrationTestCas
 
         $this->migrator()->migrate();
 
-        self::assertSame(1019, $this->migrator()->installedVersion());
+        self::assertSame(1020, $this->migrator()->installedVersion());
         self::assertSame(
             "edition-isbn10",
             $this->database->get_var(

@@ -131,7 +131,7 @@ final readonly class CoreTableNames
         $this->personalReadingTruths = $prefix
             . "biblio_personal_reading_truths";
 
-        foreach ($this->schema1019() as $tableName) {
+        foreach ($this->schema1020() as $tableName) {
             $this->assertSafe($tableName);
         }
         $this->assertSafe($this->nextReadingInsertTrigger);
@@ -539,6 +539,12 @@ final readonly class CoreTableNames
     public function schema1019(): array
     {
         return [...$this->schema1018(), ...$this->schema1019Additions()];
+    }
+
+    /** @return list<string> */
+    public function schema1020(): array
+    {
+        return $this->schema1019();
     }
 
     private function assertSafe(string $tableName): void

@@ -1069,16 +1069,24 @@ archive requests are invalid and version divergence before an unapplied target
 is a typed stale conflict.
 
 Schema 1012 stores current state/version on the Item and every archive period
-separately. `(library_id,item_id)` referential identity prevents dangling and
-cross-Library history, one generated-key uniqueness rule permits at most one
-open period, and Library/status/location plus history indexes support later
-query composition. The 1011→1012 migration preserves existing Items as active
-version 1, accepts a known completed Item-DDL partial state, completes a missing
-history-table step, rejects unknown partial definitions and validates the final
-schema before version bump.
+separately. Schema 1020 extends the existing period row with a closed
+source-neutral reason discriminant: `native` carries exactly one current
+`ItemArchiveReason`; `preserved_historical` carries no native reason and keeps
+required bounded original plain text plus an optional original code/value.
+The representation cannot combine both forms. `(library_id,item_id)`
+referential identity prevents dangling and cross-Library history, one
+generated-key uniqueness rule permits at most one open period, and
+Library/status/location plus history indexes support query composition.
+
+The 1019→1020 step preserves every existing native period, changes no Item
+state and applies the columns and constraints in one retry-recognizable ALTER.
+The migration accepts the exact source or complete target shape and rejects an
+unknown partial definition. Older schema-health checks accept the complete
+forward-compatible 1020 reason shape while 1020 health requires it.
 
 `LibraryItemArchiveQueryService` exposes only authorized, tenant-scoped batch
-Items and periods. Existing active catalog projections remain active-only, and
+Items and periods, including the typed native/preserved reason distinction.
+Existing active catalog projections remain active-only, and
 `GetAccessibleLibraryItemService` now rejects archived Items so they cannot be
 used as current Leesvoorraad, preferred or new ReadingRound sources. Archive
 updates only Item state/version and archive/audit rows: it does not close or
@@ -1090,6 +1098,24 @@ InternalLoan cannot presently be represented and the ordinary archive guard is
 vacuously true. The future lending slice must integrate its active-loan check
 and the canonical settlement-before-archive routes without changing this Item
 identity/history contract.
+
+`HistoricalItemArchiveRecorder` is the source-neutral, non-transaction-owning
+product participant for an already validated target Library. It archives the
+exact Item with a `PreservedHistoricalArchiveReason`, original archive instant
+and expected Item version, and applies the existing Collection-membership end
+rule. MIG-FND supplies the IDENTITY-01-validated target and owns the surrounding
+observation/product/mapping transaction. The recorder has no current-actor
+fallback and deliberately emits no normal Library ActivityEvent: assigning the
+target user as the historical archive actor would fabricate history. MIG-FND
+retains import provenance separately.
+
+Normal V2 writes remain enum-only in `ManageLibraryItemArchiveService`, keep
+their current authorization and ActivityEvent behavior, and cannot use free
+historical text. Restore retains the period reason; a later normal V2 archive
+creates another period with a native reason. The current catalog query still
+filters only on active/archived Item state. Book Detail remains active-Item
+only, so exposing archived history in that screen is a focused follow-up rather
+than a second archive-management surface.
 
 ## 25. Library Collection and membership foundation
 

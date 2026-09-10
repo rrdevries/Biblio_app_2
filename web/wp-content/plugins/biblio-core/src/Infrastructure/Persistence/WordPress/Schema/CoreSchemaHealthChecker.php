@@ -49,6 +49,7 @@ final readonly class CoreSchemaHealthChecker
             1017 => $this->inspectTables($this->tableNames->schema1017(), true, 1017),
             1018 => $this->inspectTables($this->tableNames->schema1018(), true, 1018),
             1019 => $this->inspectTables($this->tableNames->schema1019(), true, 1019),
+            1020 => $this->inspectTables($this->tableNames->schema1020(), true, 1020),
             default => throw new CoreSchemaMigrationException(
                 "No explicit Biblio Core schema-health contract exists for "
                 . "schema version {$expectedVersion}."
@@ -215,6 +216,15 @@ final readonly class CoreSchemaHealthChecker
             $this->tableNames->schema1019Additions(),
             false,
             1019
+        );
+    }
+
+    public function inspectSchema1020ArchiveReasons(): CoreSchemaHealth
+    {
+        return $this->inspectTables(
+            [$this->tableNames->itemArchivePeriods()],
+            true,
+            1020
         );
     }
 
@@ -635,6 +645,11 @@ final readonly class CoreSchemaHealthChecker
     /** @return array<string, array<string, array<string, string|null>>> */
     private function expectedColumns(int $schemaVersion): array
     {
+        $archiveReasonSchema1020 = $schemaVersion >= 1020
+            || $this->columnExists(
+                $this->tableNames->itemArchivePeriods(),
+                "archive_reason_kind"
+            );
         $id = [
             "type" => "varchar(191)",
             "nullable" => "NO",
@@ -802,7 +817,27 @@ final readonly class CoreSchemaHealthChecker
                 "library_id" => $id,
                 "item_id" => $id,
                 "archive_version" => ["type" => "bigint(20) unsigned", "nullable" => "NO"],
-                "archive_reason" => ["type" => "varchar(32)", "nullable" => "NO"],
+                ...($archiveReasonSchema1020 ? [
+                    "archive_reason_kind" => $ascii("varchar(24)") + [
+                        "default" => "native",
+                    ],
+                ] : []),
+                "archive_reason" => [
+                    "type" => "varchar(32)",
+                    "nullable" => $archiveReasonSchema1020 ? "YES" : "NO",
+                ],
+                ...($archiveReasonSchema1020 ? [
+                    "preserved_reason_text" => [
+                        "type" => "varchar(500)",
+                        "nullable" => "YES",
+                        "collation" => "utf8mb4_bin",
+                    ],
+                    "preserved_reason_value" => [
+                        "type" => "varchar(191)",
+                        "nullable" => "YES",
+                        "collation" => "utf8mb4_bin",
+                    ],
+                ] : []),
                 "archived_at" => ["type" => "datetime(6)", "nullable" => "NO"],
                 "restore_version" => ["type" => "bigint(20) unsigned", "nullable" => "YES"],
                 "restored_at" => ["type" => "datetime(6)", "nullable" => "YES"],
@@ -2029,6 +2064,12 @@ final readonly class CoreSchemaHealthChecker
     /** @return array<string, list<string>> */
     private function expectedChecks(int $schemaVersion): array
     {
+        $archiveReasonSchema1020 = $schemaVersion >= 1020
+            || $this->columnExists(
+                $this->tableNames->itemArchivePeriods(),
+                "archive_reason_kind"
+            );
+
         return [
             $this->tableNames->libraries() => [
                 "library_type = 'private_library'",
@@ -2088,7 +2129,14 @@ final readonly class CoreSchemaHealthChecker
             ],
             $this->tableNames->itemArchivePeriods() => [
                 "archive_version >= 2",
-                "archive_reason IN ('sold', 'given_away', 'donated', 'lost', 'damaged_discarded', 'not_returned')",
+                ...(!$archiveReasonSchema1020 ? [
+                    "archive_reason IN ('sold', 'given_away', 'donated', 'lost', 'damaged_discarded', 'not_returned')",
+                ] : [
+                    "archive_reason_kind IN ('native', 'preserved_historical')",
+                    "archive_reason_kind = 'native' AND archive_reason IN ('sold', 'given_away', 'donated', 'lost', 'damaged_discarded', 'not_returned') AND preserved_reason_text IS NULL AND preserved_reason_value IS NULL OR archive_reason_kind = 'preserved_historical' AND archive_reason IS NULL AND preserved_reason_text IS NOT NULL",
+                    "preserved_reason_text IS NULL OR CHAR_LENGTH(TRIM(preserved_reason_text)) > 0 AND CHAR_LENGTH(preserved_reason_text) <= 500",
+                    "preserved_reason_value IS NULL OR CHAR_LENGTH(TRIM(preserved_reason_value)) > 0 AND CHAR_LENGTH(preserved_reason_value) <= 191",
+                ]),
                 "restore_version IS NULL = (restored_at IS NULL)",
                 "restore_version IS NULL OR restore_version > archive_version",
                 "restored_at IS NULL OR restored_at >= archived_at",
@@ -2358,6 +2406,18 @@ final readonly class CoreSchemaHealthChecker
             . "WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s",
             DB_NAME,
             $tableName
+        )) === 1;
+    }
+
+    private function columnExists(string $tableName, string $columnName): bool
+    {
+        return (int) $this->database->get_var($this->database->prepare(
+            "SELECT COUNT(*) FROM information_schema.COLUMNS "
+                . "WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s "
+                . "AND COLUMN_NAME = %s",
+            DB_NAME,
+            $tableName,
+            $columnName
         )) === 1;
     }
 

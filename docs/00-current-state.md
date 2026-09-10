@@ -37,9 +37,10 @@ foundation introduced in schema `1018`. READ-MIG-01 adds normal source-neutral
 Personal Reading Truth and advances the current schema to `1019`; IDENTITY-01
 remains the mandatory explicit personal target validator. The mapping design
 is still **MIGRATION DESIGN BLOCKED BY REMAINING DOMAIN TARGET GAPS**:
-Wishlist, legacy archive reasons, Item local evidence and private migrated
-assessment reads still need bounded targets, while open circulation still
-needs Renée's cutover decision. No V1 parser, source profiling, import,
+Wishlist, Item local evidence and private migrated assessment reads still need
+bounded targets, while open circulation still needs Renée's cutover decision.
+ARCH-MIG-01 has closed the legacy archive-reason target gap in schema `1020`.
+No V1 parser, source profiling, import,
 domain cleanup or production-data mutation is included. See
 `docs/60-mig-01-v1-mapping-and-reconciliation-design.md` and
 `docs/62-mig-fnd-01-migration-ledger-foundation.md` plus
@@ -1765,12 +1766,23 @@ Archive lifecycle was the next prerequisite and is now closed below.
 Status: **GO / CLOSED**
 
 Schema `1012` adds explicit `active`/`archived` Item state, optimistic Item
-versioning and historically retained archive periods with reason and microsecond UTC
-timestamps. Archive and restore retain the same Item, Edition, inventory and
-Location identities. Owner and Beheerder management is authorized server-side;
-batch lifecycle/history reads require validated Library Context and remain
-tenant-scoped. Current-source reads reject archived Items, while no private
-ReadingRound or other user-owned record is changed.
+versioning and historically retained archive periods with reason and
+microsecond UTC timestamps. Schema `1020` now distinguishes a normal native V2
+reason from a preserved historical/original reason that has no safe native
+mapping. Preserved text is required, plain UTF-8 and bounded; an original
+code/value is optional. The two forms are mutually exclusive and remain on the
+exact Item archive period.
+
+Archive and restore retain the same Item, Edition, inventory and Location
+identities. Restore closes but never rewrites the period reason; a later normal
+V2 re-archive gets its own native reason. Owner and Beheerder management is
+authorized server-side and remains native-enum-only. The source-neutral
+historical recorder runs only as a participant inside an external transaction
+with an explicitly validated target Library; it does not invent a current
+archive actor. Batch lifecycle/history reads require validated Library Context
+and return the typed reason distinction tenant-scoped. Current-source reads
+reject archived Items, while no private ReadingRound or other user-owned record
+is changed.
 
 The active-InternalLoan archive guard is currently vacuously satisfied because
 InternalLoan persistence and lifecycle do not yet exist. Integrating that guard
@@ -2535,3 +2547,27 @@ the existing three values; a normal end-user write control is focused
 follow-up `READ-UI-01`. Biblio UI is `0.12.0`. No current V1 source or reported
 historical count was used. Detailed evidence:
 `docs/63-read-mig-01-personal-reading-truth.md`.
+
+### ARCH-MIG-01 — truth-preserving historical archive reasons
+
+Status: **GO / CLOSED** after recorded gates and independent review.
+
+Schema `1020` extends each Item archive period with exactly one source-neutral
+reason form: native V2 or preserved historical. Existing reasons remain native
+without data rewrite; preserved history carries exact bounded original text
+and an optional original code/value, never a guessed enum or generic `anders`.
+Item state remains separate from reason and sibling Items never share it.
+
+`HistoricalItemArchiveRecorder` accepts an explicitly validated target Library
+inside MIG-FND's existing transaction. Synthetic integration proves product
+write plus source mapping, rollback without false mapping, committed retry,
+quarantine for unrepresentable input and Library isolation. Restore keeps the
+historical period; later normal V2 re-archive creates a new native period.
+Normal archive authorization, activity audit, Collection cleanup, catalog
+archive filtering and the vacuous current loan guard remain unchanged.
+
+The authorized Core history read carries both forms. No REST/UI changed:
+archived catalog hits remain status-only and archived Book Detail is still a
+focused follow-up gap. Biblio UI remains `0.12.0`; Biblio Core plugin remains
+`2.1.0`. No current V1 source, old reason value or historical count was used.
+Detailed evidence: `docs/64-arch-mig-01-historical-archive-reasons.md`.
