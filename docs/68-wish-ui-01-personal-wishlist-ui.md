@@ -2,6 +2,10 @@
 
 Status: **TECHNICAL GO / HUMAN VISUAL ACCEPTANCE PENDING**
 
+Post-closure note: WISH-DISC-01 now resolves the bounded general discovery gap
+below through generic MH-DISC-01 title/author/ISBN discovery. The original
+WISH-UI-01 closure and version evidence remain historical; see `docs/70`.
+
 Scope: the normally reachable V2.001 UI over WISH-CORE-01 and WISH-API-01.
 No Core/schema/migration change and no grouping, reorder, priority, note,
 retailer, price or automatic fulfilment behavior.
@@ -32,12 +36,13 @@ list, request failure and local mutation failure remain distinct states.
 Library switching does not scope or replace this personal list. Core/REST
 remain the only ownership and authorization authority.
 
-## 3. Bounded discovery gap
+## 3. Bounded discovery gap at WISH-UI-01 closure
 
 There is no approved platform-wide Edition discovery endpoint. General add is
 therefore Work-only; Edition-specific add is available from an authorized Book
-Detail holding both canonical IDs. A future broader picker is `WISH-DISC-01`;
-no provider candidate, ISBN guess or client-side identity matching was added.
+Detail holding both canonical IDs. That historical limitation is now resolved
+by `WISH-DISC-01` through generic MH-DISC-01 contracts; WISH-UI-01 itself added
+no provider candidate, ISBN guess or client-side identity matching.
 
 ## 4. Accessibility and responsive evidence
 

@@ -2021,7 +2021,6 @@ body.admin-bar.biblio-app-shell-page {
 [data-biblio-wishlist-root] .biblio-ui__wishlist-content,
 [data-biblio-wishlist-root] .biblio-ui__wishlist-empty,
 [data-biblio-wishlist-root] .biblio-ui__work-search,
-[data-biblio-wishlist-root] .biblio-ui__wishlist-work-results,
 [data-biblio-wishlist-root] .biblio-ui__wishlist-dialog,
 [data-biblio-wishlist-root] .biblio-ui__wishlist-conflict-list {
     display: grid;
@@ -2046,7 +2045,7 @@ body.admin-bar.biblio-app-shell-page {
 }
 
 [data-biblio-wishlist-root] .biblio-ui__wishlist-list,
-[data-biblio-wishlist-root] .biblio-ui__wishlist-work-results,
+[data-biblio-wishlist-root] .biblio-ui__wishlist-discovery-results,
 [data-biblio-wishlist-root] .biblio-ui__wishlist-conflict-list {
     list-style: none;
     margin: 0;
@@ -2092,21 +2091,93 @@ body.admin-bar.biblio-app-shell-page {
     font-size: 0.8125rem;
 }
 
-[data-biblio-wishlist-root] .biblio-ui__wishlist-work-results > li {
-    border-block-start: var(--biblio-boundary-width) solid var(--biblio-color-border);
-    display: grid;
-    gap: var(--biblio-space-1);
-    padding-block-start: var(--biblio-space-3);
+[data-biblio-wishlist-root] .biblio-ui__wishlist-dialog {
+    --biblio-dialog-max: 46rem;
+
+    border-radius: var(--biblio-radius-overlay);
+    gap: var(--biblio-space-3);
 }
 
-[data-biblio-wishlist-root] .biblio-ui__wishlist-work-results .biblio-ui__control {
-    border: 0;
-    color: var(--biblio-color-interactive);
+[data-biblio-wishlist-root] .biblio-ui__wishlist-search {
+    margin-block-start: var(--biblio-space-2);
+}
+
+[data-biblio-wishlist-root] .biblio-ui__wishlist-search > label {
+    color: var(--biblio-color-text-primary);
+    font-weight: 600;
+}
+
+[data-biblio-wishlist-root] .biblio-ui__wishlist-search-status {
+    color: var(--biblio-color-text-secondary);
+    min-block-size: 1.5rem;
+}
+
+[data-biblio-wishlist-root] .biblio-ui__wishlist-discovery-results {
+    display: grid;
+    gap: 0;
+    min-inline-size: 0;
+}
+
+[data-biblio-wishlist-root] .biblio-ui__wishlist-discovery-result {
+    border-block-start: var(--biblio-boundary-width) solid var(--biblio-color-border);
+    display: grid;
+    gap: var(--biblio-space-4);
+    grid-template-columns: minmax(0, 1fr) minmax(10rem, auto);
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+    padding-block: var(--biblio-space-6);
+}
+
+[data-biblio-wishlist-root] .biblio-ui__wishlist-result-identity {
+    display: grid;
+    gap: var(--biblio-space-1);
+    min-inline-size: 0;
+}
+
+[data-biblio-wishlist-root] .biblio-ui__wishlist-result-identity h3 {
     font-family: var(--biblio-font-serif);
-    font-size: 1.2rem;
-    justify-content: start;
-    padding-inline: 0;
-    text-align: start;
+    font-size: clamp(1.2rem, 1.05rem + 0.45vw, 1.45rem);
+    font-weight: 600;
+    line-height: 1.18;
+}
+
+[data-biblio-wishlist-root] .biblio-ui__wishlist-result-kind {
+    color: var(--biblio-color-brass);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}
+
+[data-biblio-wishlist-root] .biblio-ui__wishlist-result-metadata {
+    display: grid;
+    font-size: 0.8125rem;
+    gap: var(--biblio-space-1) var(--biblio-space-3);
+    grid-template-columns: max-content minmax(0, 1fr);
+    margin-block-start: var(--biblio-space-2);
+    min-inline-size: 0;
+}
+
+[data-biblio-wishlist-root] .biblio-ui__wishlist-result-metadata dt {
+    color: var(--biblio-color-text-muted);
+    font-weight: 600;
+}
+
+[data-biblio-wishlist-root] .biblio-ui__wishlist-result-metadata dd {
+    margin: 0;
+    min-inline-size: 0;
+}
+
+[data-biblio-wishlist-root] .biblio-ui__wishlist-result-actions {
+    align-content: start;
+    display: grid;
+    gap: var(--biblio-space-2);
+    min-inline-size: 0;
+}
+
+[data-biblio-wishlist-root] .biblio-ui__wishlist-result-actions .biblio-ui__control {
+    inline-size: 100%;
+    min-inline-size: 0;
 }
 
 [data-biblio-wishlist-root] .biblio-ui__work-search input[type="search"] {
@@ -2121,7 +2192,8 @@ body.admin-bar.biblio-app-shell-page {
 }
 
 @media (max-width: 767px) {
-    [data-biblio-wishlist-root] .biblio-ui__wishlist-row {
+    [data-biblio-wishlist-root] .biblio-ui__wishlist-row,
+    [data-biblio-wishlist-root] .biblio-ui__wishlist-discovery-result {
         align-items: stretch;
         grid-template-columns: minmax(0, 1fr);
     }
@@ -2130,6 +2202,14 @@ body.admin-bar.biblio-app-shell-page {
     [data-biblio-wishlist-root] .biblio-ui__wishlist-row .biblio-ui__control,
     [data-biblio-wishlist-root] .biblio-ui__wishlist-empty .biblio-ui__control {
         inline-size: 100%;
+    }
+
+    [data-biblio-wishlist-root] .biblio-ui__wishlist-result-metadata {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    [data-biblio-wishlist-root] .biblio-ui__wishlist-result-metadata dt:not(:first-child) {
+        margin-block-start: var(--biblio-space-1);
     }
 }
 

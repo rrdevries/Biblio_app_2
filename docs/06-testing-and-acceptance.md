@@ -3153,3 +3153,42 @@ MH-DISC-01 is accepted when:
 Status: **GO / CLOSED**. Biblio Core is `2.5.0`, schema is `1023`, and Biblio UI
 remains `0.14.0`. WISH-DISC-01 consumer UI remains separate. See
 `docs/69-mh-disc-01-bibliographic-discovery-foundation.md`.
+
+## 96. WISH-DISC-01 Wishlist discovery integration
+
+WISH-DISC-01 is accepted when:
+
+- one labelled query field supports title, author and ISBN through only generic
+  bibliographic discovery; Core retains classification/local-first/fallback;
+- strict decoding accepts exactly all four result discriminators, explicit
+  capabilities, presentation fields, statuses and canonical materialization
+  output and rejects malformed/coerced/extra data;
+- local Work/Edition IDs go directly to WISH-API while external candidates are
+  materialized first and temporary IDs never become Wishlist targets;
+- Work-only and Edition-specific actions remain human-labelled, multiple
+  Editions stay separate and no provider/confidence/winner UI appears;
+- external Work-only/Edition-specific add, local add, duplicate reuse, explicit
+  Work-only refinement with stable entry ID and reverse 409 all pass;
+- Wishlist failure after materialization retries only the retained canonical
+  Wishlist target; lost materialization replay remains MH-DISC idempotent;
+- no-result, provider/configuration/malformed states and expired/unavailable
+  snapshots are distinct, truthful and never trigger hidden refetch;
+- abort/revision/pending controls prevent late-result, double materialization,
+  double add, stale action and refinement races;
+- the actual materialization-to-Wishlist REST chain creates no Item,
+  LibraryCatalogContext or Library activity, and the complete side-effect
+  regression remains green;
+- Book Detail keeps its existing Edition action, `/me/works` and Hierna lezen
+  remain regressievrij and Add Book's ISBN/manual/Item flow remains unchanged;
+- keyboard/live/focus, 1440/1024/768/390, 200% equivalent, touch-target and
+  no-overflow guards pass; guarded synthetic screenshots cover required states;
+- no current/historical V1 source or count is used, and manual Wishlist
+  bibliography remains honestly deferred when generic manual materialization is
+  unavailable; and
+- complete UI/Core, Metadata Hub, Add Book, concurrency, E2E, fixtures,
+  syntax, PHPStan, Composer/platform, WordPress smoke, manifest, whitespace and
+  independent review gates pass.
+
+Status: **TECHNICAL GO / HUMAN VISUAL ACCEPTANCE PENDING**. Schema remains
+`1023`; Biblio Core remains `2.5.0`; Biblio UI is `0.15.0`. See
+`docs/70-wish-disc-01-wishlist-discovery-integration.md`.

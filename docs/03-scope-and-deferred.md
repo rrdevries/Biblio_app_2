@@ -48,7 +48,7 @@ Only these release classes are used:
 | Work, Edition, Item and canonical ISBN identity | V2.001 primary scope | V2.001 MUST | Core catalog identity is required for migrated and newly added physical books | Map every relevant V1 book/copy without silently collapsing identity |
 | Add Book via ISBN, manual/no-ISBN and extra copy | V2.001 primary scope | V2.001 MUST | Everyday catalog growth must continue and provider failure may not block it | Reuse migrated identities safely; manual fallback remains operational |
 | Metadata Hub minimum for Add Book | Broad V2.001 Metadata Hub target | V2.001 MUST | Normal ISBN Add Book needs one operational provider path or safe manual fallback | Provider evidence is not canonical truth; migration must not depend on live provider success |
-| Provider-neutral bibliographic text discovery/materialization foundation | Previously missing dependency for broader consumer discovery | IMPLEMENTED FOUNDATION | MH-DISC-01 safely exposes local-first Work/Edition candidates and no-Item materialization without adding consumer UI | Uses no V1 data and does not change migration targets; WISH-DISC-01 remains the separate Wishlist consumer/UI slice |
+| Provider-neutral bibliographic text discovery/materialization foundation | Previously missing dependency for broader consumer discovery | IMPLEMENTED FOUNDATION | MH-DISC-01 safely exposes local-first Work/Edition candidates and no-Item materialization; WISH-DISC-01 now consumes it only for the personal Wishlist | Uses no V1 data and does not change migration targets; broader/global discovery UI remains separate |
 | Mijn Bibliotheek Grid/List, Search/Filter/Sort | V2.001 primary scope | V2.001 MUST | Users must find and manage their migrated catalog daily | Migrated active and archived Items must remain discoverable under exact Library Context |
 | Book Detail and essential Item data/management | V2.001 primary scope | V2.001 MUST | Migrated copies must be inspectable and usable after cutover | MIG-01 identifies the V1 Item fields that need active mapping versus preserved storage |
 | Reading status, ReadingRounds, start/finish, rereads and history | V2.001 primary scope | V2.001 MUST | These are daily V1 reading flows and historical truth | Preserve user ownership, source identity and known date precision; source-neutral Personal Reading Truth retains read/date-unknown, explicit-not-read and explicit-unknown without fabricating a round |
@@ -57,7 +57,7 @@ Only these release classes are used:
 | New rating/review create, edit, publish, withdraw and moderation UI | Ratings/Reviews as full V2.001 domain | V2.002+ | The V1 migration reference contains simple per-book rating/review writes, but D-SCOPE-01 explicitly makes Review writing/publication non-blocking for the first cutover | MIG-01 must map and retain the written V1 data and record the post-cutover limitation; V2.001 requires readability, not the new V2 write/publication lifecycle |
 | Basic Collections: show, create/edit, membership, manual order and sufficient lifecycle | V2.001 primary scope | V2.001 MUST | Existing V1 Collection data must remain usable and manageable | Preserve Collection identity, membership, order and archive/lifecycle meaning |
 | Smart Collections, wishlist grouping and rich Collection extensions | Partly future, partly designed adjacent scope | V2.002+ | Not required for daily V1 replacement | Preserve only source facts needed for later activation |
-| Basic personal Verlanglijst: view, add and remove | V2.001 primary scope | V2.001 MUST | V1 contains wishlist data and the daily list must remain usable | Core/schema/MIG-FND, owner-only REST and normally reachable UI are implemented through WISH-UI-01; entries remain separate from Collections, Gewenste aanwinsten and Hierna lezen |
+| Basic personal Verlanglijst: view, discover, add and remove | V2.001 primary scope | V2.001 MUST | V1 contains wishlist data and the daily list must remain usable | Core/schema/MIG-FND, owner-only REST, reachable UI and local/external title/author/ISBN discovery are implemented through WISH-DISC-01; entries remain separate from Collections, Gewenste aanwinsten and Hierna lezen |
 | Wishlist grouping, smart groups and Series-completeness logic | Not uniformly classified | V2.002+ | Enrichment is not needed for first cutover | Preserve source relations if present; do not infer completeness |
 | Manual Hierna lezen | V2.001 primary scope | V2.001 MUST | Explicitly retained by D-WR-01 and already has functional foundation/UI | Preserve owner, Work, duplicates, order and preferred-source meaning |
 | Wat zal ik lezen? ranking, preferences, engines, API and UI | Functionally fixed for V2.001; not implemented | V2.002+ | D-WR-01 explicitly removes it from V2.001 | Preserve the approved design; no V2.001 runtime or migration target is required |
@@ -240,9 +240,9 @@ The following remains deferred independently of D-SCOPE-01:
 - e-books, audiobooks, digital files, licenses and other media;
 - generic `Andere fysieke bron` outside approved source types;
 - smart Hierna-lezen availability or automatic source preference;
-- consumer UI/global external catalog search, popularity/collaborative filtering
-  and black-box ranking; the bounded MH-DISC-01 backend foundation is already
-  implemented without making provider order canonical;
+- global external catalog search outside the bounded personal Wishlist
+  consumer, popularity/collaborative filtering and black-box ranking;
+  MH-DISC-01 plus WISH-DISC-01 keep provider order presentation-only;
 - automatic central Work/Author/Series merge, broad bibliographic editing,
   record fusion, OCR/vision, community Metadata Graph and paid-feed expansion;
 - generic Relationship management UI;

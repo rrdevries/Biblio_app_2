@@ -1597,3 +1597,26 @@ PATCH uses the owner-scoped stable entry ID returned by GET.
 The App Shell has three real personal destinations. This navigation is
 reachability only: Core/REST retain authorization and Library URL/context
 changes never become Wishlist scope.
+
+## 38. WISH-DISC-01 Wishlist discovery consumer
+
+Wishlist presentation imports a dedicated exact MH-DISC response decoder and
+replaces its `/me/works` add search with one POST to generic bibliographic
+discovery. The decoder validates typed status, canonical local identity,
+temporary external identity, explicit capabilities, presentation fields and
+materialization output. It neither interprets provider raw data nor derives
+capabilities, identity or ranking.
+
+For local results the UI calls WISH-API-01 with canonical IDs. For external
+results it calls the actor-scoped generic materializer and then sends only the
+returned canonical IDs to WISH-API-01. The two transactions remain deliberately
+separate: platform bibliography is durable independently of a consumer write.
+The client retains successful materialization output across an explicit
+Wishlist retry, so it does not rerun provider discovery or materialization.
+No new server orchestration endpoint or client action-soup is needed.
+
+Abort/revision invalidates late discovery and stale candidate actions. One
+pending lock serializes materialization, add and refinement. PATCH retains the
+existing owner-scoped entry-ID refinement boundary; reverse collapse stays a
+Core-owned 409. Book Detail uses the same Wishlist REST semantics, while
+`/me/works` remains available to Hierna lezen and other existing consumers.

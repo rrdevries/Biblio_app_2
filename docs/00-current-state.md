@@ -2687,3 +2687,31 @@ IDs before calling the existing Wishlist API; no Wishlist UI changed here.
 Biblio Core is `2.5.0`, schema is `1023`, and Biblio UI remains `0.14.0`. No
 current or historical V1 `/data/` was used. Detailed evidence:
 `docs/69-mh-disc-01-bibliographic-discovery-foundation.md`.
+
+### WISH-DISC-01 — Wishlist discovery integration
+
+Status: **TECHNICAL GO / HUMAN VISUAL ACCEPTANCE PENDING** after recorded gates
+and independent review.
+
+The Wishlist add dialog now consumes the generic MH-DISC-01 endpoint through
+one title/author/ISBN field. Core retains ISBN/text classification, local-first
+behavior and provider fallback. The strict client preserves typed local and
+external Work/Edition results, explicit capabilities and separate multiple
+Editions; provider presentation order is not presented as recommendation.
+
+Local canonical IDs go directly to WISH-API-01. External candidates first use
+generic Work-only or Work+Edition materialization; only its returned canonical
+IDs become Wishlist POST/PATCH targets. If the later Wishlist write fails, the
+canonical target remains retryable without rematerialization. Expired or
+unavailable candidate replay requires explicit new discovery. Existing
+Work-only refinement preserves entry ID; reverse collapse retains its stable
+409 and every Edition wish.
+
+No Item, Library possession/context/activity, Collection, ReadingRound,
+circulation or Add Book action is introduced. Book Detail retains the same
+Edition-specific WISH-API path; `/me/works` and Hierna lezen remain unchanged.
+The absent generic manual materializer is honestly deferred as possible
+WISH-MAN-01 rather than borrowing Add Book manual commit. Schema remains
+`1023`, Biblio Core remains `2.5.0`, and Biblio UI is `0.15.0`. No current or
+historical V1 data/count was used. Detailed evidence:
+`docs/70-wish-disc-01-wishlist-discovery-integration.md`.

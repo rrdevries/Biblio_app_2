@@ -91,6 +91,40 @@ final class Schema1023BibliographicDiscoveryTest extends PersistenceIntegrationT
             static fn ($candidate): ?string => $candidate->providerKey(),
             $results
         ));
+        self::assertSame([
+            ["Ursula K. Le Guin"],
+            ["Ursula K. Le Guin"],
+        ], array_map(static fn ($candidate): array => $candidate->contributors(), $results));
+
+        $this->database->insert($this->tableNames->works(), [
+            "work_id" => "bounded-contributors-work",
+            "work_title" => "Bounded contributors",
+            "work_title_status" => "librarian_confirmed",
+        ]);
+        for ($position = 1; $position <= 34; $position++) {
+            $authorId = sprintf("bounded-author-%02d", $position);
+            $this->database->insert($this->tableNames->authors(), [
+                "author_id" => $authorId,
+                "display_name" => sprintf("Contributor %02d", $position),
+            ]);
+            $this->database->insert($this->tableNames->workContributors(), [
+                "work_id" => "bounded-contributors-work",
+                "author_id" => $authorId,
+                "contributor_role" => "author",
+                "contributor_position" => $position,
+            ]);
+        }
+
+        $bounded = (new WpdbBibliographicLocalDiscoveryRepository(
+            $this->database,
+            $this->tableNames
+        ))->searchText(BibliographicDiscoveryQuery::text(
+            new BibliographicTextQuery("Bounded contributors")
+        ));
+        self::assertCount(1, $bounded);
+        self::assertCount(32, $bounded[0]->contributors());
+        self::assertSame("Contributor 01", $bounded[0]->contributors()[0]);
+        self::assertSame("Contributor 32", $bounded[0]->contributors()[31]);
     }
 
     public function testMigrationIsAdditiveHealthyAndRetrySafe(): void

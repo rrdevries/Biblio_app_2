@@ -4,6 +4,7 @@ import test from "node:test";
 
 import { BiblioApiError } from "../../assets/js/api.js";
 import {
+    discoveryErrorMessage,
     readWishlistEntry,
     readWishlistList,
     wishlistErrorMessage,
@@ -80,6 +81,14 @@ test("Wishlist conflict receives product copy and not a transport error", () => 
     assert.match(wishlistErrorMessage(conflict), /specifieke uitgaven/);
     assert.match(wishlistErrorMessage(conflict), /verwijdert niets/);
     assert.doesNotMatch(wishlistErrorMessage(conflict), /Internal|409|REST/);
+
+    const duplicateModuleConflict = Object.assign(new Error("Internal transport message"), {
+        name: "BiblioApiError",
+        kind: "http",
+        code: "biblio_wishlist_intent_conflict",
+        status: 409,
+    });
+    assert.match(wishlistErrorMessage(duplicateModuleConflict), /specifieke uitgaven/);
 });
 
 test("Wishlist UI uses only approved routes and never emulates reverse collapse", async () => {
@@ -92,10 +101,12 @@ test("Wishlist UI uses only approved routes and never emulates reverse collapse"
     assert.match(source, /api\.post\("me\/wishlist"/);
     assert.match(source, /api\.patch\(/);
     assert.match(source, /api\.delete\(`me\/wishlist\//);
-    assert.match(source, /me\/works\?q=/);
+    assert.match(source, /api\.post\(\s*"me\/bibliographic-discoveries"/);
+    assert.match(source, /\/materializations`/);
     assert.match(source, /searchController\?\.abort\(\)/);
     assert.match(source, /searchRevision/);
-    assert.doesNotMatch(source, /candidate_id|lookup_id|provider|fuzzy/i);
+    assert.doesNotMatch(source, /me\/works\?q=/);
+    assert.doesNotMatch(source, /Add Book|library_id|item_id|fuzzy/i);
     assert.doesNotMatch(source, /Promise\.all\([^)]*api\.delete/s);
 });
 
@@ -110,4 +121,23 @@ test("Wishlist copy hides technical target labels and names both meanings", asyn
     assert.match(source, /Deze uitgave kiezen/);
     assert.match(source, /Algemene wens behouden/);
     assert.doesNotMatch(source, /textContent:\s*entry\.target_type/);
+});
+
+test("Wishlist discovery distinguishes expiry from malformed and normal errors", () => {
+    const expired = new BiblioApiError({
+        kind: "http",
+        code: "biblio_metadata_lookup_snapshot_unavailable",
+        status: 409,
+        message: "private",
+    });
+    const malformed = new BiblioApiError({
+        kind: "invalid_response",
+        code: "biblio_ui_invalid_response",
+        status: 200,
+        message: "private",
+    });
+
+    assert.match(discoveryErrorMessage(expired), /verlopen of niet meer beschikbaar/);
+    assert.match(discoveryErrorMessage(malformed), /niet veilig lezen/);
+    assert.doesNotMatch(discoveryErrorMessage(expired), /private|snapshot|candidate/i);
 });

@@ -2,6 +2,9 @@
 
 Status: **GO / CLOSED** after the recorded gates and independent review.
 
+Post-closure note: WISH-DISC-01 now consumes this foundation in the personal
+Wishlist UI without changing the MH-DISC-01 contracts; see `docs/70`.
+
 ## Scope and source rule
 
 MH-DISC-01 adds backend Metadata Hub foundation. It does not add Wishlist UI,
@@ -131,11 +134,11 @@ side effects, duplicate replay, same provider Work/Edition races and canonical
 ISBN race reuse. The full existing Core, Add Book, Metadata Hub, Wishlist,
 schema, REST and WordPress gates remain required for the recorded GO verdict.
 
-## Wishlist handoff
+## Wishlist handoff and completion
 
-WISH-DISC-01 may consume generic discovery results, ask the user to choose a
-capability/intent, materialize the selected candidate, and then call the
+WISH-DISC-01 now consumes generic discovery results, asks the user to choose a
+capability/intent, materializes the selected candidate, and then calls the
 existing Wishlist API with the returned canonical Work and optional Edition
 IDs. It must not infer a winner, merge candidates, reuse an expired snapshot,
-or embed provider logic. Wishlist grouping, recommendation, fuzzy search and UI
-implementation remain outside MH-DISC-01.
+or embed provider logic. Wishlist grouping, recommendation and fuzzy search
+remain outside MH-DISC-01 and WISH-DISC-01.
