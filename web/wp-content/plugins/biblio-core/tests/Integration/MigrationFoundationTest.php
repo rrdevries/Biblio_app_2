@@ -26,6 +26,7 @@ use Biblio\Core\Application\Migration\MigrationTraceabilityQuery;
 use Biblio\Core\Application\Migration\ObserveSourceRecordService;
 use Biblio\Core\Application\Migration\QuarantineReason;
 use Biblio\Core\Application\Reading\PersonalReadingTruthRecorder;
+use Biblio\Core\Application\Wishlist\WishlistRecorder;
 use Biblio\Core\Assessments\{AssessmentClock,RatingId,RatingIdGenerator,RatingNotAvailable,RatingValue,ReviewContent,ReviewId,ReviewIdGenerator,ReviewNotAvailable};
 use Biblio\Core\Catalog\{Edition,EditionId,Item,ItemArchiveReasonKind,ItemId,ItemStatus,PreservedHistoricalArchiveReason,Work,WorkId};
 use Biblio\Core\Exception\ConflictException;
@@ -43,6 +44,7 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPersonalWorkReadingMuta
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbReadingRoundRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionManager;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbWorkRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbWishlistRepository;
 use Biblio\Core\Infrastructure\WordPress\Identity\WordPressPlatformUserDirectory;
 use Biblio\Core\Infrastructure\WordPress\ProductionComposition;
 use Biblio\Core\Library\LibraryId;
@@ -50,6 +52,7 @@ use Biblio\Core\Reading\PersonalReadingTruthClock;
 use Biblio\Core\Reading\PersonalReadingTruthContradiction;
 use Biblio\Core\Reading\PersonalReadingTruthState;
 use Biblio\Core\Reading\ReadingRoundId;
+use Biblio\Core\Wishlist\{WishlistClock,WishlistEntryId,WishlistEntryIdGenerator,WishlistIntentConflict};
 use DateTimeImmutable;
 use DateTimeZone;
 use RuntimeException;
@@ -64,11 +67,11 @@ final class FoundationMigrationClock implements MigrationClock
 
 final class FoundationMigrationIds implements MigrationRunIdGenerator
 {
-    private int $next = 1;
+    private static int $next = 1;
 
     public function next(): string
     {
-        return "migration-run-test-" . $this->next++;
+        return "migration-run-test-" . self::$next++;
     }
 }
 
@@ -104,6 +107,26 @@ final class FoundationReviewIds implements ReviewIdGenerator
 {
     private int $next = 1;
     public function next(): ReviewId { return new ReviewId("migration-review-" . $this->next++); }
+}
+
+final class FoundationWishlistClock implements WishlistClock
+{
+    public function now(): DateTimeImmutable
+    {
+        return new DateTimeImmutable(
+            "2026-09-10 15:00:00.123456",
+            new DateTimeZone("UTC")
+        );
+    }
+}
+
+final class FoundationWishlistIds implements WishlistEntryIdGenerator
+{
+    private int $next = 1;
+    public function next(): WishlistEntryId
+    {
+        return new WishlistEntryId("migration-wishlist-" . $this->next++);
+    }
 }
 
 final class MigrationFoundationTest extends PersistenceIntegrationTestCase
@@ -479,6 +502,210 @@ final class MigrationFoundationTest extends PersistenceIntegrationTestCase
             PersonalReadingTruthState::ReadKnownDateUnknown,
             $truths->findForUserAndWork($target->userId(), $workId)?->state()
         );
+    }
+
+    public function testWishlistUsesMigFndWithStableRefinementRetryRollbackAndQuarantine(): void
+    {
+        [$begin, $observe, $commit, , $target, $ledger] = $this->foundation(
+            "wishlist-foundation"
+        );
+        $run = $this->beginApply($begin, $target, "snapshot-wishlist", "f");
+        $works = new WpdbWorkRepository($this->database, $this->tableNames);
+        $editions = new WpdbEditionRepository($this->database, $this->tableNames);
+        $work = new Work(new WorkId("migration-wishlist-work"), "Synthetic Wishlist Work");
+        $rollbackWork = new Work(new WorkId("migration-wishlist-rollback"), "Rollback Work");
+        $edition = new Edition(
+            new EditionId("migration-wishlist-edition"),
+            $work->id(),
+            "Synthetic Wishlist Edition"
+        );
+        $works->add($work);
+        $works->add($rollbackWork);
+        $editions->add($edition);
+        $wishlist = new WpdbWishlistRepository($this->database, $this->tableNames);
+        $recorder = new WishlistRecorder(
+            new WordPressPlatformUserDirectory(),
+            $works,
+            $editions,
+            $wishlist,
+            new FoundationWishlistIds(),
+            new FoundationWishlistClock()
+        );
+
+        $workObservation = $this->observation(
+            $observe,
+            $run,
+            "wishlist",
+            "wishlist/work-only"
+        );
+        $workOutcome = $commit->commit(
+            $run,
+            $workObservation,
+            function () use ($recorder, $target, $work): MigrationRecordOutcome {
+                $result = $recorder->addWorkOnlyForOwner($target->userId(), $work->id());
+                return MigrationRecordOutcome::mapped([
+                    new MigrationTargetMapping(
+                        "wishlist_entry",
+                        $result->entry()->id()->value(),
+                        MappingDisposition::Created
+                    ),
+                ]);
+            }
+        );
+        $entryId = $workOutcome->mappings()[0]->targetId();
+
+        $duplicateObservation = $this->observation(
+            $observe,
+            $run,
+            "wishlist",
+            "wishlist/exact-duplicate"
+        );
+        $duplicateOutcome = $commit->commit(
+            $run,
+            $duplicateObservation,
+            function () use ($recorder, $target, $work): MigrationRecordOutcome {
+                $result = $recorder->addWorkOnlyForOwner($target->userId(), $work->id());
+                self::assertFalse($result->wasCreated());
+                return MigrationRecordOutcome::mapped([
+                    new MigrationTargetMapping(
+                        "wishlist_entry",
+                        $result->entry()->id()->value(),
+                        MappingDisposition::Reused
+                    ),
+                ]);
+            }
+        );
+        self::assertSame($entryId, $duplicateOutcome->mappings()[0]->targetId());
+
+        $refinementObservation = $this->observation(
+            $observe,
+            $run,
+            "wishlist",
+            "wishlist/refinement"
+        );
+        $refinementOutcome = $commit->commit(
+            $run,
+            $refinementObservation,
+            function () use ($recorder, $target, $work, $edition): MigrationRecordOutcome {
+                $result = $recorder->refineWorkOnlyForOwner(
+                    $target->userId(),
+                    $work->id(),
+                    $edition->id()
+                );
+                return MigrationRecordOutcome::transformed([
+                    new MigrationTargetMapping(
+                        "wishlist_entry",
+                        $result->entry()->id()->value(),
+                        MappingDisposition::Reused
+                    ),
+                ], "work_only_refined_to_edition");
+            }
+        );
+        self::assertSame($entryId, $refinementOutcome->mappings()[0]->targetId());
+        self::assertSame(3, count((new MigrationTraceabilityQuery($ledger))
+            ->sourcesForTarget($run, "wishlist_entry", $entryId)));
+
+        $retryWrites = 0;
+        try {
+            $commit->commit(
+                $run,
+                $workObservation,
+                static function () use (&$retryWrites): MigrationRecordOutcome {
+                    ++$retryWrites;
+                    return MigrationRecordOutcome::failed("unexpected_retry", false);
+                }
+            );
+            self::fail("A committed Wishlist observation was processed twice.");
+        } catch (ValidationException) {
+            self::assertSame(0, $retryWrites);
+        }
+
+        $rollbackObservation = $this->observation(
+            $observe,
+            $run,
+            "wishlist",
+            "wishlist/rollback"
+        );
+        try {
+            $commit->commit(
+                $run,
+                $rollbackObservation,
+                function () use ($recorder, $target, $rollbackWork): MigrationRecordOutcome {
+                    $recorder->addWorkOnlyForOwner(
+                        $target->userId(),
+                        $rollbackWork->id()
+                    );
+                    throw new RuntimeException("synthetic Wishlist rollback");
+                }
+            );
+            self::fail("Synthetic Wishlist rollback was hidden.");
+        } catch (RuntimeException $exception) {
+            self::assertSame("synthetic Wishlist rollback", $exception->getMessage());
+        }
+        self::assertSame(0, (int) $this->database->get_var($this->database->prepare(
+            "SELECT COUNT(*) FROM `{$this->tableNames->wishlistEntries()}` WHERE work_id=%s",
+            $rollbackWork->id()->value()
+        )));
+
+        $conflictObservation = $this->observation(
+            $observe,
+            $run,
+            "wishlist",
+            "wishlist/edition-to-work-conflict"
+        );
+        $conflict = $commit->commit(
+            $run,
+            $conflictObservation,
+            function () use ($recorder, $target, $work): MigrationRecordOutcome {
+                try {
+                    $recorder->addWorkOnlyForOwner($target->userId(), $work->id());
+                } catch (WishlistIntentConflict) {
+                    return MigrationRecordOutcome::quarantined(
+                        QuarantineReason::UnsupportedTargetRepresentation,
+                        "Synthetic Edition-specific intent cannot be collapsed to Work-only."
+                    );
+                }
+                self::fail("Wishlist conflict was not quarantined.");
+            }
+        );
+        self::assertSame(MigrationDisposition::Quarantined, $conflict->disposition());
+        self::assertSame(1, $this->countRows($this->tableNames->wishlistEntries()));
+        self::assertSame(3, $this->countRows($this->tableNames->migrationTargetMappings()));
+
+        [$otherBegin, $otherObserve, $otherCommit, , $otherTarget] =
+            $this->foundation("wishlist-foundation-other");
+        $otherRun = $this->beginApply(
+            $otherBegin,
+            $otherTarget,
+            "snapshot-wishlist-other",
+            "e"
+        );
+        $otherObservation = $this->observation(
+            $otherObserve,
+            $otherRun,
+            "wishlist",
+            "wishlist/work-only"
+        );
+        $otherOutcome = $otherCommit->commit(
+            $otherRun,
+            $otherObservation,
+            function () use ($recorder, $otherTarget, $work, $edition): MigrationRecordOutcome {
+                $result = $recorder->addEditionForOwner(
+                    $otherTarget->userId(),
+                    $work->id(),
+                    $edition->id()
+                );
+                return MigrationRecordOutcome::mapped([
+                    new MigrationTargetMapping(
+                        "wishlist_entry",
+                        $result->entry()->id()->value(),
+                        MappingDisposition::Created
+                    ),
+                ]);
+            }
+        );
+        self::assertNotSame($entryId, $otherOutcome->mappings()[0]->targetId());
+        self::assertSame(2, $this->countRows($this->tableNames->wishlistEntries()));
     }
 
     public function testHistoricalArchiveWriteUsesMigFndTransactionRetryAndQuarantine(): void

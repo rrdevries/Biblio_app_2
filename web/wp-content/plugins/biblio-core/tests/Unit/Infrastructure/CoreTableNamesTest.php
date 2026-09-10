@@ -41,6 +41,8 @@ final class CoreTableNamesTest extends TestCase
         self::assertCount(2, $tableNames->schema1019Additions());
         self::assertCount(48, $tableNames->schema1019());
         self::assertCount(48, $tableNames->schema1021());
+        self::assertCount(3, $tableNames->schema1022Additions());
+        self::assertCount(51, $tableNames->schema1022());
         self::assertSame("wp_biblio_libraries", $tableNames->libraries());
         self::assertSame(
             "wp_biblio_reading_rounds",
@@ -98,6 +100,18 @@ final class CoreTableNamesTest extends TestCase
         self::assertSame(
             "wp_biblio_personal_reading_truths",
             $tableNames->personalReadingTruths()
+        );
+        self::assertSame(
+            "wp_biblio_wishlist_work_states",
+            $tableNames->wishlistWorkStates()
+        );
+        self::assertSame(
+            "wp_biblio_wishlist_entries",
+            $tableNames->wishlistEntries()
+        );
+        self::assertSame(
+            "wp_biblio_wishlist_entry_history",
+            $tableNames->wishlistEntryHistory()
         );
     }
 

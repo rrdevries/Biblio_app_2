@@ -37,17 +37,20 @@ foundation introduced in schema `1018`. READ-MIG-01 adds normal source-neutral
 Personal Reading Truth in schema `1019`; ARCH-MIG-01 preserves historical
 archive reasons in schema `1020`; ASSESS-MIG-01 adds nullable assessment time,
 a private historical Rating/Review recorder and an owner-only Book Detail read
-in schema `1021`. IDENTITY-01 remains the mandatory explicit personal target
+in schema `1021`; WISH-CORE-01 adds the source-neutral personal Wishlist Core
+target, persistence and MIG-FND participant in schema `1022`. IDENTITY-01 remains the mandatory explicit personal target
 validator. The mapping design is still **MIGRATION DESIGN BLOCKED BY REMAINING
-DOMAIN TARGET GAPS**: Wishlist and Item local evidence still need bounded
-targets, while open circulation still needs Renée's cutover decision.
+DOMAIN TARGET GAPS**: Item local evidence still needs a bounded target, while
+open circulation still needs Renée's cutover decision. Wishlist REST/UI
+delivery remains the focused WISH-API-01 follow-up.
 No V1 parser, source profiling, import,
 domain cleanup or production-data mutation is included. See
 `docs/60-mig-01-v1-mapping-and-reconciliation-design.md` and
 `docs/62-mig-fnd-01-migration-ledger-foundation.md` plus
 `docs/63-read-mig-01-personal-reading-truth.md`,
 `docs/64-arch-mig-01-historical-archive-reasons.md` and
-`docs/65-assess-mig-01-historical-assessments.md`.
+`docs/65-assess-mig-01-historical-assessments.md` plus
+`docs/66-wish-core-01-personal-wishlist-foundation.md`.
 
 ## Product model
 
@@ -487,7 +490,7 @@ Status: **Implemented**
 
 - the formal supported schema history starts at baseline version `1000`;
 - internal Fase-0 spike versions 1–5 are not production upgrade paths;
-- product `v2.001`, plugin/package `2.2.0` and schema version are independent;
+- product `v2.001`, plugin/package `2.3.0` and schema version are independent;
 - baseline installation requires an empty Core schema;
 - future schema changes use ordered forward migration steps;
 - version bump occurs only after the step postcondition succeeds;
@@ -2597,3 +2600,31 @@ IDs or technical times and adds no mutations.
 Biblio Core is `2.2.0`; Biblio UI is `0.13.0`. No current V1 source, old
 assessment or count was used. Detailed evidence:
 `docs/65-assess-mig-01-historical-assessments.md`.
+
+### WISH-CORE-01 — personal Wishlist foundation
+
+Status: **GO / CLOSED** after recorded gates and independent review.
+
+Schema `1022` adds private `wishlist_work_states`, active `wishlist_entries`
+and `wishlist_entry_history`.
+The Work-state row is the concurrency lock and enforces one exclusive target
+mode per user + Work. Entries represent either one Work-only intent or distinct
+Edition-specific intents, with exact duplicate add reuse. An explicit
+Work-only-to-Edition refinement preserves the entry identity and creation time
+in one transaction; the reverse collapse fails as a conflict.
+
+Authenticated application services expose add, refine, own-list and remove
+without accepting actor or Library Context from callers. The read model is
+owner-filtered and batch-loads ordered Authors. The source-neutral
+`WishlistRecorder` participates inside MIG-FND's existing transaction, so
+mapping, refinement, rollback, retry and quarantine stay traceable without
+embedding source provenance in product state.
+
+Removal transactionally moves the active snapshot to history with the existing
+typed reason `fulfilled|removed|read_and_removed`; there is no auto-fulfilment
+from Add Book, Item ownership, reading, Collection or Hierna lezen. Priority,
+note and grouping remain outside this foundation and are not removed from
+product canon. No REST route or UI was introduced. Biblio Core is `2.3.0`;
+Biblio UI remains `0.13.0`. No current V1 source or historical count was used.
+REST/UI delivery is follow-up `WISH-API-01`. Detailed evidence:
+`docs/66-wish-core-01-personal-wishlist-foundation.md`.

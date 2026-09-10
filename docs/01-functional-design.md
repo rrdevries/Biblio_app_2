@@ -1126,32 +1126,35 @@ content dates provide enough information.
 
 ## Verlanglijst
 
-Private, user-owned, platform-wide.
+Private, user-owned and platform-wide. Library membership, role and Item
+ownership do not own or scope it.
 
-Exactly one personal list per user.
+Every active entry targets exactly one existing Work and is exactly one of:
 
-Entry may contain:
-- Work;
-- desired execution;
-- optional Edition/ISBN;
-- priority;
-- personal Goal/context;
-- note.
+- Work-only: the user wants the book and the Edition is irrelevant;
+- Edition-specific: the user wants one exact existing Edition of that Work.
 
-Priority:
-- Topwens
-- Hoog
-- Normaal
-- Laag
+For one user + Work there is at most one Work-only entry, or zero or more
+Edition-specific entries for different Editions. The two forms are mutually
+exclusive for that user + Work, and the same Edition can occur only once.
+Repeating the exact add is idempotent and reuses the stable entry ID.
 
-Default: Normaal.
+A Work-only intent can be explicitly refined to an Edition. Refinement is one
+atomic change that preserves the entry ID and creation time. An
+Edition-specific intent cannot be collapsed to Work-only implicitly: that is
+a conflict and requires an explicit later product flow. Removal clears active
+state and preserves the entry snapshot with one of the existing history
+reasons: `Vervuld`, `Verwijderd` or `Gelezen en verwijderd`.
 
-History reasons:
-- Vervuld
-- Verwijderd
-- Gelezen en verwijderd
+The minimum V2.001 behavior is add Work-only, add Edition-specific, list own
+entries with Work/Edition distinction, title/authors and timestamps, refine
+Work-only to Edition, and remove. The current optional entry design still
+retains priority (`Topwens`, `Hoog`, `Normaal`, `Laag`; default `Normaal`),
+personal Goal/context and note. WISH-CORE-01 does not implement those explicitly
+out-of-scope fields. Grouping and manual reorder remain V2.002+.
 
-A matching Library Item never silently fulfils the personal Verlanglijst.
+A matching Library Item, Add Book, reading action, Collection or Hierna-lezen
+change never silently fulfils, removes or mutates the personal Verlanglijst.
 
 ## Gewenste aanwinsten
 

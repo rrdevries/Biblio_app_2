@@ -51,6 +51,7 @@ final readonly class CoreSchemaHealthChecker
             1019 => $this->inspectTables($this->tableNames->schema1019(), true, 1019),
             1020 => $this->inspectTables($this->tableNames->schema1020(), true, 1020),
             1021 => $this->inspectTables($this->tableNames->schema1021(), true, 1021),
+            1022 => $this->inspectTables($this->tableNames->schema1022(), true, 1022),
             default => throw new CoreSchemaMigrationException(
                 "No explicit Biblio Core schema-health contract exists for "
                 . "schema version {$expectedVersion}."
@@ -238,6 +239,15 @@ final readonly class CoreSchemaHealthChecker
         );
     }
 
+    public function inspectExistingSchema1022Additions(): CoreSchemaHealth
+    {
+        return $this->inspectTables(
+            $this->tableNames->schema1022Additions(),
+            false,
+            1022
+        );
+    }
+
     /** @param list<string> $tableNames */
     private function inspectTables(
         array $tableNames,
@@ -286,6 +296,16 @@ final readonly class CoreSchemaHealthChecker
             && $this->tableExists($this->tableNames->editionIdentifierClaims())
         ) {
             $this->inspectIsbnClaimData($issues);
+        }
+
+        if (
+            $schemaVersion >= 1022
+            && $missingIsError
+            && $this->tableExists($this->tableNames->wishlistWorkStates())
+            && $this->tableExists($this->tableNames->wishlistEntries())
+            && $this->tableExists($this->tableNames->wishlistEntryHistory())
+        ) {
+            $this->inspectWishlistData($issues);
         }
 
         return new CoreSchemaHealth($issues);
@@ -652,6 +672,39 @@ final readonly class CoreSchemaHealthChecker
         }
     }
 
+    /** @param list<string> $issues */
+    private function inspectWishlistData(array &$issues): void
+    {
+        $states = $this->tableNames->wishlistWorkStates();
+        $entries = $this->tableNames->wishlistEntries();
+        $history = $this->tableNames->wishlistEntryHistory();
+        $editions = $this->tableNames->editions();
+        $emptyState = $this->database->get_row(
+            "SELECT s.user_id,s.work_id FROM `{$states}` s "
+                . "LEFT JOIN `{$entries}` e ON e.user_id=s.user_id "
+                . "AND e.work_id=s.work_id WHERE e.wishlist_entry_id IS NULL LIMIT 1"
+        );
+        if ($emptyState !== null) {
+            $issues[] = "Wishlist contains an empty Work state";
+        }
+        $mismatch = $this->database->get_row(
+            "SELECT e.wishlist_entry_id FROM `{$entries}` e "
+                . "INNER JOIN `{$editions}` d ON d.edition_id=e.edition_id "
+                . "WHERE d.work_id<>e.work_id LIMIT 1"
+        );
+        if ($mismatch !== null) {
+            $issues[] = "Wishlist Edition does not belong to its Work";
+        }
+        $historicalMismatch = $this->database->get_row(
+            "SELECT h.wishlist_entry_id FROM `{$history}` h "
+                . "INNER JOIN `{$editions}` d ON d.edition_id=h.edition_id "
+                . "WHERE d.work_id<>h.work_id LIMIT 1"
+        );
+        if ($historicalMismatch !== null) {
+            $issues[] = "Wishlist history Edition does not belong to its Work";
+        }
+    }
+
     /** @return array<string, array<string, array<string, string|null>>> */
     private function expectedColumns(int $schemaVersion): array
     {
@@ -678,6 +731,12 @@ final readonly class CoreSchemaHealthChecker
         $generatedId = $nullableId + ["extra" => "STORED GENERATED"];
         $generatedCollectionName = [
             "type" => "varchar(80)",
+            "nullable" => "YES",
+            "collation" => "utf8mb4_bin",
+            "extra" => "STORED GENERATED",
+        ];
+        $generatedWishlistWorkId = [
+            "type" => "varchar(191)",
             "nullable" => "YES",
             "collation" => "utf8mb4_bin",
             "extra" => "STORED GENERATED",
@@ -1348,6 +1407,36 @@ final readonly class CoreSchemaHealthChecker
                 "created_at" => ["type" => "datetime(6)", "nullable" => "NO"],
                 "updated_at" => ["type" => "datetime(6)", "nullable" => "NO"],
             ],
+            $this->tableNames->wishlistWorkStates() => [
+                "user_id" => $id,
+                "work_id" => $id,
+                "target_type" => $ascii("varchar(24)"),
+                "created_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "updated_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+            ],
+            $this->tableNames->wishlistEntries() => [
+                "wishlist_entry_id" => $id,
+                "user_id" => $id,
+                "work_id" => $id,
+                "target_type" => $ascii("varchar(24)"),
+                "edition_id" => $nullableId,
+                "created_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "updated_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "work_only_work_id" => $generatedWishlistWorkId + [
+                    "expression" => "CASE WHEN target_type = 'work_only' THEN work_id ELSE NULL END",
+                ],
+            ],
+            $this->tableNames->wishlistEntryHistory() => [
+                "wishlist_entry_id" => $id,
+                "user_id" => $id,
+                "work_id" => $id,
+                "target_type" => $ascii("varchar(24)"),
+                "edition_id" => $nullableId,
+                "created_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "updated_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "removed_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "removal_reason" => $ascii("varchar(32)"),
+            ],
         ];
     }
 
@@ -1793,6 +1882,64 @@ final readonly class CoreSchemaHealthChecker
                     "columns" => ["work_id", "user_id"],
                 ],
             ],
+            $this->tableNames->wishlistWorkStates() => [
+                "PRIMARY" => [
+                    "unique" => true,
+                    "columns" => ["user_id", "work_id"],
+                ],
+                "wishlist_work_state_mode" => [
+                    "unique" => true,
+                    "columns" => ["user_id", "work_id", "target_type"],
+                ],
+                "wishlist_work_states_by_work" => [
+                    "unique" => false,
+                    "columns" => ["work_id", "user_id"],
+                ],
+            ],
+            $this->tableNames->wishlistEntries() => [
+                "PRIMARY" => [
+                    "unique" => true,
+                    "columns" => ["wishlist_entry_id"],
+                ],
+                "wishlist_work_only_unique" => [
+                    "unique" => true,
+                    "columns" => ["user_id", "work_only_work_id"],
+                ],
+                "wishlist_edition_unique" => [
+                    "unique" => true,
+                    "columns" => ["user_id", "edition_id"],
+                ],
+                "wishlist_entries_by_owner_created" => [
+                    "unique" => false,
+                    "columns" => ["user_id", "created_at", "wishlist_entry_id"],
+                ],
+                "wishlist_entries_by_work" => [
+                    "unique" => false,
+                    "columns" => ["user_id", "work_id", "target_type"],
+                ],
+                "wishlist_entries_by_edition" => [
+                    "unique" => false,
+                    "columns" => ["edition_id", "user_id"],
+                ],
+            ],
+            $this->tableNames->wishlistEntryHistory() => [
+                "PRIMARY" => [
+                    "unique" => true,
+                    "columns" => ["wishlist_entry_id"],
+                ],
+                "wishlist_history_by_owner_removed" => [
+                    "unique" => false,
+                    "columns" => ["user_id", "removed_at", "wishlist_entry_id"],
+                ],
+                "wishlist_history_by_work" => [
+                    "unique" => false,
+                    "columns" => ["user_id", "work_id"],
+                ],
+                "wishlist_history_by_edition" => [
+                    "unique" => false,
+                    "columns" => ["edition_id", "user_id"],
+                ],
+            ],
         ];
     }
 
@@ -2078,6 +2225,33 @@ final readonly class CoreSchemaHealthChecker
             ],
             $this->tableNames->personalReadingTruths() => [
                 $restrict(["work_id"], $this->tableNames->works(), ["work_id"]),
+            ],
+            $this->tableNames->wishlistWorkStates() => [
+                $restrict(["work_id"], $this->tableNames->works(), ["work_id"]),
+            ],
+            $this->tableNames->wishlistEntries() => [
+                $restrict(
+                    ["user_id", "work_id", "target_type"],
+                    $this->tableNames->wishlistWorkStates(),
+                    ["user_id", "work_id", "target_type"]
+                ),
+                $restrict(
+                    ["edition_id"],
+                    $this->tableNames->editions(),
+                    ["edition_id"]
+                ),
+            ],
+            $this->tableNames->wishlistEntryHistory() => [
+                $restrict(
+                    ["work_id"],
+                    $this->tableNames->works(),
+                    ["work_id"]
+                ),
+                $restrict(
+                    ["edition_id"],
+                    $this->tableNames->editions(),
+                    ["edition_id"]
+                ),
             ],
         ];
     }
@@ -2372,6 +2546,22 @@ final readonly class CoreSchemaHealthChecker
                 "truth_version >= 1",
                 "CHAR_LENGTH(TRIM(user_id)) > 0",
                 "updated_at >= created_at",
+            ],
+            $this->tableNames->wishlistWorkStates() => [
+                "target_type IN ('work_only','edition_specific')",
+                "CHAR_LENGTH(TRIM(user_id)) > 0",
+                "updated_at >= created_at",
+            ],
+            $this->tableNames->wishlistEntries() => [
+                "target_type='work_only' AND edition_id IS NULL OR target_type='edition_specific' AND edition_id IS NOT NULL",
+                "CHAR_LENGTH(TRIM(user_id)) > 0",
+                "updated_at >= created_at",
+            ],
+            $this->tableNames->wishlistEntryHistory() => [
+                "target_type='work_only' AND edition_id IS NULL OR target_type='edition_specific' AND edition_id IS NOT NULL",
+                "removal_reason IN ('fulfilled','removed','read_and_removed')",
+                "CHAR_LENGTH(TRIM(user_id)) > 0",
+                "updated_at >= created_at AND removed_at >= updated_at",
             ],
         ];
     }

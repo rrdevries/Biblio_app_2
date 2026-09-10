@@ -121,10 +121,10 @@ Future MIG-02 owns safe external dry-run artifacts.
 ## 9. MIG-01 representability
 
 Synthetic tests prove the contract can represent multiple Work/Edition/Item
-edges, invalid-ISBN and ambiguous-conflict quarantine, and deferred Wishlist,
-unknown-date reading truth, legacy archive facts, open circulation, ratings
-without source time, cover references and Goals. No listed domain is
-implemented by this slice.
+edges, invalid-ISBN and ambiguous-conflict quarantine, unknown-date reading
+truth, legacy archive facts, open circulation, ratings without source time,
+cover references and Goals. WISH-CORE-01 now additionally proves an active
+Wishlist participant; MIG-FND-01 itself did not implement those domains.
 
 ## 10. Privacy and actual V1 source rule
 
@@ -150,8 +150,8 @@ retry and unknown-partial-state failure are covered separately.
 
 No browser/human UI acceptance is required because no frontend or operator UI
 changed. MIG-02, a V1 parser/CLI, current-source profiling, domain cleanup,
-Wishlist/ReadingRound/Loan/Goal/cover/review behavior and remaining cutover
-decisions remain outside scope.
+Wishlist REST/UI, Loan/Goal/cover behavior and remaining cutover decisions
+remain outside scope.
 
 Schema is `1018`. Biblio UI remains `0.11.0`.
 
@@ -204,3 +204,20 @@ They never create a ContributionPublication. MIG-FND retains observation,
 mapping, retry, rollback and quarantine provenance; assessment content remains
 real owner-readable product data. Synthetic fixtures prove this contract in
 schema 1021. See `docs/65-assess-mig-01-historical-assessments.md`.
+
+## 15. WISH-CORE-01 domain participant
+
+WISH-CORE-01 adds a source-neutral `WishlistRecorder` for Work-only and
+Edition-specific personal intent. It validates the explicit active target
+user and existing Work/Edition but owns no transaction, so MIG-FND can execute
+the product write and `wishlist_entry` mapping in the same transaction as the
+source observation outcome. Product tables contain no source family, source
+ID, payload hash or migration provenance.
+
+Synthetic integration proves created and exact-duplicate-reused mappings,
+stable target identity across explicit Work-only→Edition refinement,
+bidirectional trace, committed retry without a second product write, rollback
+without product residue or false mapping, and quarantine for a forbidden
+Edition-specific→Work-only collapse. No historical snapshot, count or V1 copy
+is current input. See
+`docs/66-wish-core-01-personal-wishlist-foundation.md`.

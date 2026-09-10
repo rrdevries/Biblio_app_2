@@ -399,8 +399,8 @@ Biblio Core owns versioning and migrations for its Core tables. MariaDB DDL is n
 
 The formally supported Core schema history starts at baseline version `1000`.
 The earlier internal spike versions 1–5 are not production migration sources.
-Product version (`v2.001`), Core plugin/package version (`2.2.0`) and database
-schema version are independent. Plugin/package version `2.2.0` expects formal
+Product version (`v2.001`), Core plugin/package version (`2.3.0`) and database
+schema version are independent. Plugin/package version `2.3.0` expects formal
 schema baseline `1000`.
 
 A fresh baseline installation is allowed only on an empty Core schema.
@@ -439,7 +439,7 @@ lifecycles.
 
 These constraints require no schema migration: they align public construction
 and hydration with the already formalized baseline. Product version `v2.001`,
-plugin/package version `2.2.0` and schema baseline `1000` remain independent.
+plugin/package version `2.3.0` and schema baseline `1000` remain independent.
 
 No source FK uses cascade-delete in a way that removes personal ReadingRound history when a physical source changes or ends.
 
@@ -1497,3 +1497,43 @@ in normal logs/exceptions or Git. Historical MIG-01 snapshots and DATA-01 are
 evidence only. Every source-dependent phase requires a current `/data/` or
 export explicitly designated by Renée, and every run pins that source itself.
 See `docs/62-mig-fnd-01-migration-ledger-foundation.md`.
+
+## 35. WISH-CORE-01 personal Wishlist and schema 1022
+
+The Wishlist is a source-neutral user-owned aggregate boundary, independent of
+Library Context and Item ownership. Schema 1022 adds three explicit InnoDB
+tables. `wishlist_work_states` has one row per user + Work and is both the
+exclusive `work_only|edition_specific` mode and the serialization lock.
+`wishlist_entries` stores active stable entry identity, the same user + Work,
+the mode, optional Edition and separate creation/update instants.
+`wishlist_entry_history` stores the immutable removed snapshot plus removal
+instant and the canonical typed reason, without participating in active
+uniqueness.
+
+A composite foreign key from entry to state makes mixed target modes for one
+user + Work impossible. A generated nullable Work-only key plus a unique index
+allows at most one Work-only entry; a user + Edition unique index makes exact
+Edition adds idempotent while allowing multiple different Editions of one
+Work. Target-shape checks require NULL Edition only for Work-only. Foreign keys
+restrict deletion of referenced Work/Edition. Schema health additionally
+verifies that every Edition-specific entry's Edition belongs to its Work and
+that no empty Work state remains.
+
+All mutations run in one Core transaction. `lockOrCreateWorkState()` or
+`lockExistingWorkState()` is followed only by locking/current reads, avoiding
+stale snapshots under MariaDB `REPEATABLE READ`. Refinement deletes the
+Work-only child, changes the locked state mode and reinserts the same entry ID
+with its original creation time and new Edition. Any failure rolls back the
+whole transition. Edition-specific-to-Work-only is not an update path.
+
+Self-service application boundaries resolve the authenticated actor and never
+accept a user ID or Library Context. Reads filter on that owner and load the
+entry set plus all ordered Authors in two queries, with no Library/Item join.
+`WishlistRecorder` deliberately owns no transaction so MIG-FND can compose it
+inside `CommitMigrationRecordService`; product rows remain source-neutral and
+the ledger owns source mapping and quarantine.
+
+The Core surface contains add Work-only, add Edition-specific, explicit
+refinement, own-list and removal with persisted history reason. REST and UI are not implicit repository
+conventions for a new foundation and remain `WISH-API-01`. No automation with
+Add Book, reading, Next Reading, Collections or Item possession exists.

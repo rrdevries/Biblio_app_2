@@ -3019,3 +3019,40 @@ Status is **GO / CLOSED** only after all Core, schema, publication, Book Detail,
 ReadingRound, PersonalReadingTruth, MIG-FND, frontend, syntax, PHPStan,
 Composer/platform, WordPress smoke, manifest, whitespace and independent-review
 gates pass. See `docs/65-assess-mig-01-historical-assessments.md`.
+
+## 92. WISH-CORE-01 personal Wishlist foundation
+
+WISH-CORE-01 is accepted when:
+
+- schema 1021 upgrades additively and retry-safely to healthy 1022; fresh
+  install reaches the same structure and unknown partial shape fails closed;
+- each entry has exactly one Work and exactly one Work-only or
+  Edition-specific target, with valid Edition→Work relation;
+- one user + Work has either at most one Work-only entry or zero or more
+  distinct Edition-specific entries, never both, and an exact duplicate add
+  reuses its stable entry ID;
+- explicit Work-only→Edition refinement is atomic, concurrency-safe and
+  preserves entry ID and creation time; Edition-specific→Work-only conflicts;
+- add, own-list, refine and remove resolve the authenticated user internally,
+  expose no other user's entries and require no Library membership or role;
+- list output distinguishes target type and includes title, ordered Authors and
+  timestamps with a batch read rather than per-entry queries;
+- remove atomically clears active state and preserves the entry snapshot with
+  exactly one canonical typed reason (`fulfilled`, `removed` or
+  `read_and_removed`); Add Book, Item possession, reading, Hierna lezen and
+  Collections cause no automatic Wishlist mutation;
+- the source-neutral recorder commits product write and `wishlist_entry`
+  mapping inside MIG-FND's transaction; stable identity survives refinement,
+  rollback leaves no product row or false mapping, committed retry does not
+  repeat the write and conflict can quarantine;
+- only synthetic fixtures are used; no historical snapshot count or source
+  copy is treated as current V1 truth;
+- Core unit/integration/concurrency/schema, PHP syntax, PHPStan,
+  Composer/platform, WordPress smoke, manifest and whitespace gates pass; and
+- an independent review finds no architecture, ownership, privacy,
+  concurrency, migration or regression blocker.
+
+Status: **GO / CLOSED** when all gates pass. Target schema is `1022`; Biblio
+Core is `2.3.0` and Biblio UI remains `0.13.0`. REST/UI are explicitly outside
+this foundation and continue as `WISH-API-01`. See
+`docs/66-wish-core-01-personal-wishlist-foundation.md`.

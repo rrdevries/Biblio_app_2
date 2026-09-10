@@ -23,6 +23,12 @@ enum FailureReason: string
     case PersonalReadingTruthContradiction =
         "personal_reading_truth_contradiction";
     case PersonalReadingTruthStale = "personal_reading_truth_stale";
+    case WishlistIntentConflict = "wishlist_intent_conflict";
+    case WishlistEntryNotAvailable = "wishlist_entry_not_available";
+    case WishlistWorkUnavailable = "wishlist_work_unavailable";
+    case WishlistEditionUnavailable = "wishlist_edition_unavailable";
+    case WishlistEntryIdCollisionExhausted =
+        "wishlist_entry_id_collision_exhausted";
     case PrivateNoteNotAvailable = "private_note_not_available";
     case PrivateNoteStale = "private_note_stale";
     case PrivateNoteReadingRoundUnavailable =

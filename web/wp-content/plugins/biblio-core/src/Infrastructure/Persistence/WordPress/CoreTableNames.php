@@ -62,6 +62,9 @@ final readonly class CoreTableNames
     private string $migrationPreservations;
     private string $personalWorkReadingLocks;
     private string $personalReadingTruths;
+    private string $wishlistWorkStates;
+    private string $wishlistEntries;
+    private string $wishlistEntryHistory;
 
     public function __construct(string $prefix)
     {
@@ -130,8 +133,11 @@ final readonly class CoreTableNames
             . "biblio_personal_work_reading_locks";
         $this->personalReadingTruths = $prefix
             . "biblio_personal_reading_truths";
+        $this->wishlistWorkStates = $prefix . "biblio_wishlist_work_states";
+        $this->wishlistEntries = $prefix . "biblio_wishlist_entries";
+        $this->wishlistEntryHistory = $prefix . "biblio_wishlist_entry_history";
 
-        foreach ($this->schema1021() as $tableName) {
+        foreach ($this->schema1022() as $tableName) {
             $this->assertSafe($tableName);
         }
         $this->assertSafe($this->nextReadingInsertTrigger);
@@ -551,6 +557,37 @@ final readonly class CoreTableNames
     public function schema1021(): array
     {
         return $this->schema1020();
+    }
+
+    public function wishlistWorkStates(): string
+    {
+        return $this->wishlistWorkStates;
+    }
+
+    public function wishlistEntries(): string
+    {
+        return $this->wishlistEntries;
+    }
+
+    public function wishlistEntryHistory(): string
+    {
+        return $this->wishlistEntryHistory;
+    }
+
+    /** @return list<string> */
+    public function schema1022Additions(): array
+    {
+        return [
+            $this->wishlistWorkStates,
+            $this->wishlistEntries,
+            $this->wishlistEntryHistory,
+        ];
+    }
+
+    /** @return list<string> */
+    public function schema1022(): array
+    {
+        return [...$this->schema1021(), ...$this->schema1022Additions()];
     }
 
     private function assertSafe(string $tableName): void

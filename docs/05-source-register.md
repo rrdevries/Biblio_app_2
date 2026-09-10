@@ -266,6 +266,27 @@ not a ReadingRound and migration provenance stays in MIG-FND. The supplied
 decision text is product authority; historical MIG-01/DATA-01 source snapshots
 and counts remain evidence only and are not current V1 truth.
 
+## Approved WISH-CORE-01 Personal Wishlist decision — 2026-09-10
+Status: `ACTUEEL`
+
+Canonicalized in:
+
+- `docs/01-functional-design.md` §7;
+- `docs/02-architecture.md` §35;
+- `docs/03-scope-and-deferred.md`;
+- `docs/04-terminology.md`;
+- `docs/06-testing-and-acceptance.md` §92;
+- `docs/60-mig-01-v1-mapping-and-reconciliation-design.md`;
+- `docs/62-mig-fnd-01-migration-ledger-foundation.md` §15;
+- `docs/66-wish-core-01-personal-wishlist-foundation.md`.
+
+The approved rule defines a private source-neutral Wishlist Entry as Work-only
+or Edition-specific, mutually exclusive per user + Work, with exact-add reuse,
+stable explicit Work-only→Edition refinement and conflict on reverse collapse.
+It is separate from Library ownership, acquisition, possession, Collections
+and Hierna lezen. The supplied decision text is product authority; no earlier
+snapshot or reported Wishlist count is current V1 truth.
+
 ## Authority rule
 
 Historical timestamps do not determine authority.

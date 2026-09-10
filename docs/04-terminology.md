@@ -146,6 +146,13 @@ not enough reliable information for a concrete ReadingRound. The exact states
 are `read_known_date_unknown`, `explicit_not_read` and `unknown`. It is not
 Library-, Edition-, Item- or migration-owned and stores no reading date.
 
+## Wishlist Entry / Verlanglijstitem
+Private, platform-wide intent owned by exactly one user and targeting exactly
+one Work. It is either Work-only, meaning the Edition is irrelevant, or
+Edition-specific for one exact Edition of that Work. These target forms are
+mutually exclusive per user + Work. It is not Library-owned, Item ownership,
+Gewenste aanwinst, Collection membership or Hierna-lezen entry.
+
 ## Acquisition gap
 A canonical-confirmed, relevant and already released Series member that is not
 content-covered in one specific Library. Wishes do not close the gap.
