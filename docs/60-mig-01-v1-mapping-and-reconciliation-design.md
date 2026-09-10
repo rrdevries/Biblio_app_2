@@ -219,9 +219,9 @@ read-registration, terwijl `readHistory` audit/compat-evidence blijft.
 ## 5. Actuele V2-target inventory
 
 MIG-FND-01 verhoogde runtime, migratieregister en schema health van `1017` naar
-`1018`; READ-MIG-01 en ARCH-MIG-01 hebben de lineaire baseline vervolgens naar
-`1019` en `1020` gebracht. Alle overige domeintargets hieronder behouden hun
-eerdere status.
+`1018`; READ-MIG-01, ARCH-MIG-01 en ASSESS-MIG-01 hebben de lineaire baseline
+vervolgens naar `1019`, `1020` en `1021` gebracht. Alle overige domeintargets
+hieronder behouden hun eerdere status.
 
 | Target | Ownership/scope | Kernconstraints | V2.001-status |
 |---|---|---|---|
@@ -239,8 +239,8 @@ eerdere status.
 | ExternalLoan | user | Work-scoped user-owned external source | actief foundation; full feature deferred |
 | ReadingRound | user | Work; active heeft precies Item of ExternalLoan; historical manual vereist einddatum | actief |
 | Private Note | user | Work, optioneel owner-matching round, timestamps/version | actief |
-| Rating / WrittenReview | user | Work, optioneel owner-/Work-matching round; eigen lifecycle | actief |
-| Assessment publication/readmodel | user source + Library publication | huidige Book Detail leest alleen Library-public contributions | actief public read; private migrated read ontbreekt |
+| Rating / WrittenReview | user | Work, optioneel owner-/Work-matching round; nullable business assessment time naast technische recordtijd | **actief source-neutraal historical target in schema 1021** |
+| Assessment publication/readmodel | user source + Library publication | afzonderlijke owner-private en Library-public Book Detail-projecties; dedup op source-ID | **actief; private read en public aggregate geïsoleerd** |
 | Hierna lezen | user | Work-based, optionele preferred source, manual order, duplicates toegestaan | actief; bronpopulatie 0 |
 | Item archive period | Library | Item state/history; native of preserved historical reason per periode | **actief source-neutraal target in schema 1020; geen semantische guessing** |
 | Metadata Hub evidence | platform/Library evidence | provider/user-observation source contexts zijn gesloten allowlists | actief, niet geschikt als generieke V1-preservationstore |
@@ -419,20 +419,19 @@ ReadingRound-link wordt alleen gezet als de source die expliciet draagt. De
 bron doet dat niet, dus alle 17 Notes blijven Work-scoped. Geen Libraryrol of
 publication wordt toegevoegd.
 
-Ratings schalen deterministisch van V1 `1..5` naar V2 `2..10` half-step units.
-Geen van de 15 ratings heeft een timestamp of expliciete round-link. Het
-bestaan van één ronde op hetzelfde boek is geen bewijs voor associatie. De
-review heeft wel een UTC-date, maar ook geen expliciete round-link. V1 kent
-geen Library-publicationconcept, dus alle gemigreerde assessments blijven
-private en unpublished.
+Ratings schalen deterministisch van bronwaarde `1..5` naar V2 `2..10`
+half-step units. MIG-01 heeft aangetoond dat historische assessments zonder
+betrouwbare assessmenttijd en zonder publicatie kunnen voorkomen. Concrete
+oude records of counts zijn geen actuele V1-waarheid. Een ReadingRound-link is
+alleen geldig wanneer de source later expliciet naar een owner-/Work-matching
+target is te herleiden; dezelfde Work of een nabije datum is geen bewijs.
 
-De huidige Book Detail-projectie leest alleen Library-public contributions en
-mag deze private historische data dus niet tonen. V2.001 vereist een
-owner-scoped readable projection voor de gemigreerde private assessments.
-Daarnaast is voor ratings een waarheidstrouw timestampcontract nodig: de
-migration-run-tijd mag hoogstens als technische importtijd worden vastgelegd,
-niet als inhoudelijke ratingdatum. Deze twee punten blokkeren cutover, maar
-activeren geen nieuwe write/publication-UI.
+ASSESS-MIG-01 sluit deze targetgap in schema 1021. Rating en WrittenReview
+bewaren nullable source-neutrale business time naast technische recordtijd en
+blijven default private/unpublished. Book Detail leest voor de actor een
+afzonderlijke ownerlijst en sluit eenzelfde source uit wanneer die al zichtbaar
+in de current-Library publicatielijst staat. Private Ratings tellen nooit mee in
+de Library aggregate. Nieuwe write/publication-UI blijft buiten scope.
 
 ## 11. Collections, Wishlist, Hierna lezen en Archive
 
@@ -785,7 +784,7 @@ volledig rapporteren zonder eerdere categorieën te verbergen.
 - verplichte `target_user_id` en `target_library_id` voor apply/write/resume;
 - IDENTITY-01-validatie van actieve bestaande V2 user, exact designated
   personal Library en actieve Owner/direct membership/context;
-- target schema version/health: de actuele lineaire Core-baseline `1020`, met
+- target schema version/health: de actuele lineaire Core-baseline `1021`, met
   MIG-FND-01 ledger `1018`, READ-MIG-01 `1019` en ARCH-MIG-01 `1020` gezond;
 - migration mode `dry-run|write|resume`;
 - optionele bestaande migration-run-ID voor resume/retry;
@@ -836,13 +835,13 @@ fixturemutatie of V1-write.
 | **RESOLVED by READ-MIG-01 — onbekende leesdatum/-status** | historische audit bewees read/date-unknown, unknown en explicit no; geen count is actuele V1-waarheid | schema 1019 Personal Reading Truth bewaart de drie user×Work states zonder fictieve ronde/datum en met ownerprojectie | actief source-neutraal target + MIG-FND participant; normale write-UI volgt gericht als READ-UI-01 | rijke history-management UI ja |
 | Item acquisition/local evidence | 77 acquisitions, 3 copy notes, 1 exemplar photo, 1 disposal | bronfeiten hebben geen actief target en mogen niet verdwijnen | minimale Item-data persistence/read of traceerbare actieve migration-evidence volgens bestaande ownershipgrens | specialist collector/cover ja |
 | **RESOLVED by ARCH-MIG-01 — historical archive reason** | historische audit bewees niet-mappable archive reasons; geen count of waarde is actuele V1-waarheid | schema 1020 bewaart archived state en per Item/per periode exact native of preserved historical zonder onware enum | actief source-neutraal target + MIG-FND participant; Core-historyread draagt het type, archived Book Detail-copy volgt gericht | volledige archive-managementuitbreiding ja |
-| Private migrated assessments leesbaar | 15 ratings, 1 review; V1 kent geen publication | huidige Book Detail toont alleen publicaties; publishing zou waarheid veranderen | owner-scoped read-only projection en unknown-rating-timebeleid | nieuwe writes/publication/moderation ja |
+| **RESOLVED by ASSESS-MIG-01 — private historical assessments** | historische audit bewees dat assessments zonder betrouwbare tijd/publicatie kunnen voorkomen; geen record of count is actuele V1-waarheid | schema 1021 bewaart nullable business time, optionele betrouwbare Round-link en private productdata zonder auto-publicatie | actief source-neutraal target + MIG-FND participant + owner-only Book Detail-projectie met source-ID-dedup | nieuwe writes/publication/moderation ja |
 | Migration evidence storage | alle bronpopulaties, plus deferred/quarantine | zonder durable ledger/payloadbewijs geen idempotency of no-loss proof | **MIG-FND-01 gerealiseerd in schema 1018** | generieke import-UI ja |
 | Open circulation settlement | 8 open rounds | preserved-only kan dagelijkse beëindiging blokkeren | alleen na Renée-besluit: minimale read/end lifecycle voor bestaande rounds | volledige lending ja |
 
-Migration evidence storage, Personal Reading Truth and historical archive
-reasons are no longer gaps; the remaining three domain targets are
-technical/product prerequisites. Open
+Migration evidence storage, Personal Reading Truth, historical archive reasons
+and private historical assessments are no longer gaps; the remaining Wishlist
+and Item-local-evidence targets are technical/product prerequisites. Open
 circulation remains first a product decision. Unknown taxonomy requires daarnaast een gereviewde
 migration allowlist/termset; dit is data-curation en geen toestemming voor
 automatische termcreatie.
@@ -851,9 +850,9 @@ automatische termcreatie.
 
 | Classificatie | Prerequisite |
 |---|---|
-| BLOCKS MIG-02 WRITES | basis Wishlist persistence; rating timestamp/import contract. MIG-FND-01 ledger/preservation, READ-MIG-01 Personal Reading Truth en ARCH-MIG-01 historical archive reasons zijn niet langer blockers in deze rij. |
-| BLOCKS FIRST FULL TRIAL IMPORT | Item acquisition/local evidence target; taxonomy mapping/termset voor 74 Book Types en overige gewenste labels; private assessment import/read boundary; circulation mapping na productbesluit |
-| BLOCKS FINAL CUTOVER | basis Wishlist view/add/remove; remaining concrete read-history migration; archived Item discoverability; private ratings/review readability; chosen treatment of open loans based on a newly designated source; complete zero-silent-drop reconciliation |
+| BLOCKS MIG-02 WRITES | basis Wishlist persistence. MIG-FND-01 ledger/preservation, READ-MIG-01 Personal Reading Truth, ARCH-MIG-01 historical archive reasons en ASSESS-MIG-01 private assessment preservation/read zijn niet langer blockers in deze rij. |
+| BLOCKS FIRST FULL TRIAL IMPORT | Item acquisition/local evidence target; taxonomy mapping/termset na actuele broninventarisatie; circulation mapping na productbesluit |
+| BLOCKS FINAL CUTOVER | basis Wishlist view/add/remove; remaining concrete read-history migration; archived Item discoverability; chosen treatment of open loans based on a newly designated source; complete zero-silent-drop reconciliation |
 | DOES NOT BLOCK MIGRATION | rich Goals/Home/Stats/Timeline/Audit UI; cover acquisition/management; Wishlist grouping; smart Collections; Authors/Series dedicated UI; new assessment writes/publication; full lending; general import UI; CAT-UI/QA-ADD human follow-up |
 
 ## 24. Product decisions voor Renée
@@ -880,7 +879,13 @@ automatische termcreatie.
    native worden; anders blijven de begrensde oorspronkelijke tekst en
    optionele oorspronkelijke code/value intact. MIG-FND bewaart provenance en
    levert de expliciet gevalideerde target Library; schema 1020 is actief.
-4. **Actieve/open loans.** Kies, na inventarisatie van een nieuw aangewezen
+4. **RESOLVED — private historical assessments.** ASSESS-MIG-01 bewaart
+   Rating en WrittenReview als afzonderlijke user×Work-productdata met nullable
+   `assessed_at`, technische recordtijd en optionele exact gemapte ReadingRound.
+   De MIG-FND-participant publiceert nooit automatisch; Book Detail biedt een
+   owner-only private projectie en dedupliceert tegen de zichtbare publicatie in
+   de exacte Library. Schema 1021 is actief.
+5. **Actieve/open loans.** Kies, na inventarisatie van een nieuw aangewezen
    actuele bron, of V2.001 ze alleen preserved toont, of
    dat bestaande rounds ook beëindigd moeten kunnen worden. Technisch
    aanbevolen voor dagelijkse continuïteit: het kleine read+end-contract uit
@@ -937,8 +942,10 @@ READ-MIG-01 heeft de unknown-date/status targetgap opgelost met normale
 source-neutrale Personal Reading Truth in schema 1019. ARCH-MIG-01 heeft de
 archive-reasongap opgelost met per Item/per periode native of preserved
 historical truth in schema 1020, zonder actuele V1-data te gebruiken. De
-huidige targetlaag voldoet nog niet aan de exitcriteria voor writes of cutover
-door de overige gaps in §22. MIG-FND-01 blijft de source-neutrale schema-1018
+ASSESS-MIG-01 target bewaart private historische Ratings/Reviews, nullable
+assessmenttijd en owner-read in schema 1021 zonder actuele V1-data te gebruiken.
+De huidige targetlaag voldoet nog niet aan de exitcriteria voor writes of
+cutover door de overige gaps in §22. MIG-FND-01 blijft de source-neutrale schema-1018
 ledger, transactionele recordboundary, reconciliation en traceability. Er is geen
 V1-parser, import, domeincleanup of broninhoudelijke mappingregel gebouwd.
 

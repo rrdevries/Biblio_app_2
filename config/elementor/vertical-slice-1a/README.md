@@ -11,7 +11,7 @@ Biblio Core.
 - WordPress: 7.0.2
 - PHP: 8.3.31
 - active theme: Twenty Twenty-Five 1.5
-- Biblio Core: 2.1.0, active
+- Biblio Core: 2.2.0, active
 - Elementor: 4.2.3, active
 - Elementor Pro: 4.2.2, active
 

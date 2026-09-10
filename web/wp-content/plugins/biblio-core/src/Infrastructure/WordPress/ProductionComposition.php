@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Biblio\Core\Infrastructure\WordPress;
 
 use Biblio\Core\Application\Assessments\{AssessmentQueryService,CorrectRatingReadingRoundService,CorrectReviewReadingRoundService,CreateRatingForReadingRoundService,CreateRatingForWorkService,CreateReviewForReadingRoundService,CreateReviewForWorkService,DeleteOwnRatingService,DeleteOwnReviewService,ModerateContributionPublicationService,MoveContributionPublicationService,PublicationService,PublishRatingToLibraryService,PublishReviewToLibraryService,RestoreContributionPublicationService,SourceContributionService,UpdateRatingValueService,UpdateReviewContentService,WithdrawContributionPublicationService};
-use Biblio\Core\Application\Assessments\Read\GetLibraryPublicAssessmentsService;
+use Biblio\Core\Application\Assessments\Read\{GetLibraryPublicAssessmentsService,GetOwnAssessmentsForWorkService};
 
 use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
 use Biblio\Core\Application\Catalog\AddLibraryItemService;
@@ -110,6 +110,7 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbNextReadingRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbNextReadingDiscoveryRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbWorkDiscoveryRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPublicationRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbOwnAssessmentReadRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbRatingRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbReviewRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbReadingRoundRepository;
@@ -333,13 +334,19 @@ final class ProductionComposition
             $libraryContexts,
             $publicationRepository
         );
+        $ownAssessments = new GetOwnAssessmentsForWorkService(
+            $authenticatedUser,
+            $libraryContexts,
+            new WpdbOwnAssessmentReadRepository($database, $tableNames)
+        );
         $catalogUiReads = new CatalogUiReadService(
             $authenticatedUser,
             $libraryContexts,
             new WpdbCatalogUiReadRepository($database, $tableNames),
             $libraryClassifications,
             $libraryCollections,
-            $libraryPublicAssessments
+            $libraryPublicAssessments,
+            $ownAssessments
         );
         $bibliographicRelationships = new BibliographicRelationshipQueryService(
             $authorRepository,

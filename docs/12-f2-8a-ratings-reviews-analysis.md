@@ -805,3 +805,18 @@ variants.
 
 **F2.8b can start without any further product decision.** It must remain within
 the documented Core scope and not expand into UI, Timeline or social features.
+
+## 20. ASSESS-MIG-01 source-neutral extension
+
+ASSESS-MIG-01 preserves this model rather than adding a legacy Assessment
+aggregate. Rating and WrittenReview remain separate user-owned sources on Work,
+with their existing optional owner/Work-matching ReadingRound relation and
+independent publication lifecycle. Schema 1021 adds nullable `assessed_at` as
+business time beside technical `created_at`/`updated_at`. Normal V2 creation
+sets it to now; historical recording accepts a known instant or NULL. A NULL is
+never replaced with import/export time and no missing round is inferred.
+
+The owner read is a separate server-side Work projection used by Book Detail.
+It excludes a source already active and visibly published in the current
+Library, by source identity, while the B7 public list and aggregate remain
+unchanged. See `docs/65-assess-mig-01-historical-assessments.md`.

@@ -1,5 +1,10 @@
 # READ-MIG-01 — Personal Reading Truth
 
+> ASSESS-MIG-01 cross-reference: a private historical assessment is still a
+> separate Rating or WrittenReview source. It does not create or alter
+> PersonalReadingTruth and does not fabricate a ReadingRound or reading date.
+> See `docs/65-assess-mig-01-historical-assessments.md`.
+
 Status: **GO / CLOSED** after the recorded gates and independent review pass.
 
 ## 1. Product and ownership contract

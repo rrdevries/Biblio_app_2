@@ -7,6 +7,7 @@ namespace Biblio\Core\Tests\Integration;
 use Biblio\Core\Application\Identity\PersonalMigrationTargetInvalid;
 use Biblio\Core\Application\Identity\PersonalMigrationTarget;
 use Biblio\Core\Application\Catalog\HistoricalItemArchiveRecorder;
+use Biblio\Core\Application\Assessments\HistoricalAssessmentRecorder;
 use Biblio\Core\Application\Migration\BeginMigrationRunService;
 use Biblio\Core\Application\Migration\CommitMigrationRecordService;
 use Biblio\Core\Application\Migration\MappingDisposition;
@@ -25,11 +26,14 @@ use Biblio\Core\Application\Migration\MigrationTraceabilityQuery;
 use Biblio\Core\Application\Migration\ObserveSourceRecordService;
 use Biblio\Core\Application\Migration\QuarantineReason;
 use Biblio\Core\Application\Reading\PersonalReadingTruthRecorder;
+use Biblio\Core\Assessments\{AssessmentClock,RatingId,RatingIdGenerator,RatingNotAvailable,RatingValue,ReviewContent,ReviewId,ReviewIdGenerator,ReviewNotAvailable};
 use Biblio\Core\Catalog\{Edition,EditionId,Item,ItemArchiveReasonKind,ItemId,ItemStatus,PreservedHistoricalArchiveReason,Work,WorkId};
 use Biblio\Core\Exception\ConflictException;
 use Biblio\Core\Exception\ValidationException;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbMigrationLedgerRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbRatingRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbReviewRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbCollectionRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbEditionRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbItemArchiveRepository;
@@ -45,6 +49,7 @@ use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Reading\PersonalReadingTruthClock;
 use Biblio\Core\Reading\PersonalReadingTruthContradiction;
 use Biblio\Core\Reading\PersonalReadingTruthState;
+use Biblio\Core\Reading\ReadingRoundId;
 use DateTimeImmutable;
 use DateTimeZone;
 use RuntimeException;
@@ -76,6 +81,29 @@ final class FoundationPersonalReadingTruthClock implements PersonalReadingTruthC
             new DateTimeZone("UTC")
         );
     }
+}
+
+final class FoundationAssessmentClock implements AssessmentClock
+{
+    public function now(): DateTimeImmutable
+    {
+        return new DateTimeImmutable(
+            "2026-09-10 14:00:00.123456",
+            new DateTimeZone("UTC")
+        );
+    }
+}
+
+final class FoundationRatingIds implements RatingIdGenerator
+{
+    private int $next = 1;
+    public function next(): RatingId { return new RatingId("migration-rating-" . $this->next++); }
+}
+
+final class FoundationReviewIds implements ReviewIdGenerator
+{
+    private int $next = 1;
+    public function next(): ReviewId { return new ReviewId("migration-review-" . $this->next++); }
 }
 
 final class MigrationFoundationTest extends PersistenceIntegrationTestCase
@@ -648,6 +676,247 @@ final class MigrationFoundationTest extends PersistenceIntegrationTestCase
             MigrationDisposition::Quarantined,
             $malformedOutcome->disposition()
         );
+    }
+
+    public function testHistoricalAssessmentsUseMigFndWithoutPublicationOrInventedTime(): void
+    {
+        [$begin, $observe, $commit, , $target, $ledger] = $this->foundation(
+            "historical-assessments"
+        );
+        $run = $this->beginApply(
+            $begin,
+            $target,
+            "snapshot-historical-assessments",
+            "b"
+        );
+        $workId = new WorkId("migration-assessment-work");
+        self::assertSame(1, $this->database->insert(
+            $this->tableNames->works(),
+            [
+                "work_id" => $workId->value(),
+                "work_title" => "Synthetic assessment Work",
+            ]
+        ), $this->database->last_error);
+        $ratings = new WpdbRatingRepository($this->database, $this->tableNames);
+        $reviews = new WpdbReviewRepository($this->database, $this->tableNames);
+        $recorder = new HistoricalAssessmentRecorder(
+            new WordPressPlatformUserDirectory(),
+            new WpdbWorkRepository($this->database, $this->tableNames),
+            new WpdbReadingRoundRepository($this->database, $this->tableNames),
+            $ratings,
+            $reviews,
+            new FoundationRatingIds(),
+            new FoundationReviewIds(),
+            new FoundationAssessmentClock()
+        );
+        $otherWorkId = new WorkId("migration-assessment-other-work");
+        self::assertSame(1, $this->database->insert(
+            $this->tableNames->works(),
+            [
+                "work_id" => $otherWorkId->value(),
+                "work_title" => "Synthetic other assessment Work",
+            ]
+        ), $this->database->last_error);
+        $this->insertCompletedRound(
+            "migration-assessment-wrong-owner-round",
+            new UserId("999999"),
+            $workId
+        );
+        $this->insertCompletedRound(
+            "migration-assessment-wrong-work-round",
+            $target->userId(),
+            $otherWorkId
+        );
+        $assessmentTransactions = new WpdbTransactionManager($this->database);
+        try {
+            $assessmentTransactions->run(static fn () =>
+                $recorder->recordRatingForOwner(
+                    $target->userId(),
+                    $workId,
+                    new ReadingRoundId("migration-assessment-wrong-owner-round"),
+                    RatingValue::fromStars(4.0),
+                    null
+                )
+            );
+            self::fail("A ReadingRound owned by another user was accepted.");
+        } catch (RatingNotAvailable) {
+            self::assertSame(0, $this->countRows($this->tableNames->ratings()));
+        }
+        try {
+            $assessmentTransactions->run(static fn () =>
+                $recorder->recordReviewForOwner(
+                    $target->userId(),
+                    $workId,
+                    new ReadingRoundId("migration-assessment-wrong-work-round"),
+                    ReviewContent::fromString("Synthetic rejected review"),
+                    null
+                )
+            );
+            self::fail("A ReadingRound for another Work was accepted.");
+        } catch (ReviewNotAvailable) {
+            self::assertSame(0, $this->countRows($this->tableNames->reviews()));
+        }
+        $ratingObservation = $this->observation(
+            $observe,
+            $run,
+            "rating",
+            "assessment/rating-unknown-time"
+        );
+
+        $ratingOutcome = $commit->commit(
+            $run,
+            $ratingObservation,
+            function () use ($recorder, $target, $workId): MigrationRecordOutcome {
+                $rating = $recorder->recordRatingForOwner(
+                    $target->userId(),
+                    $workId,
+                    null,
+                    RatingValue::fromStars(4.5),
+                    null
+                );
+                return MigrationRecordOutcome::mapped([
+                    new MigrationTargetMapping(
+                        "rating",
+                        $rating->id()->value(),
+                        MappingDisposition::Created
+                    ),
+                ]);
+            }
+        );
+        $ratingMapping = $ratingOutcome->mappings()[0];
+        $rating = $ratings->findForUser(
+            new RatingId($ratingMapping->targetId()),
+            $target->userId()
+        );
+        self::assertNotNull($rating);
+        self::assertNull($rating->assessedAt());
+        self::assertSame(
+            "2026-09-10 14:00:00.123456",
+            $rating->createdAt()->format("Y-m-d H:i:s.u")
+        );
+
+        $known = new DateTimeImmutable(
+            "2014-03-02 11:12:13.654321",
+            new DateTimeZone("UTC")
+        );
+        $reviewObservation = $this->observation(
+            $observe,
+            $run,
+            "written_review",
+            "assessment/review-known-time"
+        );
+        $reviewOutcome = $commit->commit(
+            $run,
+            $reviewObservation,
+            function () use ($recorder, $target, $workId, $known): MigrationRecordOutcome {
+                $review = $recorder->recordReviewForOwner(
+                    $target->userId(),
+                    $workId,
+                    null,
+                    ReviewContent::fromString("Synthetic historical review"),
+                    $known
+                );
+                return MigrationRecordOutcome::mapped([
+                    new MigrationTargetMapping(
+                        "written_review",
+                        $review->id()->value(),
+                        MappingDisposition::Created
+                    ),
+                ]);
+            }
+        );
+        $review = $reviews->findForUser(
+            new ReviewId($reviewOutcome->mappings()[0]->targetId()),
+            $target->userId()
+        );
+        self::assertEquals($known, $review?->assessedAt());
+        self::assertNotSame(
+            $review?->createdAt()->format("Y-m-d H:i:s.u"),
+            $review?->assessedAt()?->format("Y-m-d H:i:s.u")
+        );
+        self::assertSame(
+            0,
+            $this->countRows($this->tableNames->contributionPublications())
+        );
+        self::assertCount(1, (new MigrationTraceabilityQuery($ledger))->targetsForSource(
+            $run,
+            "rating",
+            "assessment/rating-unknown-time"
+        ));
+
+        $retryWrites = 0;
+        try {
+            $commit->commit(
+                $run,
+                $ratingObservation,
+                static function () use (&$retryWrites): MigrationRecordOutcome {
+                    ++$retryWrites;
+                    return MigrationRecordOutcome::failed("unexpected_retry", false);
+                }
+            );
+            self::fail("A committed assessment observation was retried.");
+        } catch (ValidationException) {
+            self::assertSame(0, $retryWrites);
+        }
+
+        $rollbackObservation = $this->observation(
+            $observe,
+            $run,
+            "rating",
+            "assessment/rollback"
+        );
+        $rollbackWorkId = new WorkId("migration-assessment-rollback-work");
+        self::assertSame(1, $this->database->insert(
+            $this->tableNames->works(),
+            [
+                "work_id" => $rollbackWorkId->value(),
+                "work_title" => "Synthetic rollback assessment Work",
+            ]
+        ), $this->database->last_error);
+        try {
+            $commit->commit(
+                $run,
+                $rollbackObservation,
+                function () use ($recorder, $target, $rollbackWorkId): MigrationRecordOutcome {
+                    $recorder->recordRatingForOwner(
+                        $target->userId(),
+                        $rollbackWorkId,
+                        null,
+                        RatingValue::fromStars(3.0),
+                        null
+                    );
+                    throw new RuntimeException("synthetic assessment rollback");
+                }
+            );
+            self::fail("Synthetic assessment rollback was hidden.");
+        } catch (RuntimeException $exception) {
+            self::assertSame("synthetic assessment rollback", $exception->getMessage());
+        }
+        self::assertSame(1, $this->countRows($this->tableNames->ratings()));
+        self::assertSame(2, $this->countRows($this->tableNames->migrationTargetMappings()));
+
+        $malformed = $this->observation(
+            $observe,
+            $run,
+            "rating",
+            "assessment/malformed"
+        );
+        $malformedOutcome = $commit->commit(
+            $run,
+            $malformed,
+            static function (): MigrationRecordOutcome {
+                try {
+                    RatingValue::fromStars(4.2);
+                } catch (ValidationException) {
+                    return MigrationRecordOutcome::quarantined(
+                        QuarantineReason::UnsupportedTargetRepresentation,
+                        "Synthetic historical rating is not representable."
+                    );
+                }
+                self::fail("Malformed assessment was not quarantined.");
+            }
+        );
+        self::assertSame(MigrationDisposition::Quarantined, $malformedOutcome->disposition());
     }
 
     private function beginApply(

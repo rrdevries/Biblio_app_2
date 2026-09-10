@@ -1689,6 +1689,21 @@ Maximum one unlinked Review per user + Work.
 
 Each Rating/Review can remain private or be published independently.
 
+Historical and current assessments use the same source-neutral user × Work
+entities. `assessed_at` is the nullable business instant at which the user
+actually assessed the Work; `created_at` and `updated_at` remain technical V2
+record times. A historical assessment with unknown time keeps `assessed_at`
+NULL. Import time and export time never fill that unknown value. A missing
+ReadingRound relation likewise remains NULL; no last, active or migration-made
+round is inferred.
+
+Book Detail may show the current owner an explicitly separate list of their own
+assessments that are not visibly published in the current Library. This owner
+list is Work-scoped and server-authorized. A source with an active, visible
+publication in that exact Library is omitted from the owner list to prevent a
+double presentation. It remains private in every other Library unless it also
+has an explicit publication there.
+
 Private contribution requires no Library context.
 
 Publication requires:
@@ -1704,6 +1719,7 @@ The contribution remains user-owned.
 Personal average uses the user's own valid ratings.
 
 A Library public average uses only visible ratings published to that Library.
+Private unpublished Ratings never contribute to that average.
 
 ## Moderation
 

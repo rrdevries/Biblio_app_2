@@ -34,17 +34,20 @@ copies are never presumed current.
 MIG-FND-01 has implemented the source-neutral migration ledger, preservation,
 quarantine, idempotency, target locking, transaction and reconciliation
 foundation introduced in schema `1018`. READ-MIG-01 adds normal source-neutral
-Personal Reading Truth and advances the current schema to `1019`; IDENTITY-01
-remains the mandatory explicit personal target validator. The mapping design
-is still **MIGRATION DESIGN BLOCKED BY REMAINING DOMAIN TARGET GAPS**:
-Wishlist, Item local evidence and private migrated assessment reads still need
-bounded targets, while open circulation still needs Renée's cutover decision.
-ARCH-MIG-01 has closed the legacy archive-reason target gap in schema `1020`.
+Personal Reading Truth in schema `1019`; ARCH-MIG-01 preserves historical
+archive reasons in schema `1020`; ASSESS-MIG-01 adds nullable assessment time,
+a private historical Rating/Review recorder and an owner-only Book Detail read
+in schema `1021`. IDENTITY-01 remains the mandatory explicit personal target
+validator. The mapping design is still **MIGRATION DESIGN BLOCKED BY REMAINING
+DOMAIN TARGET GAPS**: Wishlist and Item local evidence still need bounded
+targets, while open circulation still needs Renée's cutover decision.
 No V1 parser, source profiling, import,
 domain cleanup or production-data mutation is included. See
 `docs/60-mig-01-v1-mapping-and-reconciliation-design.md` and
 `docs/62-mig-fnd-01-migration-ledger-foundation.md` plus
-`docs/63-read-mig-01-personal-reading-truth.md`.
+`docs/63-read-mig-01-personal-reading-truth.md`,
+`docs/64-arch-mig-01-historical-archive-reasons.md` and
+`docs/65-assess-mig-01-historical-assessments.md`.
 
 ## Product model
 
@@ -484,7 +487,7 @@ Status: **Implemented**
 
 - the formal supported schema history starts at baseline version `1000`;
 - internal Fase-0 spike versions 1–5 are not production upgrade paths;
-- product `v2.001`, plugin/package `2.1.0` and schema version are independent;
+- product `v2.001`, plugin/package `2.2.0` and schema version are independent;
 - baseline installation requires an empty Core schema;
 - future schema changes use ordered forward migration steps;
 - version bump occurs only after the step postcondition succeeds;
@@ -2571,3 +2574,26 @@ archived catalog hits remain status-only and archived Book Detail is still a
 focused follow-up gap. Biblio UI remains `0.12.0`; Biblio Core plugin remains
 `2.1.0`. No current V1 source, old reason value or historical count was used.
 Detailed evidence: `docs/64-arch-mig-01-historical-archive-reasons.md`.
+
+### ASSESS-MIG-01 — private historical assessments
+
+Status: **GO / CLOSED** after recorded gates and independent review.
+
+Schema `1021` adds nullable `assessed_at` business time to Rating and
+WrittenReview beside technical `created_at`/`updated_at`. Normal writes still
+use the current assessment instant; a historical write may preserve a known
+instant or truthful NULL. Existing supported V2 sources are backfilled from
+their previously equivalent creation instant. No import/export time is used as
+historical user time.
+
+`HistoricalAssessmentRecorder` writes private user×Work product sources inside
+MIG-FND's transaction, validates an optional exact owner/Work ReadingRound and
+has no publication path or Library fallback. Book Detail now carries a separate
+owner-only `own_not_visible` list. It excludes a source already active+visible
+in that Library by source identity, while B7 public list, cursor and aggregate
+remain unchanged. The UI shows known/unknown assessment time without internal
+IDs or technical times and adds no mutations.
+
+Biblio Core is `2.2.0`; Biblio UI is `0.13.0`. No current V1 source, old
+assessment or count was used. Detailed evidence:
+`docs/65-assess-mig-01-historical-assessments.md`.

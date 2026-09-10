@@ -50,6 +50,7 @@ final readonly class CoreSchemaHealthChecker
             1018 => $this->inspectTables($this->tableNames->schema1018(), true, 1018),
             1019 => $this->inspectTables($this->tableNames->schema1019(), true, 1019),
             1020 => $this->inspectTables($this->tableNames->schema1020(), true, 1020),
+            1021 => $this->inspectTables($this->tableNames->schema1021(), true, 1021),
             default => throw new CoreSchemaMigrationException(
                 "No explicit Biblio Core schema-health contract exists for "
                 . "schema version {$expectedVersion}."
@@ -225,6 +226,15 @@ final readonly class CoreSchemaHealthChecker
             [$this->tableNames->itemArchivePeriods()],
             true,
             1020
+        );
+    }
+
+    public function inspectSchema1021AssessmentTimes(): CoreSchemaHealth
+    {
+        return $this->inspectTables(
+            [$this->tableNames->ratings(), $this->tableNames->reviews()],
+            true,
+            1021
         );
     }
 
@@ -650,6 +660,11 @@ final readonly class CoreSchemaHealthChecker
                 $this->tableNames->itemArchivePeriods(),
                 "archive_reason_kind"
             );
+        $assessmentTimeSchema1021 = $schemaVersion >= 1021
+            || (
+                $this->columnExists($this->tableNames->ratings(), "assessed_at")
+                && $this->columnExists($this->tableNames->reviews(), "assessed_at")
+            );
         $id = [
             "type" => "varchar(191)",
             "nullable" => "NO",
@@ -1035,6 +1050,9 @@ final readonly class CoreSchemaHealthChecker
                 "rating_id" => $id, "user_id" => $id, "work_id" => $id,
                 "reading_round_id" => $nullableId,
                 "rating_half_units" => ["type" => "tinyint(3) unsigned", "nullable" => "NO"],
+                ...($assessmentTimeSchema1021 ? [
+                    "assessed_at" => ["type" => "datetime(6)", "nullable" => "YES"],
+                ] : []),
                 "created_at" => ["type" => "datetime(6)", "nullable" => "NO"],
                 "updated_at" => ["type" => "datetime(6)", "nullable" => "NO"],
                 "rating_version" => ["type" => "bigint(20) unsigned", "nullable" => "NO"],
@@ -1046,6 +1064,9 @@ final readonly class CoreSchemaHealthChecker
                 "review_id" => $id, "user_id" => $id, "work_id" => $id,
                 "reading_round_id" => $nullableId,
                 "review_content" => ["type" => "text", "nullable" => "NO"],
+                ...($assessmentTimeSchema1021 ? [
+                    "assessed_at" => ["type" => "datetime(6)", "nullable" => "YES"],
+                ] : []),
                 "created_at" => ["type" => "datetime(6)", "nullable" => "NO"],
                 "updated_at" => ["type" => "datetime(6)", "nullable" => "NO"],
                 "review_version" => ["type" => "bigint(20) unsigned", "nullable" => "NO"],

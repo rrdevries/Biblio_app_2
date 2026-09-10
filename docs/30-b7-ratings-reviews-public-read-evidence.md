@@ -1,5 +1,10 @@
 # 30 — B7 Ratings & Reviews public read foundation
 
+> ASSESS-MIG-01 note: schema 1021 and Book Detail add a separate owner-only
+> `own_not_visible` projection. This does not change this B7 public route,
+> visibility rules, cursor or aggregate; unpublished private Ratings remain
+> excluded. See `docs/65-assess-mig-01-historical-assessments.md`.
+
 Status: **GO / CLOSED**
 
 Date: 2026-09-03

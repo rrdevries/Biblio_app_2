@@ -192,3 +192,15 @@ No current V1 source, old count or concrete historical reason was used: all
 integration fixtures are synthetic. Any later source-dependent run still needs
 a current export explicitly designated and pinned by Renée. See
 `docs/64-arch-mig-01-historical-archive-reasons.md`.
+
+## 14. ASSESS-MIG-01 domain participant
+
+ASSESS-MIG-01 adds source-neutral `HistoricalAssessmentRecorder` methods for a
+private Rating or WrittenReview. They run inside the transaction already owned
+by `CommitMigrationRecordService`, validate the explicit active target user,
+existing Work and any supplied owner/Work-matching ReadingRound, and accept
+nullable business assessment time independently from technical record time.
+They never create a ContributionPublication. MIG-FND retains observation,
+mapping, retry, rollback and quarantine provenance; assessment content remains
+real owner-readable product data. Synthetic fixtures prove this contract in
+schema 1021. See `docs/65-assess-mig-01-historical-assessments.md`.

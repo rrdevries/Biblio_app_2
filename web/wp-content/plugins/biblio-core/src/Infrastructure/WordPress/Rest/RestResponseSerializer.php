@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Infrastructure\WordPress\Rest;
 
-use Biblio\Core\Application\Assessments\Read\{PublicAssessmentKind,PublicAssessmentPage,PublicAssessmentView};
+use Biblio\Core\Application\Assessments\Read\{OwnAssessmentKind,OwnAssessmentView,PublicAssessmentKind,PublicAssessmentPage,PublicAssessmentView};
 use Biblio\Core\Application\Catalog\Read\CatalogActiveReadingRoundView;
 use Biblio\Core\Application\Catalog\Read\CatalogItemCapabilities;
 use Biblio\Core\Application\Catalog\Read\CatalogItemCardView;
@@ -35,6 +35,7 @@ use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Reading\ReadingDate;
 use Biblio\Core\Reading\ReadingRound;
 use LogicException;
+use DateTimeImmutable;
 use DateTimeZone;
 
 final readonly class RestResponseSerializer
@@ -319,7 +320,8 @@ final readonly class RestResponseSerializer
                 $detail->collections()
             ),
             "assessments" => $this->assessmentProjection(
-                $detail->assessments()
+                $detail->assessments(),
+                $detail->ownAssessments()
             ),
             "item_status" => $detail->itemStatus()->value,
             "reading" => $this->readingSummary($detail->reading()),
@@ -330,8 +332,14 @@ final readonly class RestResponseSerializer
         ];
     }
 
-    /** @return array<string, mixed> */
-    private function assessmentProjection(PublicAssessmentPage $page): array
+    /**
+     * @param list<OwnAssessmentView> $own
+     * @return array<string, mixed>
+     */
+    private function assessmentProjection(
+        PublicAssessmentPage $page,
+        array $own
+    ): array
     {
         $aggregate = $page->aggregate();
 
@@ -349,7 +357,37 @@ final readonly class RestResponseSerializer
                 : $this->publicAssessmentCursorCodec()->encode(
                     $page->nextCursor()
                 ),
+            "own_not_visible" => array_map(
+                $this->ownAssessment(...),
+                $own
+            ),
         ];
+    }
+
+    /** @return array<string, mixed> */
+    private function ownAssessment(OwnAssessmentView $assessment): array
+    {
+        $base = [
+            "type" => $assessment->kind()->value,
+            "assessed_at" => $assessment->assessedAt() === null
+                ? null
+                : $this->instant($assessment->assessedAt()),
+            "reading_round_linked" => $assessment->readingRoundLinked(),
+        ];
+
+        if ($assessment->kind() === OwnAssessmentKind::Rating) {
+            return $base + ["rating" => $assessment->rating()?->stars()];
+        }
+
+        return $base + [
+            "review_html" => $assessment->escapedReviewText(),
+        ];
+    }
+
+    private function instant(DateTimeImmutable $instant): string
+    {
+        return $instant->setTimezone(new DateTimeZone("UTC"))
+            ->format("Y-m-d\\TH:i:s.u\\Z");
     }
 
     /** @return array<string, list<array<string, string>>> */

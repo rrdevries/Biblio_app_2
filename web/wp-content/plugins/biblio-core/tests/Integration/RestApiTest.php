@@ -1473,6 +1473,7 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             "contributions" => [],
             "aggregate" => ["average" => null, "voter_count" => 0],
             "next_cursor" => null,
+            "own_not_visible" => [],
         ], $detail["assessments"]);
         self::assertSame("not_read", $detail["reading"]["status"]);
         self::assertNull($detail["active_reading_round"]);

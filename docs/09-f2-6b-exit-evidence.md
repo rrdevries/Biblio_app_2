@@ -1,5 +1,11 @@
 # 09 — F2.6b exit evidence
 
+> ASSESS-MIG-01 cross-reference: historical Rating/WrittenReview recording may
+> omit `reading_round_id`. When supplied, the source-neutral recorder accepts
+> only an existing Round for the exact owner and Work; it never infers the
+> latest/active Round or creates one. ReadingRound lifecycle and history remain
+> unchanged. See `docs/65-assess-mig-01-historical-assessments.md`.
+
 Status: **GO**
 
 Scope: Biblio V2 v2.001, ADR-007 ReadingRound lifecycle and historical truth.

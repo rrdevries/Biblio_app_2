@@ -1,5 +1,12 @@
 # 58 — BOOK-API-03 Book Detail Ratings & Reviews projection
 
+> ASSESS-MIG-01 extension: Book Detail now also carries a separate strict
+> `own_not_visible` list for the authenticated owner's Work-scoped sources that
+> are not active+visible publications in the current Library. Source-identity
+> exclusion prevents double display. The established public contribution page,
+> aggregate and cursor remain unchanged. See
+> `docs/65-assess-mig-01-historical-assessments.md`.
+
 Status: **GO / CLOSED**
 
 Date: 2026-09-08

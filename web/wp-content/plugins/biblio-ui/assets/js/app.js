@@ -304,6 +304,7 @@ function assertDetailAssessments(assessments) {
             "contributions",
             "aggregate",
             "next_cursor",
+            "own_not_visible",
         ])
         || !Array.isArray(assessments.contributions)
         || !assessments.contributions.every((contribution) => {
@@ -362,6 +363,37 @@ function assertDetailAssessments(assessments) {
                 && assessments.next_cursor.length > 0
             )
         )
+        || !Array.isArray(assessments.own_not_visible)
+        || !assessments.own_not_visible.every((assessment) => {
+            if (
+                !isRecord(assessment)
+                || !(
+                    assessment.assessed_at === null
+                    || isPublicAssessmentTimestamp(assessment.assessed_at)
+                )
+                || typeof assessment.reading_round_linked !== "boolean"
+            ) {
+                return false;
+            }
+
+            if (assessment.type === "rating") {
+                return hasExactFields(assessment, [
+                    "type",
+                    "assessed_at",
+                    "reading_round_linked",
+                    "rating",
+                ]) && isPublicAssessmentRating(assessment.rating);
+            }
+
+            return assessment.type === "review"
+                && hasExactFields(assessment, [
+                    "type",
+                    "assessed_at",
+                    "reading_round_linked",
+                    "review_html",
+                ])
+                && typeof assessment.review_html === "string";
+        })
     ) {
         throw new TypeError("The Biblio Item assessments contract is invalid.");
     }

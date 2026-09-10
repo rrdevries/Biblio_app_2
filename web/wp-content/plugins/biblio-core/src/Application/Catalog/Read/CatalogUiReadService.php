@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Biblio\Core\Application\Catalog\Read;
 
 use Biblio\Core\Application\Assessments\Read\GetLibraryPublicAssessmentsService;
+use Biblio\Core\Application\Assessments\Read\GetOwnAssessmentsForWorkService;
 use Biblio\Core\Application\Identity\AuthenticatedUser;
 use Biblio\Core\Application\Library\LibraryContextQueryService;
 use Biblio\Core\Application\Library\LibraryContextView;
@@ -22,7 +23,8 @@ final readonly class CatalogUiReadService
         private CatalogUiReadRepository $repository,
         private LibraryClassificationQueryService $classifications,
         private LibraryCollectionQueryService $collections,
-        private GetLibraryPublicAssessmentsService $publicAssessments
+        private GetLibraryPublicAssessmentsService $publicAssessments,
+        private GetOwnAssessmentsForWorkService $ownAssessments
     ) {
     }
 
@@ -93,6 +95,10 @@ final readonly class CatalogUiReadService
             $libraryId,
             $record->workId()
         );
+        $ownAssessments = $this->ownAssessments->notVisibleInLibrary(
+            $libraryId,
+            $record->workId()
+        );
 
         $unknown = CatalogTextValue::unknown();
 
@@ -117,6 +123,7 @@ final readonly class CatalogUiReadService
             $classification,
             $collections,
             $assessments,
+            $ownAssessments,
             $record->itemStatus(),
             new CatalogReadingSummary(
                 $record->readingStatus(),

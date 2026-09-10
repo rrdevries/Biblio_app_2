@@ -399,8 +399,8 @@ Biblio Core owns versioning and migrations for its Core tables. MariaDB DDL is n
 
 The formally supported Core schema history starts at baseline version `1000`.
 The earlier internal spike versions 1–5 are not production migration sources.
-Product version (`v2.001`), Core plugin/package version (`2.1.0`) and database
-schema version are independent. Plugin/package version `2.1.0` expects formal
+Product version (`v2.001`), Core plugin/package version (`2.2.0`) and database
+schema version are independent. Plugin/package version `2.2.0` expects formal
 schema baseline `1000`.
 
 A fresh baseline installation is allowed only on an empty Core schema.
@@ -439,7 +439,7 @@ lifecycles.
 
 These constraints require no schema migration: they align public construction
 and hydration with the already formalized baseline. Product version `v2.001`,
-plugin/package version `2.1.0` and schema baseline `1000` remain independent.
+plugin/package version `2.2.0` and schema baseline `1000` remain independent.
 
 No source FK uses cascade-delete in a way that removes personal ReadingRound history when a physical source changes or ends.
 
@@ -995,8 +995,27 @@ for the exact Library and Work, requires active Library Item presence, and
 orders by publication update time plus publication ID. Item detail serializes
 the established public contribution DTOs, aggregate and opaque cursor without
 exposing source, owner, ReadingRound, publication or moderation internals.
-Private assessment reads and all assessment mutations remain separate Core
-boundaries.
+ASSESS-MIG-01 extends this composition with a second, explicitly separate
+owner projection. `GetOwnAssessmentsForWorkService` resolves the authenticated
+user and reauthorizes the same explicit Library Context before a user + Work
+query. It returns only sources without an active, visible publication in that
+exact Library. Deduplication is by Rating/Review source identity in SQL, never
+by content. Public DTOs and their aggregate remain unchanged.
+
+Schema 1021 adds nullable `assessed_at` to Rating and WrittenReview. Domain
+creation writes the current business instant, while the source-neutral
+`historical()` factories accept a known instant or NULL independently from
+technical `created_at`/`updated_at`. The 1020→1021 migration backfills existing
+supported native V2 rows from `created_at`, because before the historical
+write boundary every supported create assigned both meanings at the same
+instant. The retry repeats that pre-version backfill after both columns exist,
+so interruption between ALTER and backfill is safe. New historical NULLs are
+possible only after schema version 1021 is installed and are never backfilled.
+
+`HistoricalAssessmentRecorder` is a non-transaction-owning MIG-FND participant.
+It validates the explicit active owner, Work and optional exact owner/Work
+ReadingRound, then writes one private Rating or WrittenReview. It has no
+publication dependency, Library fallback, parser or current-actor fallback.
 
 ## 22. F2.12 WordPress REST adapter boundary
 

@@ -318,6 +318,13 @@ Acceptance:
 - private contributions need no Library;
 - publication requires one explicit active Library context with active Item of Work;
 - publication never silently duplicates across Libraries;
+- historical assessment time may be known or NULL independently of technical
+  creation/import time;
+- a missing historical ReadingRound link remains absent and a supplied link
+  must match both owner and Work;
+- Book Detail exposes private/unpublished assessments only to their owner and
+  omits an own source already visibly published in the current Library;
+- private unpublished Ratings never enter the Library aggregate;
 - Library moderator cannot edit another user's text;
 - Notes always private.
 
@@ -2988,3 +2995,27 @@ The authorized Core history contract carries the distinction; a user-visible
 archived Book Detail reason is a focused follow-up because archived Book Detail
 is not currently a reachable reason surface. See
 `docs/64-arch-mig-01-historical-archive-reasons.md`.
+
+## 91. ASSESS-MIG-01 historical assessments
+
+ASSESS-MIG-01 is accepted when schema 1020 upgrades additively and retry-safely
+to healthy 1021; Rating and WrittenReview can preserve a nullable business
+assessment time distinct from technical record time; normal V2 writes still
+set both instants to now; and existing native V2 rows receive their previously
+equivalent creation instant without destructive reinterpretation.
+
+The owner-only Book Detail projection must prove private known/unknown-time,
+rating-only, review-only, combined and optional-round sources; no cross-user or
+cross-Library leakage; source-ID deduplication against an own visible current-
+Library publication; unchanged public list/aggregate/cursor behavior; and no
+technical timestamp in the user contract. The MIG-FND participant must prove
+observation, private product write, mapping, rollback, retry and quarantine in
+one transaction without creating any publication. Wrong-owner or wrong-Work
+ReadingRounds fail closed.
+
+Only synthetic fixtures may be used. No historical snapshot, DATA-01 copy,
+earlier `/data/`, old concrete assessment or old count is current V1 truth.
+Status is **GO / CLOSED** only after all Core, schema, publication, Book Detail,
+ReadingRound, PersonalReadingTruth, MIG-FND, frontend, syntax, PHPStan,
+Composer/platform, WordPress smoke, manifest, whitespace and independent-review
+gates pass. See `docs/65-assess-mig-01-historical-assessments.md`.

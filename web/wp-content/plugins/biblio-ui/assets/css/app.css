@@ -1842,6 +1842,18 @@ body.admin-bar.biblio-app-shell-page {
     margin-block-start: var(--biblio-space-2);
 }
 
+[data-biblio-ui-root] .biblio-ui__assessments > .biblio-ui__section-kicker {
+    margin-block-start: var(--biblio-space-8);
+}
+
+[data-biblio-ui-root] .biblio-ui__assessments > h3 {
+    margin-block-start: var(--biblio-space-1);
+}
+
+[data-biblio-ui-root] .biblio-ui__assessments > .biblio-ui__assessment-list + .biblio-ui__section-kicker {
+    margin-block-start: var(--biblio-space-12);
+}
+
 [data-biblio-ui-root] .biblio-ui__assessment-list {
     display: grid;
     gap: var(--biblio-space-8);

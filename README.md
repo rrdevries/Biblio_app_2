@@ -56,7 +56,7 @@ integriteits-, scope-, transactie- en concurrencygevoelige Core-data.
 Persistence blijft per domein beoordeeld volgens ADR-004.
 
 De formeel ondersteunde Core-schemahistorie begint op schema baseline `1000`.
-Productversie `v2.001`, plugin/packageversie `2.1.0` en schemaversie zijn
+Productversie `v2.001`, plugin/packageversie `2.2.0` en schemaversie zijn
 onafhankelijk. Zie ADR-005. Pluginactivation voert de formele migration en
 schema-healthcheck uit. Tijdens normale runtime controleert Core vroeg de
 schemaversie en gebruikt het een kortlevende health-cache; alleen een gezonde
@@ -83,7 +83,7 @@ persistente Core-ID's zijn niet leeg, geldige UTF-8 en maximaal 191 tekens;
 ExternalLoan, Item, Library en ReadingRound zijn in de huidige technische scope
 active-only; en aanvullende membershippermissions zijn een geordende lijst van
 unieke, niet-lege UTF-8-identifiers die zonder normalisatie roundtrippen.
-Productversie `v2.001`, plugin/packageversie `2.1.0` en schemabaseline `1000`
+Productversie `v2.001`, plugin/packageversie `2.2.0` en schemabaseline `1000`
 blijven onafhankelijke versiedimensies.
 
 F1.7 sluit Fase 1 af met één reproduceerbare root-quality-gate, gelockte

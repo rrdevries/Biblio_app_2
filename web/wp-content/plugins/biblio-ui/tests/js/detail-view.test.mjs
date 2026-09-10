@@ -156,6 +156,17 @@ function detail(overrides = {}) {
             }],
             aggregate: { average: 3.8, voter_count: 2 },
             next_cursor: "opaque-cursor",
+            own_not_visible: [{
+                type: "rating",
+                assessed_at: null,
+                reading_round_linked: false,
+                rating: 4,
+            }, {
+                type: "review",
+                assessed_at: "2014-03-02T11:12:13.654321Z",
+                reading_round_linked: true,
+                review_html: "Mijn private &lt;review&gt;",
+            }],
         },
         item_status: "active",
         reading: {
@@ -263,6 +274,11 @@ test("detail renders the allowlisted known contract and canonical back link", ()
     assert.match(text(root), /Een tweede leesronde/);
     assert.match(text(root), /Lezer B · 6 juli 2026/);
     assert.match(text(root), /Er zijn meer beoordelingen beschikbaar/);
+    assert.match(text(root), /Alleen voor jou Jouw beoordelingen/);
+    assert.match(text(root), /Beoordelingsdatum onbekend · Zonder leesronde/);
+    assert.match(text(root), /Mijn private <review>/);
+    assert.match(text(root), /2 maart 2014 · Gekoppeld aan een leesronde/);
+    assert.match(text(root), /Niet zichtbaar in deze bibliotheek/);
     assert.deepEqual(
         descendants(root, (node) => (
             node.className === "biblio-ui__collection-memberships"
@@ -322,6 +338,7 @@ test("unknown, missing and not-applicable values omit labels and sections", () =
             contributions: [],
             aggregate: { average: null, voter_count: 0 },
             next_cursor: null,
+            own_not_visible: [],
         },
         reading: {
             status: "not_read",
