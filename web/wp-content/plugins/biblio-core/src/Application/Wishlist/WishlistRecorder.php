@@ -134,6 +134,56 @@ final readonly class WishlistRecorder
         return WishlistWriteResult::refined($replacement);
     }
 
+    public function refineEntryToEditionForOwner(
+        UserId $ownerUserId,
+        WishlistEntryId $entryId,
+        EditionId $editionId
+    ): WishlistWriteResult {
+        if (!$this->users->isActive($ownerUserId)) {
+            throw new WishlistEntryNotAvailable();
+        }
+        $observed = $this->wishlist->findForUser($entryId, $ownerUserId);
+        if ($observed === null) {
+            throw new WishlistEntryNotAvailable();
+        }
+        $this->assertOwnerWorkAndEdition(
+            $ownerUserId,
+            $observed->workId(),
+            $editionId
+        );
+        $state = $this->wishlist->lockExistingWorkState(
+            $ownerUserId,
+            $observed->workId()
+        );
+        if ($state === null) {
+            throw new WishlistEntryNotAvailable();
+        }
+        $current = $this->wishlist->lockForUser($entryId, $ownerUserId);
+        if (
+            $current === null
+            || !$current->workId()->equals($observed->workId())
+        ) {
+            throw new WishlistEntryNotAvailable();
+        }
+        if ($state->targetType() === WishlistTargetType::EditionSpecific) {
+            if ($current->editionId()?->equals($editionId) === true) {
+                return WishlistWriteResult::reused($current);
+            }
+            throw new WishlistIntentConflict();
+        }
+        if ($current->editionId() !== null) {
+            throw new ValidationException(
+                "Stored Work-only Wishlist state is inconsistent."
+            );
+        }
+
+        $now = $this->clock->now();
+        $replacement = $current->refineToEdition($editionId, $now);
+        $this->wishlist->refineWorkOnly($current, $replacement, $now);
+
+        return WishlistWriteResult::refined($replacement);
+    }
+
     public function removeForOwner(
         UserId $ownerUserId,
         WishlistEntryId $entryId,
