@@ -3090,3 +3090,23 @@ WISH-API-01 is accepted when:
 Status: **GO / CLOSED** when all gates pass. Schema remains `1022`; Biblio Core
 is `2.4.0` and Biblio UI remains `0.13.0`. No UI or current V1 data is included.
 See `docs/67-wish-api-01-personal-wishlist-rest-transport.md`.
+
+## 94. WISH-UI-01 personal Wishlist UI
+
+WISH-UI-01 is accepted when:
+
+- `/verlanglijst/` is reachable through the shared App Shell and has one H1;
+- exact decoding keeps Work-only and multiple Edition entries distinct;
+- Work add uses strict Work discovery and exact duplicates stay idempotent;
+- Book Detail adds its canonical Edition and explicitly refines an existing
+  Work-only entry while preserving entry ID;
+- reverse 409 is a choice state and performs no merge/delete;
+- direct remove has no fake Undo and failure preserves the entry;
+- loading, empty, list, auth/request and mutation failures are distinct;
+- no owner/Library identity is inferred and foreign-owner data never leaks;
+- keyboard, focus/status, mobile and 200%-reflow checks pass; and
+- UI/Core/E2E/fixture/fingerprint gates and independent review pass.
+
+Status: **TECHNICAL GO / HUMAN VISUAL ACCEPTANCE PENDING**. Schema remains
+`1022`; Biblio Core is `2.4.0`; Biblio UI is `0.14.0`. See
+`docs/68-wish-ui-01-personal-wishlist-ui.md`.

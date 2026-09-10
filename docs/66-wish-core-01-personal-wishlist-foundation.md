@@ -93,7 +93,8 @@ binding.
 Excluded: REST/API, UI, priority, notes, groups, smart logic, automatic
 fulfilment, Desired Acquisitions and source execution. Priority and notes remain
 in product canon but were explicitly outside this foundation; grouping is
-V2.002+. The focused delivery follow-up is `WISH-API-01`.
+V2.002+. The focused transport and reachable UI follow-ups are now closed by
+`WISH-API-01` and `WISH-UI-01`; those slices do not change this Core contract.
 
 ## 7. Verification evidence
 

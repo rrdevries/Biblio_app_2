@@ -31,9 +31,14 @@ final class NextReadingAppShortcode
 
         return sprintf(
             '<div data-biblio-ui-root data-biblio-next-reading-root data-rest-root="%s" '
-                . 'data-rest-nonce="%s" data-login-url="%s"></div>',
+                . 'data-rest-nonce="%s" data-overview-url="%s" '
+                . 'data-wishlist-url="%s" data-next-reading-url="%s" '
+                . 'data-login-url="%s"></div>',
             esc_url(rest_url("biblio/v1/")),
             esc_attr(wp_create_nonce("wp_rest")),
+            esc_url(home_url("/" . LibraryAppShortcode::PAGE_SLUG . "/")),
+            esc_url(home_url("/" . WishlistAppShortcode::PAGE_SLUG . "/")),
+            esc_url($pageUrl),
             esc_url(wp_login_url($pageUrl))
         );
     }

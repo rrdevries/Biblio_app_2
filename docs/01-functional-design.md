@@ -1153,6 +1153,12 @@ retains priority (`Topwens`, `Hoog`, `Normaal`, `Laag`; default `Normaal`),
 personal Goal/context and note. WISH-CORE-01 does not implement those explicitly
 out-of-scope fields. Grouping and manual reorder remain V2.002+.
 
+WISH-UI-01 realizes this minimum as `/verlanglijst/`. General discovery adds
+Work-only wishes through canonical Work search. A specific Edition can be
+added or selected only from Book Detail, which already holds the authorized
+canonical Work/Edition identity. Reverse collapse remains an explicit conflict
+and never silently merges or removes Edition wishes.
+
 A matching Library Item, Add Book, reading action, Collection or Hierna-lezen
 change never silently fulfils, removes or mutates the personal Verlanglijst.
 

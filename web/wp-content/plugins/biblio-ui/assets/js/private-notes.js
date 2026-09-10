@@ -341,7 +341,7 @@ function renderEditor(documentImpl, editor, actions) {
         className: "biblio-ui__editor-toolbar",
         attributes: { "aria-label": "Notitie opmaken", role: "toolbar" },
     });
-    const restoreEditorFocus = () => editable.focus();
+    const restoreEditorFocus = () => focusAfterKeyboardActivation(editable);
     toolbar.append(
         formatButton(documentImpl, "Vet", "bold", actions, restoreEditorFocus),
         formatButton(documentImpl, "Cursief", "italic", actions, restoreEditorFocus),
@@ -547,14 +547,21 @@ function focusAfterKeyboardActivation(target) {
     target.focus();
     const ownerDocument = target.ownerDocument ?? globalThis.document ?? null;
 
-    globalThis.setTimeout(() => {
+    const restoreDroppedFocus = () => {
+        const activeElement = ownerDocument?.activeElement ?? null;
         const browserDroppedFocus = ownerDocument === null
-            || ownerDocument.activeElement === null
-            || ownerDocument.activeElement === ownerDocument.body;
+            || activeElement === null
+            || activeElement === ownerDocument.body
+            || activeElement.isConnected === false;
 
         if (target.isConnected !== false && browserDroppedFocus) {
             target.focus();
         }
+    };
+
+    globalThis.setTimeout(() => {
+        restoreDroppedFocus();
+        ownerDocument?.defaultView?.requestAnimationFrame?.(restoreDroppedFocus);
     }, 0);
 }
 

@@ -38,12 +38,13 @@ Personal Reading Truth in schema `1019`; ARCH-MIG-01 preserves historical
 archive reasons in schema `1020`; ASSESS-MIG-01 adds nullable assessment time,
 a private historical Rating/Review recorder and an owner-only Book Detail read
 in schema `1021`; WISH-CORE-01 adds the source-neutral personal Wishlist Core
-target, persistence and MIG-FND participant in schema `1022`; WISH-API-01 now
-exposes that private contract through owner-only REST. IDENTITY-01 remains the mandatory explicit personal target
+target, persistence and MIG-FND participant in schema `1022`; WISH-API-01
+exposes that private contract through owner-only REST; WISH-UI-01 makes the
+basic personal list normally reachable through the shared App Shell.
+IDENTITY-01 remains the mandatory explicit personal target
 validator. The mapping design is still **MIGRATION DESIGN BLOCKED BY REMAINING
 DOMAIN TARGET GAPS**: Item local evidence still needs a bounded target, while
-open circulation still needs Renée's cutover decision. Reachable Wishlist UI
-delivery remains the focused WISH-UI-01 follow-up.
+open circulation still needs Renée's cutover decision.
 No V1 parser, source profiling, import,
 domain cleanup or production-data mutation is included. See
 `docs/60-mig-01-v1-mapping-and-reconciliation-design.md` and
@@ -52,7 +53,8 @@ domain cleanup or production-data mutation is included. See
 `docs/64-arch-mig-01-historical-archive-reasons.md` and
 `docs/65-assess-mig-01-historical-assessments.md` plus
 `docs/66-wish-core-01-personal-wishlist-foundation.md` and
-`docs/67-wish-api-01-personal-wishlist-rest-transport.md`.
+`docs/67-wish-api-01-personal-wishlist-rest-transport.md` plus
+`docs/68-wish-ui-01-personal-wishlist-ui.md`.
 
 ## Product model
 

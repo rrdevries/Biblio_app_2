@@ -49,6 +49,10 @@ function byClass(root, className) {
     return descendants(root).find((node) => node.className.split(" ").includes(className));
 }
 
+function allByClass(root, className) {
+    return descendants(root).filter((node) => node.className.split(" ").includes(className));
+}
+
 test("shell composes Ink Light sidebar, remembered rail and mobile off-canvas", () => {
     const mount = new FakeElement("div");
     const writes = [];
@@ -63,6 +67,9 @@ test("shell composes Ink Light sidebar, remembered rail and mobile off-canvas", 
         documentImpl,
         eventTarget,
         overviewUrl: "https://example.test/mijn-bibliotheek/",
+        wishlistUrl: "https://example.test/verlanglijst/",
+        nextReadingUrl: "https://example.test/hierna-lezen/",
+        activeDestination: "wishlist",
         preferences: {
             sidebarCollapsed() { return true; },
             setSidebarCollapsed(value) { writes.push(value); },
@@ -74,7 +81,17 @@ test("shell composes Ink Light sidebar, remembered rail and mobile off-canvas", 
     assert.equal(shell.getAttribute("data-biblio-appearance"), "light");
     assert.equal(shell.getAttribute("data-sidebar-collapsed"), "true");
     assert.equal(shellController.contentRoot.tagName, "MAIN");
-    assert.equal(byClass(shell, "biblio-ui__nav-link").getAttribute("aria-current"), "page");
+    const links = allByClass(shell, "biblio-ui__nav-link");
+    assert.deepEqual(links.map((link) => link.getAttribute("title")), [
+        "Mijn Bibliotheek",
+        "Verlanglijst",
+        "Hierna lezen",
+    ]);
+    assert.deepEqual(links.map((link) => link.getAttribute("aria-current")), [
+        null,
+        "page",
+        null,
+    ]);
 
     byClass(shell, "biblio-ui__sidebar-toggle").click();
     assert.equal(shell.getAttribute("data-sidebar-collapsed"), "false");

@@ -135,7 +135,7 @@ Work/Edition mismatch, two different Editions for one Work, reverse conflict,
 normal and repeated removal, stable ordering, response allowlists and the
 absence of Hierna lezen, Collection, publication and migration side effects.
 
-## 5. WISH-UI-01 handoff
+## 5. WISH-UI-01 handoff — closed
 
 The future UI can consume:
 
@@ -147,8 +147,9 @@ The future UI can consume:
 - explicit choice-required state: HTTP 409 code
   `biblio_wishlist_intent_conflict`.
 
-UI placement, labels, confirmation presentation and the later explicit reverse
-choice flow remain WISH-UI-01/product work. Grouping/reorder, priority, note,
+WISH-UI-01 now consumes these contracts through `/verlanglijst/` and Book
+Detail. The reverse conflict is presented truthfully without an invented
+collapse operation. Grouping/reorder, priority, note,
 Goal/context, retailer/price and automatic fulfilment remain outside this API.
 
 ## 6. Data, schema and versions

@@ -273,6 +273,14 @@ Home-widget. Home is geen volledige catalogus en Mijn Bibliotheek
 is geen Home-pagina. Historische mockups waarin deze functies onder één titel
 staan, zijn geen actuele IA.
 
+### 8.2 Gedeelde persoonlijke bestemmingen
+
+De gerealiseerde App Shell toont `Mijn Bibliotheek`, `Verlanglijst` en
+`Hierna lezen` als rustige, gelijkwaardige hoofdbestemmingen met precies één
+actieve state. Op desktop, rail en off-canvas blijven labels en focusnamen
+behouden. De links gebruiken server-generated canonical URLs; zichtbaarheid is
+navigatie en nooit autorisatie.
+
 ## 9. Mijn Bibliotheek en views
 
 Status: **Definitief**, behalve waar expliciet als werkwaarde aangegeven.

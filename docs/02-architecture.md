@@ -1560,3 +1560,20 @@ manual-order contract. Unavailable Work, Edition and owner-scoped entry states
 share the non-enumerating 404 envelope. `wishlist_intent_conflict` and exhausted
 entry-ID allocation map to 409. Core/DB transactions and locks remain the sole
 authority for idempotency and mixed-state prevention.
+
+## 37. WISH-UI-01 personal Wishlist presentation
+
+The `[biblio_wishlist_app]` shortcode mounts `biblio-ui/wishlist` only on
+`/verlanglijst/`. It receives escaped REST, nonce and server-generated personal
+navigation URLs. Its exact decoder rejects widened, coerced or malformed
+Wishlist projections before rendering.
+
+Work-only add imports the existing strict Work discovery decoder and preserves
+its abort/revision behavior. Edition-specific add and Work-only refinement are
+composed into Book Detail through its already-decoded canonical `work_id` and
+`edition_id`; identity never comes from visible text or provider candidates.
+PATCH uses the owner-scoped stable entry ID returned by GET.
+
+The App Shell has three real personal destinations. This navigation is
+reachability only: Core/REST retain authorization and Library URL/context
+changes never become Wishlist scope.

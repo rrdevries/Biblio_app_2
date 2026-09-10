@@ -552,6 +552,18 @@ function renderDetail(documentImpl, model, actions) {
         );
         heroActions.append(endButton);
     }
+    if (typeof actions.wishlist === "function") {
+        const wishlistButton = element(documentImpl, "button", {
+            className: "biblio-ui__control biblio-ui__control--secondary biblio-ui__wishlist-detail-action",
+            text: "Op verlanglijst",
+            attributes: { type: "button" },
+        });
+        wishlistButton.addEventListener(
+            "click",
+            () => actions.wishlist(wishlistButton)
+        );
+        heroActions.append(wishlistButton);
+    }
     identity.append(heroActions);
     hero.append(coverPresentation(documentImpl, detail), identity);
     view.append(hero);
