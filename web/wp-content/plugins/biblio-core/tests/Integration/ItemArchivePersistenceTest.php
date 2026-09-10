@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Tests\Integration;
 
-use Biblio\Core\Catalog\{Edition,EditionId,Item,ItemArchivePeriod,ItemArchiveReason,ItemId,ItemStatus,ItemVersion,LibraryLocation,LocationId,Work,WorkId};
+use Biblio\Core\Catalog\{Edition,EditionId,Item,ItemArchivePeriod,ItemArchiveReason,ItemArchiveReasonKind,ItemId,ItemStatus,ItemVersion,LibraryLocation,LocationId,PreservedHistoricalArchiveReason,Work,WorkId};
 use Biblio\Core\Infrastructure\Persistence\PersistenceException;
 use Biblio\Core\Infrastructure\Persistence\WordPress\{WpdbEditionRepository,WpdbItemArchiveRepository,WpdbItemRepository,WpdbLibraryRepository,WpdbLocationRepository,WpdbTransactionManager,WpdbWorkRepository};
 use Biblio\Core\Library\{Library,LibraryId};
@@ -72,6 +72,95 @@ final class ItemArchivePersistenceTest extends PersistenceIntegrationTestCase
         self::assertSame([], $history["item-b"]);
         self::assertSame([], $history["item-a"]);
         self::assertNotSame($libraryA->value(), $libraryB->value());
+    }
+
+    public function testItemsOfSameEditionKeepIndependentNativeAndHistoricalReasons(): void
+    {
+        [$libraryId, $nativeItem] = $this->fixture("same-edition");
+        $historicalItem = Item::active(
+            new ItemId("item-same-edition-historical"),
+            $libraryId,
+            $nativeItem->editionId()
+        );
+        (new WpdbItemRepository($this->database, $this->tableNames))
+            ->add($historicalItem);
+        $archives = new WpdbItemArchiveRepository(
+            $this->database,
+            $this->tableNames
+        );
+        $transactions = new WpdbTransactionManager($this->database);
+        $historicalReason = new PreservedHistoricalArchiveReason(
+            "historical reason A",
+            "source-code-a"
+        );
+
+        $transactions->run(function () use (
+            $archives,
+            $libraryId,
+            $nativeItem
+        ): void {
+            $locked = $archives->findItemForUpdate($nativeItem->id(), $libraryId);
+            self::assertNotNull($locked);
+            $archived = $locked->archive();
+            self::assertTrue($archives->saveArchive(
+                $archived,
+                $locked->version(),
+                new ItemArchivePeriod(
+                    $libraryId,
+                    $locked->id(),
+                    $archived->version(),
+                    ItemArchiveReason::Lost,
+                    new DateTimeImmutable("2026-09-08 10:00:00.000001+00:00")
+                )
+            ));
+        });
+        $transactions->run(function () use (
+            $archives,
+            $libraryId,
+            $historicalItem,
+            $historicalReason
+        ): void {
+            $locked = $archives->findItemForUpdate(
+                $historicalItem->id(),
+                $libraryId
+            );
+            self::assertNotNull($locked);
+            $archived = $locked->archive();
+            self::assertTrue($archives->saveArchive(
+                $archived,
+                $locked->version(),
+                new ItemArchivePeriod(
+                    $libraryId,
+                    $locked->id(),
+                    $archived->version(),
+                    $historicalReason,
+                    new DateTimeImmutable("2026-09-08 11:00:00.000002+00:00")
+                )
+            ));
+        });
+
+        $periods = $archives->periodsForItems(
+            $libraryId,
+            [$nativeItem->id(), $historicalItem->id()]
+        );
+        self::assertSame(
+            ItemArchiveReason::Lost,
+            $periods[$nativeItem->id()->value()][0]->reason()
+        );
+        $storedHistorical = $periods[$historicalItem->id()->value()][0]
+            ->reason();
+        self::assertSame(
+            ItemArchiveReasonKind::PreservedHistorical,
+            $storedHistorical->kind()
+        );
+        if (!$storedHistorical instanceof PreservedHistoricalArchiveReason) {
+            self::fail("Preserved historical archive reason was not hydrated.");
+        }
+        self::assertSame(
+            "historical reason A",
+            $storedHistorical->originalText()
+        );
+        self::assertSame("source-code-a", $storedHistorical->originalValue());
     }
 
     public function testDatabaseRejectsDanglingAndCrossLibraryArchiveHistory(): void

@@ -34,7 +34,7 @@ final class Schema1011LocationTest extends PersistenceIntegrationTestCase
 
         $this->migrator()->migrate();
 
-        self::assertSame(1019, $this->migrator()->installedVersion());
+        self::assertSame(1020, $this->migrator()->installedVersion());
         self::assertNull($this->database->get_var(
             "SELECT location_id FROM `{$this->tableNames->items()}` WHERE item_id='preserved-item'"
         ));

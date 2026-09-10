@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Infrastructure\Persistence\WordPress;
 
-use Biblio\Core\Catalog\{EditionId,InventoryNumber,Item,ItemArchivePeriod,ItemArchiveReason,ItemId,ItemStatus,ItemVersion,LocationId,WritableItemArchiveRepository};
+use Biblio\Core\Catalog\{EditionId,InventoryNumber,Item,ItemArchivePeriod,ItemArchiveReason,ItemArchiveReasonKind,ItemId,ItemStatus,ItemVersion,LocationId,PreservedHistoricalArchiveReason,WritableItemArchiveRepository};
 use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Infrastructure\Persistence\PersistenceException;
 use Biblio\Core\Library\LibraryId;
@@ -46,13 +46,21 @@ final readonly class WpdbItemArchiveRepository implements WritableItemArchiveRep
         if ($result !== 1) { return false; }
 
         $history = $this->tables->itemArchivePeriods();
+        $reason = $period->reason();
+        $nativeReason = $reason instanceof ItemArchiveReason ? $reason : null;
+        $historicalReason = $reason instanceof PreservedHistoricalArchiveReason
+            ? $reason
+            : null;
         $inserted = $this->database->insert($history, [
             "library_id" => $period->libraryId()->value(),
             "item_id" => $period->itemId()->value(),
             "archive_version" => $period->archiveVersion()->value(),
-            "archive_reason" => $period->reason()->value,
+            "archive_reason_kind" => $period->reason()->kind()->value,
+            "archive_reason" => $nativeReason?->value,
+            "preserved_reason_text" => $historicalReason?->originalText(),
+            "preserved_reason_value" => $historicalReason?->originalValue(),
             "archived_at" => $this->formatInstant($period->archivedAt()),
-        ], ["%s", "%s", "%d", "%s", "%s"]);
+        ], ["%s", "%s", "%d", "%s", "%s", "%s", "%s", "%s"]);
         if ($inserted !== 1) { throw WpdbErrorTranslator::writeFailure("Could not persist Item archive period.", $this->database->last_error); }
         return true;
     }
@@ -93,7 +101,7 @@ final readonly class WpdbItemArchiveRepository implements WritableItemArchiveRep
     {
         $table = $this->tables->itemArchivePeriods();
         $row = $this->database->get_row($this->database->prepare(
-            "SELECT library_id,item_id,archive_version,archive_reason,archived_at,restore_version,restored_at FROM `{$table}` "
+            "SELECT library_id,item_id,archive_version,archive_reason_kind,archive_reason,preserved_reason_text,preserved_reason_value,archived_at,restore_version,restored_at FROM `{$table}` "
                 . "WHERE library_id=%s AND item_id=%s AND restored_at IS NULL FOR UPDATE",
             $libraryId->value(),
             $itemId->value()
@@ -109,7 +117,7 @@ final readonly class WpdbItemArchiveRepository implements WritableItemArchiveRep
         $table = $this->tables->itemArchivePeriods();
         $placeholders = implode(",", array_fill(0, count($itemIds), "%s"));
         $rows = $this->database->get_results($this->database->prepare(
-            "SELECT library_id,item_id,archive_version,archive_reason,archived_at,restore_version,restored_at FROM `{$table}` "
+            "SELECT library_id,item_id,archive_version,archive_reason_kind,archive_reason,preserved_reason_text,preserved_reason_value,archived_at,restore_version,restored_at FROM `{$table}` "
                 . "WHERE library_id=%s AND item_id IN ({$placeholders}) ORDER BY item_id,archive_version",
             $libraryId->value(),
             ...array_map(static fn (ItemId $id): string => $id->value(), $itemIds)
@@ -142,8 +150,22 @@ final readonly class WpdbItemArchiveRepository implements WritableItemArchiveRep
 
     private function hydratePeriod(object $row): ItemArchivePeriod
     {
+        $kind = ItemArchiveReasonKind::from((string) $row->archive_reason_kind);
+        $reason = match ($kind) {
+            ItemArchiveReasonKind::Native => ItemArchiveReason::from(
+                (string) $row->archive_reason
+            ),
+            ItemArchiveReasonKind::PreservedHistorical =>
+                new PreservedHistoricalArchiveReason(
+                    (string) $row->preserved_reason_text,
+                    $row->preserved_reason_value === null
+                        ? null
+                        : (string) $row->preserved_reason_value
+                ),
+        };
+
         return new ItemArchivePeriod(new LibraryId((string) $row->library_id), new ItemId((string) $row->item_id),
-            new ItemVersion((int) $row->archive_version), ItemArchiveReason::from((string) $row->archive_reason),
+            new ItemVersion((int) $row->archive_version), $reason,
             $this->hydrateInstant($row->archived_at), $row->restore_version === null ? null : new ItemVersion((int) $row->restore_version),
             $row->restored_at === null ? null : $this->hydrateInstant($row->restored_at));
     }

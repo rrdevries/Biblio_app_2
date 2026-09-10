@@ -11,7 +11,7 @@ use Biblio\Core\Catalog\ItemId;
 use Biblio\Core\Catalog\ItemStatus;
 use Biblio\Core\Catalog\LibraryLocation;
 use Biblio\Core\Catalog\LocationId;
-use Biblio\Core\Catalog\{ItemArchivePeriod,ItemArchiveReason,ItemArchiveTransitionUnavailable,ItemVersion};
+use Biblio\Core\Catalog\{ItemArchivePeriod,ItemArchiveReason,ItemArchiveReasonKind,ItemArchiveTransitionUnavailable,ItemVersion,PreservedHistoricalArchiveReason};
 use Biblio\Core\Catalog\Work;
 use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Catalog\WorkTitleStatus;
@@ -86,6 +86,57 @@ final class CatalogEntitiesTest extends TestCase
         self::assertSame("123456", $period->archivedAt()->format("u"));
         self::assertSame("654321", $period->restoredAt()?->format("u"));
         self::assertFalse($period->isOpen());
+    }
+
+    public function testPreservedHistoricalArchiveReasonIsDistinctAndLossless(): void
+    {
+        $reason = new PreservedHistoricalArchiveReason(
+            "historical reason A",
+            "source-code-a"
+        );
+        $period = new ItemArchivePeriod(
+            new LibraryId("library-a"),
+            new ItemId("item-a"),
+            new ItemVersion(2),
+            $reason,
+            new \DateTimeImmutable("2026-09-04 10:11:12.123456+00:00")
+        );
+
+        self::assertSame(ItemArchiveReasonKind::PreservedHistorical, $reason->kind());
+        self::assertSame("historical reason A", $reason->originalText());
+        self::assertSame("source-code-a", $reason->originalValue());
+        self::assertTrue($period->reason()->equals($reason));
+        self::assertFalse($period->reason()->equals(ItemArchiveReason::Sold));
+    }
+
+    #[DataProvider("invalidHistoricalArchiveReasons")]
+    public function testPreservedHistoricalArchiveReasonRejectsUnsafeInput(
+        string $text,
+        ?string $originalValue = null
+    ): void {
+        $this->expectException(InvalidArgumentException::class);
+
+        new PreservedHistoricalArchiveReason($text, $originalValue);
+    }
+
+    /** @return iterable<string, array{string, string|null}> */
+    public static function invalidHistoricalArchiveReasons(): iterable
+    {
+        yield "empty" => ["", null];
+        yield "whitespace" => ["   ", null];
+        yield "overlong text" => [str_repeat("a", 501), null];
+        yield "invalid utf-8" => ["historical \xC3\x28 reason", null];
+        yield "html" => ["<strong>historical reason A</strong>", null];
+        yield "control character" => ["historical\x00reason", null];
+        yield "empty original value" => ["historical reason A", " "];
+        yield "html original value" => [
+            "historical reason A",
+            "<script>source-code-a</script>",
+        ];
+        yield "overlong original value" => [
+            "historical reason A",
+            str_repeat("b", 192),
+        ];
     }
     public function testWorkRequiresMeaningfulTitle(): void
     {

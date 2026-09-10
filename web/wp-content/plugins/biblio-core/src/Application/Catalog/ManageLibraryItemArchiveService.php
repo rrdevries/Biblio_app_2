@@ -33,7 +33,7 @@ final readonly class ManageLibraryItemArchiveService
             $open = $this->repository->openPeriod($itemId, $context->libraryId());
 
             if ($current->status() === ItemStatus::Archived) {
-                if ($open !== null && $open->reason() === $reason) { return $current; }
+                if ($open !== null && $open->reason()->equals($reason)) { return $current; }
                 throw new ItemArchiveTransitionUnavailable();
             }
             if ($open !== null) { throw new ItemArchiveTransitionUnavailable(); }

@@ -6,6 +6,7 @@ namespace Biblio\Core\Tests\Integration;
 
 use Biblio\Core\Application\Identity\PersonalMigrationTargetInvalid;
 use Biblio\Core\Application\Identity\PersonalMigrationTarget;
+use Biblio\Core\Application\Catalog\HistoricalItemArchiveRecorder;
 use Biblio\Core\Application\Migration\BeginMigrationRunService;
 use Biblio\Core\Application\Migration\CommitMigrationRecordService;
 use Biblio\Core\Application\Migration\MappingDisposition;
@@ -24,11 +25,15 @@ use Biblio\Core\Application\Migration\MigrationTraceabilityQuery;
 use Biblio\Core\Application\Migration\ObserveSourceRecordService;
 use Biblio\Core\Application\Migration\QuarantineReason;
 use Biblio\Core\Application\Reading\PersonalReadingTruthRecorder;
-use Biblio\Core\Catalog\WorkId;
+use Biblio\Core\Catalog\{Edition,EditionId,Item,ItemArchiveReasonKind,ItemId,ItemStatus,PreservedHistoricalArchiveReason,Work,WorkId};
 use Biblio\Core\Exception\ConflictException;
 use Biblio\Core\Exception\ValidationException;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbMigrationLedgerRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbCollectionRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbEditionRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbItemArchiveRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbItemRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPersonalReadingTruthRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPersonalWorkReadingMutationLock;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbReadingRoundRepository;
@@ -445,6 +450,203 @@ final class MigrationFoundationTest extends PersistenceIntegrationTestCase
         self::assertSame(
             PersonalReadingTruthState::ReadKnownDateUnknown,
             $truths->findForUserAndWork($target->userId(), $workId)?->state()
+        );
+    }
+
+    public function testHistoricalArchiveWriteUsesMigFndTransactionRetryAndQuarantine(): void
+    {
+        [$begin, $observe, $commit, , $target, $ledger] = $this->foundation(
+            "historical-archive"
+        );
+        $run = $this->beginApply(
+            $begin,
+            $target,
+            "snapshot-historical-archive",
+            "a"
+        );
+        $work = new Work(
+            new WorkId("migration-archive-work"),
+            "Synthetic archive Work"
+        );
+        $edition = new Edition(
+            new EditionId("migration-archive-edition"),
+            $work->id(),
+            "Synthetic archive Edition"
+        );
+        $works = new WpdbWorkRepository($this->database, $this->tableNames);
+        $editions = new WpdbEditionRepository($this->database, $this->tableNames);
+        $items = new WpdbItemRepository($this->database, $this->tableNames);
+        $archives = new WpdbItemArchiveRepository(
+            $this->database,
+            $this->tableNames
+        );
+        $works->add($work);
+        $editions->add($edition);
+        $item = Item::active(
+            new ItemId("migration-archive-item"),
+            $target->libraryId(),
+            $edition->id()
+        );
+        $rollbackItem = Item::active(
+            new ItemId("migration-archive-rollback-item"),
+            $target->libraryId(),
+            $edition->id()
+        );
+        $items->add($item);
+        $items->add($rollbackItem);
+        $recorder = new HistoricalItemArchiveRecorder(
+            $archives,
+            new WpdbCollectionRepository($this->database, $this->tableNames)
+        );
+        $observation = $this->observation(
+            $observe,
+            $run,
+            "item_archive",
+            "archive/item-a"
+        );
+        $archivedAt = new DateTimeImmutable(
+            "2026-09-08 09:00:00.123456",
+            new DateTimeZone("UTC")
+        );
+
+        $outcome = $commit->commit(
+            $run,
+            $observation,
+            function () use (
+                $recorder,
+                $run,
+                $item,
+                $archivedAt
+            ): MigrationRecordOutcome {
+                $recorder->recordForLibrary(
+                    $run->targetLibraryId(),
+                    $item->id(),
+                    new PreservedHistoricalArchiveReason(
+                        "historical reason A",
+                        "source-code-a"
+                    ),
+                    $archivedAt,
+                    $item->version()
+                );
+
+                return MigrationRecordOutcome::transformed([
+                    new MigrationTargetMapping(
+                        "item",
+                        $item->id()->value(),
+                        MappingDisposition::Created
+                    ),
+                ], "historical_archive_reason_preserved");
+            }
+        );
+        self::assertSame(MigrationDisposition::Transformed, $outcome->disposition());
+        $period = $archives->periodsForItems(
+            $target->libraryId(),
+            [$item->id()]
+        )[$item->id()->value()][0];
+        self::assertSame(
+            ItemArchiveReasonKind::PreservedHistorical,
+            $period->reason()->kind()
+        );
+        self::assertSame(
+            ItemStatus::Archived,
+            $items->findInLibrary($item->id(), $target->libraryId())?->status()
+        );
+        self::assertCount(
+            1,
+            (new MigrationTraceabilityQuery($ledger))->targetsForSource(
+                $run,
+                "item_archive",
+                "archive/item-a"
+            )
+        );
+
+        $retryWrites = 0;
+        try {
+            $commit->commit(
+                $run,
+                $observation,
+                static function () use (&$retryWrites): MigrationRecordOutcome {
+                    ++$retryWrites;
+                    return MigrationRecordOutcome::failed("unexpected_retry", false);
+                }
+            );
+            self::fail("A committed historical archive observation was retried.");
+        } catch (ValidationException) {
+            self::assertSame(0, $retryWrites);
+        }
+
+        $rollbackObservation = $this->observation(
+            $observe,
+            $run,
+            "item_archive",
+            "archive/rollback"
+        );
+        try {
+            $commit->commit(
+                $run,
+                $rollbackObservation,
+                function () use (
+                    $recorder,
+                    $run,
+                    $rollbackItem,
+                    $archivedAt
+                ): MigrationRecordOutcome {
+                    $recorder->recordForLibrary(
+                        $run->targetLibraryId(),
+                        $rollbackItem->id(),
+                        new PreservedHistoricalArchiveReason(
+                            "historical reason rollback"
+                        ),
+                        $archivedAt,
+                        $rollbackItem->version()
+                    );
+                    throw new RuntimeException("synthetic archive rollback");
+                }
+            );
+            self::fail("Synthetic archive rollback was hidden.");
+        } catch (RuntimeException $exception) {
+            self::assertSame("synthetic archive rollback", $exception->getMessage());
+        }
+        self::assertSame(
+            ItemStatus::Active,
+            $items->findInLibrary(
+                $rollbackItem->id(),
+                $target->libraryId()
+            )?->status()
+        );
+        self::assertSame(
+            [],
+            $archives->periodsForItems(
+                $target->libraryId(),
+                [$rollbackItem->id()]
+            )[$rollbackItem->id()->value()]
+        );
+
+        $malformed = $this->observation(
+            $observe,
+            $run,
+            "item_archive",
+            "archive/malformed"
+        );
+        $malformedOutcome = $commit->commit(
+            $run,
+            $malformed,
+            static function (): MigrationRecordOutcome {
+                try {
+                    new PreservedHistoricalArchiveReason("   ");
+                } catch (ValidationException) {
+                    return MigrationRecordOutcome::quarantined(
+                        QuarantineReason::UnsupportedTargetRepresentation,
+                        "Synthetic historical archive reason is not representable."
+                    );
+                }
+
+                self::fail("Malformed archive reason was not quarantined.");
+            }
+        );
+        self::assertSame(
+            MigrationDisposition::Quarantined,
+            $malformedOutcome->disposition()
         );
     }
 
