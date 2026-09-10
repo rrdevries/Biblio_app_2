@@ -28,7 +28,7 @@ final class Schema1015MetadataFieldReviewTest extends PersistenceIntegrationTest
     public function testMigrationCreatesHealthyRetrySafeSchema(): void
     {
         $this->dropAdditions();
-        update_option(CoreSchemaMigrator::VERSION_OPTION, "1014", false);
+        $this->setHistoricalSchemaVersion(1014);
         $migration = new CoreSchema1015Migration($this->database, $this->tableNames);
 
         try {
@@ -39,7 +39,7 @@ final class Schema1015MetadataFieldReviewTest extends PersistenceIntegrationTest
             $migration->assertPostcondition();
             $this->migrator()->migrate();
 
-            self::assertSame(1022, $this->migrator()->installedVersion());
+            self::assertSame(1023, $this->migrator()->installedVersion());
             self::assertTrue($this->migrator()->health()->isHealthy());
         } finally {
             $this->restoreCurrentSchema();
@@ -55,7 +55,7 @@ final class Schema1015MetadataFieldReviewTest extends PersistenceIntegrationTest
                 . "metadata_record_id VARCHAR(191) NOT NULL PRIMARY KEY"
                 . ") ENGINE=InnoDB"
         );
-        update_option(CoreSchemaMigrator::VERSION_OPTION, "1014", false);
+        $this->setHistoricalSchemaVersion(1014);
 
         try {
             $this->expectException(CoreSchemaMigrationException::class);
@@ -192,7 +192,7 @@ final class Schema1015MetadataFieldReviewTest extends PersistenceIntegrationTest
     private function restoreCurrentSchema(): void
     {
         $this->dropAdditions();
-        update_option(CoreSchemaMigrator::VERSION_OPTION, "1014", false);
+        $this->setHistoricalSchemaVersion(1014);
         $this->migrator()->migrate();
     }
 }

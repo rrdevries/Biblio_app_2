@@ -52,6 +52,7 @@ final readonly class CoreSchemaHealthChecker
             1020 => $this->inspectTables($this->tableNames->schema1020(), true, 1020),
             1021 => $this->inspectTables($this->tableNames->schema1021(), true, 1021),
             1022 => $this->inspectTables($this->tableNames->schema1022(), true, 1022),
+            1023 => $this->inspectTables($this->tableNames->schema1023(), true, 1023),
             default => throw new CoreSchemaMigrationException(
                 "No explicit Biblio Core schema-health contract exists for "
                 . "schema version {$expectedVersion}."
@@ -245,6 +246,24 @@ final readonly class CoreSchemaHealthChecker
             $this->tableNames->schema1022Additions(),
             false,
             1022
+        );
+    }
+
+    public function inspectExistingSchema1023Additions(): CoreSchemaHealth
+    {
+        return $this->inspectTables(
+            $this->tableNames->schema1023Additions(),
+            false,
+            1023
+        );
+    }
+
+    public function inspectSchema1023Evidence(): CoreSchemaHealth
+    {
+        return $this->inspectTables(
+            [$this->tableNames->metadataFieldEvidence()],
+            true,
+            1023
         );
     }
 
@@ -1000,7 +1019,13 @@ final readonly class CoreSchemaHealthChecker
                 "observation_count" => ["type" => "bigint(20) unsigned", "nullable" => "NO"],
                 "match_method" => $ascii("varchar(32)"),
                 "queried_identifier_type" => $ascii("varchar(16)"),
-                "queried_identifier" => $ascii("varchar(13)"),
+                "queried_identifier" => $schemaVersion >= 1023
+                    ? [
+                        "type" => "varchar(100)",
+                        "nullable" => "NO",
+                        "collation" => "utf8mb4_bin",
+                    ]
+                    : $ascii("varchar(13)"),
             ],
             $this->tableNames->metadataLookupSnapshots() => [
                 "lookup_id" => $id,
@@ -1029,6 +1054,37 @@ final readonly class CoreSchemaHealthChecker
                 "observed_at" => ["type" => "datetime(6)", "nullable" => "NO"],
                 "source_context" => $ascii("varchar(64)"),
                 "correction_proposal" => ["type" => "tinyint(3) unsigned", "nullable" => "NO"],
+            ],
+            $this->tableNames->bibliographicDiscoverySnapshots() => [
+                "discovery_id" => $id,
+                "actor_user_id" => $id,
+                "query_type" => $ascii("varchar(16)"),
+                "normalized_query" => [
+                    "type" => "varchar(100)",
+                    "nullable" => "NO",
+                    "collation" => "utf8mb4_bin",
+                ],
+                "canonical_isbn_13" => [
+                    "type" => "char(13)",
+                    "nullable" => "YES",
+                    "collation" => "ascii_bin",
+                ],
+                "created_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "expires_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+            ],
+            $this->tableNames->bibliographicDiscoveryCandidates() => [
+                "discovery_id" => $id,
+                "candidate_id" => $ascii("char(64)"),
+                "candidate_json" => ["type" => "longtext", "nullable" => "NO"],
+                "candidate_hash" => $ascii("char(64)"),
+            ],
+            $this->tableNames->bibliographicProviderIdentities() => [
+                "provider_key" => $ascii("varchar(64)"),
+                "source_entity_type" => $ascii("varchar(16)"),
+                "provider_record_id" => $id,
+                "target_type" => $ascii("varchar(16)"),
+                "work_id" => $nullableId,
+                "edition_id" => $nullableId,
             ],
             $this->tableNames->locations() => [
                 "library_id" => $id,
@@ -1612,6 +1668,30 @@ final readonly class CoreSchemaHealthChecker
                 "metadata_user_observations_by_edition" => ["unique" => false, "columns" => ["edition_id", "field_key", "observed_at", "observation_id"]],
                 "metadata_user_observations_by_scope" => ["unique" => false, "columns" => ["library_id", "item_id", "observed_at", "observation_id"]],
             ],
+            $this->tableNames->bibliographicDiscoverySnapshots() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["discovery_id"]],
+                "bibliographic_discovery_by_actor_expiry" => [
+                    "unique" => false,
+                    "columns" => ["actor_user_id", "expires_at", "discovery_id"],
+                ],
+            ],
+            $this->tableNames->bibliographicDiscoveryCandidates() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["discovery_id", "candidate_id"]],
+            ],
+            $this->tableNames->bibliographicProviderIdentities() => [
+                "PRIMARY" => [
+                    "unique" => true,
+                    "columns" => ["provider_key", "source_entity_type", "provider_record_id", "target_type"],
+                ],
+                "bibliographic_provider_identity_by_work" => [
+                    "unique" => false,
+                    "columns" => ["work_id", "provider_key", "source_entity_type", "provider_record_id"],
+                ],
+                "bibliographic_provider_identity_by_edition" => [
+                    "unique" => false,
+                    "columns" => ["edition_id", "provider_key", "provider_record_id"],
+                ],
+            ],
             $this->tableNames->locations() => [
                 "PRIMARY" => [
                     "unique" => true,
@@ -2081,6 +2161,17 @@ final readonly class CoreSchemaHealthChecker
                 $restrict(["edition_id"], $this->tableNames->editions(), ["edition_id"]),
                 $restrict(["library_id", "item_id"], $this->tableNames->items(), ["library_id", "item_id"]),
             ],
+            $this->tableNames->bibliographicDiscoveryCandidates() => [
+                $cascade(
+                    ["discovery_id"],
+                    $this->tableNames->bibliographicDiscoverySnapshots(),
+                    ["discovery_id"]
+                ),
+            ],
+            $this->tableNames->bibliographicProviderIdentities() => [
+                $restrict(["work_id"], $this->tableNames->works(), ["work_id"]),
+                $restrict(["edition_id"], $this->tableNames->editions(), ["edition_id"]),
+            ],
             $this->tableNames->locations() => [
                 $restrict(["library_id"], $this->tableNames->libraries(), ["library_id"]),
             ],
@@ -2388,8 +2479,12 @@ final readonly class CoreSchemaHealthChecker
                 "CHAR_LENGTH(TRIM(provider_record_id)) > 0",
                 "last_retrieved_at >= first_retrieved_at",
                 "observation_count >= 1",
-                "match_method = 'exact_isbn'",
-                "queried_identifier_type = 'isbn_10' AND queried_identifier REGEXP '^[0-9]{9}[0-9X]$' OR queried_identifier_type = 'isbn_13' AND queried_identifier REGEXP '^97[89][0-9]{10}$'",
+                $schemaVersion >= 1023
+                    ? "match_method IN ('exact_isbn', 'text_search')"
+                    : "match_method = 'exact_isbn'",
+                $schemaVersion >= 1023
+                    ? "queried_identifier_type = 'isbn_10' AND queried_identifier REGEXP '^[0-9]{9}[0-9X]$' OR queried_identifier_type = 'isbn_13' AND queried_identifier REGEXP '^97[89][0-9]{10}$' OR queried_identifier_type = 'text' AND CHAR_LENGTH(TRIM(queried_identifier)) > 0 AND CHAR_LENGTH(queried_identifier) <= 100"
+                    : "queried_identifier_type = 'isbn_10' AND queried_identifier REGEXP '^[0-9]{9}[0-9X]$' OR queried_identifier_type = 'isbn_13' AND queried_identifier REGEXP '^97[89][0-9]{10}$'",
             ],
             $this->tableNames->metadataLookupSnapshots() => [
                 "lookup_id REGEXP '^lookup-[0-9a-f]{32}$'",
@@ -2412,6 +2507,24 @@ final readonly class CoreSchemaHealthChecker
                 "CHAR_LENGTH(TRIM(actor_user_id)) > 0",
                 "source_context = 'physical_copy_add_book'",
                 "correction_proposal IN (0, 1)",
+            ],
+            $this->tableNames->bibliographicDiscoverySnapshots() => [
+                "discovery_id REGEXP '^lookup-[0-9a-f]{32}$'",
+                "CHAR_LENGTH(TRIM(actor_user_id)) > 0",
+                "query_type = 'isbn' AND canonical_isbn_13 REGEXP '^97[89][0-9]{10}$' AND CAST(normalized_query AS CHAR CHARSET binary) = CAST(canonical_isbn_13 AS CHAR CHARSET binary) OR query_type = 'text' AND canonical_isbn_13 IS NULL AND CHAR_LENGTH(TRIM(normalized_query)) > 0",
+                "expires_at > created_at",
+            ],
+            $this->tableNames->bibliographicDiscoveryCandidates() => [
+                "candidate_id REGEXP '^[0-9a-f]{64}$'",
+                "JSON_VALID(candidate_json) AND CHAR_LENGTH(candidate_json) <= 32768",
+                "candidate_hash REGEXP '^[0-9a-f]{64}$'",
+                "CAST(candidate_hash AS CHAR CHARSET binary) = CAST(SHA2(candidate_json, 256) AS CHAR CHARSET binary)",
+            ],
+            $this->tableNames->bibliographicProviderIdentities() => [
+                "provider_key REGEXP '^[a-z][a-z0-9_]{0,63}$'",
+                "source_entity_type IN ('work', 'edition')",
+                "CHAR_LENGTH(TRIM(provider_record_id)) > 0",
+                "target_type = 'work' AND work_id IS NOT NULL AND edition_id IS NULL OR target_type = 'edition' AND work_id IS NULL AND edition_id IS NOT NULL",
             ],
             $this->tableNames->locations() => [
                 "CHAR_LENGTH(TRIM(display_name)) > 0",

@@ -48,7 +48,7 @@ final class Schema1004PrivateNotesTest extends PersistenceIntegrationTestCase
             'work_title' => 'Blijft behouden',
         ]);
         $this->database->query("DROP TABLE `{$notes}`");
-        update_option(CoreSchemaMigrator::VERSION_OPTION, '1003', false);
+        $this->setHistoricalSchemaVersion(1003);
         $migration = new CoreSchema1004Migration($this->database, $this->tableNames);
 
         $migration->assertPrecondition();
@@ -58,7 +58,7 @@ final class Schema1004PrivateNotesTest extends PersistenceIntegrationTestCase
         ));
         $this->migrator()->migrate();
 
-        self::assertSame(1022, $this->migrator()->installedVersion());
+        self::assertSame(1023, $this->migrator()->installedVersion());
         self::assertSame('Blijft behouden', $this->database->get_var(
             $this->database->prepare(
                 "SELECT work_title FROM `{$works}` WHERE work_id = %s",
@@ -76,7 +76,7 @@ final class Schema1004PrivateNotesTest extends PersistenceIntegrationTestCase
             "CREATE TABLE `{$notes}` (private_note_id VARCHAR(191) NOT NULL PRIMARY KEY) "
             . "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
         );
-        update_option(CoreSchemaMigrator::VERSION_OPTION, '1003', false);
+        $this->setHistoricalSchemaVersion(1003);
 
         try {
             $this->migrator()->migrate();
@@ -91,7 +91,7 @@ final class Schema1004PrivateNotesTest extends PersistenceIntegrationTestCase
             ));
         } finally {
             $this->database->query("DROP TABLE `{$notes}`");
-            update_option(CoreSchemaMigrator::VERSION_OPTION, '1003', false);
+            $this->setHistoricalSchemaVersion(1003);
             $this->migrator()->migrate();
         }
     }

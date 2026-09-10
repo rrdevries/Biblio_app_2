@@ -13,8 +13,8 @@ use Biblio\Core\Application\Metadata\MetadataFieldReview;
 use Biblio\Core\Application\Metadata\MetadataFieldReviewRepository;
 use Biblio\Core\Application\Metadata\MetadataFieldValue;
 use Biblio\Core\Application\Metadata\MetadataMatchMethod;
+use Biblio\Core\Application\Metadata\MetadataEvidenceQueryType;
 use Biblio\Core\Application\Metadata\MetadataRecordId;
-use Biblio\Core\Catalog\IsbnType;
 use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Persistence\PersistenceException;
@@ -292,7 +292,7 @@ final readonly class WpdbMetadataFieldReviewRepository implements MetadataFieldR
             $this->date((string) $row->last_retrieved_at),
             (int) $row->observation_count,
             MetadataMatchMethod::from((string) $row->match_method),
-            IsbnType::from((string) $row->queried_identifier_type),
+            MetadataEvidenceQueryType::from((string) $row->queried_identifier_type),
             (string) $row->queried_identifier
         );
         $expectedId = hash("sha256", implode("\0", [

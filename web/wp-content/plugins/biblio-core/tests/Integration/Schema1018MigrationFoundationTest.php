@@ -19,7 +19,7 @@ final class Schema1018MigrationFoundationTest extends PersistenceIntegrationTest
         foreach (array_reverse($this->tableNames->schema1018Additions()) as $table) {
             $this->database->query("DROP TABLE IF EXISTS " . $table);
         }
-        update_option(CoreSchemaMigrator::VERSION_OPTION, "1017", false);
+        $this->setHistoricalSchemaVersion(1017);
         (new CoreSchemaMigrator(
             $this->database,
             $this->tableNames,
@@ -40,7 +40,7 @@ final class Schema1018MigrationFoundationTest extends PersistenceIntegrationTest
         foreach (array_reverse($this->tableNames->schema1018Additions()) as $table) {
             $this->database->query("DROP TABLE IF EXISTS " . $table);
         }
-        update_option(CoreSchemaMigrator::VERSION_OPTION, "1017", false);
+        $this->setHistoricalSchemaVersion(1017);
         $migration = new CoreSchema1018Migration($this->database, $this->tableNames);
 
         $migration->assertPrecondition();
@@ -63,6 +63,7 @@ final class Schema1018MigrationFoundationTest extends PersistenceIntegrationTest
         foreach (array_reverse($this->tableNames->schema1018Additions()) as $table) {
             $this->database->query("DROP TABLE IF EXISTS " . $table);
         }
+        $this->setHistoricalSchemaVersion(1017);
         $runs = $this->tableNames->migrationRuns();
         $this->database->query(
             "CREATE TABLE " . $runs . " (run_id VARCHAR(191) NOT NULL PRIMARY KEY) ENGINE=InnoDB"

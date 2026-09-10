@@ -24,6 +24,7 @@ use Biblio\Core\Application\NextReading\Read\NextReadingSourceOptionView;
 use Biblio\Core\Application\Wishlist\WishlistEntryView;
 use Biblio\Core\Application\Catalog\LocalEditionResolutionType;
 use Biblio\Core\Application\Metadata\{AddBookCommitResult,AddBookExistingEdition,AddBookExistingItem,AddBookMetadataLookupResult,ClassifiedMetadataCandidate,MetadataCandidateId,MetadataFieldBinding,MetadataLookupStatus};
+use Biblio\Core\Application\Metadata\Discovery\{BibliographicDiscoveryCandidate,BibliographicDiscoveryResult,BibliographicMaterializationResult};
 use Biblio\Core\Application\Reading\History\ReadingHistoryEntry;
 use Biblio\Core\Application\Reading\History\ReadingHistoryPage;
 use Biblio\Core\Catalog\WorkId;
@@ -58,6 +59,64 @@ final readonly class RestResponseSerializer
     {
         return [
             "libraries" => array_map($this->library(...), $libraries),
+        ];
+    }
+
+    /** @return array<string,mixed> */
+    public function bibliographicDiscovery(BibliographicDiscoveryResult $result): array
+    {
+        return [
+            "query" => [
+                "type" => $result->query()->type()->value,
+                "normalized" => $result->query()->normalizedValue(),
+            ],
+            "status" => $result->status()->value,
+            "discovery_id" => $result->discoveryId()?->value(),
+            "results" => array_map($this->bibliographicCandidate(...), $result->candidates()),
+            "provider_attempts" => $result->attempts(),
+        ];
+    }
+
+    /** @return array<string,mixed> */
+    private function bibliographicCandidate(BibliographicDiscoveryCandidate $candidate): array
+    {
+        return [
+            "candidate_id" => $candidate->id(),
+            "type" => $candidate->type()->value,
+            "work_id" => $candidate->workId()?->value(),
+            "edition_id" => $candidate->editionId()?->value(),
+            "title" => $candidate->title(),
+            "subtitle" => $candidate->subtitle(),
+            "contributors" => $candidate->contributors(),
+            "languages" => $candidate->languages(),
+            "publishers" => $candidate->publishers(),
+            "publication_date" => $candidate->publicationDate(),
+            "page_count" => $candidate->pageCount(),
+            "format" => $candidate->format(),
+            "isbn_10" => $candidate->isbn()?->isbn10()?->value(),
+            "isbn_13" => $candidate->isbn()?->isbn13()->value(),
+            "provider_evidence" => $candidate->providerKey() === null ? null : [
+                "provider_key" => $candidate->providerKey(),
+                "provider_record_id" => $candidate->providerRecordId(),
+                "provider_work_id" => $candidate->providerWorkId(),
+                "retrieved_at" => $candidate->retrievedAt()?->setTimezone(new DateTimeZone("UTC"))->format(DATE_ATOM),
+                "match_method" => $candidate->matchMethod()?->value,
+            ],
+            "presentation_order" => $candidate->presentationOrder(),
+            "capabilities" => [
+                "can_add_work_only" => $candidate->canAddWorkOnly(),
+                "can_add_edition_specific" => $candidate->canAddEditionSpecific(),
+            ],
+        ];
+    }
+
+    /** @return array<string,mixed> */
+    public function bibliographicMaterialization(BibliographicMaterializationResult $result): array
+    {
+        return [
+            "work_id" => $result->work()->id()->value(),
+            "edition_id" => $result->edition()?->id()->value(),
+            "reused" => $result->reused(),
         ];
     }
 

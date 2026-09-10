@@ -151,7 +151,7 @@ final class Schema1021AssessmentTimeTest extends PersistenceIntegrationTestCase
                 );
             }
         }
-        update_option(CoreSchemaMigrator::VERSION_OPTION, "1020", false);
+        $this->setHistoricalSchemaVersion(1020);
     }
 
     private function seedWork(): void

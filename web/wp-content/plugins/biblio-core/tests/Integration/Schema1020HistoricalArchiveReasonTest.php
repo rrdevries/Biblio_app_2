@@ -128,7 +128,7 @@ final class Schema1020HistoricalArchiveReasonTest extends PersistenceIntegration
     private function restoreSchema1019(): void
     {
         if (!$this->hasColumn("archive_reason_kind")) {
-            update_option(CoreSchemaMigrator::VERSION_OPTION, "1019", false);
+            $this->setHistoricalSchemaVersion(1019);
             return;
         }
 
@@ -145,7 +145,7 @@ final class Schema1020HistoricalArchiveReasonTest extends PersistenceIntegration
                 . "DROP COLUMN archive_reason_kind,"
                 . "ADD CONSTRAINT item_archive_reason_supported CHECK (archive_reason IN ('sold','given_away','donated','lost','damaged_discarded','not_returned'))"
         );
-        update_option(CoreSchemaMigrator::VERSION_OPTION, "1019", false);
+        $this->setHistoricalSchemaVersion(1019);
     }
 
     private function seedArchivedItem(): void

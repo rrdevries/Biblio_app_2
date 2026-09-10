@@ -19,7 +19,7 @@ final class Schema1017AddBookEvidenceTest extends PersistenceIntegrationTestCase
         foreach (array_reverse($this->tableNames->schema1017Additions()) as $table) {
             $this->database->query("DROP TABLE IF EXISTS `{$table}`");
         }
-        update_option(CoreSchemaMigrator::VERSION_OPTION, "1016", false);
+        $this->setHistoricalSchemaVersion(1016);
         $migration = new CoreSchema1017Migration($this->database, $this->tableNames);
 
         $migration->assertPrecondition();
@@ -31,7 +31,7 @@ final class Schema1017AddBookEvidenceTest extends PersistenceIntegrationTestCase
         self::assertTrue($this->migrator()->healthForVersion(1017)->isHealthy());
         self::assertSame(1016, $migration->sourceVersion());
         self::assertSame(1017, $migration->targetVersion());
-        update_option(CoreSchemaMigrator::VERSION_OPTION, "1017", false);
+        $this->setHistoricalSchemaVersion(1017);
     }
 
     public function testSnapshotRoundTripEnforcesActorLibraryAndExpiry(): void

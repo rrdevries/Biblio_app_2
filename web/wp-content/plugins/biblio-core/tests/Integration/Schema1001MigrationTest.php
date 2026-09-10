@@ -377,7 +377,7 @@ final class Schema1001MigrationTest extends PersistenceIntegrationTestCase
 
     private function downgradeToVersion1000(): void
     {
-        foreach (array_reverse($this->tableNames->schema1022()) as $table) {
+        foreach (array_reverse($this->tableNames->schema1023()) as $table) {
             $this->database->query("DROP TABLE IF EXISTS `{$table}`");
         }
         delete_option(CoreSchemaMigrator::VERSION_OPTION);

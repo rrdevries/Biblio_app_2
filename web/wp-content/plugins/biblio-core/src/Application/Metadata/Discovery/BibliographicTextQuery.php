@@ -1,0 +1,36 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Biblio\Core\Application\Metadata\Discovery;
+
+use Biblio\Core\Exception\ValidationException;
+
+final readonly class BibliographicTextQuery
+{
+    public const int MAXIMUM_LENGTH = 100;
+
+    private string $value;
+
+    public function __construct(string $value)
+    {
+        if (!mb_check_encoding($value, "UTF-8")) {
+            throw new ValidationException("Bibliographic search must be valid UTF-8.");
+        }
+
+        $normalized = preg_replace('/\s+/u', ' ', trim($value));
+        if ($normalized === null || $normalized === "") {
+            throw new ValidationException("Bibliographic search must not be empty.");
+        }
+        if (mb_strlen($normalized, "UTF-8") > self::MAXIMUM_LENGTH) {
+            throw new ValidationException(
+                "Bibliographic search must not exceed " . self::MAXIMUM_LENGTH
+                . " characters."
+            );
+        }
+
+        $this->value = $normalized;
+    }
+
+    public function value(): string { return $this->value; }
+}

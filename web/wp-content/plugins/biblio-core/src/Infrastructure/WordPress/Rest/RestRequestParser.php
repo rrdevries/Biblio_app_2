@@ -10,6 +10,7 @@ use Biblio\Core\Application\Catalog\Read\CatalogOverviewPageSize;
 use Biblio\Core\Application\Catalog\Query\CatalogQuery;
 use Biblio\Core\Application\Catalog\Classification\LibraryCatalogContextInitialization;
 use Biblio\Core\Application\Metadata\{AddBookCommitRequest,AddBookCommitSelection,AddBookObservedMetadata,MetadataCandidateId,MetadataFieldValue,MetadataLookupId,UserObservedMetadataField};
+use Biblio\Core\Application\Metadata\Discovery\BibliographicMaterializationIntent;
 use Biblio\Core\Application\Reading\History\ReadingHistoryCursor;
 use Biblio\Core\Application\Reading\History\ReadingHistoryPageSize;
 use Biblio\Core\Application\Catalog\Discovery\{WorkDiscoveryCursor,WorkDiscoveryLimit,WorkDiscoverySearchTerm};
@@ -54,6 +55,44 @@ final readonly class RestRequestParser
             "library_id",
             static fn (string $value): LibraryId => new LibraryId($value)
         );
+    }
+
+    public function bibliographicDiscoveryQuery(WP_REST_Request $request): string
+    {
+        $body = $this->jsonObject($request, "query");
+        $this->validateBodyFields($body, ["query"]);
+        if (!is_string($body["query"])) {
+            throw RestRequestException::wrongType("query", "a string");
+        }
+        return $body["query"];
+    }
+
+    /** @return array{discovery_id:MetadataLookupId,candidate_id:MetadataCandidateId,intent:BibliographicMaterializationIntent} */
+    public function bibliographicMaterialization(WP_REST_Request $request): array
+    {
+        $body = $this->jsonObject($request, "candidate_id");
+        $this->validateBodyFields($body, ["candidate_id", "intent"]);
+        if (!is_string($body["candidate_id"])) {
+            throw RestRequestException::wrongType("candidate_id", "a string");
+        }
+        if (!is_string($body["intent"])) {
+            throw RestRequestException::wrongType("intent", "a string");
+        }
+        try {
+            return [
+                "discovery_id" => $this->identifier(
+                    $request->get_url_params()["discovery_id"] ?? null,
+                    "discovery_id",
+                    static fn (string $value): MetadataLookupId => new MetadataLookupId($value)
+                ),
+                "candidate_id" => new MetadataCandidateId($body["candidate_id"]),
+                "intent" => BibliographicMaterializationIntent::from($body["intent"]),
+            ];
+        } catch (RestRequestException $exception) {
+            throw $exception;
+        } catch (Throwable) {
+            throw RestRequestException::invalid("bibliographic_materialization");
+        }
     }
 
     public function catalogQuery(WP_REST_Request $request): CatalogQuery

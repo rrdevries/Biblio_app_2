@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Application\Metadata;
 
+use Biblio\Core\Application\Metadata\Discovery\BibliographicDiscoveryCandidate;
+use Biblio\Core\Application\Metadata\Discovery\BibliographicQueryType;
 use Biblio\Core\Catalog\IsbnType;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -13,6 +15,7 @@ final class MetadataFieldEvidence
 {
     private DateTimeImmutable $firstRetrievedAt;
     private DateTimeImmutable $lastRetrievedAt;
+    private readonly MetadataEvidenceQueryType $queriedIdentifierType;
 
     public function __construct(
         private readonly string $providerKey,
@@ -21,9 +24,12 @@ final class MetadataFieldEvidence
         DateTimeImmutable $lastRetrievedAt,
         private int $observationCount,
         private readonly MetadataMatchMethod $matchMethod,
-        private readonly IsbnType $queriedIdentifierType,
+        IsbnType|MetadataEvidenceQueryType $queriedIdentifierType,
         private readonly string $queriedIdentifier
     ) {
+        $this->queriedIdentifierType = $queriedIdentifierType instanceof IsbnType
+            ? MetadataEvidenceQueryType::from($queriedIdentifierType->value)
+            : $queriedIdentifierType;
         if (
             preg_match('/^[a-z][a-z0-9_]{0,63}$/D', $providerKey) !== 1
             || $providerRecordId === ""
@@ -34,10 +40,15 @@ final class MetadataFieldEvidence
             throw new InvalidArgumentException("Invalid metadata field evidence.");
         }
         if (
-            ($queriedIdentifierType === IsbnType::Isbn10
+            ($this->queriedIdentifierType === MetadataEvidenceQueryType::Isbn10
                 && preg_match('/^[0-9]{9}[0-9X]$/D', $queriedIdentifier) !== 1)
-            || ($queriedIdentifierType === IsbnType::Isbn13
+            || ($this->queriedIdentifierType === MetadataEvidenceQueryType::Isbn13
                 && preg_match('/^97[89][0-9]{10}$/D', $queriedIdentifier) !== 1)
+            || ($this->queriedIdentifierType === MetadataEvidenceQueryType::Text
+                && ($queriedIdentifier === ""
+                    || trim($queriedIdentifier) !== $queriedIdentifier
+                    || !mb_check_encoding($queriedIdentifier, "UTF-8")
+                    || mb_strlen($queriedIdentifier, "UTF-8") > 100))
         ) {
             throw new InvalidArgumentException("Invalid evidence query identifier.");
         }
@@ -64,6 +75,29 @@ final class MetadataFieldEvidence
         );
     }
 
+    public static function fromDiscoveryCandidate(
+        BibliographicDiscoveryCandidate $candidate
+    ): self {
+        $retrievedAt = $candidate->retrievedAt()
+            ?? throw new InvalidArgumentException("Local candidates have no provider evidence.");
+        $matchMethod = $candidate->matchMethod()
+            ?? throw new InvalidArgumentException("Local candidates have no match method.");
+        return new self(
+            $candidate->providerKey()
+                ?? throw new InvalidArgumentException("Local candidates have no provider."),
+            $candidate->providerRecordId()
+                ?? throw new InvalidArgumentException("Local candidates have no provider record."),
+            $retrievedAt,
+            $retrievedAt,
+            1,
+            $matchMethod,
+            $candidate->queryType() === BibliographicQueryType::Isbn
+                ? MetadataEvidenceQueryType::Isbn13
+                : MetadataEvidenceQueryType::Text,
+            $candidate->normalizedQuery()
+        );
+    }
+
     public function identity(): string
     {
         return hash("sha256", implode("\0", [
@@ -81,9 +115,8 @@ final class MetadataFieldEvidence
         if ($retrievedAt < $this->firstRetrievedAt) {
             $this->firstRetrievedAt = $retrievedAt;
         }
-        if ($retrievedAt > $this->lastRetrievedAt) {
-            $this->lastRetrievedAt = $retrievedAt;
-        }
+        if ($retrievedAt <= $this->lastRetrievedAt) { return; }
+        $this->lastRetrievedAt = $retrievedAt;
         ++$this->observationCount;
     }
 
@@ -93,6 +126,6 @@ final class MetadataFieldEvidence
     public function lastRetrievedAt(): DateTimeImmutable { return $this->lastRetrievedAt; }
     public function observationCount(): int { return $this->observationCount; }
     public function matchMethod(): MetadataMatchMethod { return $this->matchMethod; }
-    public function queriedIdentifierType(): IsbnType { return $this->queriedIdentifierType; }
+    public function queriedIdentifierType(): MetadataEvidenceQueryType { return $this->queriedIdentifierType; }
     public function queriedIdentifier(): string { return $this->queriedIdentifier; }
 }

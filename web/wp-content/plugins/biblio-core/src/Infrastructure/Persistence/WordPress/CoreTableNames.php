@@ -65,6 +65,9 @@ final readonly class CoreTableNames
     private string $wishlistWorkStates;
     private string $wishlistEntries;
     private string $wishlistEntryHistory;
+    private string $bibliographicDiscoverySnapshots;
+    private string $bibliographicDiscoveryCandidates;
+    private string $bibliographicProviderIdentities;
 
     public function __construct(string $prefix)
     {
@@ -136,8 +139,14 @@ final readonly class CoreTableNames
         $this->wishlistWorkStates = $prefix . "biblio_wishlist_work_states";
         $this->wishlistEntries = $prefix . "biblio_wishlist_entries";
         $this->wishlistEntryHistory = $prefix . "biblio_wishlist_entry_history";
+        $this->bibliographicDiscoverySnapshots = $prefix
+            . "biblio_bibliographic_discoveries";
+        $this->bibliographicDiscoveryCandidates = $prefix
+            . "biblio_bibliographic_discovery_candidates";
+        $this->bibliographicProviderIdentities = $prefix
+            . "biblio_bibliographic_provider_identities";
 
-        foreach ($this->schema1022() as $tableName) {
+        foreach ($this->schema1023() as $tableName) {
             $this->assertSafe($tableName);
         }
         $this->assertSafe($this->nextReadingInsertTrigger);
@@ -588,6 +597,37 @@ final readonly class CoreTableNames
     public function schema1022(): array
     {
         return [...$this->schema1021(), ...$this->schema1022Additions()];
+    }
+
+    public function bibliographicDiscoverySnapshots(): string
+    {
+        return $this->bibliographicDiscoverySnapshots;
+    }
+
+    public function bibliographicDiscoveryCandidates(): string
+    {
+        return $this->bibliographicDiscoveryCandidates;
+    }
+
+    public function bibliographicProviderIdentities(): string
+    {
+        return $this->bibliographicProviderIdentities;
+    }
+
+    /** @return list<string> */
+    public function schema1023Additions(): array
+    {
+        return [
+            $this->bibliographicDiscoverySnapshots,
+            $this->bibliographicDiscoveryCandidates,
+            $this->bibliographicProviderIdentities,
+        ];
+    }
+
+    /** @return list<string> */
+    public function schema1023(): array
+    {
+        return [...$this->schema1022(), ...$this->schema1023Additions()];
     }
 
     private function assertSafe(string $tableName): void
