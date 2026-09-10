@@ -422,8 +422,31 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         );
         self::assertNull($authorized->get_data()["data"]["edition_id"]);
         self::assertFalse($authorized->get_data()["data"]["reused"]);
+        $wishlistRequest = new WP_REST_Request("POST", "/biblio/v1/me/wishlist");
+        $wishlistRequest->set_header("content-type", "application/json");
+        $wishlistRequest->set_body((string) wp_json_encode([
+            "target" => [
+                "type" => "work_only",
+                "work_id" => $authorized->get_data()["data"]["work_id"],
+            ],
+        ]));
+        $wishlist = $this->dispatchAsActor($wishlistRequest);
+        self::assertSame(201, $wishlist->get_status());
+        self::assertSame(
+            $authorized->get_data()["data"]["work_id"],
+            $wishlist->get_data()["data"]["work_id"]
+        );
+        self::assertSame(1, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->wishlistEntries()}`"
+        ));
         self::assertSame(0, (int) $this->database->get_var(
             "SELECT COUNT(*) FROM `{$this->tableNames->items()}`"
+        ));
+        self::assertSame(0, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->libraryCatalogContexts()}`"
+        ));
+        self::assertSame(0, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->libraryActivityEvents()}`"
         ));
 
         $titleOnly = BibliographicDiscoveryCandidate::external(

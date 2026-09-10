@@ -66,12 +66,22 @@ final readonly class WpdbBibliographicLocalDiscoveryRepository implements
         ));
 
         try {
+            $workIds = array_values(array_unique(array_map(
+                static fn (object $row): string => (string) $row->work_id,
+                $rows
+            )));
+            $contributorsByWork = $this->contributorsByWork($workIds);
             $result = [];
             foreach ($rows as $order => $row) {
                 $workId = new WorkId((string) $row->work_id);
+                $workContributors = $contributorsByWork[$workId->value()] ?? [];
                 if ((string) $row->result_type === "work") {
                     $result[] = BibliographicDiscoveryCandidate::localWork(
-                        $workId, (string) $row->result_title, $query, $order
+                        $workId,
+                        (string) $row->result_title,
+                        $query,
+                        $order,
+                        $workContributors
                     );
                     continue;
                 }
@@ -89,7 +99,8 @@ final readonly class WpdbBibliographicLocalDiscoveryRepository implements
                     (string) $row->result_title,
                     $query,
                     $order,
-                    $identity
+                    $identity,
+                    $workContributors
                 );
             }
             return $result;
@@ -101,5 +112,38 @@ final readonly class WpdbBibliographicLocalDiscoveryRepository implements
                 FailureReason::PersistenceReadFailed
             );
         }
+    }
+
+    /**
+     * @param list<string> $workIds
+     * @return array<string, list<string>>
+     */
+    private function contributorsByWork(array $workIds): array
+    {
+        if ($workIds === []) {
+            return [];
+        }
+
+        $contributors = $this->tables->workContributors();
+        $authors = $this->tables->authors();
+        $placeholders = implode(",", array_fill(0, count($workIds), "%s"));
+        $rows = $this->database->get_results($this->database->prepare(
+            "SELECT wc.work_id,a.display_name "
+                . "FROM `{$contributors}` wc "
+                . "INNER JOIN `{$authors}` a ON a.author_id=wc.author_id "
+                . "WHERE wc.work_id IN ({$placeholders}) "
+                . "ORDER BY wc.work_id,wc.contributor_position,a.author_id",
+            ...$workIds
+        ));
+
+        $result = [];
+        foreach ($rows as $row) {
+            $workId = (string) $row->work_id;
+            if (count($result[$workId] ?? []) < 32) {
+                $result[$workId][] = (string) $row->display_name;
+            }
+        }
+
+        return $result;
     }
 }

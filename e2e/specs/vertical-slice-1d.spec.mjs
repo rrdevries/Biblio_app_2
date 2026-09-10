@@ -109,7 +109,9 @@ function restError(code, status, message = "Veilige E2E-fout") {
 
 async function openItem(page, itemId, libraryId = IDS.actorLibrary) {
     await page.goto(libraryUrl(itemId, libraryId));
-    await expect(notesRegion(page)).toHaveAttribute("aria-busy", "false");
+    await expect(
+        notesRegion(page).locator(":scope > .biblio-ui__private-notes")
+    ).toHaveAttribute("aria-busy", "false");
     await expect(page.getByRole("heading", { level: 2, name: "Privénotities" }))
         .toBeVisible();
 }
@@ -818,7 +820,8 @@ test("keyboard-only Notes controls, toolbar, Save, Cancel and delete dialog rema
     await openItem(page, IDS.zeroItem);
     const add = page.getByRole("button", { name: "Notitie toevoegen" });
     await add.focus();
-    await page.keyboard.press("Enter");
+    await expect(add).toBeFocused();
+    await add.press("Enter");
     const editor = noteEditor(page);
     await expect(editor).toBeFocused();
     await page.keyboard.press("Shift+Tab");
@@ -837,7 +840,8 @@ test("keyboard-only Notes controls, toolbar, Save, Cancel and delete dialog rema
 
     const edit = card.getByRole("button", { name: "Bewerken" });
     await edit.focus();
-    await page.keyboard.press("Enter");
+    await expect(edit).toBeFocused();
+    await edit.press("Enter");
     await expect(noteEditor(page)).toBeFocused();
     await tabTo(page, notesRegion(page).getByRole("button", { name: "Opslaan" }));
     await tabTo(page, notesRegion(page).getByRole("button", { name: "Annuleren" }));
@@ -846,7 +850,8 @@ test("keyboard-only Notes controls, toolbar, Save, Cancel and delete dialog rema
 
     const remove = card.getByRole("button", { name: "Verwijderen" });
     await remove.focus();
-    await page.keyboard.press("Enter");
+    await expect(remove).toBeFocused();
+    await remove.press("Enter");
     let dialog = page.getByRole("dialog", { name: "Privénotitie verwijderen?" });
     await expect(dialog.getByRole("button", { name: "Annuleren" })).toBeFocused();
     await page.keyboard.press("Escape");

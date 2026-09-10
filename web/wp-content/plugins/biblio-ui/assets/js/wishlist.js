@@ -1,6 +1,9 @@
 import { BiblioApiError, createBiblioApi } from "./api.js";
+import {
+    readBibliographicDiscovery,
+    readBibliographicMaterialization,
+} from "./bibliographic-discovery.js";
 import { createLibraryShell } from "./ui-shell.js";
-import { readWorkPage } from "./work-discovery.js";
 
 const LIST_FIELDS = ["entries"];
 const ENTRY_FIELDS = [
@@ -80,21 +83,51 @@ export function readWishlistList(value) {
     });
 }
 
+function isBiblioApiError(error) {
+    return error instanceof BiblioApiError || (
+        error instanceof Error
+        && error.name === "BiblioApiError"
+        && ["aborted", "http", "invalid_response", "network"].includes(error.kind)
+        && text(error.code)
+        && (error.status === null || Number.isInteger(error.status))
+    );
+}
+
 export function wishlistErrorMessage(error) {
-    if (error instanceof BiblioApiError && error.status === 401) {
+    if (isBiblioApiError(error) && error.status === 401) {
         return "Je sessie is verlopen. Log opnieuw in.";
     }
     if (
-        error instanceof BiblioApiError
+        isBiblioApiError(error)
         && error.status === 409
         && error.code === "biblio_wishlist_intent_conflict"
     ) {
         return "Er staan al specifieke uitgaven van dit boek op je verlanglijst. Biblio voegt daarom geen algemene boekwens toe en verwijdert niets.";
     }
-    if (error instanceof BiblioApiError && error.status === 404) {
+    if (isBiblioApiError(error) && error.status === 404) {
         return "Deze wens of uitgave is niet meer beschikbaar.";
     }
     return "Dat lukte niet. Probeer het opnieuw.";
+}
+
+function isWishlistIntentConflict(error) {
+    return isBiblioApiError(error)
+        && error.status === 409
+        && error.code === "biblio_wishlist_intent_conflict";
+}
+
+export function discoveryErrorMessage(error) {
+    if (
+        isBiblioApiError(error)
+        && error.status === 409
+        && error.code === "biblio_metadata_lookup_snapshot_unavailable"
+    ) {
+        return "Deze zoekresultaten zijn verlopen of niet meer beschikbaar. Zoek opnieuw.";
+    }
+    if (error instanceof TypeError || error?.kind === "invalid_response") {
+        return "Biblio kon de zoekresultaten niet veilig lezen. Probeer het opnieuw.";
+    }
+    return wishlistErrorMessage(error);
 }
 
 function el(documentImpl, tagName, {
@@ -209,6 +242,7 @@ export function createWishlistApp({
     let searchRevision = 0;
     let searchController = null;
     let destroyed = false;
+    const searchRestorers = new WeakMap();
 
     function announce(message) {
         live.textContent = "";
@@ -219,6 +253,13 @@ export function createWishlistApp({
         pending = value;
         view.setAttribute("aria-busy", value ? "true" : "false");
         for (const control of view.querySelectorAll("button")) {
+            control.disabled = value;
+        }
+    }
+
+    function setDialogPending(dialog, value) {
+        dialog.setAttribute("aria-busy", value ? "true" : "false");
+        for (const control of dialog.querySelectorAll("button, input")) {
             control.disabled = value;
         }
     }
@@ -291,7 +332,7 @@ export function createWishlistApp({
                 textContent: wishlistErrorMessage(state.error),
             }));
             if (
-                state.error instanceof BiblioApiError
+                isBiblioApiError(state.error)
                 && state.error.status === 401
                 && text(root.dataset.loginUrl)
             ) {
@@ -387,7 +428,7 @@ export function createWishlistApp({
         }
     }
 
-    function conflictContent(dialog, work) {
+    function conflictContent(dialog, target) {
         const heading = el(documentImpl, "h2", {
             textContent: "Algemene wens niet toegevoegd",
             attrs: { tabindex: "-1" },
@@ -396,7 +437,7 @@ export function createWishlistApp({
             textContent: "Er staan al specifieke uitgaven van dit boek op je verlanglijst. Biblio verwijdert of voegt die niet automatisch samen.",
         });
         const existing = state.entries.filter(
-            (entry) => entry.work_id === work.work_id
+            (entry) => entry.work_id === target.workId
                 && entry.target_type === "edition_specific"
         );
         const list = el(documentImpl, "ul", {
@@ -413,13 +454,433 @@ export function createWishlistApp({
         heading.focus();
     }
 
+    function candidateMetadata(candidate) {
+        const details = [];
+        if (candidate.publishers.length > 0) {
+            details.push(["Uitgever", candidate.publishers.join(", ")]);
+        }
+        if (candidate.publication_date !== null) {
+            details.push(["Jaar / datum", candidate.publication_date]);
+        }
+        if (candidate.languages.length > 0) {
+            details.push(["Taal", candidate.languages.join(", ")]);
+        }
+        if (candidate.isbn_13 !== null || candidate.isbn_10 !== null) {
+            details.push(["ISBN", candidate.isbn_13 ?? candidate.isbn_10]);
+        }
+        if (candidate.format !== null) {
+            details.push(["Binding", candidate.format]);
+        }
+        if (candidate.page_count !== null) {
+            details.push(["Omvang", `${candidate.page_count} pagina’s`]);
+        }
+        return details;
+    }
+
+    function resultTypeLabel(candidate) {
+        return candidate.type === "local_work"
+            || candidate.type === "external_work_candidate"
+            ? "Boek"
+            : "Specifieke uitgave";
+    }
+
+    function discoveryStatusCopy(discovery) {
+        if (discovery.status === "no_results") {
+            return "Geen boeken gevonden.";
+        }
+        if (discovery.status === "provider_failure") {
+            return "Zoeken buiten Biblio lukt tijdelijk niet. Probeer het opnieuw.";
+        }
+        if (discovery.status === "configuration_failure") {
+            return "Zoeken buiten Biblio is tijdelijk niet beschikbaar. Probeer het later opnieuw.";
+        }
+        if (discovery.status === "invalid_provider_response") {
+            return "Externe zoekresultaten konden niet veilig worden gelezen. Probeer het opnieuw.";
+        }
+        return `${discovery.results.length} ${discovery.results.length === 1 ? "resultaat" : "resultaten"} gevonden.`;
+    }
+
+    function finishWishlistMutation(dialog, added, wasPresent, action) {
+        const existingIndex = state.entries.findIndex(
+            (entry) => entry.wishlist_entry_id === added.wishlist_entry_id
+        );
+        const entries = [...state.entries];
+        if (existingIndex === -1) entries.unshift(added);
+        else entries[existingIndex] = added;
+        state = Object.freeze({
+            name: "ready",
+            entries: Object.freeze(entries),
+        });
+        render();
+        dialog.close();
+        if (action === "refined") {
+            announce(`Je algemene wens voor “${added.display_title}” is verfijnd naar deze uitgave.`);
+        } else if (added.target_type === "edition_specific") {
+            announce(wasPresent
+                ? `Deze uitgave van “${added.display_title}” staat al op je verlanglijst.`
+                : `Deze uitgave van “${added.display_title}” is aan je verlanglijst toegevoegd.`);
+        } else {
+            announce(wasPresent
+                ? `“${added.display_title}” staat al op je verlanglijst.`
+                : `“${added.display_title}” is aan je verlanglijst toegevoegd.`);
+        }
+        focusEntry(content, added.wishlist_entry_id);
+    }
+
+    function wishlistRetryContent(dialog, target, error) {
+        const heading = el(documentImpl, "h2", {
+            textContent: "Wens nog niet toegevoegd",
+            attrs: { tabindex: "-1" },
+        });
+        const retry = button(documentImpl, "Opnieuw proberen", "retry-wishlist", "primary");
+        const close = button(documentImpl, "Sluiten", "close-wishlist");
+        retry.addEventListener("click", () => writeWishlistTarget(target, dialog));
+        close.addEventListener("click", () => dialog.close());
+        dialog.replaceChildren(
+            heading,
+            el(documentImpl, "p", {
+                className: "biblio-ui__inline-error",
+                textContent: wishlistErrorMessage(error),
+                attrs: { role: "alert" },
+            }),
+            el(documentImpl, "p", {
+                textContent: "Het boek is veilig herkend. Probeer alleen het bewaren op je verlanglijst opnieuw.",
+            }),
+            el(documentImpl, "div", { className: "biblio-ui__dialog-actions" })
+        );
+        dialog.lastElementChild.append(retry, close);
+        heading.focus();
+    }
+
+    function refinementContent(dialog, target, workOnly) {
+        const heading = el(documentImpl, "h2", {
+            textContent: "Algemene wens verfijnen?",
+            attrs: { tabindex: "-1" },
+        });
+        const confirm = button(documentImpl, "Deze uitgave kiezen", "refine", "primary");
+        const cancel = button(documentImpl, "Algemene wens behouden", "keep-general");
+        async function refine() {
+            if (pending) return;
+            setPending(true);
+            setDialogPending(dialog, true);
+            try {
+                const refined = readWishlistEntry(await api.patch(
+                    `me/wishlist/${encodeURIComponent(workOnly.wishlist_entry_id)}`,
+                    { target: { type: "edition_specific", edition_id: target.editionId } }
+                ));
+                await finishWishlistMutation(dialog, refined, false, "refined");
+            } catch (error) {
+                if (isWishlistIntentConflict(error)) {
+                    await handleIntentConflict(target, dialog, "refined");
+                    return;
+                }
+                const retryHeading = el(documentImpl, "h2", {
+                    textContent: "Wens nog niet verfijnd",
+                    attrs: { tabindex: "-1" },
+                });
+                const retry = button(documentImpl, "Opnieuw proberen", "retry-refinement", "primary");
+                const close = button(documentImpl, "Algemene wens behouden", "keep-general");
+                retry.addEventListener("click", refine);
+                close.addEventListener("click", () => dialog.close());
+                dialog.replaceChildren(
+                    retryHeading,
+                    el(documentImpl, "p", {
+                        className: "biblio-ui__inline-error",
+                        textContent: wishlistErrorMessage(error),
+                        attrs: { role: "alert" },
+                    }),
+                    el(documentImpl, "p", {
+                        textContent: "Je algemene wens is niet gewijzigd.",
+                    }),
+                    el(documentImpl, "div", { className: "biblio-ui__dialog-actions" })
+                );
+                dialog.lastElementChild.append(retry, close);
+                retryHeading.focus();
+            } finally {
+                setPending(false);
+                if (dialog.open) setDialogPending(dialog, false);
+            }
+        }
+        confirm.addEventListener("click", refine);
+        cancel.addEventListener("click", () => dialog.close());
+        dialog.replaceChildren(
+            heading,
+            el(documentImpl, "p", {
+                textContent: "Dit boek staat al algemeen op je verlanglijst. Kies deze concrete uitgave alleen als je de algemene wens wilt vervangen; de wens behoudt dezelfde identiteit.",
+            }),
+            el(documentImpl, "div", { className: "biblio-ui__dialog-actions" })
+        );
+        dialog.lastElementChild.append(confirm, cancel);
+        heading.focus();
+    }
+
+    function staleConflictContent(dialog, refreshFailed) {
+        const heading = el(documentImpl, "h2", {
+            textContent: "Controleer je verlanglijst",
+            attrs: { tabindex: "-1" },
+        });
+        const review = button(
+            documentImpl,
+            refreshFailed ? "Verlanglijst vernieuwen" : "Bijgewerkte lijst bekijken",
+            "review-stale-wishlist",
+            "primary"
+        );
+        review.addEventListener("click", () => {
+            dialog.close();
+            if (refreshFailed) void load({ focusHeading: true });
+        });
+        dialog.replaceChildren(
+            heading,
+            el(documentImpl, "p", {
+                className: refreshFailed ? "biblio-ui__inline-error" : undefined,
+                textContent: refreshFailed
+                    ? "Je verlanglijst is elders gewijzigd, maar kon niet opnieuw worden geladen. Vernieuw de lijst en kies daarna opnieuw."
+                    : "Je verlanglijst is elders gewijzigd. Bekijk de bijgewerkte lijst en kies daarna opnieuw.",
+                attrs: refreshFailed ? { role: "alert" } : {},
+            }),
+            review
+        );
+        heading.focus();
+        announce("Je verlanglijst is elders gewijzigd. Controleer de actuele lijst.");
+    }
+
+    async function handleIntentConflict(target, dialog, completedAction = "added") {
+        try {
+            const list = readWishlistList(await api.get("me/wishlist"));
+            state = Object.freeze({ name: "ready", entries: list.entries });
+            render();
+            if (target.intent === "work_only") {
+                const editions = list.entries.filter((entry) => (
+                    entry.work_id === target.workId && entry.target_type === "edition_specific"
+                ));
+                if (editions.length > 0) {
+                    conflictContent(dialog, target);
+                    announce("Er staan al specifieke uitgaven van dit boek op je verlanglijst. Biblio voegt daarom geen algemene boekwens toe en verwijdert niets.");
+                    return;
+                }
+                staleConflictContent(dialog, false);
+                return;
+            }
+
+            const exactEdition = list.entries.find((entry) => (
+                entry.edition_id === target.editionId
+            ));
+            if (exactEdition !== undefined) {
+                finishWishlistMutation(dialog, exactEdition, true, completedAction);
+                return;
+            }
+            const workOnly = list.entries.find((entry) => (
+                entry.work_id === target.workId && entry.target_type === "work_only"
+            ));
+            if (workOnly !== undefined) {
+                refinementContent(dialog, target, workOnly);
+                return;
+            }
+            staleConflictContent(dialog, false);
+        } catch {
+            staleConflictContent(dialog, true);
+        }
+    }
+
+    async function writeWishlistTarget(target, dialog) {
+        if (pending || !dialog.open) return;
+        const exactEntry = state.entries.find((entry) => (
+            target.intent === "work_only"
+                ? entry.work_id === target.workId && entry.target_type === "work_only"
+                : entry.edition_id === target.editionId
+        ));
+        const workOnly = target.intent === "work_and_edition"
+            ? state.entries.find((entry) => (
+                entry.work_id === target.workId && entry.target_type === "work_only"
+            ))
+            : undefined;
+        if (workOnly !== undefined) {
+            refinementContent(dialog, target, workOnly);
+            return;
+        }
+
+        setPending(true);
+        setDialogPending(dialog, true);
+        try {
+            const payload = target.intent === "work_only"
+                ? { target: { type: "work_only", work_id: target.workId } }
+                : {
+                    target: {
+                        type: "edition_specific",
+                        work_id: target.workId,
+                        edition_id: target.editionId,
+                    },
+                };
+            const added = readWishlistEntry(await api.post("me/wishlist", payload));
+            await finishWishlistMutation(dialog, added, exactEntry !== undefined, "added");
+        } catch (error) {
+            if (isWishlistIntentConflict(error)) {
+                await handleIntentConflict(target, dialog);
+            } else {
+                wishlistRetryContent(dialog, target, error);
+            }
+        } finally {
+            setPending(false);
+            if (dialog.open) setDialogPending(dialog, false);
+        }
+    }
+
+    function materializationErrorContent(dialog, candidate, discovery, intent, revision, error) {
+        const unavailable = isBiblioApiError(error)
+            && error.status === 409
+            && error.code === "biblio_metadata_lookup_snapshot_unavailable";
+        const heading = el(documentImpl, "h2", {
+            textContent: unavailable ? "Zoek opnieuw" : "Boek nog niet voorbereid",
+            attrs: { tabindex: "-1" },
+        });
+        const retry = button(
+            documentImpl,
+            unavailable ? "Nieuwe zoekopdracht" : "Opnieuw proberen",
+            unavailable ? "new-search" : "retry-materialization",
+            "primary"
+        );
+        const close = button(documentImpl, "Sluiten", "close-materialization");
+        if (unavailable) {
+            retry.addEventListener("click", () => {
+                searchRestorers.get(dialog)?.();
+            });
+        } else {
+            retry.addEventListener("click", () => chooseCandidate(
+                candidate, discovery, intent, dialog, revision
+            ));
+        }
+        close.addEventListener("click", () => dialog.close());
+        dialog.replaceChildren(
+            heading,
+            el(documentImpl, "p", {
+                className: "biblio-ui__inline-error",
+                textContent: discoveryErrorMessage(error),
+                attrs: { role: "alert" },
+            }),
+            el(documentImpl, "div", { className: "biblio-ui__dialog-actions" })
+        );
+        dialog.lastElementChild.append(retry, close);
+        heading.focus();
+    }
+
+    async function chooseCandidate(candidate, discovery, intent, dialog, revision) {
+        if (pending || revision !== searchRevision || !dialog.open) return;
+        const external = candidate.type.startsWith("external_");
+        setPending(true);
+        setDialogPending(dialog, true);
+        try {
+            let workId = candidate.work_id;
+            let editionId = candidate.edition_id;
+            if (external) {
+                const materialized = readBibliographicMaterialization(await api.post(
+                    `me/bibliographic-discoveries/${encodeURIComponent(discovery.discovery_id)}/materializations`,
+                    { candidate_id: candidate.candidate_id, intent }
+                ), intent);
+                workId = materialized.work_id;
+                editionId = materialized.edition_id;
+            }
+            if (revision !== searchRevision || !dialog.open) return;
+            if (!text(workId) || (intent === "work_and_edition" && !text(editionId))) {
+                throw new TypeError("The selected bibliographic identity is invalid.");
+            }
+            const target = Object.freeze({
+                workId,
+                editionId,
+                intent,
+                title: candidate.title,
+            });
+            setPending(false);
+            setDialogPending(dialog, false);
+            await writeWishlistTarget(target, dialog);
+        } catch (error) {
+            materializationErrorContent(
+                dialog, candidate, discovery, intent, revision, error
+            );
+        } finally {
+            setPending(false);
+            if (dialog.open) setDialogPending(dialog, false);
+        }
+    }
+
+    function renderCandidate(candidate, discovery, dialog, revision) {
+        const item = el(documentImpl, "li", {
+            className: "biblio-ui__wishlist-discovery-result",
+            attrs: { "data-result-type": candidate.type },
+        });
+        const identity = el(documentImpl, "div", {
+            className: "biblio-ui__wishlist-result-identity",
+        });
+        identity.append(
+            el(documentImpl, "p", {
+                className: "biblio-ui__wishlist-result-kind",
+                textContent: resultTypeLabel(candidate),
+            }),
+            el(documentImpl, "h3", { textContent: candidate.title })
+        );
+        if (candidate.subtitle !== null) {
+            identity.append(el(documentImpl, "p", {
+                className: "biblio-ui__context",
+                textContent: candidate.subtitle,
+            }));
+        }
+        if (candidate.contributors.length > 0) {
+            identity.append(el(documentImpl, "p", {
+                className: "biblio-ui__authors",
+                textContent: candidate.contributors.join(", "),
+            }));
+        }
+        const metadata = candidateMetadata(candidate);
+        if (metadata.length > 0) {
+            const list = el(documentImpl, "dl", {
+                className: "biblio-ui__wishlist-result-metadata",
+            });
+            for (const [term, value] of metadata) {
+                list.append(
+                    el(documentImpl, "dt", { textContent: term }),
+                    el(documentImpl, "dd", { textContent: value })
+                );
+            }
+            identity.append(list);
+        }
+        const actions = el(documentImpl, "div", {
+            className: "biblio-ui__wishlist-result-actions",
+            attrs: { "aria-label": `Kies hoe je “${candidate.title}” wilt bewaren` },
+        });
+        if (candidate.capabilities.can_add_work_only) {
+            const workOnly = button(
+                documentImpl, "Uitgave maakt niet uit", "choose-work", "secondary"
+            );
+            workOnly.addEventListener("click", () => chooseCandidate(
+                candidate, discovery, "work_only", dialog, revision
+            ));
+            actions.append(workOnly);
+        }
+        if (candidate.capabilities.can_add_edition_specific) {
+            const edition = button(
+                documentImpl, "Deze specifieke uitgave", "choose-edition", "primary"
+            );
+            edition.addEventListener("click", () => chooseCandidate(
+                candidate, discovery, "work_and_edition", dialog, revision
+            ));
+            actions.append(edition);
+        }
+        item.append(identity, actions);
+        return item;
+    }
+
     function openAddDialog(opener) {
         const dialog = dialogShell(documentImpl, host, "Boek toevoegen aan verlanglijst", opener);
-        const heading = el(documentImpl, "h2", { textContent: "Boek toevoegen" });
-        const form = el(documentImpl, "form", { className: "biblio-ui__work-search" });
+        const heading = el(documentImpl, "h2", { textContent: "Zoek een boek" });
+        const intro = el(documentImpl, "p", {
+            className: "biblio-ui__context",
+            textContent: "Kies daarna of iedere uitgave goed is, of juist één concrete uitgave.",
+        });
+        const form = el(documentImpl, "form", {
+            className: "biblio-ui__work-search biblio-ui__wishlist-search",
+        });
         const inputId = "biblio-wishlist-work-search";
         const label = el(documentImpl, "label", {
-            textContent: "Zoek op titel of auteur",
+            textContent: "Zoek op titel, auteur of ISBN",
             attrs: { for: inputId },
         });
         const input = el(documentImpl, "input", {
@@ -435,15 +896,24 @@ export function createWishlistApp({
         const search = button(documentImpl, "Zoeken", "search", "primary");
         search.setAttribute("type", "submit");
         const searchStatus = el(documentImpl, "p", {
+            className: "biblio-ui__wishlist-search-status",
             attrs: { role: "status", "aria-live": "polite" },
         });
         const results = el(documentImpl, "ul", {
-            className: "biblio-ui__work-results biblio-ui__wishlist-work-results",
+            className: "biblio-ui__wishlist-discovery-results",
+            attrs: { "aria-label": "Zoekresultaten" },
         });
         const cancel = button(documentImpl, "Annuleren", "cancel");
         cancel.addEventListener("click", () => dialog.close());
         form.append(label, input, search, searchStatus, results, cancel);
-        dialog.append(heading, form);
+        dialog.append(heading, intro, form);
+        searchRestorers.set(dialog, () => {
+            results.replaceChildren();
+            searchStatus.textContent = "Deze zoekresultaten zijn verlopen of niet meer beschikbaar. Pas je zoekopdracht aan of zoek opnieuw.";
+            dialog.replaceChildren(heading, intro, form);
+            setDialogPending(dialog, false);
+            input.focus();
+        });
 
         form.addEventListener("submit", async (event) => {
             event.preventDefault();
@@ -453,90 +923,38 @@ export function createWishlistApp({
             searchController?.abort();
             searchController = abortControllerFactory();
             search.disabled = true;
+            input.setAttribute("aria-busy", "true");
             searchStatus.textContent = "Zoeken…";
             results.replaceChildren();
             try {
-                const page = readWorkPage(await api.get(
-                    `me/works?q=${encodeURIComponent(query)}&limit=10`,
+                const discovery = readBibliographicDiscovery(await api.post(
+                    "me/bibliographic-discoveries",
+                    { query },
                     { signal: searchController.signal }
                 ));
                 if (revision !== searchRevision || !dialog.open) return;
-                for (const work of page.items) {
-                    const item = el(documentImpl, "li");
-                    const select = button(documentImpl, work.title, "select-work");
-                    const authors = authorLabel(work.authors);
-                    if (authors.length > 0) {
-                        select.setAttribute("aria-label", `${work.title}, ${authors}`);
-                    }
-                    select.addEventListener("click", () => addWorkOnly(work, dialog));
-                    item.append(select);
-                    if (authors.length > 0) item.append(el(documentImpl, "p", { textContent: authors }));
-                    if (work.series.length > 0) {
-                        item.append(el(documentImpl, "p", {
-                            className: "biblio-ui__context",
-                            textContent: work.series.map((series) => series.display_name).join(", "),
-                        }));
-                    }
-                    results.append(item);
+                for (const candidate of discovery.results) {
+                    results.append(renderCandidate(candidate, discovery, dialog, revision));
                 }
-                searchStatus.textContent = page.items.length === 0
-                    ? "Geen boeken gevonden."
-                    : `${page.items.length} ${page.items.length === 1 ? "boek" : "boeken"} gevonden.`;
-                results.querySelector("button")?.focus();
+                searchStatus.textContent = discoveryStatusCopy(discovery);
             } catch (error) {
                 if (error?.kind !== "aborted" && revision === searchRevision) {
-                    searchStatus.textContent = wishlistErrorMessage(error);
+                    searchStatus.textContent = discoveryErrorMessage(error);
                 }
             } finally {
-                if (revision === searchRevision) search.disabled = false;
+                if (revision === searchRevision) {
+                    search.disabled = false;
+                    input.removeAttribute("aria-busy");
+                }
             }
         });
-        dialog.addEventListener("close", () => searchController?.abort(), { once: true });
+        dialog.addEventListener("close", () => {
+            searchRevision += 1;
+            searchController?.abort();
+            searchRestorers.delete(dialog);
+        }, { once: true });
         dialog.showModal();
         input.focus();
-    }
-
-    async function addWorkOnly(work, dialog) {
-        if (pending) return;
-        setPending(true);
-        dialog.setAttribute("aria-busy", "true");
-        const before = state.entries.find(
-            (entry) => entry.work_id === work.work_id
-                && entry.target_type === "work_only"
-        );
-        try {
-            const added = readWishlistEntry(await api.post("me/wishlist", {
-                target: { type: "work_only", work_id: work.work_id },
-            }));
-            const list = readWishlistList(await api.get("me/wishlist"));
-            state = Object.freeze({ name: "ready", entries: list.entries });
-            render();
-            dialog.close();
-            announce(before === undefined
-                ? `“${added.display_title}” is aan je verlanglijst toegevoegd.`
-                : `“${added.display_title}” staat al op je verlanglijst.`);
-            focusEntry(content, added.wishlist_entry_id);
-        } catch (error) {
-            if (
-                error instanceof BiblioApiError
-                && error.status === 409
-                && error.code === "biblio_wishlist_intent_conflict"
-            ) {
-                conflictContent(dialog, work);
-                announce(wishlistErrorMessage(error));
-            } else {
-                const errorBox = el(documentImpl, "p", {
-                    className: "biblio-ui__inline-error",
-                    textContent: wishlistErrorMessage(error),
-                    attrs: { role: "alert" },
-                });
-                dialog.append(errorBox);
-                errorBox.focus?.();
-            }
-        } finally {
-            dialog.setAttribute("aria-busy", "false");
-            setPending(false);
-        }
     }
 
     render();
@@ -603,6 +1021,106 @@ export function createWishlistDetailController({
         heading.focus();
     }
 
+    function finishEdition(dialog, opener, added, refined = false) {
+        dialog.close();
+        opener.textContent = "Staat op verlanglijst";
+        announce(refined
+            ? `Je algemene wens voor “${added.display_title}” is verfijnd naar deze uitgave.`
+            : `Deze uitgave van “${added.display_title}” staat op je verlanglijst.`);
+    }
+
+    function showStaleConflict(dialog, context, opener, refreshFailed = false) {
+        const heading = el(documentImpl, "h2", {
+            textContent: "Controleer je verlanglijst",
+            attrs: { tabindex: "-1" },
+        });
+        const review = button(
+            documentImpl,
+            refreshFailed ? "Opnieuw controleren" : "Sluiten en opnieuw bekijken",
+            "review-stale-wishlist",
+            "primary"
+        );
+        if (refreshFailed) {
+            review.addEventListener("click", () => reconcileIntentConflict(
+                dialog, context, opener
+            ));
+        } else {
+            review.addEventListener("click", () => dialog.close());
+        }
+        dialog.replaceChildren(
+            heading,
+            el(documentImpl, "p", {
+                className: refreshFailed ? "biblio-ui__inline-error" : undefined,
+                textContent: refreshFailed
+                    ? "Je verlanglijst is elders gewijzigd, maar kon niet opnieuw worden geladen. Controleer opnieuw voordat je een keuze maakt."
+                    : "Je verlanglijst is elders gewijzigd. Sluit dit venster en bekijk de actuele wens voordat je opnieuw kiest.",
+                attrs: refreshFailed ? { role: "alert" } : {},
+            }),
+            review
+        );
+        heading.focus();
+        announce("Je verlanglijst is elders gewijzigd. Controleer de actuele wens.");
+    }
+
+    function showRefinement(dialog, context, opener, workOnly) {
+        const heading = el(documentImpl, "h2", {
+            textContent: "Algemene wens verfijnen?",
+            attrs: { tabindex: "-1" },
+        });
+        const confirm = button(documentImpl, "Deze uitgave kiezen", "refine", "primary");
+        const cancel = closeButton(dialog, "Algemene wens behouden");
+        confirm.addEventListener("click", async () => {
+            confirm.disabled = true;
+            cancel.disabled = true;
+            try {
+                const refined = readWishlistEntry(await api.patch(
+                    `me/wishlist/${encodeURIComponent(workOnly.wishlist_entry_id)}`,
+                    { target: { type: "edition_specific", edition_id: context.editionId } }
+                ));
+                finishEdition(dialog, opener, refined, true);
+            } catch (error) {
+                if (isWishlistIntentConflict(error)) {
+                    await reconcileIntentConflict(dialog, context, opener, true);
+                } else {
+                    showError(dialog, error);
+                }
+            }
+        });
+        dialog.replaceChildren(
+            heading,
+            el(documentImpl, "p", {
+                textContent: "Dit boek staat al algemeen op je verlanglijst. Kies alleen deze concrete uitgave als je de algemene wens wilt vervangen; de wens behoudt dezelfde identiteit.",
+            }),
+            el(documentImpl, "div", { className: "biblio-ui__dialog-actions" })
+        );
+        dialog.lastElementChild.append(confirm, cancel);
+        heading.focus();
+    }
+
+    async function reconcileIntentConflict(dialog, context, opener, refined = false) {
+        try {
+            const list = readWishlistList(await api.get("me/wishlist"));
+            const exactEdition = list.entries.find(
+                (entry) => entry.edition_id === context.editionId
+            );
+            if (exactEdition !== undefined) {
+                finishEdition(dialog, opener, exactEdition, refined);
+                return;
+            }
+            const workOnly = list.entries.find(
+                (entry) => entry.work_id === context.workId
+                    && entry.target_type === "work_only"
+            );
+            if (workOnly !== undefined) {
+                showRefinement(dialog, context, opener, workOnly);
+                return;
+            }
+            showStaleConflict(dialog, context, opener);
+        } catch {
+            showStaleConflict(dialog, context, opener, true);
+        }
+    }
+
     async function addEdition(dialog, context, opener) {
         try {
             const added = readWishlistEntry(await api.post("me/wishlist", {
@@ -612,11 +1130,13 @@ export function createWishlistDetailController({
                     edition_id: context.editionId,
                 },
             }));
-            dialog.close();
-            opener.textContent = "Staat op verlanglijst";
-            announce(`Deze uitgave van “${added.display_title}” staat op je verlanglijst.`);
+            finishEdition(dialog, opener, added);
         } catch (error) {
-            showError(dialog, error);
+            if (isWishlistIntentConflict(error)) {
+                await reconcileIntentConflict(dialog, context, opener);
+            } else {
+                showError(dialog, error);
+            }
         }
     }
 
@@ -664,36 +1184,7 @@ export function createWishlistDetailController({
                     && entry.target_type === "work_only"
             );
             if (workOnly !== undefined) {
-                const heading = el(documentImpl, "h2", {
-                    textContent: "Algemene wens verfijnen?",
-                    attrs: { tabindex: "-1" },
-                });
-                const confirm = button(documentImpl, "Deze uitgave kiezen", "refine", "primary");
-                const cancel = closeButton(dialog, "Algemene wens behouden");
-                confirm.addEventListener("click", async () => {
-                    confirm.disabled = true;
-                    cancel.disabled = true;
-                    try {
-                        const refined = readWishlistEntry(await api.patch(
-                            `me/wishlist/${encodeURIComponent(workOnly.wishlist_entry_id)}`,
-                            { target: { type: "edition_specific", edition_id: editionId } }
-                        ));
-                        dialog.close();
-                        opener.textContent = "Staat op verlanglijst";
-                        announce(`Je algemene wens voor “${refined.display_title}” is verfijnd naar deze uitgave.`);
-                    } catch (error) {
-                        showError(dialog, error);
-                    }
-                });
-                dialog.replaceChildren(
-                    heading,
-                    el(documentImpl, "p", {
-                        textContent: "Dit boek staat al algemeen op je verlanglijst. Kies alleen deze concrete uitgave als je de algemene wens wilt vervangen; de wens behoudt dezelfde identiteit.",
-                    }),
-                    el(documentImpl, "div", { className: "biblio-ui__dialog-actions" })
-                );
-                dialog.lastElementChild.append(confirm, cancel);
-                heading.focus();
+                showRefinement(dialog, context, opener, workOnly);
                 return;
             }
 
