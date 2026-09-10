@@ -72,6 +72,7 @@ use Biblio\Core\Application\Reading\StartReadingFromNextReadingEntryService;
 use Biblio\Core\Application\Reading\StopReadingRoundService;
 use Biblio\Core\Application\Reading\PersonalReadingTruthRecorder;
 use Biblio\Core\Application\Reading\RecordPersonalReadingTruthService;
+use Biblio\Core\Application\Wishlist\{AddWishlistEntryService,GetMyWishlistService,RefineWishlistEntryService,RemoveWishlistEntryService,WishlistRecorder};
 use Biblio\Core\Authorization\LibraryAuthorizationPolicy;
 use Biblio\Core\Audit\ActivityEventSource;
 use Biblio\Core\Catalog\Classification\ClassificationNameNormalizer;
@@ -120,6 +121,8 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPersonalWorkReadingMuta
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionConnection;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionManager;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbWorkRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbWishlistReadRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbWishlistRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbAuthorRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbSeriesRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbBibliographicMetadataRepository;
@@ -272,6 +275,34 @@ final class ProductionComposition
         $nextReadingConsumption = new ConsumeNextReadingAfterStartService(
             $nextReadingRepository,
             $nextReadingClock
+        );
+        $wishlistRepository = new WpdbWishlistRepository($database, $tableNames);
+        $wishlistRecorder = new WishlistRecorder(
+            $platformUsers,
+            $workRepository,
+            $editionRepository,
+            $wishlistRepository,
+            new OpaqueWishlistEntryIdGenerator(),
+            new SystemWishlistClock()
+        );
+        $wishlistAdd = new AddWishlistEntryService(
+            $authenticatedUser,
+            $wishlistRecorder,
+            $transactionManager
+        );
+        $wishlistRefine = new RefineWishlistEntryService(
+            $authenticatedUser,
+            $wishlistRecorder,
+            $transactionManager
+        );
+        $wishlistRemove = new RemoveWishlistEntryService(
+            $authenticatedUser,
+            $wishlistRecorder,
+            $transactionManager
+        );
+        $myWishlist = new GetMyWishlistService(
+            $authenticatedUser,
+            new WpdbWishlistReadRepository($database, $tableNames)
         );
         $readingRoundIds = new OpaqueReadingRoundIdGenerator();
         $readingRoundClock = new SystemReadingRoundClock();
@@ -845,7 +876,11 @@ final class ProductionComposition
             $nextReadingHome,
             $workDiscovery,
             $nextReadingDiscovery,
-            $personalReadingTruthRecording
+            $personalReadingTruthRecording,
+            $wishlistAdd,
+            $wishlistRefine,
+            $wishlistRemove,
+            $myWishlist
         );
         $this->lifecycle = new CoreLifecycleCoordinator(
             new CoreSchemaMigrator(

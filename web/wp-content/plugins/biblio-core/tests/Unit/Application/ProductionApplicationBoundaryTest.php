@@ -36,6 +36,10 @@ use Biblio\Core\Application\Reading\CreateActiveReadingRoundService;
 use Biblio\Core\Application\Reading\StartReadingFromExternalLoanService;
 use Biblio\Core\Application\Reading\StartReadingFromLibraryItemService;
 use Biblio\Core\Application\Reading\History\GetMyReadingHistoryForWorkService;
+use Biblio\Core\Application\Wishlist\AddWishlistEntryService;
+use Biblio\Core\Application\Wishlist\GetMyWishlistService;
+use Biblio\Core\Application\Wishlist\RefineWishlistEntryService;
+use Biblio\Core\Application\Wishlist\RemoveWishlistEntryService;
 use Biblio\Core\Library\LibraryContext;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Catalog\WorkId;
@@ -78,6 +82,11 @@ final class ProductionApplicationBoundaryTest extends TestCase
             [WorkDiscoveryService::class, "search"],
             [NextReadingDiscoveryService::class, "sourceOptions"],
             [GetLibraryPublicAssessmentsService::class, "forWork"],
+            [AddWishlistEntryService::class, "addWorkOnly"],
+            [AddWishlistEntryService::class, "addEdition"],
+            [RefineWishlistEntryService::class, "refineToEdition"],
+            [RemoveWishlistEntryService::class, "remove"],
+            [GetMyWishlistService::class, "get"],
             [LibraryCollectionQueryService::class, "activeCollections"],
             [LibraryCollectionQueryService::class, "collections"],
             [LibraryCollectionQueryService::class, "activeCollectionsForItems"],
@@ -174,6 +183,7 @@ final class ProductionApplicationBoundaryTest extends TestCase
             "libraryPublicAssessments",
             "myNextReadingList",
             "myPrivateNotes",
+            "myWishlist",
             "nextReadingAdd",
             "nextReadingDiscovery",
             "nextReadingEntryReading",
@@ -218,6 +228,9 @@ final class ProductionApplicationBoundaryTest extends TestCase
             "reviewPublication",
             "stopReadingRound",
             "subjectManagement",
+            "wishlistAdd",
+            "wishlistRefine",
+            "wishlistRemove",
             "workDiscovery",
         ], $publicMethods);
         self::assertNotContains("get", $publicMethods);

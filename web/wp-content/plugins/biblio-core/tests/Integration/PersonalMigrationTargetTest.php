@@ -290,6 +290,28 @@ final class PersonalMigrationTargetTest extends PersistenceIntegrationTestCase
                 "updated_at" => "2026-09-09 10:00:00.000000",
             ]
         );
+        $this->database->insert(
+            $this->tableNames->wishlistWorkStates(),
+            [
+                "user_id" => (string) $personalId,
+                "work_id" => "identity-work",
+                "target_type" => "work_only",
+                "created_at" => "2026-09-10 10:00:00.000000",
+                "updated_at" => "2026-09-10 10:00:00.000000",
+            ]
+        );
+        $this->database->insert(
+            $this->tableNames->wishlistEntries(),
+            [
+                "wishlist_entry_id" => "identity-wishlist-entry",
+                "user_id" => (string) $personalId,
+                "work_id" => "identity-work",
+                "target_type" => "work_only",
+                "edition_id" => null,
+                "created_at" => "2026-09-10 10:00:00.000000",
+                "updated_at" => "2026-09-10 10:00:00.000000",
+            ]
+        );
 
         $readiness = $application->personalMigrationTargets()->validate(
             new UserId((string) $personalId),
@@ -306,6 +328,7 @@ final class PersonalMigrationTargetTest extends PersistenceIntegrationTestCase
             1,
             $readiness->counts()["user_personal_reading_truths"]
         );
+        self::assertSame(1, $readiness->counts()["user_wishlist_entries"]);
         self::assertSame(1, $this->countRows($this->tableNames->items()));
     }
 

@@ -57,6 +57,7 @@ use Biblio\Core\Application\Reading\StartReadingFromLibraryItemService;
 use Biblio\Core\Application\Reading\StartReadingFromNextReadingEntryService;
 use Biblio\Core\Application\Reading\StopReadingRoundService;
 use Biblio\Core\Application\Reading\RecordPersonalReadingTruthService;
+use Biblio\Core\Application\Wishlist\{AddWishlistEntryService,GetMyWishlistService,RefineWishlistEntryService,RemoveWishlistEntryService};
 
 /**
  * The deliberately small adapter-facing boundary of the production Core.
@@ -141,7 +142,11 @@ final readonly class CoreApplication
         private GetNextReadingHomeProjectionService $nextReadingHome,
         private WorkDiscoveryService $workDiscovery,
         private NextReadingDiscoveryService $nextReadingDiscovery,
-        private RecordPersonalReadingTruthService $personalReadingTruthRecording
+        private RecordPersonalReadingTruthService $personalReadingTruthRecording,
+        private AddWishlistEntryService $wishlistAdd,
+        private RefineWishlistEntryService $wishlistRefine,
+        private RemoveWishlistEntryService $wishlistRemove,
+        private GetMyWishlistService $myWishlist
     ) {
     }
 
@@ -412,4 +417,8 @@ final readonly class CoreApplication
     public function nextReadingHome(): GetNextReadingHomeProjectionService { return $this->nextReadingHome; }
     public function workDiscovery(): WorkDiscoveryService { return $this->workDiscovery; }
     public function nextReadingDiscovery(): NextReadingDiscoveryService { return $this->nextReadingDiscovery; }
+    public function wishlistAdd(): AddWishlistEntryService { return $this->wishlistAdd; }
+    public function wishlistRefine(): RefineWishlistEntryService { return $this->wishlistRefine; }
+    public function wishlistRemove(): RemoveWishlistEntryService { return $this->wishlistRemove; }
+    public function myWishlist(): GetMyWishlistService { return $this->myWishlist; }
 }

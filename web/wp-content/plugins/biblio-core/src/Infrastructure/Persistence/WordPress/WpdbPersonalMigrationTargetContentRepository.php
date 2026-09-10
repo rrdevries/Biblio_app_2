@@ -127,6 +127,16 @@ final readonly class WpdbPersonalMigrationTargetContentRepository implements
                 "user_id",
                 $userId->value()
             ),
+            "user_wishlist_entries" => $this->countBy(
+                $this->tables->wishlistEntries(),
+                "user_id",
+                $userId->value()
+            ),
+            "user_wishlist_history_entries" => $this->countBy(
+                $this->tables->wishlistEntryHistory(),
+                "user_id",
+                $userId->value()
+            ),
         ]);
     }
 

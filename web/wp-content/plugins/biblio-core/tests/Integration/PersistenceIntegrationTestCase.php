@@ -80,6 +80,9 @@ abstract class PersistenceIntegrationTestCase extends TestCase
         $migrationRuns = $this->tableNames->migrationRuns();
         $personalReadingTruths = $this->tableNames->personalReadingTruths();
         $personalWorkReadingLocks = $this->tableNames->personalWorkReadingLocks();
+        $wishlistEntries = $this->tableNames->wishlistEntries();
+        $wishlistEntryHistory = $this->tableNames->wishlistEntryHistory();
+        $wishlistWorkStates = $this->tableNames->wishlistWorkStates();
         $locations = $this->tableNames->locations();
         $editions = $this->tableNames->editions();
         $works = $this->tableNames->works();
@@ -109,6 +112,11 @@ abstract class PersistenceIntegrationTestCase extends TestCase
         foreach ([$personalReadingTruths, $personalWorkReadingLocks] as $readingTable) {
             if ($this->tableExists($readingTable)) {
                 $this->database->query("DELETE FROM `{$readingTable}`");
+            }
+        }
+        foreach ([$wishlistEntryHistory, $wishlistEntries, $wishlistWorkStates] as $wishlistTable) {
+            if ($this->tableExists($wishlistTable)) {
+                $this->database->query("DELETE FROM `{$wishlistTable}`");
             }
         }
 
