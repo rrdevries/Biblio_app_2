@@ -70,6 +70,7 @@ const BIBLIO_E2E_NOTE_REFRESH = "e2e-private-note-refresh";
 const BIBLIO_E2E_NOTE_REFLOW = "e2e-private-note-reflow";
 const BIBLIO_E2E_NOTE_FOREIGN = "e2e-private-note-foreign";
 const BIBLIO_E2E_C7_PAGE_SLUG = "hierna-lezen";
+const BIBLIO_E2E_WISHLIST_PAGE_SLUG = "verlanglijst";
 const BIBLIO_E2E_C7_UNAVAILABLE_ITEM = "e2e-item-c7-unavailable";
 const BIBLIO_E2E_C7_LOAN = "e2e-external-loan-c7";
 const BIBLIO_E2E_C7_FOREIGN_LOAN = "e2e-external-loan-c7-foreign";
@@ -335,6 +336,9 @@ function biblioE2eCleanupCore(wpdb $database): void
 
     try {
         if ($userIds !== []) {
+            biblioE2eDeleteIn($database, $tables->wishlistEntryHistory(), "user_id", $userIds);
+            biblioE2eDeleteIn($database, $tables->wishlistEntries(), "user_id", $userIds);
+            biblioE2eDeleteIn($database, $tables->wishlistWorkStates(), "user_id", $userIds);
             biblioE2eDeleteIn($database, $tables->nextReadingUndo(), "user_id", $userIds);
             biblioE2eDeleteIn($database, $tables->nextReadingEntries(), "user_id", $userIds);
             biblioE2eDeleteIn($database, $tables->nextReadingLists(), "user_id", $userIds);
@@ -805,6 +809,90 @@ function biblioE2eCreateNextReadingPage(): void
     }
 }
 
+function biblioE2eCreateWishlistPage(): void
+{
+    $existing = get_page_by_path(BIBLIO_E2E_WISHLIST_PAGE_SLUG, OBJECT, "page");
+    if ($existing instanceof WP_Post) {
+        if (
+            $existing->post_status !== "publish"
+            || trim($existing->post_content) !== "[biblio_wishlist_app]"
+        ) {
+            biblioE2eFail("the Wishlist Page slug is already occupied.");
+        }
+
+        return;
+    }
+
+    $result = wp_insert_post([
+        "post_title" => "Verlanglijst",
+        "post_name" => BIBLIO_E2E_WISHLIST_PAGE_SLUG,
+        "post_type" => "page",
+        "post_status" => "publish",
+        "post_content" => "[biblio_wishlist_app]",
+        "meta_input" => [
+            BIBLIO_E2E_MARKER_KEY => BIBLIO_E2E_MARKER_VALUE,
+        ],
+    ], true);
+
+    if (is_wp_error($result)) {
+        throw new RuntimeException("Could not create exact Wishlist fixture Page.");
+    }
+}
+
+function biblioE2eResetWishlist(wpdb $database, bool $allUsers = false): void
+{
+    $userIds = [];
+    foreach (biblioE2eUsernames() as $position => $username) {
+        if (!$allUsers && $position > 0) {
+            break;
+        }
+        $user = get_user_by("login", $username);
+        if (!$user instanceof WP_User) {
+            biblioE2eFail("Wishlist fixture user does not exist.");
+        }
+        $userIds[] = (string) $user->ID;
+    }
+
+    $tables = new CoreTableNames($database->prefix);
+    biblioE2eDeleteIn($database, $tables->wishlistEntryHistory(), "user_id", $userIds);
+    biblioE2eDeleteIn($database, $tables->wishlistEntries(), "user_id", $userIds);
+    biblioE2eDeleteIn($database, $tables->wishlistWorkStates(), "user_id", $userIds);
+}
+
+function biblioE2eSeedWishlist(wpdb $database, bool $includeOther = false): void
+{
+    biblioE2eResetWishlist($database, $includeOther);
+    [$actorName, $otherName] = biblioE2eUsernames();
+    $actor = get_user_by("login", $actorName);
+    if (!$actor instanceof WP_User) {
+        biblioE2eFail("Wishlist actor fixture user does not exist.");
+    }
+
+    wp_set_current_user($actor->ID);
+    $wishlist = (new ProductionComposition($database))->application()->wishlistAdd();
+    $wishlist->addWorkOnly(new WorkId("e2e-work-missing-metadata"));
+    $wishlist->addEdition(
+        new WorkId("e2e-work-history"),
+        new EditionId("e2e-edition-history")
+    );
+    $wishlist->addEdition(
+        new WorkId("e2e-work-history"),
+        new EditionId("e2e-edition-history-other")
+    );
+
+    if (!$includeOther) {
+        return;
+    }
+
+    $other = get_user_by("login", $otherName);
+    if (!$other instanceof WP_User) {
+        biblioE2eFail("Wishlist other fixture user does not exist.");
+    }
+    wp_set_current_user($other->ID);
+    (new ProductionComposition($database))->application()->wishlistAdd()
+        ->addWorkOnly(new WorkId("e2e-work-foreign"));
+}
+
 function biblioE2eSeedNextReading(
     wpdb $database,
     string $actorId,
@@ -1137,6 +1225,9 @@ function biblioE2eCounts(wpdb $database): array
         "next_reading_lists" => $countForUsers($tables->nextReadingLists()),
         "next_reading_entries" => $countForUsers($tables->nextReadingEntries()),
         "next_reading_undo" => $countForUsers($tables->nextReadingUndo()),
+        "wishlist_work_states" => $countForUsers($tables->wishlistWorkStates()),
+        "wishlist_entries" => $countForUsers($tables->wishlistEntries()),
+        "wishlist_entry_history" => $countForUsers($tables->wishlistEntryHistory()),
         "rounds" => (int) $database->get_var($database->prepare(
             "SELECT COUNT(*) FROM `{$tables->readingRounds()}` WHERE work_id IN ({$workSql})",
             ...$workValues
@@ -1463,7 +1554,7 @@ function biblioE2eFingerprint(wpdb $database): array
     $payload = [];
     $rowCount = 0;
 
-    foreach ((new CoreTableNames($database->prefix))->schema1008() as $table) {
+    foreach ((new CoreTableNames($database->prefix))->schema1022() as $table) {
         $rows = $database->get_results("SELECT * FROM `{$table}`", ARRAY_A);
         $serialized = [];
 
@@ -1676,7 +1767,9 @@ function biblioE2eSetup(wpdb $database): void
         (string) $other
     );
     biblioE2eSeedNextReading($database, (string) $actor, (string) $other);
+    biblioE2eSeedWishlist($database, true);
     biblioE2eCreateNextReadingPage();
+    biblioE2eCreateWishlistPage();
 }
 
 biblioE2eGuard();
@@ -1725,6 +1818,12 @@ try {
             break;
         case "next-reading-reset":
             biblioE2eResetNextReading($wpdb);
+            break;
+        case "wishlist-reset":
+            biblioE2eResetWishlist($wpdb);
+            break;
+        case "wishlist-seed":
+            biblioE2eSeedWishlist($wpdb);
             break;
         case "state":
         case "fingerprint":

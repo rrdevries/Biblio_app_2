@@ -20,6 +20,7 @@ import {
 } from "biblio-ui/reading-history";
 import { createStartReadingView } from "biblio-ui/start-reading-view";
 import { createLibraryShell } from "biblio-ui/ui-shell";
+import { createWishlistDetailController } from "biblio-ui/wishlist";
 import {
     buildRouteUrl,
     createRouteController,
@@ -57,6 +58,11 @@ export {
 } from "biblio-ui/reading-history";
 export { createStartReadingView } from "biblio-ui/start-reading-view";
 export { createLibraryShell } from "biblio-ui/ui-shell";
+export {
+    createWishlistDetailController,
+    readWishlistEntry,
+    readWishlistList,
+} from "biblio-ui/wishlist";
 export {
     buildRouteUrl,
     createRouteController,
@@ -656,6 +662,8 @@ export function readMountConfig(mount) {
         restRoot: mountValue(mount, "restRoot"),
         restNonce: mountValue(mount, "restNonce"),
         overviewUrl: mountValue(mount, "overviewUrl"),
+        wishlistUrl: mountValue(mount, "wishlistUrl"),
+        nextReadingUrl: mountValue(mount, "nextReadingUrl"),
         loginUrl: mountValue(mount, "loginUrl"),
     });
 }
@@ -674,6 +682,7 @@ export function createLibraryApp(mount, {
     privateNotesControllerFactory = createPrivateNotesController,
     startReadingViewFactory = createStartReadingView,
     addBookWizardFactory = createAddBookWizard,
+    wishlistDetailControllerFactory = createWishlistDetailController,
     shellFactory = createLibraryShell,
     reload = () => locationImpl.reload(),
     abortControllerFactory = () => new AbortController(),
@@ -707,6 +716,7 @@ export function createLibraryApp(mount, {
     let activeRouteState = null;
     let startReadingView;
     let addBookWizard;
+    let wishlistDetailController = null;
     let currentController = null;
     let catalogController = null;
     let mutationController = null;
@@ -723,6 +733,9 @@ export function createLibraryApp(mount, {
                     documentImpl,
                     eventTarget,
                     overviewUrl: config.overviewUrl,
+                    wishlistUrl: config.wishlistUrl,
+                    nextReadingUrl: config.nextReadingUrl,
+                    activeDestination: "library",
                 })
                 : Object.freeze({
                     contentRoot: mount,
@@ -951,6 +964,8 @@ export function createLibraryApp(mount, {
         endReadingView?.destroy();
         privateNotesController?.destroy();
         privateNotesController = null;
+        wishlistDetailController?.destroy();
+        wishlistDetailController = null;
         activeRouteState = null;
         if (searchTimer !== null) {
             clearTimeoutImpl(searchTimer);
@@ -1557,6 +1572,14 @@ export function createLibraryApp(mount, {
                             },
                         });
                     },
+                    wishlist(opener) {
+                        return wishlistDetailController?.open({
+                            opener,
+                            workId: currentDetail.work_id,
+                            editionId: currentDetail.edition_id,
+                            title: currentDetail.title,
+                        });
+                    },
                 };
 
                 if (requestedItemId.length === 0) {
@@ -1600,6 +1623,11 @@ export function createLibraryApp(mount, {
                     eventTarget,
                     loginUrl: config.loginUrl,
                     reload,
+                });
+                wishlistDetailController = wishlistDetailControllerFactory({
+                    root: mount,
+                    api,
+                    documentImpl,
                 });
                 renderCurrentDetail();
                 await Promise.all([
@@ -2110,6 +2138,8 @@ export function createLibraryApp(mount, {
         endReadingView?.destroy();
         privateNotesController?.destroy();
         privateNotesController = null;
+        wishlistDetailController?.destroy();
+        wishlistDetailController = null;
         activeRouteState = null;
         if (searchTimer !== null) {
             clearTimeoutImpl(searchTimer);

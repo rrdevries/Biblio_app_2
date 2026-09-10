@@ -6,7 +6,7 @@ namespace Biblio\UI;
 
 final class Plugin
 {
-    public const VERSION = "0.13.0";
+    public const VERSION = "0.14.0";
     public const PAGE_BODY_CLASS = "biblio-app-shell-page";
     public const SCRIPT_MODULE_ID = "biblio-ui/app";
     public const ADD_BOOK_SCRIPT_MODULE_ID = "biblio-ui/add-book-wizard";
@@ -23,21 +23,26 @@ final class Plugin
     public const UI_PREFERENCES_SCRIPT_MODULE_ID = "biblio-ui/ui-preferences";
     public const UI_SHELL_SCRIPT_MODULE_ID = "biblio-ui/ui-shell";
     public const NEXT_READING_SCRIPT_MODULE_ID = "biblio-ui/next-reading";
+    public const WISHLIST_SCRIPT_MODULE_ID = "biblio-ui/wishlist";
     public const STYLE_HANDLE = "biblio-ui";
 
     private bool $booted = false;
     private readonly LibraryAppShortcode $libraryAppShortcode;
     private readonly NextReadingAppShortcode $nextReadingAppShortcode;
+    private readonly WishlistAppShortcode $wishlistAppShortcode;
 
     public function __construct(
         private readonly string $pluginFile,
         ?LibraryAppShortcode $libraryAppShortcode = null,
-        ?NextReadingAppShortcode $nextReadingAppShortcode = null
+        ?NextReadingAppShortcode $nextReadingAppShortcode = null,
+        ?WishlistAppShortcode $wishlistAppShortcode = null
     ) {
         $this->libraryAppShortcode = $libraryAppShortcode
             ?? new LibraryAppShortcode();
         $this->nextReadingAppShortcode = $nextReadingAppShortcode
             ?? new NextReadingAppShortcode();
+        $this->wishlistAppShortcode = $wishlistAppShortcode
+            ?? new WishlistAppShortcode();
     }
 
     public function boot(): void
@@ -48,6 +53,7 @@ final class Plugin
 
         add_action("init", [$this->libraryAppShortcode, "register"]);
         add_action("init", [$this->nextReadingAppShortcode, "register"]);
+        add_action("init", [$this->wishlistAppShortcode, "register"]);
         add_action("wp_enqueue_scripts", [$this, "registerAndEnqueueAssets"]);
         add_filter("body_class", [$this, "addPageBodyClass"]);
         $this->booted = true;
@@ -59,7 +65,11 @@ final class Plugin
      */
     public function addPageBodyClass(array $classes): array
     {
-        if (!is_page(LibraryAppShortcode::PAGE_SLUG)) {
+        if (!is_page([
+            LibraryAppShortcode::PAGE_SLUG,
+            NextReadingAppShortcode::PAGE_SLUG,
+            WishlistAppShortcode::PAGE_SLUG,
+        ])) {
             return $classes;
         }
 
@@ -77,6 +87,9 @@ final class Plugin
             $assetBaseUrl . "js/next-reading.js",
             [[
                 "id" => self::API_SCRIPT_MODULE_ID,
+                "import" => "static",
+            ], [
+                "id" => self::UI_SHELL_SCRIPT_MODULE_ID,
                 "import" => "static",
             ]],
             self::VERSION
@@ -125,6 +138,18 @@ final class Plugin
             $assetBaseUrl . "js/ui-shell.js",
             [[
                 "id" => self::UI_PREFERENCES_SCRIPT_MODULE_ID,
+                "import" => "static",
+            ]],
+            self::VERSION
+        );
+        wp_register_script_module(
+            self::WISHLIST_SCRIPT_MODULE_ID,
+            $assetBaseUrl . "js/wishlist.js",
+            [[
+                "id" => self::API_SCRIPT_MODULE_ID,
+                "import" => "static",
+            ], [
+                "id" => self::UI_SHELL_SCRIPT_MODULE_ID,
                 "import" => "static",
             ]],
             self::VERSION
@@ -204,6 +229,9 @@ final class Plugin
             ], [
                 "id" => self::UI_SHELL_SCRIPT_MODULE_ID,
                 "import" => "static",
+            ], [
+                "id" => self::WISHLIST_SCRIPT_MODULE_ID,
+                "import" => "static",
             ]],
             self::VERSION
         );
@@ -216,6 +244,13 @@ final class Plugin
 
         if (is_page(NextReadingAppShortcode::PAGE_SLUG)) {
             wp_enqueue_script_module(self::NEXT_READING_SCRIPT_MODULE_ID);
+            wp_enqueue_style(self::STYLE_HANDLE);
+
+            return;
+        }
+
+        if (is_page(WishlistAppShortcode::PAGE_SLUG)) {
+            wp_enqueue_script_module(self::WISHLIST_SCRIPT_MODULE_ID);
             wp_enqueue_style(self::STYLE_HANDLE);
 
             return;

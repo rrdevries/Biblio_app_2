@@ -29,6 +29,7 @@ for (const [moduleId, file] of [
     ["biblio-ui/start-reading-view", "start-reading-view.js"],
     ["biblio-ui/ui-preferences", "ui-preferences.js"],
     ["biblio-ui/ui-shell", "ui-shell.js"],
+    ["biblio-ui/wishlist", "wishlist.js"],
 ]) {
     appSource = appSource.replaceAll(
         `"${moduleId}"`,
@@ -47,6 +48,8 @@ function mount() {
             restRoot: "https://example.test/wp-json/biblio/v1/",
             restNonce: "rest-nonce",
             overviewUrl: "https://example.test/mijn-bibliotheek/",
+            wishlistUrl: "https://example.test/verlanglijst/",
+            nextReadingUrl: "https://example.test/hierna-lezen/",
             loginUrl: "https://example.test/wp-login.php?redirect_to=library",
         },
     };
@@ -96,6 +99,8 @@ test("mount configuration is the sole API bootstrap source", () => {
         restRoot: "https://example.test/wp-json/biblio/v1/",
         restNonce: "rest-nonce",
         overviewUrl: "https://example.test/mijn-bibliotheek/",
+        wishlistUrl: "https://example.test/verlanglijst/",
+        nextReadingUrl: "https://example.test/hierna-lezen/",
         loginUrl: "https://example.test/wp-login.php?redirect_to=library",
     });
 });

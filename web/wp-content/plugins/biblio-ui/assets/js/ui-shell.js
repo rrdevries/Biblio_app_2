@@ -36,6 +36,9 @@ export function createLibraryShell(mount, {
     documentImpl = globalThis.document,
     eventTarget = globalThis,
     overviewUrl,
+    wishlistUrl,
+    nextReadingUrl,
+    activeDestination = "library",
     preferences = createUiPreferences(),
 } = {}) {
     if (typeof mount?.replaceChildren !== "function") {
@@ -87,22 +90,34 @@ export function createLibraryShell(mount, {
         className: "biblio-ui__nav",
         attributes: { "aria-label": "Hoofdnavigatie" },
     });
-    const navLink = element(documentImpl, "a", {
-        className: "biblio-ui__nav-link",
-        attributes: {
-            href: overviewUrl,
-            "aria-current": "page",
-            title: "Mijn Bibliotheek",
-        },
-    });
-    navLink.append(
-        icon(documentImpl, "books", "biblio-ui__nav-mark"),
-        element(documentImpl, "span", {
-            className: "biblio-ui__nav-label",
-            text: "Mijn Bibliotheek",
-        })
-    );
-    nav.append(navLink);
+    const destinations = [
+        ["library", "Mijn Bibliotheek", overviewUrl, "books"],
+        ["wishlist", "Verlanglijst", wishlistUrl, "bookmark"],
+        ["next-reading", "Hierna lezen", nextReadingUrl, "book-open"],
+    ];
+    const navLinks = [];
+    for (const [key, label, href, iconName] of destinations) {
+        if (typeof href !== "string" || href.length === 0) {
+            continue;
+        }
+        const link = element(documentImpl, "a", {
+            className: "biblio-ui__nav-link",
+            attributes: {
+                href,
+                ...(activeDestination === key ? { "aria-current": "page" } : {}),
+                title: label,
+            },
+        });
+        link.append(
+            icon(documentImpl, iconName, "biblio-ui__nav-mark"),
+            element(documentImpl, "span", {
+                className: "biblio-ui__nav-label",
+                text: label,
+            })
+        );
+        nav.append(link);
+        navLinks.push(link);
+    }
 
     const account = element(documentImpl, "p", {
         className: "biblio-ui__sidebar-context",
@@ -212,7 +227,9 @@ export function createLibraryShell(mount, {
         closeMobileNavigation();
         menuButton.focus?.();
     });
-    navLink.addEventListener("click", closeMobileNavigation);
+    for (const link of navLinks) {
+        link.addEventListener("click", closeMobileNavigation);
+    }
     eventTarget?.addEventListener?.("keydown", onKeyDown);
     sync();
 

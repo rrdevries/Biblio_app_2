@@ -2,12 +2,16 @@ body.biblio-app-shell-page > .wp-site-blocks > :is(header, footer).wp-block-temp
     display: none;
 }
 
+body.biblio-app-shell-page .wp-block-post-title {
+    display: none;
+}
+
 body.biblio-app-shell-page .wp-site-blocks > main#wp--skip-link--target,
 body.biblio-app-shell-page .wp-site-blocks > main#wp--skip-link--target > .wp-block-group,
 body.biblio-app-shell-page .wp-site-blocks > main#wp--skip-link--target .wp-block-post-content {
     /* The block theme emits these values inline; the shortcode page owns its canvas. */
-    margin-block: 0 !important;
-    padding-block: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
 body.biblio-app-shell-page [data-elementor-type="wp-page"] [data-element_type="container"] > .e-con-inner {
@@ -844,6 +848,10 @@ body.admin-bar.biblio-app-shell-page {
 
 [data-biblio-ui-root] .biblio-ui__icon[data-biblio-icon="books"] {
     mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 4.5h4v15H5v-15Zm5.5 1.5h4v13.5h-4V6Zm5.5-2 3.3-.8L22 18l-3.3.8L16 4Z' fill='none' stroke='black' stroke-width='1.6' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+[data-biblio-ui-root] .biblio-ui__icon[data-biblio-icon="bookmark"] {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6.5 3.75h11v16.5L12 16.6l-5.5 3.65V3.75Z' fill='none' stroke='black' stroke-width='1.6' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 [data-biblio-ui-root] .biblio-ui__icon[data-biblio-icon="user"] {
@@ -1985,7 +1993,7 @@ body.admin-bar.biblio-app-shell-page {
     }
 }
 
-[data-biblio-next-reading-root] .biblio-ui__visually-hidden {
+[data-biblio-ui-root] .biblio-ui__visually-hidden {
     block-size: 1px;
     clip: rect(0 0 0 0);
     clip-path: inset(50%);
@@ -1993,6 +2001,136 @@ body.admin-bar.biblio-app-shell-page {
     overflow: hidden;
     position: absolute;
     white-space: nowrap;
+}
+
+[data-biblio-wishlist-root] .biblio-ui__wishlist {
+    gap: var(--biblio-space-8);
+}
+
+[data-biblio-wishlist-root] .biblio-ui__wishlist-page-header {
+    display: grid;
+    gap: var(--biblio-space-2);
+    max-inline-size: var(--biblio-reading-max);
+}
+
+[data-biblio-wishlist-root] .biblio-ui__wishlist-intro,
+[data-biblio-wishlist-root] .biblio-ui__wishlist-added {
+    color: var(--biblio-color-text-muted);
+}
+
+[data-biblio-wishlist-root] .biblio-ui__wishlist-content,
+[data-biblio-wishlist-root] .biblio-ui__wishlist-empty,
+[data-biblio-wishlist-root] .biblio-ui__work-search,
+[data-biblio-wishlist-root] .biblio-ui__wishlist-work-results,
+[data-biblio-wishlist-root] .biblio-ui__wishlist-dialog,
+[data-biblio-wishlist-root] .biblio-ui__wishlist-conflict-list {
+    display: grid;
+    gap: var(--biblio-space-4);
+    min-inline-size: 0;
+}
+
+[data-biblio-wishlist-root] .biblio-ui__wishlist-empty {
+    border-block: var(--biblio-boundary-width) solid var(--biblio-color-border);
+    max-inline-size: var(--biblio-guided-max);
+    padding-block: var(--biblio-space-12);
+}
+
+[data-biblio-wishlist-root] .biblio-ui__wishlist-toolbar {
+    align-items: center;
+    border-block-end: var(--biblio-boundary-width) solid var(--biblio-color-border);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--biblio-space-4);
+    justify-content: space-between;
+    padding-block-end: var(--biblio-space-4);
+}
+
+[data-biblio-wishlist-root] .biblio-ui__wishlist-list,
+[data-biblio-wishlist-root] .biblio-ui__wishlist-work-results,
+[data-biblio-wishlist-root] .biblio-ui__wishlist-conflict-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+[data-biblio-wishlist-root] .biblio-ui__wishlist-row {
+    align-items: center;
+    border-block-end: var(--biblio-boundary-width) solid var(--biblio-color-border);
+    display: grid;
+    gap: var(--biblio-space-4);
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+    padding-block: var(--biblio-space-6);
+}
+
+[data-biblio-wishlist-root] .biblio-ui__wishlist-identity {
+    display: grid;
+    gap: var(--biblio-space-1);
+    min-inline-size: 0;
+}
+
+[data-biblio-wishlist-root] .biblio-ui__wishlist-target {
+    align-items: center;
+    color: var(--biblio-color-interactive);
+    display: inline-flex;
+    font-size: 0.875rem;
+    font-weight: 600;
+    gap: var(--biblio-space-2);
+}
+
+[data-biblio-wishlist-root] .biblio-ui__wishlist-target::before {
+    background: var(--biblio-color-brass);
+    block-size: 0.4rem;
+    border-radius: 50%;
+    content: "";
+    flex: 0 0 0.4rem;
+    inline-size: 0.4rem;
+}
+
+[data-biblio-wishlist-root] .biblio-ui__wishlist-added {
+    font-size: 0.8125rem;
+}
+
+[data-biblio-wishlist-root] .biblio-ui__wishlist-work-results > li {
+    border-block-start: var(--biblio-boundary-width) solid var(--biblio-color-border);
+    display: grid;
+    gap: var(--biblio-space-1);
+    padding-block-start: var(--biblio-space-3);
+}
+
+[data-biblio-wishlist-root] .biblio-ui__wishlist-work-results .biblio-ui__control {
+    border: 0;
+    color: var(--biblio-color-interactive);
+    font-family: var(--biblio-font-serif);
+    font-size: 1.2rem;
+    justify-content: start;
+    padding-inline: 0;
+    text-align: start;
+}
+
+[data-biblio-wishlist-root] .biblio-ui__work-search input[type="search"] {
+    inline-size: 100%;
+    min-block-size: var(--biblio-control-min);
+    min-inline-size: 0;
+    padding: var(--biblio-space-2) var(--biblio-space-3);
+}
+
+[data-biblio-wishlist-root] .biblio-ui__wishlist-row > .biblio-ui__inline-error {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 767px) {
+    [data-biblio-wishlist-root] .biblio-ui__wishlist-row {
+        align-items: stretch;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    [data-biblio-wishlist-root] .biblio-ui__wishlist-toolbar .biblio-ui__control,
+    [data-biblio-wishlist-root] .biblio-ui__wishlist-row .biblio-ui__control,
+    [data-biblio-wishlist-root] .biblio-ui__wishlist-empty .biblio-ui__control {
+        inline-size: 100%;
+    }
 }
 
 [data-biblio-next-reading-root] .biblio-ui__next-reading-content,

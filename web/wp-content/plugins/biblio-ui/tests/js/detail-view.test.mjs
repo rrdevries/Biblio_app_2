@@ -539,6 +539,31 @@ test("End Reading appears only for capability plus active round and passes its o
     }
 });
 
+test("Book Detail exposes one quiet Edition-specific Wishlist action", () => {
+    const { root, view } = setup();
+    const openers = [];
+
+    view.render(
+        {
+            state: "detail",
+            detail: detail(),
+            backUrl: "https://example.test/mijn-bibliotheek/?library_id=library-1",
+        },
+        {
+            backToOverview() {},
+            wishlist(opener) { openers.push(opener); },
+        }
+    );
+
+    const wishlist = byTag(root, "button").find(
+        (node) => node.textContent === "Op verlanglijst"
+    );
+    assert.ok(wishlist);
+    assert.match(wishlist.className, /control--secondary/);
+    wishlist.click();
+    assert.equal(openers[0], wishlist);
+});
+
 test("detail loading and Item-unavailable states expose no server details", () => {
     const { root, view } = setup();
     let backCalls = 0;

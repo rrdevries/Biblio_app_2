@@ -1,4 +1,5 @@
 import { BiblioApiError, createBiblioApi } from "./api.js";
+import { createLibraryShell } from "./ui-shell.js";
 import { readWorkPage } from "./work-discovery.js";
 
 const LIST_FIELDS = ["list_version", "entries"];
@@ -161,7 +162,12 @@ export function nextReadingErrorMessage(error) {
     return "Dat lukte niet. Probeer het opnieuw.";
 }
 
-export function createNextReadingApp({ root, api, documentImpl = document }) {
+export function createNextReadingApp({
+    root,
+    api,
+    documentImpl = document,
+    loginUrl = root?.dataset?.loginUrl,
+}) {
     let list = null;
     let busy = false;
     let undo = null;
@@ -215,12 +221,12 @@ export function createNextReadingApp({ root, api, documentImpl = document }) {
         if (
             error instanceof BiblioApiError
             && error.status === 401
-            && text(root.dataset.loginUrl)
+            && text(loginUrl)
         ) {
             box.append(el(documentImpl, "a", {
                 className: "biblio-ui__control biblio-ui__control--secondary",
                 textContent: "Opnieuw inloggen",
-                attrs: { href: root.dataset.loginUrl },
+                attrs: { href: loginUrl },
             }));
             content.replaceChildren(box);
             return;
@@ -564,7 +570,17 @@ export function createNextReadingApp({ root, api, documentImpl = document }) {
 function bootstrap() {
     for (const root of document.querySelectorAll("[data-biblio-next-reading-root]")) {
         const api = createBiblioApi({ restRoot: root.dataset.restRoot, restNonce: root.dataset.restNonce });
-        createNextReadingApp({ root, api }).load();
+        const shell = createLibraryShell(root, {
+            overviewUrl: root.dataset.overviewUrl,
+            wishlistUrl: root.dataset.wishlistUrl,
+            nextReadingUrl: root.dataset.nextReadingUrl,
+            activeDestination: "next-reading",
+        });
+        createNextReadingApp({
+            root: shell.contentRoot,
+            api,
+            loginUrl: root.dataset.loginUrl,
+        }).load();
     }
 }
 
