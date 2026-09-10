@@ -239,7 +239,10 @@ function publishedDateLabel(timestamp) {
 }
 
 function assessmentsSection(documentImpl, assessments) {
-    if (assessments.contributions.length === 0) {
+    if (
+        assessments.contributions.length === 0
+        && assessments.own_not_visible.length === 0
+    ) {
         return null;
     }
 
@@ -247,12 +250,60 @@ function assessmentsSection(documentImpl, assessments) {
         className: "biblio-ui__section biblio-ui__detail-section biblio-ui__assessments",
         attributes: { id: "beoordelingen" },
     });
+    section.append(element(documentImpl, "h2", { text: "Beoordelingen" }));
+
+    if (assessments.own_not_visible.length > 0) {
+        section.append(
+            element(documentImpl, "p", {
+                className: "biblio-ui__section-kicker",
+                text: "Alleen voor jou",
+            }),
+            element(documentImpl, "h3", { text: "Jouw beoordelingen" })
+        );
+        const ownList = element(documentImpl, "ol", {
+            className: "biblio-ui__assessment-list",
+        });
+        for (const assessment of assessments.own_not_visible) {
+            const entry = element(documentImpl, "li", {
+                className: `biblio-ui__assessment biblio-ui__assessment--${assessment.type}`,
+            });
+            if (assessment.type === "rating") {
+                entry.append(element(documentImpl, "p", {
+                    className: "biblio-ui__assessment-rating",
+                    text: ratingLabel(assessment.rating),
+                    attributes: { "aria-label": `${ratingLabel(assessment.rating)} sterren` },
+                }));
+            } else {
+                entry.append(element(documentImpl, "blockquote", {
+                    className: "biblio-ui__assessment-review",
+                    text: reviewText(assessment.review_html),
+                }));
+            }
+            const date = assessment.assessed_at === null
+                ? "Beoordelingsdatum onbekend"
+                : publishedDateLabel(assessment.assessed_at);
+            const round = assessment.reading_round_linked
+                ? "Gekoppeld aan een leesronde"
+                : "Zonder leesronde";
+            entry.append(element(documentImpl, "p", {
+                className: "biblio-ui__assessment-byline",
+                text: `${date} · ${round} · Niet zichtbaar in deze bibliotheek`,
+            }));
+            ownList.append(entry);
+        }
+        section.append(ownList);
+    }
+
+    if (assessments.contributions.length === 0) {
+        return section;
+    }
+
     section.append(
         element(documentImpl, "p", {
             className: "biblio-ui__section-kicker",
             text: "In deze bibliotheek",
         }),
-        element(documentImpl, "h2", { text: "Beoordelingen" })
+        element(documentImpl, "h3", { text: "Gepubliceerde beoordelingen" })
     );
 
     if (assessments.aggregate.average !== null) {

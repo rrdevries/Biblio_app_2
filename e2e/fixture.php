@@ -342,6 +342,8 @@ function biblioE2eCleanupCore(wpdb $database): void
         biblioE2eDeleteIn($database, $tables->contributionPublications(), "library_id", $libraries);
         biblioE2eDeleteIn($database, $tables->ratings(), "work_id", $works);
         biblioE2eDeleteIn($database, $tables->reviews(), "work_id", $works);
+        biblioE2eDeleteIn($database, $tables->personalReadingTruths(), "work_id", $works);
+        biblioE2eDeleteIn($database, $tables->personalWorkReadingLocks(), "work_id", $works);
         biblioE2eDeleteIn($database, $tables->libraryActivityEvents(), "library_id", $libraries);
         biblioE2eDeleteIn($database, $tables->nextReadingEntries(), "item_id", $items);
         biblioE2eDeleteIn($database, $tables->readingRounds(), "work_id", $works);
@@ -633,18 +635,20 @@ function biblioE2eSeedAssessments(
     }
 
     $ratings = [
-        ["e2e-rating-actor-a", $otherId, "e2e-assessment-round-actor-a", 10, "10:01:00"],
-        ["e2e-rating-actor-b", $otherId, "e2e-assessment-round-actor-b", 8, "10:03:00"],
-        ["e2e-rating-actor-only", $otherId, "e2e-assessment-round-actor-c", 7, "10:05:00"],
-        ["e2e-rating-other-library", $otherId, null, 6, "10:01:30"],
+        ["e2e-rating-actor-a", $otherId, "e2e-assessment-round-actor-a", 10, "10:01:00", null],
+        ["e2e-rating-actor-b", $otherId, "e2e-assessment-round-actor-b", 8, "10:03:00", null],
+        ["e2e-rating-actor-only", $otherId, "e2e-assessment-round-actor-c", 7, "10:05:00", null],
+        ["e2e-rating-other-library", $otherId, null, 6, "10:01:30", null],
+        ["e2e-rating-actor-private", $actorId, null, 9, "10:06:30", null],
     ];
-    foreach ($ratings as [$ratingId, $userId, $roundId, $halfUnits, $time]) {
+    foreach ($ratings as [$ratingId, $userId, $roundId, $halfUnits, $time, $assessedAt]) {
         if ($database->insert($tables->ratings(), [
             "rating_id" => $ratingId,
             "user_id" => $userId,
             "work_id" => $workId,
             "reading_round_id" => $roundId,
             "rating_half_units" => $halfUnits,
+            "assessed_at" => $assessedAt,
             "created_at" => "2026-09-08 {$time}.000000",
             "updated_at" => "2026-09-08 {$time}.000000",
             "rating_version" => 1,
@@ -654,23 +658,24 @@ function biblioE2eSeedAssessments(
     }
 
     $reviews = [
-        ["e2e-review-actor-a", $otherId, "e2e-assessment-round-actor-a", "Een bedachtzame eerste beoordeling met <script> als zichtbare tekst.", "10:02:00"],
-        ["e2e-review-actor-b", $otherId, "e2e-assessment-round-actor-b", "Een tweede leesronde met een zeerlangonafgebrokenreviewwoorddatveiligmoetafbrekenzonderhorizontaleoverflow.", "10:04:00"],
-        ["e2e-review-actor-text-only", $otherId, "e2e-assessment-round-actor-d", "Zonder sterren, wel met een rustige observatie.", "10:06:00"],
-        ["e2e-review-actor-private", $actorId, null, "E2E OWN PRIVATE REVIEW MUST NEVER LEAK.", "10:07:00"],
-        ["e2e-review-other-public", $otherId, null, "Alleen gepubliceerd in de andere Library.", "10:02:30"],
-        ["e2e-review-other-private", $otherId, "e2e-assessment-round-other-private", "E2E OTHER PRIVATE REVIEW MUST NEVER LEAK.", "10:07:30"],
-        ["e2e-review-actor-other-library", $otherId, "e2e-assessment-round-actor-other-library", "Publicatie uitsluitend in de andere Library.", "10:08:00"],
-        ["e2e-review-actor-withdrawn", $otherId, "e2e-assessment-round-actor-e", "E2E WITHDRAWN REVIEW MUST NEVER LEAK.", "10:09:00"],
-        ["e2e-review-other-hidden", $otherId, "e2e-assessment-round-other-hidden", "E2E HIDDEN REVIEW MUST NEVER LEAK.", "10:10:00"],
+        ["e2e-review-actor-a", $otherId, "e2e-assessment-round-actor-a", "Een bedachtzame eerste beoordeling met <script> als zichtbare tekst.", "10:02:00", null],
+        ["e2e-review-actor-b", $otherId, "e2e-assessment-round-actor-b", "Een tweede leesronde met een zeerlangonafgebrokenreviewwoorddatveiligmoetafbrekenzonderhorizontaleoverflow.", "10:04:00", null],
+        ["e2e-review-actor-text-only", $otherId, "e2e-assessment-round-actor-d", "Zonder sterren, wel met een rustige observatie.", "10:06:00", null],
+        ["e2e-review-actor-private", $actorId, null, "E2E OWN PRIVATE REVIEW MUST NEVER LEAK.", "10:07:00", "2026-09-08 09:15:00.000000"],
+        ["e2e-review-other-public", $otherId, null, "Alleen gepubliceerd in de andere Library.", "10:02:30", null],
+        ["e2e-review-other-private", $otherId, "e2e-assessment-round-other-private", "E2E OTHER PRIVATE REVIEW MUST NEVER LEAK.", "10:07:30", null],
+        ["e2e-review-actor-other-library", $otherId, "e2e-assessment-round-actor-other-library", "Publicatie uitsluitend in de andere Library.", "10:08:00", null],
+        ["e2e-review-actor-withdrawn", $otherId, "e2e-assessment-round-actor-e", "E2E WITHDRAWN REVIEW MUST NEVER LEAK.", "10:09:00", null],
+        ["e2e-review-other-hidden", $otherId, "e2e-assessment-round-other-hidden", "E2E HIDDEN REVIEW MUST NEVER LEAK.", "10:10:00", null],
     ];
-    foreach ($reviews as [$reviewId, $userId, $roundId, $content, $time]) {
+    foreach ($reviews as [$reviewId, $userId, $roundId, $content, $time, $assessedAt]) {
         if ($database->insert($tables->reviews(), [
             "review_id" => $reviewId,
             "user_id" => $userId,
             "work_id" => $workId,
             "reading_round_id" => $roundId,
             "review_content" => $content,
+            "assessed_at" => $assessedAt,
             "created_at" => "2026-09-08 {$time}.000000",
             "updated_at" => "2026-09-08 {$time}.000000",
             "review_version" => 1,
@@ -1146,6 +1151,14 @@ function biblioE2eCounts(wpdb $database): array
         )),
         "reviews" => (int) $database->get_var($database->prepare(
             "SELECT COUNT(*) FROM `{$tables->reviews()}` WHERE work_id IN ({$workSql})",
+            ...$workValues
+        )),
+        "personal_reading_truths" => (int) $database->get_var($database->prepare(
+            "SELECT COUNT(*) FROM `{$tables->personalReadingTruths()}` WHERE work_id IN ({$workSql})",
+            ...$workValues
+        )),
+        "personal_work_reading_locks" => (int) $database->get_var($database->prepare(
+            "SELECT COUNT(*) FROM `{$tables->personalWorkReadingLocks()}` WHERE work_id IN ({$workSql})",
             ...$workValues
         )),
         "assessment_publications" => (int) $database->get_var($database->prepare(

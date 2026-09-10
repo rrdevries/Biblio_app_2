@@ -47,7 +47,7 @@ final class Schema1012ItemArchiveTest extends PersistenceIntegrationTestCase
         $migration->assertPrecondition();
         $migration->assertPostcondition();
         $this->migrator()->migrate();
-        self::assertSame(1020, $this->migrator()->installedVersion());
+        self::assertSame(1021, $this->migrator()->installedVersion());
     }
 
     public function testUnknownPartialStateFailsBeforeVersionBump(): void

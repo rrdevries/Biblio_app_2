@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Tests\Integration;
 
-use Biblio\Core\Application\Assessments\Read\GetLibraryPublicAssessmentsService;
+use Biblio\Core\Application\Assessments\Read\{GetLibraryPublicAssessmentsService,GetOwnAssessmentsForWorkService};
 use Biblio\Core\Application\Catalog\Read\CatalogDataState;
 use Biblio\Core\Application\Catalog\Read\CatalogItemNotAvailable;
 use Biblio\Core\Application\Catalog\Read\CatalogOverviewPageSize;
@@ -21,6 +21,7 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbCatalogUiReadRepository
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbCollectionRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryClassificationReadRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPublicationRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbOwnAssessmentReadRepository;
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Reading\PersonalWorkReadingStatus;
 use Biblio\Core\Tests\Support\ControllableAuthenticatedUser;
@@ -542,6 +543,14 @@ final class CatalogUiReadModelsTest extends PersistenceIntegrationTestCase
             new GetLibraryPublicAssessmentsService(
                 $contexts,
                 new WpdbPublicationRepository($this->database, $this->tableNames)
+            ),
+            new GetOwnAssessmentsForWorkService(
+                $authenticated,
+                $contexts,
+                new WpdbOwnAssessmentReadRepository(
+                    $this->database,
+                    $this->tableNames
+                )
             )
         );
     }

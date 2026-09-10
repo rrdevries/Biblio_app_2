@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Biblio\Core\Application\Catalog\Read;
 
 use Biblio\Core\Application\Assessments\Read\PublicAssessmentPage;
+use Biblio\Core\Application\Assessments\Read\OwnAssessmentView;
 use Biblio\Core\Application\Library\LibraryContextView;
 use Biblio\Core\Catalog\EditionId;
 use Biblio\Core\Catalog\ItemId;
@@ -36,6 +37,8 @@ final readonly class CatalogItemDetailView
         /** @var list<CatalogItemCollectionView> */
         private array $collections,
         private PublicAssessmentPage $assessments,
+        /** @var list<OwnAssessmentView> */
+        private array $ownAssessments,
         private ItemStatus $itemStatus,
         private CatalogReadingSummary $reading,
         private ?CatalogActiveReadingRoundView $activeReadingRound,
@@ -67,6 +70,8 @@ final readonly class CatalogItemDetailView
     /** @return list<CatalogItemCollectionView> */
     public function collections(): array { return $this->collections; }
     public function assessments(): PublicAssessmentPage { return $this->assessments; }
+    /** @return list<OwnAssessmentView> */
+    public function ownAssessments(): array { return $this->ownAssessments; }
     public function itemStatus(): ItemStatus { return $this->itemStatus; }
     public function reading(): CatalogReadingSummary { return $this->reading; }
     public function activeReadingRound(): ?CatalogActiveReadingRoundView

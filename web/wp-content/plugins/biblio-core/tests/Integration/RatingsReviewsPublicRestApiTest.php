@@ -254,6 +254,33 @@ final class RatingsReviewsPublicRestApiTest extends PersistenceIntegrationTestCa
             null,
             "Own private review"
         );
+        $this->seedRating(
+            "rating-own-private",
+            $this->actorId,
+            "round-own-private",
+            9,
+            "09:00:00",
+            true
+        );
+        self::assertSame(1, $this->database->update(
+            $this->tableNames->ratings(),
+            ["assessed_at" => "2014-03-02 11:12:13.654321"],
+            ["rating_id" => "rating-own-private"]
+        ));
+        $this->seedReview(
+            "review-own-published",
+            $this->actorId,
+            "round-own-published",
+            "Own visible review",
+            true
+        );
+        $this->seedPublication(
+            "publication-own-review",
+            "library-a",
+            null,
+            "review-own-published",
+            "10:08:00"
+        );
 
         $detailRequest = new WP_REST_Request(
             "GET",
@@ -269,6 +296,7 @@ final class RatingsReviewsPublicRestApiTest extends PersistenceIntegrationTestCa
             "contributions",
             "aggregate",
             "next_cursor",
+            "own_not_visible",
         ], array_keys($detail["assessments"]));
         self::assertSame(
             $standalone["contributions"],
@@ -279,7 +307,21 @@ final class RatingsReviewsPublicRestApiTest extends PersistenceIntegrationTestCa
             $detail["assessments"]["aggregate"]
         );
         self::assertNull($detail["assessments"]["next_cursor"]);
-        self::assertCount(5, $detail["assessments"]["contributions"]);
+        self::assertCount(6, $detail["assessments"]["contributions"]);
+        self::assertSame([
+            [
+                "type" => "review",
+                "assessed_at" => null,
+                "reading_round_linked" => false,
+                "review_html" => "Own private review",
+            ],
+            [
+                "type" => "rating",
+                "assessed_at" => "2014-03-02T11:12:13.654321Z",
+                "reading_round_linked" => true,
+                "rating" => 4.5,
+            ],
+        ], $detail["assessments"]["own_not_visible"]);
         self::assertCount(2, array_filter(
             $detail["assessments"]["contributions"],
             static fn (array $row): bool =>
@@ -293,12 +335,46 @@ final class RatingsReviewsPublicRestApiTest extends PersistenceIntegrationTestCa
         ], $detail["classification"]);
         self::assertSame([], $detail["collections"]);
 
+        $otherOwnerDetail = $this->data($this->dispatchAs(
+            $this->authorA,
+            new WP_REST_Request(
+                "GET",
+                "/biblio/v1/libraries/library-a/items/item-a"
+            )
+        ));
+        self::assertSame([], $otherOwnerDetail["assessments"]["own_not_visible"]);
+        self::assertStringNotContainsString(
+            "Own private review",
+            (string) wp_json_encode($otherOwnerDetail["assessments"])
+        );
+
+        $sameWorkOtherLibrary = $this->data($this->dispatchAs(
+            $this->actorId,
+            new WP_REST_Request(
+                "GET",
+                "/biblio/v1/libraries/library-b/items/item-b"
+            )
+        ));
+        self::assertCount(
+            3,
+            $sameWorkOtherLibrary["assessments"]["own_not_visible"]
+        );
+        self::assertSame(1, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->ratings()}` "
+                . "WHERE rating_id='rating-own-private'"
+        ));
+        self::assertSame(2, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->reviews()}` "
+                . "WHERE user_id='" . $this->actorId . "' AND work_id='work-a'"
+        ));
+
         $serialized = (string) wp_json_encode($detail["assessments"]);
         foreach ([
-            "Own private review",
             "Private review",
             "Library B only",
             "review-own-private",
+            "review-own-published",
+            "rating-own-private",
             "reading_round_id",
             "user_id",
             "moderation",
