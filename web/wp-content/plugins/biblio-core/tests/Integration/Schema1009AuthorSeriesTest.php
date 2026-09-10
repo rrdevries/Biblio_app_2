@@ -22,7 +22,7 @@ final class Schema1009AuthorSeriesTest extends PersistenceIntegrationTestCase
     public function testUpgradeFrom1008PreservesExistingDataAndHasNoLegacyMetadataToMigrate(): void
     {
         $this->dropFoundationTables();
-        update_option(CoreSchemaMigrator::VERSION_OPTION, "1008", false);
+        $this->setHistoricalSchemaVersion(1008);
         $this->database->insert($this->tableNames->works(), [
             "work_id" => "preserved-work",
             "work_title" => "Preserved title",
@@ -30,7 +30,7 @@ final class Schema1009AuthorSeriesTest extends PersistenceIntegrationTestCase
 
         $this->migrator()->migrate();
 
-        self::assertSame(1022, $this->migrator()->installedVersion());
+        self::assertSame(1023, $this->migrator()->installedVersion());
         self::assertSame("Preserved title", $this->database->get_var(
             "SELECT work_title FROM `{$this->tableNames->works()}` WHERE work_id='preserved-work'"
         ));
@@ -44,7 +44,7 @@ final class Schema1009AuthorSeriesTest extends PersistenceIntegrationTestCase
     public function testKnownPartialMigrationIsRetryable(): void
     {
         $this->dropFoundationTables();
-        update_option(CoreSchemaMigrator::VERSION_OPTION, "1008", false);
+        $this->setHistoricalSchemaVersion(1008);
         $migration = new CoreSchema1009Migration($this->database, $this->tableNames);
 
         $migration->assertPrecondition();
@@ -53,7 +53,7 @@ final class Schema1009AuthorSeriesTest extends PersistenceIntegrationTestCase
         $migration->assertPrecondition();
         $migration->assertPostcondition();
 
-        update_option(CoreSchemaMigrator::VERSION_OPTION, "1009", false);
+        $this->setHistoricalSchemaVersion(1009);
         self::assertTrue($this->migrator()->healthForVersion(1009)->isHealthy());
     }
 
@@ -61,7 +61,7 @@ final class Schema1009AuthorSeriesTest extends PersistenceIntegrationTestCase
     {
         $authors = $this->tableNames->authors();
         $this->database->query("ALTER TABLE `{$authors}` DROP INDEX authors_by_display_name");
-        update_option(CoreSchemaMigrator::VERSION_OPTION, "1008", false);
+        $this->setHistoricalSchemaVersion(1008);
 
         try {
             $this->migrator()->migrate();
@@ -74,7 +74,7 @@ final class Schema1009AuthorSeriesTest extends PersistenceIntegrationTestCase
 
         $this->dropFoundationTables();
         $this->migrator()->migrate();
-        self::assertSame(1022, $this->migrator()->installedVersion());
+        self::assertSame(1023, $this->migrator()->installedVersion());
         self::assertTrue($this->migrator()->healthForVersion(1009)->isHealthy());
     }
 

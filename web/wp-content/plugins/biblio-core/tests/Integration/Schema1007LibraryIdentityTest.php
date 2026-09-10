@@ -24,7 +24,7 @@ final class Schema1007LibraryIdentityTest extends PersistenceIntegrationTestCase
         $this->database->query(
             "ALTER TABLE `{$memberships}` DROP INDEX `memberships_by_user`"
         );
-        update_option(CoreSchemaMigrator::VERSION_OPTION, "1006", false);
+        $this->setHistoricalSchemaVersion(1006);
         $this->database->insert($libraries, [
             "library_id" => "legacy-personal",
             "library_type" => "private_library",
@@ -46,7 +46,7 @@ final class Schema1007LibraryIdentityTest extends PersistenceIntegrationTestCase
         try {
             $this->migrator()->migrate();
 
-            self::assertSame(1022, $this->migrator()->installedVersion());
+            self::assertSame(1023, $this->migrator()->installedVersion());
             self::assertSame(
                 "Mijn Bibliotheek",
                 $this->database->get_var(
@@ -80,7 +80,7 @@ final class Schema1007LibraryIdentityTest extends PersistenceIntegrationTestCase
                 ARRAY_A
             ));
         } finally {
-            update_option(CoreSchemaMigrator::VERSION_OPTION, "1006", false);
+            $this->setHistoricalSchemaVersion(1006);
             $this->migrator()->migrate();
         }
     }
@@ -124,7 +124,7 @@ final class Schema1007LibraryIdentityTest extends PersistenceIntegrationTestCase
             "ALTER TABLE `{$memberships}` ADD INDEX `memberships_by_user` "
             . "(library_id, user_id)"
         );
-        update_option(CoreSchemaMigrator::VERSION_OPTION, "1006", false);
+        $this->setHistoricalSchemaVersion(1006);
 
         try {
             $migration = new CoreSchema1007Migration(
@@ -144,7 +144,7 @@ final class Schema1007LibraryIdentityTest extends PersistenceIntegrationTestCase
             $this->database->query(
                 "ALTER TABLE `{$memberships}` DROP INDEX `memberships_by_user`"
             );
-            update_option(CoreSchemaMigrator::VERSION_OPTION, "1006", false);
+            $this->setHistoricalSchemaVersion(1006);
             $this->migrator()->migrate();
         }
     }

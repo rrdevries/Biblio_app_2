@@ -47,7 +47,7 @@ final class Schema1012ItemArchiveTest extends PersistenceIntegrationTestCase
         $migration->assertPrecondition();
         $migration->assertPostcondition();
         $this->migrator()->migrate();
-        self::assertSame(1022, $this->migrator()->installedVersion());
+        self::assertSame(1023, $this->migrator()->installedVersion());
     }
 
     public function testUnknownPartialStateFailsBeforeVersionBump(): void
@@ -83,7 +83,7 @@ final class Schema1012ItemArchiveTest extends PersistenceIntegrationTestCase
             $this->database->query("ALTER TABLE `{$items}` DROP COLUMN item_version");
             $this->database->query("ALTER TABLE `{$items}` ADD CONSTRAINT items_status_active CHECK (item_status IN ('active'))");
         }
-        update_option(CoreSchemaMigrator::VERSION_OPTION, "1011", false);
+        $this->setHistoricalSchemaVersion(1011);
     }
 
     private function applyItemLifecycleAlter(): void

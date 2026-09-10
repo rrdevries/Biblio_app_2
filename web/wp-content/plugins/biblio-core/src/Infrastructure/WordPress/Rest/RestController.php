@@ -240,6 +240,20 @@ final class RestController
             "callback" => [$this, "discoverWorks"],
             "permission_callback" => [$this, "authenticated"],
         ]);
+        register_rest_route(self::NAMESPACE, "/me/bibliographic-discoveries", [
+            "methods" => WP_REST_Server::CREATABLE,
+            "callback" => [$this, "createBibliographicDiscovery"],
+            "permission_callback" => [$this, "authenticated"],
+        ]);
+        register_rest_route(
+            self::NAMESPACE,
+            "/me/bibliographic-discoveries/(?P<discovery_id>[^/]+)/materializations",
+            [
+                "methods" => WP_REST_Server::CREATABLE,
+                "callback" => [$this, "materializeBibliographicCandidate"],
+                "permission_callback" => [$this, "authenticated"],
+            ]
+        );
         register_rest_route(
             self::NAMESPACE,
             "/me/works/(?P<work_id>[^/]+)/preferred-source-options",
@@ -787,6 +801,34 @@ final class RestController
             );
 
             return $this->success($this->responses->workDiscovery($page));
+        });
+    }
+
+    public function createBibliographicDiscovery(
+        WP_REST_Request $request
+    ): WP_REST_Response|WP_Error {
+        return $this->execute(function (CoreApplication $application) use ($request): WP_REST_Response {
+            $result = $application->bibliographicDiscovery()->discover(
+                $this->requests->bibliographicDiscoveryQuery($request)
+            );
+            return $this->success($this->responses->bibliographicDiscovery($result));
+        });
+    }
+
+    public function materializeBibliographicCandidate(
+        WP_REST_Request $request
+    ): WP_REST_Response|WP_Error {
+        return $this->execute(function (CoreApplication $application) use ($request): WP_REST_Response {
+            $input = $this->requests->bibliographicMaterialization($request);
+            $result = $application->bibliographicMaterialization()->materialize(
+                $input["discovery_id"],
+                $input["candidate_id"],
+                $input["intent"]
+            );
+            return $this->success(
+                $this->responses->bibliographicMaterialization($result),
+                201
+            );
         });
     }
 

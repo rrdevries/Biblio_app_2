@@ -121,11 +121,11 @@ final class Schema1008NextReadingContractCorrectionTest extends PersistenceInteg
                 "created_at" => $createdAt,
             ], ["%s", "%s", "%s", "%s", "%s", "%s", "%s", "%s", "%d", "%s"]));
         }
-        update_option(CoreSchemaMigrator::VERSION_OPTION, "1007", false);
+        $this->setHistoricalSchemaVersion(1007);
 
         $this->migrator()->migrate();
 
-        self::assertSame(1022, $this->migrator()->installedVersion());
+        self::assertSame(1023, $this->migrator()->installedVersion());
         $rows = $this->database->get_results(
             "SELECT entry_id,work_id,preferred_source_type,preferred_source_id_snapshot,"
             . "preferred_source_library_id_snapshot,item_id,external_loan_id,position,created_at "

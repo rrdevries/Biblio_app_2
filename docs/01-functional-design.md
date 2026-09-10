@@ -465,6 +465,26 @@ The approved v2.001 build target is deliberately small:
 - preserve a first-class manual/no-ISBN path;
 - render an honest no-cover state without depending on a provider cover.
 
+MH-DISC-01 additionally supplies one authenticated provider-neutral
+bibliographic discovery boundary for future consumers. A valid ISBN remains
+Edition-mode; any other validated input is one normalized text query used for
+title/author/free bibliographic search without a client provider selector.
+Discovery is local-first and can return explicit local/external Work and Edition
+candidate types. Provider order is presentation-only and never selects, merges
+or recommends a canonical winner. Open Library Work results may expose multiple
+concrete Editions; Google Books Volumes remain Edition candidates.
+
+An ISBN-less external Edition may be shown, but title alone is never sufficient
+for durable materialization. Stable provider publication identity plus a
+provider Work link, contributors or canonical ISBN is required. Provider Work
+identity remains provider-scoped and cannot cause cross-provider or fuzzy
+title/author merge. A selected actor-scoped, unexpired candidate can create a
+provisional Work and optional Edition without any Item, Library possession,
+Library activity or Wishlist mutation. This central write is available only to
+the active Eigenaar of the actor's server-resolved designated personal
+Privébibliotheek; the request carries no Library selector. See
+`docs/69-mh-disc-01-bibliographic-discovery-foundation.md`.
+
 Independent Biblio-owned or user-supplied cover acquisition/management is
 V2.002+. Existing V1 cover references/assets remain migration inventory and
 may not be silently discarded.

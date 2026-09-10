@@ -6,7 +6,9 @@ namespace Biblio\Core\Tests\Integration;
 
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchema1019Migration;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaHealthChecker;
+use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrationRegistry;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrationException;
+use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrator;
 
 final class Schema1019PersonalReadingTruthTest extends PersistenceIntegrationTestCase
 {
@@ -15,10 +17,15 @@ final class Schema1019PersonalReadingTruthTest extends PersistenceIntegrationTes
         foreach (array_reverse($this->tableNames->schema1019Additions()) as $table) {
             $this->database->query("DROP TABLE IF EXISTS `{$table}`");
         }
-        $migration = new CoreSchema1019Migration($this->database, $this->tableNames);
-        $migration->assertPrecondition();
-        $migration->migrate();
-        $migration->assertPostcondition();
+        $this->setHistoricalSchemaVersion(1018);
+        (new CoreSchemaMigrator(
+            $this->database,
+            $this->tableNames,
+            CoreSchemaMigrationRegistry::production(
+                $this->database,
+                $this->tableNames
+            )->migrations()
+        ))->migrate();
 
         parent::tearDown();
     }
@@ -28,6 +35,7 @@ final class Schema1019PersonalReadingTruthTest extends PersistenceIntegrationTes
         foreach (array_reverse($this->tableNames->schema1019Additions()) as $table) {
             $this->database->query("DROP TABLE IF EXISTS `{$table}`");
         }
+        $this->setHistoricalSchemaVersion(1018);
         $migration = new CoreSchema1019Migration($this->database, $this->tableNames);
 
         $migration->assertPrecondition();
@@ -51,6 +59,7 @@ final class Schema1019PersonalReadingTruthTest extends PersistenceIntegrationTes
         foreach (array_reverse($this->tableNames->schema1019Additions()) as $table) {
             $this->database->query("DROP TABLE IF EXISTS `{$table}`");
         }
+        $this->setHistoricalSchemaVersion(1018);
         $truths = $this->tableNames->personalReadingTruths();
         $this->database->query(
             "CREATE TABLE `{$truths}` (user_id VARCHAR(191) NOT NULL PRIMARY KEY) ENGINE=InnoDB"

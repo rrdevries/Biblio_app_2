@@ -6,6 +6,7 @@ namespace Biblio\Core\Tests\Integration;
 
 use Biblio\Core\Application\Catalog\Classification\ClassificationSeedEvolutionService;
 use Biblio\Core\Infrastructure\Persistence\WordPress\CoreTableNames;
+use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrator;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbClassificationSeedEvolutionFactory;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -71,6 +72,12 @@ abstract class PersistenceIntegrationTestCase extends TestCase
         $metadataFieldStates = $this->tableNames->metadataFieldStates();
         $metadataLookupCandidates = $this->tableNames->metadataLookupCandidates();
         $metadataLookupSnapshots = $this->tableNames->metadataLookupSnapshots();
+        $bibliographicDiscoveryCandidates = $this->tableNames
+            ->bibliographicDiscoveryCandidates();
+        $bibliographicDiscoverySnapshots = $this->tableNames
+            ->bibliographicDiscoverySnapshots();
+        $bibliographicProviderIdentities = $this->tableNames
+            ->bibliographicProviderIdentities();
         $metadataUserObservations = $this->tableNames->metadataUserObservations();
         $migrationMappings = $this->tableNames->migrationTargetMappings();
         $migrationQuarantine = $this->tableNames->migrationQuarantine();
@@ -183,6 +190,15 @@ abstract class PersistenceIntegrationTestCase extends TestCase
         if ($this->tableExists($metadataLookupSnapshots)) {
             $this->database->query("DELETE FROM `{$metadataLookupSnapshots}`");
         }
+        if ($this->tableExists($bibliographicDiscoveryCandidates)) {
+            $this->database->query("DELETE FROM `{$bibliographicDiscoveryCandidates}`");
+        }
+        if ($this->tableExists($bibliographicDiscoverySnapshots)) {
+            $this->database->query("DELETE FROM `{$bibliographicDiscoverySnapshots}`");
+        }
+        if ($this->tableExists($bibliographicProviderIdentities)) {
+            $this->database->query("DELETE FROM `{$bibliographicProviderIdentities}`");
+        }
         if ($this->tableExists($identifierClaims)) {
             $this->database->query("DELETE FROM `{$identifierClaims}`");
         }
@@ -214,6 +230,47 @@ abstract class PersistenceIntegrationTestCase extends TestCase
         );
         $this->database->query("DELETE FROM `{$memberships}`");
         $this->database->query("DELETE FROM `{$libraries}`");
+    }
+
+    protected function setHistoricalSchemaVersion(int $version): void
+    {
+        if ($version < 1023) {
+            foreach (array_reverse($this->tableNames->schema1023Additions()) as $table) {
+                $this->database->query("DROP TABLE IF EXISTS `{$table}`");
+            }
+
+            $evidence = $this->tableNames->metadataFieldEvidence();
+            if ($this->tableExists($evidence)) {
+                $columnType = strtolower((string) $this->database->get_var(
+                    $this->database->prepare(
+                        "SELECT COLUMN_TYPE FROM information_schema.COLUMNS "
+                            . "WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s "
+                            . "AND COLUMN_NAME = 'queried_identifier'",
+                        DB_NAME,
+                        $evidence
+                    )
+                ));
+
+                if ($columnType === "varchar(100)") {
+                    $this->database->query(
+                        "ALTER TABLE `{$evidence}` "
+                            . "DROP CONSTRAINT metadata_field_evidence_match_supported,"
+                            . "DROP CONSTRAINT metadata_field_evidence_query_valid,"
+                            . "MODIFY queried_identifier VARCHAR(13) "
+                            . "CHARACTER SET ascii COLLATE ascii_bin NOT NULL,"
+                            . "ADD CONSTRAINT metadata_field_evidence_match_supported "
+                            . "CHECK (match_method='exact_isbn'),"
+                            . "ADD CONSTRAINT metadata_field_evidence_query_valid "
+                            . "CHECK ((queried_identifier_type='isbn_10' "
+                            . "AND queried_identifier REGEXP '^[0-9]{9}[0-9X]$') "
+                            . "OR (queried_identifier_type='isbn_13' "
+                            . "AND queried_identifier REGEXP '^97[89][0-9]{10}$'))"
+                    );
+                }
+            }
+        }
+
+        update_option(CoreSchemaMigrator::VERSION_OPTION, (string) $version, false);
     }
 
     protected function classificationSeedEvolution(): ClassificationSeedEvolutionService

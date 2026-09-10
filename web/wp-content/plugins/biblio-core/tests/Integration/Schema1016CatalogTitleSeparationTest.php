@@ -28,7 +28,7 @@ final class Schema1016CatalogTitleSeparationTest extends PersistenceIntegrationT
         try {
             $this->migrator()->migrate();
 
-            self::assertSame(1022, $this->migrator()->installedVersion());
+            self::assertSame(1023, $this->migrator()->installedVersion());
             self::assertTrue($this->migrator()->health()->isHealthy());
             self::assertSame("Bestaande titel", $this->database->get_var(
                 "SELECT edition_title FROM `{$editions}` WHERE edition_id='edition-a'"
@@ -75,7 +75,7 @@ final class Schema1016CatalogTitleSeparationTest extends PersistenceIntegrationT
             $migration->assertPostcondition();
             $this->migrator()->migrate();
 
-            self::assertSame(1022, $this->migrator()->installedVersion());
+            self::assertSame(1023, $this->migrator()->installedVersion());
             self::assertTrue($this->migrator()->health()->isHealthy());
         } finally {
             $this->restoreCurrentSchema();
@@ -255,7 +255,7 @@ final class Schema1016CatalogTitleSeparationTest extends PersistenceIntegrationT
                 "ALTER TABLE `{$editions}` DROP COLUMN edition_title"
             );
         }
-        update_option(CoreSchemaMigrator::VERSION_OPTION, "1015", false);
+        $this->setHistoricalSchemaVersion(1015);
     }
 
     private function restoreCurrentSchema(): void
@@ -273,7 +273,7 @@ final class Schema1016CatalogTitleSeparationTest extends PersistenceIntegrationT
                     . "ON w.work_id=e.work_id SET e.edition_title=w.work_title"
             );
         }
-        update_option(CoreSchemaMigrator::VERSION_OPTION, "1015", false);
+        $this->setHistoricalSchemaVersion(1015);
         $this->migrator()->migrate();
     }
 

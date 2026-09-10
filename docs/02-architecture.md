@@ -399,8 +399,8 @@ Biblio Core owns versioning and migrations for its Core tables. MariaDB DDL is n
 
 The formally supported Core schema history starts at baseline version `1000`.
 The earlier internal spike versions 1–5 are not production migration sources.
-Product version (`v2.001`), Core plugin/package version (`2.4.0`) and database
-schema version are independent. Plugin/package version `2.4.0` expects formal
+Product version (`v2.001`), Core plugin/package version (`2.5.0`) and database
+schema version are independent. Plugin/package version `2.5.0` expects formal
 schema baseline `1000`.
 
 A fresh baseline installation is allowed only on an empty Core schema.
@@ -439,7 +439,7 @@ lifecycles.
 
 These constraints require no schema migration: they align public construction
 and hydration with the already formalized baseline. Product version `v2.001`,
-plugin/package version `2.4.0` and schema baseline `1000` remain independent.
+plugin/package version `2.5.0` and schema baseline `1000` remain independent.
 
 No source FK uses cascade-delete in a way that removes personal ReadingRound history when a physical source changes or ends.
 
@@ -516,6 +516,26 @@ v2.001 runtime adapters. Provider-specific transport, credentials, caching and
 branding remain adapter/operations concerns and never leak into Core. Material
 conflicts are returned for explicit candidate review, not silently fused per
 field. Manual/no-ISBN entry and Biblio-owned covers remain independent paths.
+
+MH-DISC-01 adds a consumer-neutral discovery/application boundary beside the
+unchanged Add Book boundary. It owns server-side ISBN-versus-text
+classification, local-first orchestration and typed Work/Edition candidates.
+The Open Library adapter returns provider-ranked Work candidates and performs a
+strictly bounded Editions follow-up; Google Books maps Volumes as Edition
+candidates. Provider rank is transient presentation order only.
+
+External candidates needing later selection are immutable hashed snapshots in
+schema `1023`, scoped to authenticated actor plus normalized typed query and a
+30-minute expiry. Add Book's Library/ISBN snapshot tables remain unchanged.
+Materialization is one Core transaction from exact snapshot candidate to
+provider-scoped provisional/canonical Work and optional Edition. Strong
+provider identity and canonical ISBN constraints are the only reuse boundaries;
+there is no fuzzy or cross-provider Work merge. The service has no Item,
+caller-supplied Library Context, activity or Wishlist dependency. Core does
+require active ownership of the actor's designated personal Privébibliotheek
+before central bibliographic materialization. Existing field-review storage
+accepts bounded text-query evidence and retains canonical protection.
+See `docs/69-mh-disc-01-bibliographic-discovery-foundation.md`.
 
 ADR-010 classifies conflicts by impact while retaining whole-record candidate
 selection. Identity-critical differences must remain reviewable; publication

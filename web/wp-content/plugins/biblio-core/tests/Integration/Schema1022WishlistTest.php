@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Tests\Integration;
 
-use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\{CoreSchema1022Migration,CoreSchemaHealthChecker,CoreSchemaMigrationException};
+use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\{CoreSchema1022Migration,CoreSchemaHealthChecker,CoreSchemaMigrationException,CoreSchemaMigrationRegistry,CoreSchemaMigrator};
 
 final class Schema1022WishlistTest extends PersistenceIntegrationTestCase
 {
@@ -13,10 +13,15 @@ final class Schema1022WishlistTest extends PersistenceIntegrationTestCase
         foreach (array_reverse($this->tableNames->schema1022Additions()) as $table) {
             $this->database->query("DROP TABLE IF EXISTS `{$table}`");
         }
-        $migration = new CoreSchema1022Migration($this->database, $this->tableNames);
-        $migration->assertPrecondition();
-        $migration->migrate();
-        $migration->assertPostcondition();
+        $this->setHistoricalSchemaVersion(1021);
+        (new CoreSchemaMigrator(
+            $this->database,
+            $this->tableNames,
+            CoreSchemaMigrationRegistry::production(
+                $this->database,
+                $this->tableNames
+            )->migrations()
+        ))->migrate();
         parent::tearDown();
     }
 
@@ -25,6 +30,7 @@ final class Schema1022WishlistTest extends PersistenceIntegrationTestCase
         foreach (array_reverse($this->tableNames->schema1022Additions()) as $table) {
             $this->database->query("DROP TABLE IF EXISTS `{$table}`");
         }
+        $this->setHistoricalSchemaVersion(1021);
         $migration = new CoreSchema1022Migration($this->database, $this->tableNames);
 
         $migration->assertPrecondition();
@@ -48,6 +54,7 @@ final class Schema1022WishlistTest extends PersistenceIntegrationTestCase
         foreach (array_reverse($this->tableNames->schema1022Additions()) as $table) {
             $this->database->query("DROP TABLE IF EXISTS `{$table}`");
         }
+        $this->setHistoricalSchemaVersion(1021);
         $states = $this->tableNames->wishlistWorkStates();
         $this->database->query(
             "CREATE TABLE `{$states}` (user_id VARCHAR(191) NOT NULL PRIMARY KEY) ENGINE=InnoDB"

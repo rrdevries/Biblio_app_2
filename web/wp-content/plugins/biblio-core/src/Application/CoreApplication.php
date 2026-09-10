@@ -31,6 +31,7 @@ use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
 use Biblio\Core\Application\Library\GetAccessibleLibraryItemService;
 use Biblio\Core\Application\Library\LibraryContextQueryService;
 use Biblio\Core\Application\Metadata\{AddBookCommitService,AddBookMetadataLookupService};
+use Biblio\Core\Application\Metadata\Discovery\{BibliographicDiscoveryService,BibliographicMaterializationService};
 use Biblio\Core\Application\Notes\CorrectPrivateNoteReadingRoundService;
 use Biblio\Core\Application\Notes\CreatePrivateNoteService;
 use Biblio\Core\Application\Notes\DeletePrivateNoteService;
@@ -146,8 +147,20 @@ final readonly class CoreApplication
         private AddWishlistEntryService $wishlistAdd,
         private RefineWishlistEntryService $wishlistRefine,
         private RemoveWishlistEntryService $wishlistRemove,
-        private GetMyWishlistService $myWishlist
+        private GetMyWishlistService $myWishlist,
+        private BibliographicDiscoveryService $bibliographicDiscovery,
+        private BibliographicMaterializationService $bibliographicMaterialization
     ) {
+    }
+
+    public function bibliographicDiscovery(): BibliographicDiscoveryService
+    {
+        return $this->bibliographicDiscovery;
+    }
+
+    public function bibliographicMaterialization(): BibliographicMaterializationService
+    {
+        return $this->bibliographicMaterialization;
     }
 
     public function libraryItemCreation(): AddLibraryItemService

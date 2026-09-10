@@ -494,7 +494,7 @@ Status: **Implemented**
 
 - the formal supported schema history starts at baseline version `1000`;
 - internal Fase-0 spike versions 1–5 are not production upgrade paths;
-- product `v2.001`, plugin/package `2.4.0` and schema version are independent;
+- product `v2.001`, plugin/package `2.5.0` and schema version are independent;
 - baseline installation requires an empty Core schema;
 - future schema changes use ordered forward migration steps;
 - version bump occurs only after the step postcondition succeeds;
@@ -2658,3 +2658,32 @@ valid Core state. No schema, UI, V1 data, Hierna lezen, Collection, Add Book or
 migration behavior changed. Biblio Core is `2.4.0`, schema remains `1022`, and
 Biblio UI remains `0.13.0`. Detailed contract and evidence:
 `docs/67-wish-api-01-personal-wishlist-rest-transport.md`.
+
+### MH-DISC-01 — provider-neutral bibliographic discovery foundation
+
+Status: **GO / CLOSED** after recorded gates and independent review.
+
+Schema `1023` adds actor-scoped, typed ISBN/text discovery snapshots and
+provider-scoped Work/Edition identity mappings. Core searches canonical local
+Work/Edition/Author identity first, then conditionally uses Open Library and
+Google Books. Results explicitly distinguish local/external Work and Edition
+candidates. Open Library may return multiple concrete Editions for one Work;
+provider position remains presentation order only and never becomes a Biblio
+winner, merge rule or recommendation.
+
+An ISBN-less external Edition remains visible when its provider publication
+identity is stable, but title alone cannot materialize. Exact unexpired replay
+can transactionally create/reuse a provisional Work and optional Edition with
+field-level provider evidence. Strong provider identity and canonical ISBN are
+the only dedup boundaries; there is no cross-provider or fuzzy title/author
+merge. The materializer creates no Item, Library possession/context/activity or
+Wishlist state. Core permits the central write only for the active Eigenaar of
+the actor's designated personal Privébibliotheek, resolved server-side without
+a client Library parameter.
+
+The existing Add Book Library/ISBN snapshots and REST contracts are unchanged.
+WISH-DISC-01 can later consume the generic REST discovery and materialization
+IDs before calling the existing Wishlist API; no Wishlist UI changed here.
+Biblio Core is `2.5.0`, schema is `1023`, and Biblio UI remains `0.14.0`. No
+current or historical V1 `/data/` was used. Detailed evidence:
+`docs/69-mh-disc-01-bibliographic-discovery-foundation.md`.

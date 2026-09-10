@@ -48,6 +48,7 @@ Only these release classes are used:
 | Work, Edition, Item and canonical ISBN identity | V2.001 primary scope | V2.001 MUST | Core catalog identity is required for migrated and newly added physical books | Map every relevant V1 book/copy without silently collapsing identity |
 | Add Book via ISBN, manual/no-ISBN and extra copy | V2.001 primary scope | V2.001 MUST | Everyday catalog growth must continue and provider failure may not block it | Reuse migrated identities safely; manual fallback remains operational |
 | Metadata Hub minimum for Add Book | Broad V2.001 Metadata Hub target | V2.001 MUST | Normal ISBN Add Book needs one operational provider path or safe manual fallback | Provider evidence is not canonical truth; migration must not depend on live provider success |
+| Provider-neutral bibliographic text discovery/materialization foundation | Previously missing dependency for broader consumer discovery | IMPLEMENTED FOUNDATION | MH-DISC-01 safely exposes local-first Work/Edition candidates and no-Item materialization without adding consumer UI | Uses no V1 data and does not change migration targets; WISH-DISC-01 remains the separate Wishlist consumer/UI slice |
 | Mijn Bibliotheek Grid/List, Search/Filter/Sort | V2.001 primary scope | V2.001 MUST | Users must find and manage their migrated catalog daily | Migrated active and archived Items must remain discoverable under exact Library Context |
 | Book Detail and essential Item data/management | V2.001 primary scope | V2.001 MUST | Migrated copies must be inspectable and usable after cutover | MIG-01 identifies the V1 Item fields that need active mapping versus preserved storage |
 | Reading status, ReadingRounds, start/finish, rereads and history | V2.001 primary scope | V2.001 MUST | These are daily V1 reading flows and historical truth | Preserve user ownership, source identity and known date precision; source-neutral Personal Reading Truth retains read/date-unknown, explicit-not-read and explicit-unknown without fabricating a round |
@@ -239,8 +240,9 @@ The following remains deferred independently of D-SCOPE-01:
 - e-books, audiobooks, digital files, licenses and other media;
 - generic `Andere fysieke bron` outside approved source types;
 - smart Hierna-lezen availability or automatic source preference;
-- external catalog discovery, popularity/collaborative filtering and black-box
-  ranking;
+- consumer UI/global external catalog search, popularity/collaborative filtering
+  and black-box ranking; the bounded MH-DISC-01 backend foundation is already
+  implemented without making provider order canonical;
 - automatic central Work/Author/Series merge, broad bibliographic editing,
   record fusion, OCR/vision, community Metadata Graph and paid-feed expansion;
 - generic Relationship management UI;

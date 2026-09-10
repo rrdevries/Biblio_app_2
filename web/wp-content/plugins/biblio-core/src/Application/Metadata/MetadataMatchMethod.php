@@ -7,4 +7,5 @@ namespace Biblio\Core\Application\Metadata;
 enum MetadataMatchMethod: string
 {
     case ExactIsbn = "exact_isbn";
+    case TextSearch = "text_search";
 }

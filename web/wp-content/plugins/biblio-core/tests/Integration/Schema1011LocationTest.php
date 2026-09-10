@@ -34,7 +34,7 @@ final class Schema1011LocationTest extends PersistenceIntegrationTestCase
 
         $this->migrator()->migrate();
 
-        self::assertSame(1022, $this->migrator()->installedVersion());
+        self::assertSame(1023, $this->migrator()->installedVersion());
         self::assertNull($this->database->get_var(
             "SELECT location_id FROM `{$this->tableNames->items()}` WHERE item_id='preserved-item'"
         ));
@@ -50,7 +50,7 @@ final class Schema1011LocationTest extends PersistenceIntegrationTestCase
         $migration->assertPrecondition();
         $migration->assertPostcondition();
         self::assertTrue($this->migrator()->healthForVersion(1011)->isHealthy());
-        update_option(CoreSchemaMigrator::VERSION_OPTION, "1011", false);
+        $this->setHistoricalSchemaVersion(1011);
         $this->migrator()->migrate();
     }
 
@@ -94,7 +94,7 @@ final class Schema1011LocationTest extends PersistenceIntegrationTestCase
             $this->database->query("ALTER TABLE `{$items}` DROP COLUMN location_id");
         }
         $this->database->query("DROP TABLE IF EXISTS `{$this->tableNames->locations()}`");
-        update_option(CoreSchemaMigrator::VERSION_OPTION, "1010", false);
+        $this->setHistoricalSchemaVersion(1010);
     }
 
     private function migrator(): CoreSchemaMigrator

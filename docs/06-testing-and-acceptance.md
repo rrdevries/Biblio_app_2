@@ -3110,3 +3110,46 @@ WISH-UI-01 is accepted when:
 Status: **TECHNICAL GO / HUMAN VISUAL ACCEPTANCE PENDING**. Schema remains
 `1022`; Biblio Core is `2.4.0`; Biblio UI is `0.14.0`. See
 `docs/68-wish-ui-01-personal-wishlist-ui.md`.
+
+## 95. MH-DISC-01 provider-neutral bibliographic discovery foundation
+
+MH-DISC-01 is accepted when:
+
+- Core classifies canonical ISBN-10/13 separately from one normalized UTF-8
+  text query and a combined title/author query works without client/provider
+  mode selection;
+- local Work/Edition/Author identity short-circuits external calls; otherwise
+  Open Library precedes Google Books with distinct result, miss,
+  provider/configuration failure and malformed-response states;
+- typed candidates distinguish local/external Work and Edition and always
+  expose explicit Work-only/Edition-specific capabilities;
+- Open Library exposes bounded multiple Editions per Work without a silent
+  best-Edition winner and all provider order remains presentation-only;
+- title-only ISBN-less Editions cannot materialize, while stable provider
+  publication identity plus Work link, contributors or canonical ISBN can;
+- external snapshots preserve exact candidate/provider evidence, typed query,
+  actor scope and 30-minute expiry; foreign/expired replay fails without
+  refetch;
+- generic Work-only and Work+Edition materialization is transactional,
+  idempotent, strong-identity-only and never creates Item, Library Context,
+  activity, possession, ReadingRound, Collection or Wishlist state;
+- materialization rejects an actor without active ownership of their designated
+  personal Privébibliotheek, and every mapped Edition is rechecked against a
+  supplied canonical ISBN before reuse;
+- real concurrent same Work, same Edition and different-candidate/same-ISBN
+  writes retain one target and the race loser reuses it;
+- field evidence remains proposed/supporting and user-confirmed or intentionally
+  blank canonical metadata is not overwritten; CAT-T1 remains intact;
+- schema `1022` upgrades linearly/additively to healthy `1023`, fresh install and
+  retry succeed, unknown partial shape fails closed and existing Add Book
+  snapshot rows/contracts remain compatible;
+- the full Metadata Hub, Add Book, Wishlist, REST, schema, syntax, PHPStan,
+  Composer/platform, WordPress smoke, manifest and whitespace suites pass;
+- only deterministic synthetic/provider fixtures are used, with no current or
+  historical V1 data/count treated as current truth; and
+- independent review finds no architecture, identity, privacy, transaction,
+  concurrency or regression blocker.
+
+Status: **GO / CLOSED**. Biblio Core is `2.5.0`, schema is `1023`, and Biblio UI
+remains `0.14.0`. WISH-DISC-01 consumer UI remains separate. See
+`docs/69-mh-disc-01-bibliographic-discovery-foundation.md`.

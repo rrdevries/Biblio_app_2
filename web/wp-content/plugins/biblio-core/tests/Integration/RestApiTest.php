@@ -6,12 +6,14 @@ namespace Biblio\Core\Tests\Integration;
 
 use Biblio\Core\Application\Notes\Read\PrivateNoteViewCursor;
 use Biblio\Core\Application\Metadata\{CandidateClassifier,FirstSufficientMetadataLookupService,MetadataCandidate,MetadataCandidateId,MetadataLookupId,MetadataLookupSnapshot,MetadataMatchMethod};
+use Biblio\Core\Application\Metadata\Discovery\{BibliographicCandidateType,BibliographicDiscoveryCandidate,BibliographicDiscoveryQuery,BibliographicDiscoverySnapshot,BibliographicTextQuery};
 use Biblio\Core\Catalog\{CanonicalIsbnIdentity,Isbn13};
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Exception\AuthorizationException;
 use Biblio\Core\Exception\ValidationException;
 use Biblio\Core\Infrastructure\WordPress\ProductionComposition;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbMetadataLookupSnapshotRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbBibliographicDiscoverySnapshotRepository;
 use Biblio\Core\Infrastructure\Metadata\ConfigurationErrorMetadataProvider;
 use Biblio\Core\Infrastructure\WordPress\Rest\CatalogCursorCodec;
 use Biblio\Core\Infrastructure\WordPress\Rest\PrivateNoteCursorCodec;
@@ -104,6 +106,9 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             "/biblio/v1/me/wishlist",
             "/biblio/v1/me/wishlist/(?P<wishlist_entry_id>[^/]+)",
             "/biblio/v1/me/works",
+            "/biblio/v1/me/bibliographic-discoveries",
+            "/biblio/v1/me/bibliographic-discoveries/"
+                . "(?P<discovery_id>[^/]+)/materializations",
             "/biblio/v1/me/works/(?P<work_id>[^/]+)/preferred-source-options",
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/works/"
                 . "(?P<work_id>[^/]+)/assessments",
@@ -125,7 +130,7 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             }
         }
 
-        self::assertCount(21, array_filter(
+        self::assertCount(23, array_filter(
             array_keys($routes),
             static fn (string $route): bool => str_starts_with(
                 $route,
@@ -164,6 +169,13 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/metadata-lookups"
         ]);
         self::assertSame(["POST"], $metadataLookupMethods);
+        self::assertSame(["POST"], $this->routeMethods($routes[
+            "/biblio/v1/me/bibliographic-discoveries"
+        ]));
+        self::assertSame(["POST"], $this->routeMethods($routes[
+            "/biblio/v1/me/bibliographic-discoveries/"
+                . "(?P<discovery_id>[^/]+)/materializations"
+        ]));
         self::assertSame(["GET", "POST"], $this->routeMethods($routes[
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/items"
         ]));
@@ -286,6 +298,180 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             503,
             $privateNotesUnavailable->get_error_data()["status"]
         );
+    }
+
+    public function testBibliographicDiscoveryRestIsStrictAuthenticatedAndTyped(): void
+    {
+        $this->seedWork("rest-bibliographic-work", "The Dispossessed");
+        $request = new WP_REST_Request(
+            "POST",
+            "/biblio/v1/me/bibliographic-discoveries"
+        );
+        $request->set_header("content-type", "application/json");
+        $request->set_body((string) wp_json_encode([
+            "query" => "  The   Dispossessed  ",
+        ]));
+
+        $response = $this->dispatchAsActor($request);
+
+        self::assertSame(200, $response->get_status());
+        $data = $response->get_data()["data"];
+        self::assertSame("text", $data["query"]["type"]);
+        self::assertSame(
+            "The Dispossessed",
+            $data["query"]["normalized"]
+        );
+        self::assertNull($data["discovery_id"]);
+        self::assertSame(
+            "local_work",
+            $data["results"][0]["type"]
+        );
+        self::assertSame([
+            "can_add_work_only" => true,
+            "can_add_edition_specific" => false,
+        ], $data["results"][0]["capabilities"]);
+        self::assertNull($data["results"][0]["provider_evidence"]);
+
+        $unknown = new WP_REST_Request(
+            "POST",
+            "/biblio/v1/me/bibliographic-discoveries"
+        );
+        $unknown->set_header("content-type", "application/json");
+        $unknown->set_body((string) wp_json_encode([
+            "query" => "The Dispossessed",
+            "provider" => "open_library",
+        ]));
+        $rejected = $this->dispatchAsActor($unknown);
+        self::assertSame(400, $rejected->get_status());
+        self::assertSame(
+            "biblio_unknown_request_fields",
+            $rejected->get_data()["code"]
+        );
+
+        wp_set_current_user(0);
+        $anonymous = $this->server->dispatch($request);
+        self::assertSame(401, $anonymous->get_status());
+    }
+
+    public function testBibliographicMaterializationRequiresDesignatedPersonalOwnership(): void
+    {
+        $query = BibliographicDiscoveryQuery::text(
+            new BibliographicTextQuery("Unauthorized Work")
+        );
+        $candidate = BibliographicDiscoveryCandidate::external(
+            BibliographicCandidateType::ExternalWork,
+            "open_library",
+            "/works/OL900W",
+            "/works/OL900W",
+            new DateTimeImmutable("2026-09-10T12:00:00+00:00"),
+            MetadataMatchMethod::TextSearch,
+            $query,
+            "Unauthorized Work",
+            null,
+            null,
+            ["Synthetic Author"],
+            [],
+            [],
+            null,
+            null,
+            null,
+            0
+        );
+        $discovery = new MetadataLookupId(
+            "lookup-99999999999999999999999999999999"
+        );
+        (new WpdbBibliographicDiscoverySnapshotRepository(
+            $this->database,
+            $this->tableNames
+        ))->save(new BibliographicDiscoverySnapshot(
+            $discovery,
+            new UserId((string) $this->actorId),
+            $query,
+            new DateTimeImmutable("2026-09-10T12:00:00+00:00"),
+            new DateTimeImmutable("2099-09-10T12:30:00+00:00"),
+            [$candidate]
+        ));
+        $request = new WP_REST_Request(
+            "POST",
+            "/biblio/v1/me/bibliographic-discoveries/"
+                . $discovery->value() . "/materializations"
+        );
+        $request->set_header("content-type", "application/json");
+        $request->set_body((string) wp_json_encode([
+            "candidate_id" => $candidate->id(),
+            "intent" => "work_only",
+        ]));
+
+        $response = $this->dispatchAsActor($request);
+
+        self::assertSame(404, $response->get_status());
+        self::assertSame("biblio_resource_not_available", $response->get_data()["code"]);
+        self::assertSame(0, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->works()}`"
+        ));
+
+        wp_set_current_user($this->actorId);
+        (new ProductionComposition($this->database))->application()
+            ->personalLibraries()
+            ->ensure();
+        $authorized = $this->dispatchAsActor($request);
+        self::assertSame(201, $authorized->get_status());
+        self::assertStringStartsWith(
+            "work-",
+            $authorized->get_data()["data"]["work_id"]
+        );
+        self::assertNull($authorized->get_data()["data"]["edition_id"]);
+        self::assertFalse($authorized->get_data()["data"]["reused"]);
+        self::assertSame(0, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->items()}`"
+        ));
+
+        $titleOnly = BibliographicDiscoveryCandidate::external(
+            BibliographicCandidateType::ExternalEdition,
+            "google_books",
+            "title-only-volume",
+            null,
+            new DateTimeImmutable("2026-09-10T12:00:00+00:00"),
+            MetadataMatchMethod::TextSearch,
+            $query,
+            "Title Only",
+            null,
+            null,
+            [],
+            [],
+            [],
+            null,
+            null,
+            null,
+            0
+        );
+        $titleOnlyDiscovery = new MetadataLookupId(
+            "lookup-89898989898989898989898989898989"
+        );
+        (new WpdbBibliographicDiscoverySnapshotRepository(
+            $this->database,
+            $this->tableNames
+        ))->save(new BibliographicDiscoverySnapshot(
+            $titleOnlyDiscovery,
+            new UserId((string) $this->actorId),
+            $query,
+            new DateTimeImmutable("2026-09-10T12:00:00+00:00"),
+            new DateTimeImmutable("2099-09-10T12:30:00+00:00"),
+            [$titleOnly]
+        ));
+        $rejectedRequest = new WP_REST_Request(
+            "POST",
+            "/biblio/v1/me/bibliographic-discoveries/"
+                . $titleOnlyDiscovery->value() . "/materializations"
+        );
+        $rejectedRequest->set_header("content-type", "application/json");
+        $rejectedRequest->set_body((string) wp_json_encode([
+            "candidate_id" => $titleOnly->id(),
+            "intent" => "work_and_edition",
+        ]));
+        $insufficient = $this->dispatchAsActor($rejectedRequest);
+        self::assertSame(422, $insufficient->get_status());
+        self::assertSame("biblio_validation_failed", $insufficient->get_data()["code"]);
     }
 
     public function testAuthenticatedActorGetsOnlyServerResolvedLibraries(): void
