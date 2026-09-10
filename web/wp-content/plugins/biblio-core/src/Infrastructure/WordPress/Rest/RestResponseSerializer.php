@@ -21,6 +21,7 @@ use Biblio\Core\Application\Notes\Read\PrivateNoteViewPage;
 use Biblio\Core\Application\NextReading\{NextReadingEntryView,NextReadingListView,NextReadingRemoval,PreferredReadingSourceState,PreferredReadingSourceView};
 use Biblio\Core\Application\Catalog\Discovery\{WorkDiscoveryPage,WorkDiscoverySeriesView,WorkDiscoveryView};
 use Biblio\Core\Application\NextReading\Read\NextReadingSourceOptionView;
+use Biblio\Core\Application\Wishlist\WishlistEntryView;
 use Biblio\Core\Application\Catalog\LocalEditionResolutionType;
 use Biblio\Core\Application\Metadata\{AddBookCommitResult,AddBookExistingEdition,AddBookExistingItem,AddBookMetadataLookupResult,ClassifiedMetadataCandidate,MetadataCandidateId,MetadataFieldBinding,MetadataLookupStatus};
 use Biblio\Core\Application\Reading\History\ReadingHistoryEntry;
@@ -521,6 +522,35 @@ final readonly class RestResponseSerializer
         return [
             "list_version" => $list->version()->value(),
             "entries" => array_map($this->nextReadingEntry(...), $list->entries()),
+        ];
+    }
+
+    /** @param list<WishlistEntryView> $entries
+     * @return array{entries:list<array<string,mixed>>}
+     */
+    public function wishlist(array $entries): array
+    {
+        return ["entries" => array_map($this->wishlistEntry(...), $entries)];
+    }
+
+    /** @return array<string,mixed> */
+    public function wishlistEntry(WishlistEntryView $entry): array
+    {
+        return [
+            "wishlist_entry_id" => $entry->entryId()->value(),
+            "target_type" => $entry->targetType()->value,
+            "work_id" => $entry->workId()->value(),
+            "edition_id" => $entry->editionId()?->value(),
+            "display_title" => $entry->displayTitle(),
+            "authors" => array_map(
+                static fn (Author $author): array => [
+                    "author_id" => $author->id()->value(),
+                    "display_name" => $author->displayName(),
+                ],
+                $entry->authors()
+            ),
+            "created_at" => $this->instant($entry->createdAt()),
+            "updated_at" => $this->instant($entry->updatedAt()),
         ];
     }
 

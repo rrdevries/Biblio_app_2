@@ -38,11 +38,12 @@ Personal Reading Truth in schema `1019`; ARCH-MIG-01 preserves historical
 archive reasons in schema `1020`; ASSESS-MIG-01 adds nullable assessment time,
 a private historical Rating/Review recorder and an owner-only Book Detail read
 in schema `1021`; WISH-CORE-01 adds the source-neutral personal Wishlist Core
-target, persistence and MIG-FND participant in schema `1022`. IDENTITY-01 remains the mandatory explicit personal target
+target, persistence and MIG-FND participant in schema `1022`; WISH-API-01 now
+exposes that private contract through owner-only REST. IDENTITY-01 remains the mandatory explicit personal target
 validator. The mapping design is still **MIGRATION DESIGN BLOCKED BY REMAINING
 DOMAIN TARGET GAPS**: Item local evidence still needs a bounded target, while
-open circulation still needs Renée's cutover decision. Wishlist REST/UI
-delivery remains the focused WISH-API-01 follow-up.
+open circulation still needs Renée's cutover decision. Reachable Wishlist UI
+delivery remains the focused WISH-UI-01 follow-up.
 No V1 parser, source profiling, import,
 domain cleanup or production-data mutation is included. See
 `docs/60-mig-01-v1-mapping-and-reconciliation-design.md` and
@@ -50,7 +51,8 @@ domain cleanup or production-data mutation is included. See
 `docs/63-read-mig-01-personal-reading-truth.md`,
 `docs/64-arch-mig-01-historical-archive-reasons.md` and
 `docs/65-assess-mig-01-historical-assessments.md` plus
-`docs/66-wish-core-01-personal-wishlist-foundation.md`.
+`docs/66-wish-core-01-personal-wishlist-foundation.md` and
+`docs/67-wish-api-01-personal-wishlist-rest-transport.md`.
 
 ## Product model
 
@@ -490,7 +492,7 @@ Status: **Implemented**
 
 - the formal supported schema history starts at baseline version `1000`;
 - internal Fase-0 spike versions 1–5 are not production upgrade paths;
-- product `v2.001`, plugin/package `2.3.0` and schema version are independent;
+- product `v2.001`, plugin/package `2.4.0` and schema version are independent;
 - baseline installation requires an empty Core schema;
 - future schema changes use ordered forward migration steps;
 - version bump occurs only after the step postcondition succeeds;
@@ -2626,5 +2628,31 @@ from Add Book, Item ownership, reading, Collection or Hierna lezen. Priority,
 note and grouping remain outside this foundation and are not removed from
 product canon. No REST route or UI was introduced. Biblio Core is `2.3.0`;
 Biblio UI remains `0.13.0`. No current V1 source or historical count was used.
-REST/UI delivery is follow-up `WISH-API-01`. Detailed evidence:
+At foundation closure, REST/UI delivery was deferred. REST now follows in
+WISH-API-01 below; UI remains WISH-UI-01. Foundation evidence:
 `docs/66-wish-core-01-personal-wishlist-foundation.md`.
+
+### WISH-API-01 — personal Wishlist REST transport
+
+Status: **GO / CLOSED** after recorded gates and independent review.
+
+The authenticated `/biblio/v1/me/wishlist` resource exposes the existing
+owner-list and strict Work-only/Edition-specific adds. Exact duplicate POSTs
+reuse the stable entry and return HTTP 200; a created entry returns 201. PATCH
+on the entry resource performs only the existing Work-only-to-Edition
+refinement, addressed by owner-scoped Wishlist Entry ID. DELETE uses the normal
+Core `removed` reason and returns 204.
+
+Requests accept no actor or Library identity. Foreign, missing and unavailable
+Wishlist resources all use the existing non-enumerating 404 envelope. The
+explicit reverse Work/Edition choice conflict is HTTP 409 with stable code
+`biblio_wishlist_intent_conflict`. Responses allowlist entry target, Work and
+optional Edition identity, display title, ordered Authors and UTC timestamps;
+history, migration, Library and owner fields remain private.
+
+The existing full owner list and ordering are projected without a new cursor or
+manual ordering model. Concurrent duplicate adds and add/refinement retain one
+valid Core state. No schema, UI, V1 data, Hierna lezen, Collection, Add Book or
+migration behavior changed. Biblio Core is `2.4.0`, schema remains `1022`, and
+Biblio UI remains `0.13.0`. Detailed contract and evidence:
+`docs/67-wish-api-01-personal-wishlist-rest-transport.md`.

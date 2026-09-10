@@ -85,6 +85,7 @@ final class ProductionApplicationBoundaryTest extends TestCase
             [AddWishlistEntryService::class, "addWorkOnly"],
             [AddWishlistEntryService::class, "addEdition"],
             [RefineWishlistEntryService::class, "refineToEdition"],
+            [RefineWishlistEntryService::class, "refineEntryToEdition"],
             [RemoveWishlistEntryService::class, "remove"],
             [GetMyWishlistService::class, "get"],
             [LibraryCollectionQueryService::class, "activeCollections"],

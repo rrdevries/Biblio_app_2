@@ -7,7 +7,7 @@ namespace Biblio\Core\Application\Wishlist;
 use Biblio\Core\Application\Identity\AuthenticatedUser;
 use Biblio\Core\Application\TransactionManager;
 use Biblio\Core\Catalog\{EditionId,WorkId};
-use Biblio\Core\Wishlist\WishlistWriteResult;
+use Biblio\Core\Wishlist\{WishlistEntryId,WishlistWriteResult};
 
 final readonly class RefineWishlistEntryService
 {
@@ -26,6 +26,17 @@ final readonly class RefineWishlistEntryService
         return $this->transactions->run(
             fn (): WishlistWriteResult => $this->recorder
                 ->refineWorkOnlyForOwner($owner, $workId, $editionId)
+        );
+    }
+
+    public function refineEntryToEdition(
+        WishlistEntryId $entryId,
+        EditionId $editionId
+    ): WishlistWriteResult {
+        $owner = $this->authenticatedUser->requireUserId();
+        return $this->transactions->run(
+            fn (): WishlistWriteResult => $this->recorder
+                ->refineEntryToEditionForOwner($owner, $entryId, $editionId)
         );
     }
 }

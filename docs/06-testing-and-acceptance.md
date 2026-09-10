@@ -3053,6 +3053,40 @@ WISH-CORE-01 is accepted when:
   concurrency, migration or regression blocker.
 
 Status: **GO / CLOSED** when all gates pass. Target schema is `1022`; Biblio
-Core is `2.3.0` and Biblio UI remains `0.13.0`. REST/UI are explicitly outside
-this foundation and continue as `WISH-API-01`. See
+Core is `2.3.0` and Biblio UI remains `0.13.0`. REST/UI were explicitly outside
+this foundation; REST follows in WISH-API-01 below. See
 `docs/66-wish-core-01-personal-wishlist-foundation.md`.
+
+## 93. WISH-API-01 personal Wishlist REST transport
+
+WISH-API-01 is accepted when:
+
+- authenticated owner-only GET returns the existing ordered Wishlist readmodel
+  and anonymous access fails;
+- strict discriminated POST requests add Work-only or Edition-specific targets,
+  return 201 for creation and 200 with the same resource for exact idempotent
+  reuse;
+- multiple distinct Editions for one Work remain valid while an
+  Edition-specific-to-Work-only request returns stable 409
+  `biblio_wishlist_intent_conflict`;
+- PATCH addresses an existing owner-scoped entry, atomically refines only
+  Work-only to Edition-specific and preserves entry ID and creation time;
+- DELETE uses the Core service with normal `removed` history reason, returns
+  204 and a repeated or foreign remove is the same non-enumerating 404;
+- malformed, missing, extra, wrong-type and unsupported target fields fail
+  closed without ID coercion;
+- requests accept no user, owner, Library, Collection or migration identity;
+  Library roles confer no access to another user's Wishlist;
+- the response allowlist contains only entry target, Work/Edition identity,
+  display title, ordered Authors and functional timestamps;
+- real parallel REST requests prove duplicate Work-only add, duplicate Edition
+  add and add/refinement retain one valid active state;
+- WISH-CORE cardinality, locking, refinement, history and privacy regressions,
+  route registration, PHP syntax, PHPStan, Composer/platform, WordPress smoke,
+  manifest and whitespace gates pass; and
+- an independent second review finds no architecture, authorization, privacy,
+  concurrency or regression blocker.
+
+Status: **GO / CLOSED** when all gates pass. Schema remains `1022`; Biblio Core
+is `2.4.0` and Biblio UI remains `0.13.0`. No UI or current V1 data is included.
+See `docs/67-wish-api-01-personal-wishlist-rest-transport.md`.

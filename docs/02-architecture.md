@@ -399,8 +399,8 @@ Biblio Core owns versioning and migrations for its Core tables. MariaDB DDL is n
 
 The formally supported Core schema history starts at baseline version `1000`.
 The earlier internal spike versions 1–5 are not production migration sources.
-Product version (`v2.001`), Core plugin/package version (`2.3.0`) and database
-schema version are independent. Plugin/package version `2.3.0` expects formal
+Product version (`v2.001`), Core plugin/package version (`2.4.0`) and database
+schema version are independent. Plugin/package version `2.4.0` expects formal
 schema baseline `1000`.
 
 A fresh baseline installation is allowed only on an empty Core schema.
@@ -439,7 +439,7 @@ lifecycles.
 
 These constraints require no schema migration: they align public construction
 and hydration with the already formalized baseline. Product version `v2.001`,
-plugin/package version `2.3.0` and schema baseline `1000` remain independent.
+plugin/package version `2.4.0` and schema baseline `1000` remain independent.
 
 No source FK uses cascade-delete in a way that removes personal ReadingRound history when a physical source changes or ends.
 
@@ -1534,6 +1534,29 @@ inside `CommitMigrationRecordService`; product rows remain source-neutral and
 the ledger owns source mapping and quarantine.
 
 The Core surface contains add Work-only, add Edition-specific, explicit
-refinement, own-list and removal with persisted history reason. REST and UI are not implicit repository
-conventions for a new foundation and remain `WISH-API-01`. No automation with
-Add Book, reading, Next Reading, Collections or Item possession exists.
+refinement, own-list and removal with persisted history reason. REST and UI are
+not implicit repository conventions for a new foundation; transport follows in
+WISH-API-01 below and UI remains separate. No automation with Add Book,
+reading, Next Reading, Collections or Item possession exists.
+
+## 36. WISH-API-01 personal Wishlist REST boundary
+
+Wishlist REST is a personal `/me` resource and never a Library-scoped route.
+The controller resolves no actor, owner or Library identifier from request
+data; existing authenticated application services resolve the WordPress actor
+and persistence predicates enforce ownership.
+
+`GET|POST /biblio/v1/me/wishlist` and
+`PATCH|DELETE /biblio/v1/me/wishlist/{wishlist_entry_id}` are thin adapters over
+the existing Core list/add/refine/remove services. POST and PATCH use closed,
+exact `target` object shapes. PATCH addresses a stable entry ID; its minimal
+Core service extension revalidates that owner-scoped entry inside the mutation
+transaction before applying the existing Work-only-to-Edition transition.
+
+The serializer projects the established `WishlistEntryView` allowlist. The
+existing repository ordering remains authoritative and the current service
+returns one full list, so the transport introduces neither pagination nor a
+manual-order contract. Unavailable Work, Edition and owner-scoped entry states
+share the non-enumerating 404 envelope. `wishlist_intent_conflict` and exhausted
+entry-ID allocation map to 409. Core/DB transactions and locks remain the sole
+authority for idempotency and mixed-state prevention.

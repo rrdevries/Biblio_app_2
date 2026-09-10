@@ -29,6 +29,7 @@ use Biblio\Core\Reading\ReadingDate;
 use Biblio\Core\Reading\ReadingRoundId;
 use Biblio\Core\Reading\ReadingRoundOutcome;
 use Biblio\Core\Reading\ReadingRoundVersion;
+use Biblio\Core\Wishlist\WishlistEntryId;
 use JsonException;
 use stdClass;
 use Throwable;
@@ -286,6 +287,58 @@ final readonly class RestRequestParser
         WP_REST_Request $request
     ): array {
         return $this->nextReadingRemove($request);
+    }
+
+    /** @return array{type:string, work_id:WorkId, edition_id:?EditionId} */
+    public function wishlistAdd(WP_REST_Request $request): array
+    {
+        $this->validateQueryFields($request, []);
+        $body = $this->jsonObject($request, "target");
+        $this->validateBodyFields($body, ["target"]);
+
+        return $this->wishlistTarget($body["target"]);
+    }
+
+    public function validateWishlistList(WP_REST_Request $request): void
+    {
+        $this->validateQueryFields($request, []);
+    }
+
+    /** @return array{entry_id:WishlistEntryId, edition_id:EditionId} */
+    public function wishlistRefinement(WP_REST_Request $request): array
+    {
+        $this->validateQueryFields($request, []);
+        $body = $this->jsonObject($request, "target");
+        $this->validateBodyFields($body, ["target"]);
+        $target = $body["target"];
+        if (
+            !is_array($target)
+            || array_is_list($target)
+            || !$this->hasExactFields($target, ["type", "edition_id"])
+            || $target["type"] !== "edition_specific"
+        ) {
+            throw RestRequestException::invalid("target");
+        }
+
+        return [
+            "entry_id" => $this->wishlistEntryId($request),
+            "edition_id" => $this->identifier(
+                $target["edition_id"],
+                "edition_id",
+                static fn (string $id): EditionId => new EditionId($id)
+            ),
+        ];
+    }
+
+    public function wishlistRemovalEntryId(
+        WP_REST_Request $request
+    ): WishlistEntryId {
+        $this->validateQueryFields($request, []);
+        if (trim((string) $request->get_body()) !== "") {
+            throw RestRequestException::unknownFields();
+        }
+
+        return $this->wishlistEntryId($request);
     }
 
     /** @return array{search: WorkDiscoverySearchTerm, limit: WorkDiscoveryLimit, cursor: ?WorkDiscoveryCursor} */
@@ -663,6 +716,63 @@ final readonly class RestRequestParser
             static fn (string $value): NextReadingEntryId =>
                 new NextReadingEntryId($value)
         );
+    }
+
+    private function wishlistEntryId(WP_REST_Request $request): WishlistEntryId
+    {
+        return $this->identifier(
+            $request->get_url_params()["wishlist_entry_id"] ?? null,
+            "wishlist_entry_id",
+            static fn (string $value): WishlistEntryId =>
+                new WishlistEntryId($value)
+        );
+    }
+
+    /** @return array{type:string, work_id:WorkId, edition_id:?EditionId} */
+    private function wishlistTarget(mixed $value): array
+    {
+        if (!is_array($value) || array_is_list($value)) {
+            throw RestRequestException::wrongType("target", "a JSON object");
+        }
+        if (!isset($value["type"]) || !is_string($value["type"])) {
+            throw RestRequestException::invalid("target");
+        }
+
+        if ($value["type"] === "work_only") {
+            if (!$this->hasExactFields($value, ["type", "work_id"])) {
+                throw RestRequestException::invalid("target");
+            }
+            return [
+                "type" => "work_only",
+                "work_id" => $this->identifier(
+                    $value["work_id"],
+                    "work_id",
+                    static fn (string $id): WorkId => new WorkId($id)
+                ),
+                "edition_id" => null,
+            ];
+        }
+
+        if ($value["type"] !== "edition_specific") {
+            throw RestRequestException::invalid("target");
+        }
+        if (!$this->hasExactFields($value, ["type", "work_id", "edition_id"])) {
+            throw RestRequestException::invalid("target");
+        }
+
+        return [
+            "type" => "edition_specific",
+            "work_id" => $this->identifier(
+                $value["work_id"],
+                "work_id",
+                static fn (string $id): WorkId => new WorkId($id)
+            ),
+            "edition_id" => $this->identifier(
+                $value["edition_id"],
+                "edition_id",
+                static fn (string $id): EditionId => new EditionId($id)
+            ),
+        ];
     }
 
     private function nextReadingListVersion(

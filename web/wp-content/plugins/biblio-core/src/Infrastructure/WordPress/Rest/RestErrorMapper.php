@@ -72,6 +72,9 @@ final readonly class RestErrorMapper
             FailureReason::ReviewNotAvailable,
             FailureReason::PublicationNotAvailable,
             FailureReason::ModerationForbidden,
+            FailureReason::WishlistEntryNotAvailable,
+            FailureReason::WishlistWorkUnavailable,
+            FailureReason::WishlistEditionUnavailable,
         ], true)) {
             return $this->error(
                 "biblio_resource_not_available",
@@ -94,6 +97,8 @@ final readonly class RestErrorMapper
             FailureReason::PublicationStale,
             FailureReason::AssessmentIdCollisionExhausted,
             FailureReason::MetadataLookupSnapshotUnavailable,
+            FailureReason::WishlistIntentConflict,
+            FailureReason::WishlistEntryIdCollisionExhausted,
         ], true)) {
             return $this->error(
                 "biblio_{$reason->value}",

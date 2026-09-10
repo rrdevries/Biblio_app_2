@@ -6,9 +6,12 @@ namespace Biblio\Core\Infrastructure\WordPress\Rest;
 
 use Biblio\Core\Application\CoreApplication;
 use Biblio\Core\Application\Notes\Read\PrivateNoteView;
+use Biblio\Core\Application\Wishlist\WishlistEntryView;
 use Biblio\Core\Reading\ReadingRoundOutcome;
 use Biblio\Core\NextReading\PreferredReadingSourceType;
+use Biblio\Core\Wishlist\WishlistEntryId;
 use Closure;
+use LogicException;
 use Throwable;
 use WP_Error;
 use WP_REST_Request;
@@ -200,6 +203,34 @@ final class RestController
                 [
                     "methods" => WP_REST_Server::DELETABLE,
                     "callback" => [$this, "clearNextReadingPreferredSource"],
+                    "permission_callback" => [$this, "authenticated"],
+                ],
+            ]
+        );
+        register_rest_route(self::NAMESPACE, "/me/wishlist", [
+            [
+                "methods" => WP_REST_Server::READABLE,
+                "callback" => [$this, "wishlist"],
+                "permission_callback" => [$this, "authenticated"],
+            ],
+            [
+                "methods" => WP_REST_Server::CREATABLE,
+                "callback" => [$this, "addWishlistEntry"],
+                "permission_callback" => [$this, "authenticated"],
+            ],
+        ]);
+        register_rest_route(
+            self::NAMESPACE,
+            "/me/wishlist/(?P<wishlist_entry_id>[^/]+)",
+            [
+                [
+                    "methods" => "PATCH",
+                    "callback" => [$this, "refineWishlistEntry"],
+                    "permission_callback" => [$this, "authenticated"],
+                ],
+                [
+                    "methods" => WP_REST_Server::DELETABLE,
+                    "callback" => [$this, "removeWishlistEntry"],
                     "permission_callback" => [$this, "authenticated"],
                 ],
             ]
@@ -673,6 +704,75 @@ final class RestController
         });
     }
 
+    public function wishlist(
+        WP_REST_Request $request
+    ): WP_REST_Response|WP_Error {
+        return $this->execute(function (
+            CoreApplication $application
+        ) use ($request): WP_REST_Response {
+            $this->requests->validateWishlistList($request);
+            return $this->success($this->responses->wishlist(
+                $application->myWishlist()->get()
+            ));
+        });
+    }
+
+    public function addWishlistEntry(
+        WP_REST_Request $request
+    ): WP_REST_Response|WP_Error {
+        return $this->execute(function (
+            CoreApplication $application
+        ) use ($request): WP_REST_Response {
+            $target = $this->requests->wishlistAdd($request);
+            $result = $target["type"] === "work_only"
+                ? $application->wishlistAdd()->addWorkOnly($target["work_id"])
+                : $application->wishlistAdd()->addEdition(
+                    $target["work_id"],
+                    $target["edition_id"]
+                        ?? throw new LogicException("Edition target is incomplete.")
+                );
+
+            return $this->success(
+                $this->responses->wishlistEntry(
+                    $this->wishlistEntryView($application, $result->entry()->id())
+                ),
+                $result->wasCreated() ? 201 : 200
+            );
+        });
+    }
+
+    public function refineWishlistEntry(
+        WP_REST_Request $request
+    ): WP_REST_Response|WP_Error {
+        return $this->execute(function (
+            CoreApplication $application
+        ) use ($request): WP_REST_Response {
+            $input = $this->requests->wishlistRefinement($request);
+            $result = $application->wishlistRefine()->refineEntryToEdition(
+                $input["entry_id"],
+                $input["edition_id"]
+            );
+
+            return $this->success($this->responses->wishlistEntry(
+                $this->wishlistEntryView($application, $result->entry()->id())
+            ));
+        });
+    }
+
+    public function removeWishlistEntry(
+        WP_REST_Request $request
+    ): WP_REST_Response|WP_Error {
+        return $this->execute(function (
+            CoreApplication $application
+        ) use ($request): WP_REST_Response {
+            $application->wishlistRemove()->remove(
+                $this->requests->wishlistRemovalEntryId($request)
+            );
+
+            return new WP_REST_Response(null, 204);
+        });
+    }
+
     public function discoverWorks(
         WP_REST_Request $request
     ): WP_REST_Response|WP_Error {
@@ -728,5 +828,18 @@ final class RestController
     private function success(array $data, int $status = 200): WP_REST_Response
     {
         return new WP_REST_Response(["data" => $data], $status);
+    }
+
+    private function wishlistEntryView(
+        CoreApplication $application,
+        WishlistEntryId $entryId
+    ): WishlistEntryView {
+        foreach ($application->myWishlist()->get() as $entry) {
+            if ($entry->entryId()->equals($entryId)) {
+                return $entry;
+            }
+        }
+
+        throw new LogicException("Wishlist write result is not readable.");
     }
 }
