@@ -10,6 +10,7 @@ use Biblio\Core\Application\Metadata\Discovery\{BibliographicCandidateType,Bibli
 use Biblio\Core\Application\Metadata\Search\{
     BibliographicAuthorReference,
     BibliographicAuthorSearchResult,
+    BibliographicAuthorSelectorCodec,
     BibliographicSearchCursorCodec,
     BibliographicTextSearchQuery
 };
@@ -401,6 +402,17 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         self::assertSame(["query", "authors", "works"], array_keys($data));
         self::assertSame("Ursula Le Guin", $data["query"]);
         self::assertSame("rest-search-author", $data["authors"]["items"][0]["author_id"]);
+        self::assertSame(
+            ["result_id", "result_kind", "author_id", "display_name", "author_selector"],
+            array_keys($data["authors"]["items"][0])
+        );
+        $salt = constant("AUTH_SALT");
+        self::assertIsString($salt);
+        $selectedAuthor = (new BibliographicAuthorSelectorCodec(
+            hash("sha256", $salt . ":bibliographic-author-selector-v1")
+        ))->decode($data["authors"]["items"][0]["author_selector"]);
+        self::assertSame("rest-search-author", $selectedAuthor->authorId()?->value());
+        self::assertNull($selectedAuthor->providerIdentity());
         self::assertSame("rest-search-work", $data["works"]["items"][0]["work_id"]);
         self::assertSame(
             "configuration_error",

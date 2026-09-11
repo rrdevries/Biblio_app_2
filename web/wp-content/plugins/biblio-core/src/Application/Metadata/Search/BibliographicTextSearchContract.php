@@ -9,9 +9,10 @@ use Throwable;
 
 final readonly class BibliographicTextSearchContract
 {
-    public function __construct(private BibliographicSearchCursorCodec $cursors)
-    {
-    }
+    public function __construct(
+        private BibliographicSearchCursorCodec $cursors,
+        private BibliographicAuthorSelectorCodec $authorSelectors
+    ) {}
 
     /** @param array<string,mixed> $payload */
     public function decodeRequest(array $payload): BibliographicTextSearchRequest
@@ -54,11 +55,14 @@ final readonly class BibliographicTextSearchContract
             "query" => $result->query()->value(),
             "authors" => [
                 "items" => array_map(
-                    static fn (BibliographicAuthorSearchResult $author): array => [
+                    fn (BibliographicAuthorSearchResult $author): array => [
                         "result_id" => $author->reference()->resultId(),
                         "result_kind" => $author->reference()->kind()->value,
                         "author_id" => $author->reference()->authorId()?->value(),
                         "display_name" => $author->displayName(),
+                        "author_selector" => $this->authorSelectors->encode(
+                            $author->reference()
+                        ),
                     ],
                     $result->authors()->items()
                 ),

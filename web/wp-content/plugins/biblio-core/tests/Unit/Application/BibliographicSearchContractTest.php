@@ -9,6 +9,7 @@ use Biblio\Core\Application\Metadata\Search\{
     BibliographicAuthorSearchPage,
     BibliographicAuthorSearchProvider,
     BibliographicAuthorSearchResult,
+    BibliographicAuthorSelectorCodec,
     BibliographicProviderEntityIdentity,
     BibliographicSearchProviderAttempt,
     BibliographicSearchCursor,
@@ -36,6 +37,7 @@ use PHPUnit\Framework\TestCase;
 final class BibliographicSearchContractTest extends TestCase
 {
     private const string CURSOR_SECRET = "test-bibliographic-search-cursor-secret";
+    private const string SELECTOR_SECRET = "test-bibliographic-author-selector-secret";
 
     public function testTypedPagesSerializeSeparateAuthorsAndWorksWithIndependentCursors(): void
     {
@@ -98,6 +100,13 @@ final class BibliographicSearchContractTest extends TestCase
         ], $payload["works"]["provider_attempts"][0]);
         self::assertSame("external_candidate", $payload["authors"]["items"][0]["result_kind"]);
         self::assertNull($payload["authors"]["items"][0]["author_id"]);
+        $selectedAuthor = (new BibliographicAuthorSelectorCodec(
+            self::SELECTOR_SECRET
+        ))->decode($payload["authors"]["items"][0]["author_selector"]);
+        self::assertSame(
+            "/authors/OL1A",
+            $selectedAuthor->providerIdentity()?->providerRecordId()
+        );
         self::assertSame("local_canonical", $payload["works"]["items"][0]["result_kind"]);
         self::assertSame("work-dispossessed", $payload["works"]["items"][0]["work_id"]);
         self::assertSame(
@@ -446,7 +455,8 @@ final class BibliographicSearchContractTest extends TestCase
     private function contract(): BibliographicTextSearchContract
     {
         return new BibliographicTextSearchContract(
-            new BibliographicSearchCursorCodec(self::CURSOR_SECRET)
+            new BibliographicSearchCursorCodec(self::CURSOR_SECRET),
+            new BibliographicAuthorSelectorCodec(self::SELECTOR_SECRET)
         );
     }
 

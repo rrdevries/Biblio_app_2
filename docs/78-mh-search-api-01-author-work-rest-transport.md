@@ -55,11 +55,14 @@ Each result group contains `items`, nullable `next_cursor` and typed
 `provider_attempts`.
 
 Author items expose opaque `result_id`, provider-neutral `result_kind`,
-nullable canonical `author_id` and `display_name`. Work items expose the same
-result identity/kind pattern, nullable canonical `work_id`, Work title,
-ordered Authors and reliable Series context. Raw provider identity/payload,
-ISBN, publisher, publication date, language, binding, page count and every
-Library/private field stay absent.
+nullable canonical `author_id`, `display_name` and, after D-AUTHOR-REF-01, an
+opaque signed `author_selector`. The selector is the only authority-bearing
+handoff to the future Works-by-Author REST boundary; `result_id`, visible IDs
+and display data are not. Work items expose the unchanged result identity/kind
+pattern, nullable canonical `work_id`, Work title, ordered Authors and reliable
+Series context. Raw provider identity/payload, ISBN, publisher, publication
+date, language, binding, page count and every Library/private field stay
+absent.
 
 ## 5. Authentication and privacy
 
@@ -110,8 +113,9 @@ Wishlist or Library mutation occurs.
 ## 10. Deferred transport
 
 MH-AUTHOR-01 Works-by-Author and MH-EDITION-01 Editions-by-Work stay
-application-only. Their REST routes belong to MH-AUTHOR-API-01 and
-MH-EDITION-API-01. SEARCH-UI-01 and every Wishlist/Add Book consumer cutover
+application-only. D-AUTHOR-REF-01 supplies only the signed Author-selector
+handoff; the route that accepts it still belongs to MH-AUTHOR-API-01.
+MH-EDITION-API-01, SEARCH-UI-01 and every Wishlist/Add Book consumer cutover
 also remain separate.
 
 ## 11. Tests and quality gates
@@ -144,7 +148,8 @@ canonical records and the existing deterministic provider fixtures.
 
 - product: `v2.001`;
 - schema: `1023`, unchanged;
-- Biblio Core: `2.10.0`;
+- Biblio Core at this slice's closure: `2.10.0`; D-AUTHOR-REF-01 later adds
+  the selector field in Core `2.11.0`;
 - Biblio UI: `0.15.1`, unchanged.
 
 ## 14. Git

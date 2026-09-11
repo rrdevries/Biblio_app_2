@@ -2928,3 +2928,25 @@ MH-DISC-01, Wishlist, Add Book and `/me/works` remain unchanged. Author-to-
 Works and Work-to-Editions REST transport, every UI consumer and consumer
 cutover remain deferred. Schema stays `1023`; Biblio Core is `2.10.0` and
 Biblio UI stays `0.15.1`. No current or historical V1 data was used.
+
+### D-AUTHOR-REF-01 — signed Author selector handoff
+
+Status: **GO / CLOSED** after the full Core/UI gates and independent second
+review pass.
+
+The top-level Author search REST result now adds one opaque signed
+`author_selector`. Its version-1 payload can represent canonical-only,
+Open-Library-provider-only or canonical plus server-proven Open Library Author
+evidence. Signature, token type, form, provider allowlist and exact field
+combinations fail closed; the client neither reads nor composes identity.
+
+The selector codec reconstructs the exact existing
+`BibliographicAuthorReference` for the future MH-AUTHOR-API-01. It is stateless,
+query-independent and has no TTL because it carries stable bibliographic
+identity rather than a mutable candidate snapshot. `AUTH_SALT` rotation
+invalidates issued selectors. Current production search has no Author mapping
+source, so local results remain canonical-only and external results remain
+provider-only; no composite is guessed from names or Works. There is no route
+that consumes the selector yet, no Author-to-Works REST implementation, no
+persistence/schema/UI/provider-search/consumer/V1 change. Schema remains
+`1023`; Biblio Core is `2.11.0`; Biblio UI remains `0.15.1`.

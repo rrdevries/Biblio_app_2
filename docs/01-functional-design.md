@@ -551,6 +551,17 @@ search request and no Edition request. Google Books, Works-by-Author,
 Editions-by-Work, UI and consumer cutover remain outside this slice. Only the
 top-level Author/Work search is now REST-reachable through MH-SEARCH-API-01.
 
+D-AUTHOR-REF-01 adds the authority-bearing handoff for a selected Author.
+Every top-level Author result receives one opaque signed `author_selector`.
+It represents exactly one canonical Author, one Open Library Author, or a
+canonical Author with server-proven Open Library Author evidence. A client
+never combines `author_id` and provider identity itself, and neither visible
+display data nor `result_id` authorizes Works-by-Author. A local Author without
+proven external evidence remains canonical-only; an external Author without a
+canonical mapping remains provider-only. The future MH-AUTHOR-API-01 accepts
+only this selector and reconstructs the typed `BibliographicAuthorReference`
+server-side.
+
 Independent Biblio-owned or user-supplied cover acquisition/management is
 V2.002+. Existing V1 cover references/assets remain migration inventory and
 may not be silently discarded.

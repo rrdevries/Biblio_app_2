@@ -347,6 +347,14 @@ them from labels, missing metadata or provider shape. Materialization and each
 consumer mutation remain separately authorized application operations unless a
 later accepted contract explicitly changes that boundary.
 
+D-AUTHOR-REF-01 makes the selected-Author handoff concrete at REST: every
+top-level Author result includes one opaque signed `author_selector`. It
+represents exactly a canonical Author, an Open Library provider Author, or a
+canonical Author with server-proven Open Library evidence. The client never
+constructs or combines those identities, and `result_id` remains presentation
+identity rather than selection authority. The future MH-AUTHOR-API-01 accepts
+only this selector.
+
 ## 14. Consumer behavior
 
 ### Wishlist

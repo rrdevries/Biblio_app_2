@@ -8,6 +8,7 @@ use Biblio\Core\Application\Metadata\Search\{
     BibliographicAuthorReference,
     BibliographicAuthorSearchPage,
     BibliographicAuthorSearchResult,
+    BibliographicAuthorSelectorCodec,
     BibliographicProviderEntityIdentity,
     BibliographicSearchCursorCodec,
     BibliographicSearchGroup,
@@ -30,6 +31,7 @@ use PHPUnit\Framework\TestCase;
 final class RestBibliographicTextSearchContractTest extends TestCase
 {
     private const string SECRET = "rest-bibliographic-search-test-secret";
+    private const string SELECTOR_SECRET = "rest-bibliographic-author-selector-secret";
 
     public function testDecoderBuildsIndependentTypedCursors(): void
     {
@@ -163,6 +165,17 @@ final class RestBibliographicTextSearchContractTest extends TestCase
             array_keys($payload["works"])
         );
         self::assertSame("external_candidate", $payload["authors"]["items"][0]["result_kind"]);
+        self::assertSame(
+            ["result_id", "result_kind", "author_id", "display_name", "author_selector"],
+            array_keys($payload["authors"]["items"][0])
+        );
+        $selectedAuthor = (new BibliographicAuthorSelectorCodec(
+            self::SELECTOR_SECRET
+        ))->decode($payload["authors"]["items"][0]["author_selector"]);
+        self::assertSame(
+            "/authors/OL1A",
+            $selectedAuthor->providerIdentity()?->providerRecordId()
+        );
         self::assertArrayNotHasKey("provider_record_id", $payload["authors"]["items"][0]);
         self::assertSame(
             ["result_id", "result_kind", "work_id", "title", "authors", "series"],
@@ -181,7 +194,10 @@ final class RestBibliographicTextSearchContractTest extends TestCase
     private function transport(): RestBibliographicTextSearchContract
     {
         return new RestBibliographicTextSearchContract(
-            new BibliographicTextSearchContract($this->codec())
+            new BibliographicTextSearchContract(
+                $this->codec(),
+                new BibliographicAuthorSelectorCodec(self::SELECTOR_SECRET)
+            )
         );
     }
 }

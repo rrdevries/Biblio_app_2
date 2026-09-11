@@ -1830,3 +1830,35 @@ responses; usable local results therefore survive external failure. Anonymous
 requests use the existing 401 `/me` permission callback, and the application
 service also resolves the actor server-side. The route performs no
 materialization and introduces no schema, UI or consumer-contract change.
+
+## 45. D-AUTHOR-REF-01 signed Author selector handoff
+
+`BibliographicAuthorSelectorCodec` is the single issue/verify boundary between
+top-level Author results and the future Works-by-Author REST route. It signs a
+strict version-1 JSON envelope as `base64url(payload).base64url(HMAC-SHA256)`
+with an Author-selector-specific secret derived from WordPress `AUTH_SALT`.
+The payload is not encrypted because it contains no secret; authenticity and
+integrity are the security properties.
+
+The envelope has a fixed Author-selector token type and exactly one of three
+structural forms: canonical `AuthorId`, Open Library provider Author identity,
+or both as a server-proven composite. Only `/authors/OL…A` is allowlisted for
+the current provider lane. Unknown versions/types/forms/fields, unsupported
+providers, invalid IDs, impossible combinations, malformed encoding and bad
+signatures fail closed with the same safe validation boundary.
+
+`BibliographicTextSearchContract` issues the selector directly from each typed
+`BibliographicAuthorSearchResult`; it never consumes client identity fields.
+`result_id` remains stable presentation identity and is not authority. Current
+production search has no provider-to-canonical Author mapping repository, so
+its local results issue canonical-only selectors and Open Library results issue
+provider-only selectors. A composite can appear only after a trusted server
+pipeline supplies a `BibliographicAuthorReference` already carrying proven
+provider evidence; this slice adds no mapping or name bridge.
+
+The selector is stateless, query-independent and non-expiring. Stable Author
+identity is the handoff fact, while rotation of `AUTH_SALT` provides global
+revocation. No currently mutable Author mapping exists to revalidate. If a
+future durable/revocable Author mapping is introduced, that mapping boundary
+must define use-time revalidation before a composite is consumed. No schema,
+persistence, endpoint, UI or consumer behavior is added here.

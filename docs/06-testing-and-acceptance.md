@@ -3453,3 +3453,40 @@ MH-SEARCH-API-01 is accepted when:
 Status: **GO / CLOSED** after the clean full Core gate and independent review.
 Detailed closure evidence is recorded in
 `docs/78-mh-search-api-01-author-work-rest-transport.md`.
+
+## 105. D-AUTHOR-REF-01 signed Author selector handoff
+
+D-AUTHOR-REF-01 is accepted when:
+
+- canonical-only, Open-Library-provider-only and trusted composite Author
+  references each issue a signed opaque selector and decode to the exact typed
+  reference;
+- the format has an explicit version and Author-selector token type, uses an
+  `AUTH_SALT`-derived domain-separated HMAC secret and exposes no signing key;
+- unknown version/type/form/field, unsupported provider, malformed canonical
+  or provider ID, impossible field combination, malformed encoding, unsigned
+  payload and bad signature all fail closed;
+- canonical-only cannot claim a provider lane, provider-only cannot claim a
+  canonical ID, and changes to canonical ID, provider, provider Author ID or
+  discriminator invalidate the token, preventing cross-binding;
+- the top-level Author REST projection issues `author_selector` from the typed
+  server result while keeping display fields semantically intact and leaving
+  the Work response and existing search cursors unchanged;
+- current canonical results remain canonical-only and current Open Library
+  results remain provider-only because there is no production Author mapping;
+  no name/Work heuristic or new mapping is introduced;
+- selectors are stateless, query-independent and non-expiring stable identity
+  snapshots; a future mutable Author mapping must separately define use-time
+  revalidation;
+- no MH-AUTHOR-API route, Author-to-Works transport, schema, persistence, UI,
+  provider search, Wishlist/Add Book consumer or V1 behavior is added;
+- selector, issuance, verification, tamper, cross-binding, REST, MH-SEARCH,
+  MH-AUTHOR, MH-EDITION, Wishlist/Add Book, PHP syntax, PHPStan,
+  Composer/platform, WordPress smoke, manifest and whitespace gates pass; and
+- the independent second review finds no identity, cryptography, strictness,
+  compatibility or scope blocker.
+
+Status: **GO / CLOSED** after the full Core/UI gates and independent second
+review. Schema remains `1023`; Biblio Core is `2.11.0`; Biblio UI remains
+`0.15.1`. Closure evidence is recorded in
+`docs/79-d-author-ref-01-signed-author-selector-handoff.md`.
