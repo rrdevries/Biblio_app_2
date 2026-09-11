@@ -1674,3 +1674,38 @@ retains explicit Library Context plus `catalog.item_add` authorization after
 selection. Existing snapshot, materialization, evidence and authorization
 boundaries stay intact until explicit implementation slices migrate them. See
 `docs/73-d-search-01-shared-bibliographic-search-model.md`.
+
+## 40. MH-SEARCH-01A pageable Author/Work contract foundation
+
+The new `Application\Metadata\Search` namespace is additive and deliberately
+unwired. `BibliographicTextSearchQuery` wraps the existing normalized text
+rules and rejects a checksum-valid ISBN before `BibliographicTextSearchRequest`
+is constructed. The request accepts no provider selector, entity-mode
+selector or Edition query. `BibliographicTextSearchResult` owns two independent
+typed pages. Page constructors reject malformed lists, duplicate strong
+identity, unstable order and a continuation that does not match their query,
+group or final keyset position.
+
+`BibliographicAuthorReference` and `BibliographicWorkReference` distinguish
+canonical identity from a provider-scoped candidate. A provider reference is
+itself typed as Author or Work, so publication/Volume identity cannot satisfy
+the Work-reference contract. When a provider identity is already mapped to a
+canonical entity, the canonical ID is the stable result key and provider data
+remains backend evidence. The public serializer exposes only opaque result ID,
+provider-neutral result kind and optional canonical ID; it does not expose raw
+provider identity or payload.
+
+`BibliographicSearchCursorCodec` signs a versioned opaque envelope and binds it
+to normalized query, `authors|works`, `local_canonical|external_candidate`,
+presentation order and stable result ID. Page ordering is the lexicographic
+tuple `(local/external tier, presentation_order, result_id)`. This preserves
+local-first presentation and provider relevance without turning rank into
+identity. `next_cursor = null` is the explicit end state.
+
+Capability asymmetry uses two small ports,
+`BibliographicAuthorSearchProvider` and `BibliographicWorkSearchProvider`.
+Implementing one does not imply the other. No provider adapter, orchestrator,
+REST controller, WordPress composition, durable snapshot or schema change is
+introduced. The existing MH-DISC and `/me/works` boundaries remain production
+contracts while MH-SEARCH-01B supplies a later implementation behind the new
+ports.

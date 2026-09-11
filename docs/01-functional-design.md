@@ -512,6 +512,25 @@ and explicit loading/partial-failure states. Consumer-specific logic starts
 only after selection. See
 `docs/73-d-search-01-shared-bibliographic-search-model.md`.
 
+MH-SEARCH-01A implements only the parallel shared contract beneath that target.
+A general normalized text request carries independent optional Author and Work
+continuations. The result contains exactly two entity groups, each with
+`items` and nullable `next_cursor`; one empty group never suppresses the other.
+Author results show a stable strong result identity, provider-neutral
+local/external kind, optional canonical Author ID and display name. Work
+results show the equivalent Work identity, Work title, ordered Authors and
+only reliable Series context. Concrete publication fields remain Edition data.
+
+The opaque continuations are independently query- and group-bound and use a
+stable strong identity after presentation order. A provider-ranked first
+result is never a winner. Only canonical or same-provider entity identity may
+deduplicate; name/title similarity never does. Separate Author-search and
+Work-search ports make unsupported capabilities explicit without requiring a
+fictive symmetrical provider. The contract is not yet reachable over REST and
+does not change current Wishlist, Add Book or `/me/works` behavior. Later
+MH-SEARCH-01B populates the contract; Works-by-Author and Editions-by-Work each
+remain their own bounded continuation slice.
+
 Independent Biblio-owned or user-supplied cover acquisition/management is
 V2.002+. Existing V1 cover references/assets remain migration inventory and
 may not be silently discarded.

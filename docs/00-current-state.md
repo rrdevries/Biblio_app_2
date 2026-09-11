@@ -2783,3 +2783,37 @@ production behavior remains unchanged until bounded implementation slices
 replace it. Schema stays `1023`; Biblio Core stays `2.5.2`; Biblio UI stays
 `0.15.1`. No V1 data was used. Canonical decision:
 `docs/73-d-search-01-shared-bibliographic-search-model.md`.
+
+### MH-SEARCH-01A — parallel pageable Author/Work contract
+
+Status: **GO / CLOSED** after contract tests, broad regression gates and
+independent review.
+
+Core now contains a parallel application-level `Metadata/Search` foundation
+for one normalized bibliographic text query with separately typed `authors`
+and `works` pages. Author results retain either canonical Author identity or a
+strong provider-scoped Author reference. Work results retain canonical or
+strong provider-scoped Work identity and expose only Work title, ordered
+Author presentation and reliable Series context; no ISBN, publisher,
+publication date, binding, Edition language or Edition fan-out is part of the
+shape.
+
+Each group has its own signed opaque continuation. The cursor is versioned and
+bound to the normalized query, exact result group, local/external lane,
+presentation order and stable strong result identity. Local canonical results
+sort before external candidates; provider relevance is presentation order
+only and the strong identity is the mandatory stable tie-breaker. Duplicate
+canonical or same-provider identities fail closed, while text lookalikes stay
+separate.
+
+Provider capability asymmetry is represented by separate Author-search and
+Work-search ports; an adapter need not implement both. The typed Author and
+Work references are the handoff for later Works-by-Author and
+Editions-by-Work slices, but neither query is implemented here. There is no
+REST route, production composition, provider adapter, persistence or schema
+change. Existing MH-DISC-01, Wishlist, Add Book and `/me/works` contracts and
+strict decoders remain unchanged until explicit consumer cutover slices.
+
+Schema remains `1023`; Biblio Core is `2.6.0`; Biblio UI remains `0.15.1`.
+No V1 data was used. Detailed evidence:
+`docs/74-mh-search-01a-pageable-author-work-contract.md`.

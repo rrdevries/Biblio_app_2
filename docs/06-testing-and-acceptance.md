@@ -3284,3 +3284,38 @@ D-SEARCH-01 is accepted when the canonical documentation proves that:
 Status: **GO / DECISION CANONICALIZED / IMPLEMENTATION NOT STARTED**. Schema
 remains `1023`; Biblio Core remains `2.5.2`; Biblio UI remains `0.15.1`. See
 `docs/73-d-search-01-shared-bibliographic-search-model.md`.
+
+## 100. MH-SEARCH-01A pageable Author/Work contract foundation
+
+MH-SEARCH-01A is accepted when:
+
+- one typed normalized text request accepts no ISBN, provider, title/Author mode
+  or Edition query and rejects missing, coerced, unknown and malformed fields;
+- Author and Work results are separate typed pages with independent nullable
+  continuations, including Author-empty, Work-empty and both-empty cases;
+- Author results require canonical Author identity or typed strong
+  provider-scoped Author identity and preserve a stable handoff reference;
+- Work results require canonical Work identity or typed strong provider-scoped
+  Work identity and expose only Work title, ordered Authors and reliable Series
+  context, with no Edition publication fields;
+- signed opaque cursors are versioned and bound to normalized query, group,
+  source lane, presentation order and strong result identity; wrong-query,
+  wrong-group, malformed, tampered and unknown-field payloads fail closed;
+- pages enforce deterministic local-before-external order, stable identity
+  tie-breaking and explicit `null` end-of-results without a hidden top-ten;
+- duplicate prevention uses canonical or same-provider strong identity only,
+  while text lookalikes remain separate;
+- separate Author-search and Work-search ports represent provider capability
+  asymmetry without a fictive unsupported implementation;
+- no provider adapter, Editions query, Works-by-Author query, REST route,
+  production wiring, schema/persistence, UI, Wishlist or Add Book change is
+  introduced;
+- existing MH-DISC, Work discovery, Wishlist and Add Book contract regression,
+  unit, integration, syntax, PHPStan, Composer/platform, WordPress smoke,
+  manifest and whitespace gates pass; and
+- independent review finds no identity, pagination, strictness, compatibility,
+  authorization or scope blocker.
+
+Status: **GO / CLOSED**. Schema remains `1023`; Biblio Core is `2.6.0`;
+Biblio UI remains `0.15.1`. See
+`docs/74-mh-search-01a-pageable-author-work-contract.md`.
