@@ -6,6 +6,8 @@ namespace Biblio\Core\Infrastructure\WordPress\Rest;
 
 use Biblio\Core\Application\CoreApplication;
 use Biblio\Core\Application\Metadata\Search\BibliographicAuthorSelectorCodec;
+use Biblio\Core\Application\Metadata\Search\BibliographicAuthorWorkSearchContract;
+use Biblio\Core\Application\Metadata\Search\BibliographicAuthorWorkSearchCursorCodec;
 use Biblio\Core\Application\Metadata\Search\BibliographicSearchCursorCodec;
 use Biblio\Core\Application\Metadata\Search\BibliographicTextSearchContract;
 use Closure;
@@ -24,13 +26,22 @@ final class RestApi
         $privateNoteCursors = new PrivateNoteCursorCodec();
         $workDiscoveryCursors = new WorkDiscoveryCursorCodec();
         $publicAssessmentCursors = new PublicAssessmentCursorCodec();
+        $authorSelectors = new BibliographicAuthorSelectorCodec(
+            self::bibliographicAuthorSelectorSecret()
+        );
         $bibliographicSearch = new RestBibliographicTextSearchContract(
             new BibliographicTextSearchContract(
                 new BibliographicSearchCursorCodec(
                     self::bibliographicSearchCursorSecret()
                 ),
-                new BibliographicAuthorSelectorCodec(
-                    self::bibliographicAuthorSelectorSecret()
+                $authorSelectors
+            )
+        );
+        $bibliographicAuthorWorks = new RestBibliographicAuthorWorkSearchContract(
+            $authorSelectors,
+            new BibliographicAuthorWorkSearchContract(
+                new BibliographicAuthorWorkSearchCursorCodec(
+                    self::bibliographicAuthorWorkSearchCursorSecret()
                 )
             )
         );
@@ -43,7 +54,8 @@ final class RestApi
                 $workDiscoveryCursors,
                 $publicAssessmentCursors,
                 null,
-                $bibliographicSearch
+                $bibliographicSearch,
+                $bibliographicAuthorWorks
             ),
             new RestResponseSerializer(
                 $catalogCursors,
@@ -51,7 +63,8 @@ final class RestApi
                 $privateNoteCursors,
                 $workDiscoveryCursors,
                 $publicAssessmentCursors,
-                $bibliographicSearch
+                $bibliographicSearch,
+                $bibliographicAuthorWorks
             ),
             new RestErrorMapper()
         );
@@ -90,5 +103,15 @@ final class RestApi
         }
 
         return hash("sha256", $salt . ":bibliographic-author-selector-v1");
+    }
+
+    private static function bibliographicAuthorWorkSearchCursorSecret(): string
+    {
+        $salt = defined("AUTH_SALT") ? constant("AUTH_SALT") : null;
+        if (!is_string($salt) || trim($salt) === "") {
+            throw new LogicException("WordPress authentication salt is unavailable.");
+        }
+
+        return hash("sha256", $salt . ":bibliographic-author-work-search-v1");
     }
 }

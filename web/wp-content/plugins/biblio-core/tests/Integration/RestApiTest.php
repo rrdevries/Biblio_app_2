@@ -11,6 +11,7 @@ use Biblio\Core\Application\Metadata\Search\{
     BibliographicAuthorReference,
     BibliographicAuthorSearchResult,
     BibliographicAuthorSelectorCodec,
+    BibliographicProviderEntityIdentity,
     BibliographicSearchCursorCodec,
     BibliographicTextSearchQuery
 };
@@ -122,6 +123,7 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             "/biblio/v1/me/works",
             "/biblio/v1/me/bibliographic-discoveries",
             "/biblio/v1/me/bibliographic-searches",
+            "/biblio/v1/me/bibliographic-author-works",
             "/biblio/v1/me/bibliographic-discoveries/"
                 . "(?P<discovery_id>[^/]+)/materializations",
             "/biblio/v1/me/works/(?P<work_id>[^/]+)/preferred-source-options",
@@ -145,7 +147,7 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             }
         }
 
-        self::assertCount(24, array_filter(
+        self::assertCount(25, array_filter(
             array_keys($routes),
             static fn (string $route): bool => str_starts_with(
                 $route,
@@ -189,6 +191,9 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         ]));
         self::assertSame(["POST"], $this->routeMethods($routes[
             "/biblio/v1/me/bibliographic-searches"
+        ]));
+        self::assertSame(["POST"], $this->routeMethods($routes[
+            "/biblio/v1/me/bibliographic-author-works"
         ]));
         self::assertSame(["POST"], $this->routeMethods($routes[
             "/biblio/v1/me/bibliographic-discoveries/"
@@ -516,6 +521,204 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             "work_cursor" => $cursor,
         ]));
         self::assertSame(400, $wrongSlot->get_status());
+    }
+
+    public function testBibliographicAuthorWorksRestAcceptsEverySelectorFormAndRetainsLocalOnFailure(): void
+    {
+        self::assertSame(1, $this->database->insert($this->tableNames->authors(), [
+            "author_id" => "rest-author-works",
+            "display_name" => "Selected Author",
+        ]));
+        $this->seedWork("rest-author-work", "Selected Work");
+        self::assertSame(1, $this->database->insert(
+            $this->tableNames->workContributors(),
+            [
+                "work_id" => "rest-author-work",
+                "author_id" => "rest-author-works",
+                "contributor_role" => "author",
+                "contributor_position" => 1,
+            ]
+        ));
+        $canonical = BibliographicAuthorReference::canonical(
+            new AuthorId("rest-author-works")
+        );
+        $provider = BibliographicProviderEntityIdentity::author(
+            "open_library",
+            "/authors/OL1A"
+        );
+
+        $canonicalResponse = $this->dispatchAsActor(
+            $this->bibliographicAuthorWorksRequest([
+                "author_selector" => $this->authorSelectorCodec()->encode($canonical),
+                "cursor" => null,
+            ])
+        );
+        self::assertSame(200, $canonicalResponse->get_status());
+        $canonicalData = $this->successData($canonicalResponse);
+        self::assertSame(["items", "next_cursor", "provider_attempts"], array_keys($canonicalData));
+        self::assertSame("rest-author-work", $canonicalData["items"][0]["work_id"]);
+        self::assertNull($canonicalData["items"][0]["provider_identity"]);
+        self::assertSame([], $canonicalData["provider_attempts"]);
+
+        $failedComposite = $this->successData($this->dispatchAsActor(
+            $this->bibliographicAuthorWorksRequest([
+                "author_selector" => $this->authorSelectorCodec()->encode(
+                    BibliographicAuthorReference::canonical(
+                        new AuthorId("rest-author-works"),
+                        $provider
+                    )
+                ),
+            ])
+        ));
+        self::assertSame("rest-author-work", $failedComposite["items"][0]["work_id"]);
+        self::assertSame("configuration_error", $failedComposite["provider_attempts"][0]["status"]);
+        self::assertSame("configuration", $failedComposite["provider_attempts"][0]["failure_reason"]);
+
+        $this->rebuildApiWithOpenLibraryConfiguration();
+        $httpFixture = static function (mixed $preempt, array $arguments, string $url): array {
+            self::assertStringContainsString(
+                "/authors/OL1A/works.json?limit=",
+                $url
+            );
+            self::assertSame("GET", $arguments["method"] ?? "GET");
+            return [
+                "headers" => [],
+                "body" => (string) wp_json_encode([
+                    "links" => ["author" => "/authors/OL1A"],
+                    "size" => 1,
+                    "entries" => [[
+                        "key" => "/works/OL99W",
+                        "title" => "External Selected Work",
+                        "authors" => [[
+                            "author" => ["key" => "/authors/OL1A"],
+                        ]],
+                    ]],
+                ]),
+                "response" => ["code" => 200, "message" => "OK"],
+                "cookies" => [],
+                "filename" => null,
+            ];
+        };
+        add_filter("pre_http_request", $httpFixture, 10, 3);
+        try {
+            $providerData = $this->successData($this->dispatchAsActor(
+                $this->bibliographicAuthorWorksRequest([
+                    "author_selector" => $this->authorSelectorCodec()->encode(
+                        BibliographicAuthorReference::external($provider)
+                    ),
+                ])
+            ));
+            self::assertSame("External Selected Work", $providerData["items"][0]["title"]);
+            self::assertNull($providerData["items"][0]["work_id"]);
+            self::assertSame([
+                "provider_key" => "open_library",
+                "record_id" => "/works/OL99W",
+            ], $providerData["items"][0]["provider_identity"]);
+            self::assertSame("candidates", $providerData["provider_attempts"][0]["status"]);
+
+            $compositeData = $this->successData($this->dispatchAsActor(
+                $this->bibliographicAuthorWorksRequest([
+                    "author_selector" => $this->authorSelectorCodec()->encode(
+                        BibliographicAuthorReference::canonical(
+                            new AuthorId("rest-author-works"),
+                            $provider
+                        )
+                    ),
+                ])
+            ));
+            self::assertSame(
+                ["Selected Work", "External Selected Work"],
+                array_column($compositeData["items"], "title")
+            );
+            self::assertSame("candidates", $compositeData["provider_attempts"][0]["status"]);
+        } finally {
+            remove_filter("pre_http_request", $httpFixture, 10);
+        }
+
+        wp_set_current_user(0);
+        self::assertSame(401, $this->server->dispatch(
+            $this->bibliographicAuthorWorksRequest([
+                "author_selector" => $this->authorSelectorCodec()->encode($canonical),
+            ])
+        )->get_status());
+    }
+
+    public function testBibliographicAuthorWorksRestRejectsUntrustedFieldsAndCursorCrossBinding(): void
+    {
+        foreach (["rest-cursor-author-a", "rest-cursor-author-b"] as $authorId) {
+            self::assertSame(1, $this->database->insert($this->tableNames->authors(), [
+                "author_id" => $authorId,
+                "display_name" => $authorId,
+            ]));
+        }
+        for ($position = 1; $position <= 11; $position++) {
+            $workId = sprintf("rest-author-page-work-%02d", $position);
+            $this->seedWork($workId, sprintf("Author Page Work %02d", $position));
+            self::assertSame(1, $this->database->insert(
+                $this->tableNames->workContributors(),
+                [
+                    "work_id" => $workId,
+                    "author_id" => "rest-cursor-author-a",
+                    "contributor_role" => "author",
+                    "contributor_position" => 1,
+                ]
+            ));
+        }
+        $selectorA = $this->authorSelectorCodec()->encode(
+            BibliographicAuthorReference::canonical(new AuthorId("rest-cursor-author-a"))
+        );
+        $selectorB = $this->authorSelectorCodec()->encode(
+            BibliographicAuthorReference::canonical(new AuthorId("rest-cursor-author-b"))
+        );
+        $first = $this->successData($this->dispatchAsActor(
+            $this->bibliographicAuthorWorksRequest(["author_selector" => $selectorA])
+        ));
+        self::assertCount(10, $first["items"]);
+        self::assertIsString($first["next_cursor"]);
+
+        $second = $this->successData($this->dispatchAsActor(
+            $this->bibliographicAuthorWorksRequest([
+                "author_selector" => $selectorA,
+                "cursor" => $first["next_cursor"],
+            ])
+        ));
+        self::assertCount(1, $second["items"]);
+        self::assertNull($second["next_cursor"]);
+
+        self::assertSame(400, $this->dispatchAsActor(
+            $this->bibliographicAuthorWorksRequest([
+                "author_selector" => $selectorB,
+                "cursor" => $first["next_cursor"],
+            ])
+        )->get_status());
+
+        foreach ([
+            [],
+            ["author_selector" => 42],
+            ["author_selector" => $selectorA, "author_id" => "rest-cursor-author-a"],
+            ["author_selector" => $selectorA, "provider" => "open_library"],
+            ["author_selector" => $selectorA, "name" => "Selected Author"],
+            ["author_selector" => $selectorA, "library_id" => "library-a"],
+            ["author_selector" => $selectorA, "user_id" => $this->actorId],
+            ["author_selector" => $selectorA . "x"],
+            ["author_selector" => $selectorA, "cursor" => false],
+        ] as $body) {
+            self::assertSame(400, $this->dispatchAsActor(
+                $this->bibliographicAuthorWorksRequest($body)
+            )->get_status());
+        }
+
+        $queryRequest = $this->bibliographicAuthorWorksRequest([
+            "author_selector" => $selectorA,
+        ]);
+        $queryRequest->set_query_params(["library_id" => "library-a"]);
+        self::assertSame(400, $this->dispatchAsActor($queryRequest)->get_status());
+
+        foreach (["{", "{\"author_selector\":\"\xC3\x28\"}"] as $body) {
+            self::assertSame(400, $this->dispatchAsActor(
+                $this->bibliographicAuthorWorksRawRequest($body)
+            )->get_status());
+        }
     }
 
     public function testBibliographicSearchRestRejectsMalformedJsonUtf8AndUnexpectedQueryInput(): void
@@ -3799,6 +4002,61 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         $request->set_body($body);
 
         return $request;
+    }
+
+    /** @param array<string, mixed> $body */
+    private function bibliographicAuthorWorksRequest(array $body): WP_REST_Request
+    {
+        return $this->bibliographicAuthorWorksRawRequest(
+            (string) wp_json_encode($body)
+        );
+    }
+
+    private function bibliographicAuthorWorksRawRequest(string $body): WP_REST_Request
+    {
+        $request = new WP_REST_Request(
+            "POST",
+            "/biblio/v1/me/bibliographic-author-works"
+        );
+        $request->set_header("content-type", "application/json");
+        $request->set_body($body);
+
+        return $request;
+    }
+
+    private function authorSelectorCodec(): BibliographicAuthorSelectorCodec
+    {
+        $salt = constant("AUTH_SALT");
+        self::assertIsString($salt);
+        return new BibliographicAuthorSelectorCodec(
+            hash("sha256", $salt . ":bibliographic-author-selector-v1")
+        );
+    }
+
+    private function rebuildApiWithOpenLibraryConfiguration(): void
+    {
+        $this->server = new WP_REST_Server();
+        global $wp_rest_server;
+        $wp_rest_server = $this->server;
+
+        $application = (new ProductionComposition(
+            $this->database,
+            metadataLookup: new FirstSufficientMetadataLookupService(
+                new CandidateClassifier(),
+                new ConfigurationErrorMetadataProvider("open_library"),
+                new ConfigurationErrorMetadataProvider("google_books")
+            ),
+            providerConfiguration: new RuntimeMetadataProviderConfiguration(
+                static fn (string $name): bool => false,
+                static fn (string $name): mixed => null,
+                static fn (string $name): mixed => $name
+                    === "BIBLIO_OPEN_LIBRARY_CONTACT_EMAIL"
+                    ? "integration@example.invalid"
+                    : false
+            )
+        ))->application();
+        $this->api = new RestApi(static fn () => $application);
+        $this->api->registerRoutes();
     }
 
     /** @param array<string, mixed> $body */

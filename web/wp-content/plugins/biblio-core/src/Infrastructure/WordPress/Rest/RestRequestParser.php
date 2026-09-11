@@ -11,7 +11,7 @@ use Biblio\Core\Application\Catalog\Query\CatalogQuery;
 use Biblio\Core\Application\Catalog\Classification\LibraryCatalogContextInitialization;
 use Biblio\Core\Application\Metadata\{AddBookCommitRequest,AddBookCommitSelection,AddBookObservedMetadata,MetadataCandidateId,MetadataFieldValue,MetadataLookupId,UserObservedMetadataField};
 use Biblio\Core\Application\Metadata\Discovery\BibliographicMaterializationIntent;
-use Biblio\Core\Application\Metadata\Search\BibliographicTextSearchRequest;
+use Biblio\Core\Application\Metadata\Search\{BibliographicAuthorWorkSearchRequest,BibliographicTextSearchRequest};
 use Biblio\Core\Application\Reading\History\ReadingHistoryCursor;
 use Biblio\Core\Application\Reading\History\ReadingHistoryPageSize;
 use Biblio\Core\Application\Catalog\Discovery\{WorkDiscoveryCursor,WorkDiscoveryLimit,WorkDiscoverySearchTerm};
@@ -46,7 +46,8 @@ final readonly class RestRequestParser
         private ?WorkDiscoveryCursorCodec $workDiscoveryCursors = null,
         private ?PublicAssessmentCursorCodec $publicAssessmentCursors = null,
         private ?RestCatalogQueryParser $catalogQueries = null,
-        private ?RestBibliographicTextSearchContract $bibliographicSearch = null
+        private ?RestBibliographicTextSearchContract $bibliographicSearch = null,
+        private ?RestBibliographicAuthorWorkSearchContract $bibliographicAuthorWorks = null
     ) {
     }
 
@@ -76,6 +77,16 @@ final readonly class RestRequestParser
 
         return $this->bibliographicSearchContract()->decodeRequest(
             $this->jsonObject($request, "query")
+        );
+    }
+
+    public function bibliographicAuthorWorks(
+        WP_REST_Request $request
+    ): BibliographicAuthorWorkSearchRequest {
+        $this->validateQueryFields($request, []);
+
+        return $this->bibliographicAuthorWorksContract()->decodeRequest(
+            $this->jsonObject($request, "author_selector")
         );
     }
 
@@ -912,6 +923,14 @@ final readonly class RestRequestParser
         return $this->bibliographicSearch
             ?? throw new \LogicException(
                 "Bibliographic text-search REST contract is not configured."
+            );
+    }
+
+    private function bibliographicAuthorWorksContract(): RestBibliographicAuthorWorkSearchContract
+    {
+        return $this->bibliographicAuthorWorks
+            ?? throw new \LogicException(
+                "Bibliographic Author Works REST contract is not configured."
             );
     }
 

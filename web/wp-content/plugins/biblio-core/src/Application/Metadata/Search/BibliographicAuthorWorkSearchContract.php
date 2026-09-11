@@ -50,10 +50,15 @@ final readonly class BibliographicAuthorWorkSearchContract
     /** @return array<string,mixed> */
     private function serializeWork(BibliographicWorkSearchResult $work): array
     {
+        $provider = $work->reference()->providerIdentity();
         return [
             "result_id" => $work->reference()->resultId(),
             "result_kind" => $work->reference()->kind()->value,
             "work_id" => $work->reference()->workId()?->value(),
+            "provider_identity" => $provider === null ? null : [
+                "provider_key" => $provider->providerKey(),
+                "record_id" => $provider->providerRecordId(),
+            ],
             "title" => $work->title(),
             "authors" => array_map(
                 static fn (BibliographicWorkAuthor $author): array => [

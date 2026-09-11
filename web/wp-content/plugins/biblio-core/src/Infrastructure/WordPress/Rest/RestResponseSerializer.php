@@ -26,6 +26,7 @@ use Biblio\Core\Application\Catalog\LocalEditionResolutionType;
 use Biblio\Core\Application\Metadata\{AddBookCommitResult,AddBookExistingEdition,AddBookExistingItem,AddBookMetadataLookupResult,ClassifiedMetadataCandidate,MetadataCandidateId,MetadataFieldBinding,MetadataLookupStatus};
 use Biblio\Core\Application\Metadata\Discovery\{BibliographicDiscoveryCandidate,BibliographicDiscoveryResult,BibliographicMaterializationResult};
 use Biblio\Core\Application\Metadata\Search\BibliographicTextSearchResult;
+use Biblio\Core\Application\Metadata\Search\BibliographicAuthorWorkSearchPage;
 use Biblio\Core\Application\Reading\History\ReadingHistoryEntry;
 use Biblio\Core\Application\Reading\History\ReadingHistoryPage;
 use Biblio\Core\Catalog\WorkId;
@@ -49,7 +50,8 @@ final readonly class RestResponseSerializer
         private PrivateNoteCursorCodec $privateNoteCursors,
         private ?WorkDiscoveryCursorCodec $workDiscoveryCursors = null,
         private ?PublicAssessmentCursorCodec $publicAssessmentCursors = null,
-        private ?RestBibliographicTextSearchContract $bibliographicSearch = null
+        private ?RestBibliographicTextSearchContract $bibliographicSearch = null,
+        private ?RestBibliographicAuthorWorkSearchContract $bibliographicAuthorWorks = null
     ) {
     }
 
@@ -84,6 +86,13 @@ final readonly class RestResponseSerializer
         BibliographicTextSearchResult $result
     ): array {
         return $this->bibliographicSearchContract()->serialize($result);
+    }
+
+    /** @return array<string,mixed> */
+    public function bibliographicAuthorWorks(
+        BibliographicAuthorWorkSearchPage $page
+    ): array {
+        return $this->bibliographicAuthorWorksContract()->serialize($page);
     }
 
     /** @return array<string,mixed> */
@@ -789,6 +798,14 @@ final readonly class RestResponseSerializer
         return $this->bibliographicSearch
             ?? throw new LogicException(
                 "Bibliographic text-search REST contract is not configured."
+            );
+    }
+
+    private function bibliographicAuthorWorksContract(): RestBibliographicAuthorWorkSearchContract
+    {
+        return $this->bibliographicAuthorWorks
+            ?? throw new LogicException(
+                "Bibliographic Author Works REST contract is not configured."
             );
     }
 
