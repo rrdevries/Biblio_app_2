@@ -1,0 +1,7 @@
+{
+  "numFound": 1,
+  "start": 0,
+  "docs": [
+    {"key": "not-a-stable-author", "name": "Unusable Author"}
+  ]
+}

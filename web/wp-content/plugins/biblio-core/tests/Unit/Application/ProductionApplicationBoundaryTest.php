@@ -162,6 +162,7 @@ final class ProductionApplicationBoundaryTest extends TestCase
             "bibliographicMaterialization",
             "bibliographicMetadata",
             "bibliographicRelationships",
+            "bibliographicTextSearch",
             "bookTypeManagement",
             "catalogContextCreation",
             "catalogContextManagement",

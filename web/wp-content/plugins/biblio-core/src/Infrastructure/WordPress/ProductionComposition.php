@@ -42,6 +42,7 @@ use Biblio\Core\Application\Library\LibraryAccessService;
 use Biblio\Core\Application\Library\LibraryContextQueryService;
 use Biblio\Core\Application\Metadata\{AddBookCommitService,AddBookMetadataLookupService,AddBookMetadataReviewPolicy,CandidateClassifier,FirstSufficientMetadataLookupService};
 use Biblio\Core\Application\Metadata\Discovery\{BibliographicDiscoveryService,BibliographicMaterializationService,BibliographicTextDiscoveryProvider,DesignatedPersonalBibliographicAuthorization};
+use Biblio\Core\Application\Metadata\Search\BibliographicTextSearchService;
 use Biblio\Core\Application\Notes\CorrectPrivateNoteReadingRoundService;
 use Biblio\Core\Application\Notes\CreatePrivateNoteService;
 use Biblio\Core\Application\Notes\DeletePrivateNoteService;
@@ -130,12 +131,14 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbBibliographicMetadataRe
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbBibliographicDiscoverySnapshotRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbBibliographicLocalDiscoveryRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbBibliographicProviderIdentityRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbBibliographicSearchProvider;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrationRegistry;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrator;
 use Biblio\Core\Infrastructure\Metadata\ConfigurationErrorMetadataProvider;
 use Biblio\Core\Infrastructure\Metadata\ConfigurationErrorTextDiscoveryProvider;
+use Biblio\Core\Infrastructure\Metadata\ConfigurationErrorBibliographicSearchProvider;
 use Biblio\Core\Infrastructure\Metadata\GoogleBooks\{GoogleBooksConfiguration,GoogleBooksMetadataProvider,GoogleBooksTextDiscoveryProvider};
-use Biblio\Core\Infrastructure\Metadata\OpenLibrary\{OpenLibraryConfiguration,OpenLibraryMetadataProvider,OpenLibraryTextDiscoveryProvider};
+use Biblio\Core\Infrastructure\Metadata\OpenLibrary\{OpenLibraryBibliographicSearchProvider,OpenLibraryConfiguration,OpenLibraryMetadataProvider,OpenLibraryTextDiscoveryProvider};
 use Biblio\Core\Infrastructure\Metadata\RuntimeMetadataProviderConfiguration;
 use Biblio\Core\Infrastructure\Metadata\SystemMetadataClock;
 use Biblio\Core\Infrastructure\Metadata\WordPressProviderHttpClient;
@@ -848,6 +851,19 @@ final class ProductionComposition
             $metadataClock,
             $transactionManager
         );
+        $localBibliographicSearch = new WpdbBibliographicSearchProvider(
+            $database,
+            $tableNames
+        );
+        $openLibraryBibliographicSearch = $this->bibliographicSearchProvider();
+        $bibliographicTextSearch = new BibliographicTextSearchService(
+            $authenticatedUser,
+            $localBibliographicSearch,
+            $localBibliographicSearch,
+            $openLibraryBibliographicSearch,
+            $openLibraryBibliographicSearch,
+            $bibliographicProviderIdentities
+        );
 
         $this->application = new CoreApplication(
             $personalLibraries,
@@ -929,6 +945,7 @@ final class ProductionComposition
             $wishlistRefine,
             $wishlistRemove,
             $myWishlist,
+            $bibliographicTextSearch,
             $bibliographicDiscovery,
             $bibliographicMaterialization
         );
@@ -991,6 +1008,23 @@ final class ProductionComposition
             $openLibrary,
             $google
         );
+    }
+
+    private function bibliographicSearchProvider(): OpenLibraryBibliographicSearchProvider|ConfigurationErrorBibliographicSearchProvider
+    {
+        $provider = new ConfigurationErrorBibliographicSearchProvider("open_library");
+        $contact = $this->providerConfiguration->openLibraryContactEmail();
+        if (is_string($contact)) {
+            try {
+                $provider = new OpenLibraryBibliographicSearchProvider(
+                    new WordPressProviderHttpClient(),
+                    new OpenLibraryConfiguration("Biblio", "2.001", $contact)
+                );
+            } catch (\InvalidArgumentException) {
+                // Invalid operational config remains a typed configuration failure.
+            }
+        }
+        return $provider;
     }
 
     /** @return array{BibliographicTextDiscoveryProvider,BibliographicTextDiscoveryProvider} */

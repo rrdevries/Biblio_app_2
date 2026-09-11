@@ -10,6 +10,7 @@ use Biblio\Core\Application\Metadata\Search\{
     BibliographicAuthorSearchProvider,
     BibliographicAuthorSearchResult,
     BibliographicProviderEntityIdentity,
+    BibliographicSearchProviderAttempt,
     BibliographicSearchCursor,
     BibliographicSearchCursorCodec,
     BibliographicSearchGroup,
@@ -25,6 +26,7 @@ use Biblio\Core\Application\Metadata\Search\{
     BibliographicWorkSearchResult,
     BibliographicWorkSeriesContext
 };
+use Biblio\Core\Application\Metadata\{ProviderFailureReason,ProviderLookupStatus};
 use Biblio\Core\Catalog\{AuthorId,SeriesId,SeriesPosition,WorkId};
 use Biblio\Core\Exception\ValidationException;
 use InvalidArgumentException;
@@ -59,7 +61,16 @@ final class BibliographicSearchContractTest extends TestCase
         $result = new BibliographicTextSearchResult(
             $query,
             new BibliographicAuthorSearchPage($query, [$author], $author->cursor($query)),
-            new BibliographicWorkSearchPage($query, [$work], $work->cursor($query))
+            new BibliographicWorkSearchPage($query, [$work], $work->cursor($query)),
+            [new BibliographicSearchProviderAttempt(
+                "open_library",
+                ProviderLookupStatus::Unavailable,
+                ProviderFailureReason::Timeout
+            )],
+            [new BibliographicSearchProviderAttempt(
+                "open_library",
+                ProviderLookupStatus::Candidates
+            )]
         );
         $contract = $this->contract();
 
@@ -67,8 +78,24 @@ final class BibliographicSearchContractTest extends TestCase
 
         self::assertSame(["query", "authors", "works"], array_keys($payload));
         self::assertSame("Ursula Le Guin", $payload["query"]);
-        self::assertSame(["items", "next_cursor"], array_keys($payload["authors"]));
-        self::assertSame(["items", "next_cursor"], array_keys($payload["works"]));
+        self::assertSame(
+            ["items", "next_cursor", "provider_attempts"],
+            array_keys($payload["authors"])
+        );
+        self::assertSame(
+            ["items", "next_cursor", "provider_attempts"],
+            array_keys($payload["works"])
+        );
+        self::assertSame([
+            "provider_key" => "open_library",
+            "status" => "unavailable",
+            "failure_reason" => "timeout",
+        ], $payload["authors"]["provider_attempts"][0]);
+        self::assertSame([
+            "provider_key" => "open_library",
+            "status" => "candidates",
+            "failure_reason" => null,
+        ], $payload["works"]["provider_attempts"][0]);
         self::assertSame("external_candidate", $payload["authors"]["items"][0]["result_kind"]);
         self::assertNull($payload["authors"]["items"][0]["author_id"]);
         self::assertSame("local_canonical", $payload["works"]["items"][0]["result_kind"]);

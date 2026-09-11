@@ -1,0 +1,16 @@
+{
+  "numFound": 2,
+  "start": 0,
+  "docs": [
+    {
+      "key": "/works/OL82563W",
+      "title": "Harry Potter and the Philosopher's Stone",
+      "author_name": ["J. K. Rowling"]
+    },
+    {
+      "key": "OL17930368W",
+      "title": "Harry Potter and the Chamber of Secrets",
+      "author_name": ["J. K. Rowling"]
+    }
+  ]
+}
