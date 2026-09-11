@@ -2906,3 +2906,25 @@ There is no REST/UI consumer, schema, Edition, Google Books, Wishlist, Add Book
 or V1 change. Schema stays `1023`; Biblio Core is `2.9.0` and Biblio UI stays
 `0.15.1`. Detailed evidence:
 `docs/77-mh-author-01-pageable-works-by-selected-author.md`.
+
+### MH-SEARCH-API-01 — shared Author/Work search REST transport
+
+Status: **GO / CLOSED** after the clean full Core gate and independent review.
+
+The shared top-level Author/Work application search is now reachable through
+authenticated `POST /biblio/v1/me/bibliographic-searches`. The strict body
+contains required `query` and independent optional `author_cursor` and
+`work_cursor`; it accepts no actor, Library, provider or result-type selector.
+Checksum-valid ISBN remains outside this text-only endpoint.
+
+The response keeps Authors and Works in separate groups with their own items,
+nullable continuation and typed provider attempts. The adapter reuses the
+existing signed query/group-bound 01A cursors and exact typed serializer.
+Partial external failure stays HTTP 200 with local results retained. No raw
+provider payload, Edition field, Library/private data or materialization is
+exposed or performed.
+
+MH-DISC-01, Wishlist, Add Book and `/me/works` remain unchanged. Author-to-
+Works and Work-to-Editions REST transport, every UI consumer and consumer
+cutover remain deferred. Schema stays `1023`; Biblio Core is `2.10.0` and
+Biblio UI stays `0.15.1`. No current or historical V1 data was used.

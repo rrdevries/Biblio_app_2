@@ -1738,8 +1738,9 @@ local page remains usable. Deduplication uses reference identity plus an
 existing provider-Work-to-canonical-Work mapping when the mapped local result
 is present; text equality is never consulted.
 
-Production composition exposes the service through `CoreApplication`, but no
-REST controller or frontend consumes it yet. MH-DISC-01, Wishlist, Add Book,
+Production composition exposes the service through `CoreApplication`.
+MH-SEARCH-API-01 now adds a thin authenticated REST adapter for only this
+top-level service; no frontend consumes it yet. MH-DISC-01, Wishlist, Add Book,
 `/me/works` and Hierna lezen remain unchanged. There is no persistence or
 schema migration.
 
@@ -1802,3 +1803,30 @@ already carries Open Library Author evidence. Provider-to-canonical Work
 deduplication is one Author-scoped batchquery; title/name similarity is never
 used. The service is exposed through `CoreApplication` without REST/UI,
 snapshot, materialization, persistence migration or schema change.
+
+## 44. MH-SEARCH-API-01 top-level Author/Work REST transport
+
+`POST /biblio/v1/me/bibliographic-searches` is the single authenticated REST
+resource for a general bibliographic text query. The strict JSON body contains
+only required `query` plus optional `author_cursor` and `work_cursor`. Query
+parameters, actor identity, Library identity, provider selection and result-
+type selection are rejected.
+
+`RestBibliographicTextSearchContract` adapts the existing typed 01A decoder and
+serializer to the central REST parser/error conventions. It maps malformed,
+wrong-query, wrong-group and tampered cursor input to safe 400 errors. Cursor
+signatures use a domain-separated hash of WordPress `AUTH_SALT`; REST never
+decodes cursors for business behavior.
+
+The controller calls only `CoreApplication::bibliographicTextSearch()`. Its
+response uses the established `data` envelope and retains `query`, separate
+`authors` and `works` groups, per-group `items`, independently nullable
+`next_cursor` and typed `provider_attempts`. The existing serializer exposes
+opaque result ID, provider-neutral result kind and optional canonical entity
+ID, but no raw provider identity, payload, Edition or Library data.
+
+Normal provider miss and partial provider failure remain successful typed
+responses; usable local results therefore survive external failure. Anonymous
+requests use the existing 401 `/me` permission callback, and the application
+service also resolves the actor server-side. The route performs no
+materialization and introduces no schema, UI or consumer-contract change.

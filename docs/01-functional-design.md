@@ -526,10 +526,11 @@ stable strong identity after presentation order. A provider-ranked first
 result is never a winner. Only canonical or same-provider entity identity may
 deduplicate; name/title similarity never does. Separate Author-search and
 Work-search ports make unsupported capabilities explicit without requiring a
-fictive symmetrical provider. The contract is not yet reachable over REST and
-does not change current Wishlist, Add Book or `/me/works` behavior. Later
-MH-SEARCH-01B was reserved to populate the contract; Works-by-Author and
-Editions-by-Work each remain their own bounded continuation slice.
+fictive symmetrical provider. MH-SEARCH-API-01 now exposes this exact top-level
+contract through authenticated `POST /biblio/v1/me/bibliographic-searches`.
+It does not change current Wishlist, Add Book or `/me/works` behavior.
+Works-by-Author and Editions-by-Work each remain their own bounded application
+boundary and are not reachable through this route.
 
 MH-SEARCH-01B now populates that parallel contract with local canonical plus
 Open Library search. Local Author search matches normalized text against
@@ -547,7 +548,8 @@ titles remain separate. Provider miss, configuration error, malformed response
 and technical failure remain typed per group and never remove usable local
 results. Initial search performs exactly one Author search request and one Work
 search request and no Edition request. Google Books, Works-by-Author,
-Editions-by-Work, REST/UI and consumer cutover remain outside this slice.
+Editions-by-Work, UI and consumer cutover remain outside this slice. Only the
+top-level Author/Work search is now REST-reachable through MH-SEARCH-API-01.
 
 Independent Biblio-owned or user-supplied cover acquisition/management is
 V2.002+. Existing V1 cover references/assets remain migration inventory and

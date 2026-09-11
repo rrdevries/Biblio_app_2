@@ -11,6 +11,7 @@ use Biblio\Core\Application\Catalog\Query\CatalogQuery;
 use Biblio\Core\Application\Catalog\Classification\LibraryCatalogContextInitialization;
 use Biblio\Core\Application\Metadata\{AddBookCommitRequest,AddBookCommitSelection,AddBookObservedMetadata,MetadataCandidateId,MetadataFieldValue,MetadataLookupId,UserObservedMetadataField};
 use Biblio\Core\Application\Metadata\Discovery\BibliographicMaterializationIntent;
+use Biblio\Core\Application\Metadata\Search\BibliographicTextSearchRequest;
 use Biblio\Core\Application\Reading\History\ReadingHistoryCursor;
 use Biblio\Core\Application\Reading\History\ReadingHistoryPageSize;
 use Biblio\Core\Application\Catalog\Discovery\{WorkDiscoveryCursor,WorkDiscoveryLimit,WorkDiscoverySearchTerm};
@@ -44,7 +45,8 @@ final readonly class RestRequestParser
         private PrivateNoteCursorCodec $privateNoteCursors,
         private ?WorkDiscoveryCursorCodec $workDiscoveryCursors = null,
         private ?PublicAssessmentCursorCodec $publicAssessmentCursors = null,
-        private ?RestCatalogQueryParser $catalogQueries = null
+        private ?RestCatalogQueryParser $catalogQueries = null,
+        private ?RestBibliographicTextSearchContract $bibliographicSearch = null
     ) {
     }
 
@@ -65,6 +67,16 @@ final readonly class RestRequestParser
             throw RestRequestException::wrongType("query", "a string");
         }
         return $body["query"];
+    }
+
+    public function bibliographicTextSearch(
+        WP_REST_Request $request
+    ): BibliographicTextSearchRequest {
+        $this->validateQueryFields($request, []);
+
+        return $this->bibliographicSearchContract()->decodeRequest(
+            $this->jsonObject($request, "query")
+        );
     }
 
     /** @return array{discovery_id:MetadataLookupId,candidate_id:MetadataCandidateId,intent:BibliographicMaterializationIntent} */
@@ -893,6 +905,14 @@ final readonly class RestRequestParser
     private function workDiscoveryCursorCodec(): WorkDiscoveryCursorCodec
     {
         return $this->workDiscoveryCursors ?? new WorkDiscoveryCursorCodec();
+    }
+
+    private function bibliographicSearchContract(): RestBibliographicTextSearchContract
+    {
+        return $this->bibliographicSearch
+            ?? throw new \LogicException(
+                "Bibliographic text-search REST contract is not configured."
+            );
     }
 
     /**

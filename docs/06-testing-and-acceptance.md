@@ -3418,3 +3418,38 @@ MH-AUTHOR-01 is accepted when:
 
 Status: **GO / CLOSED**. Detailed closure evidence is recorded in
 `docs/77-mh-author-01-pageable-works-by-selected-author.md`.
+
+## 104. MH-SEARCH-API-01 shared Author/Work REST transport
+
+MH-SEARCH-API-01 is accepted when:
+
+- exactly one authenticated `POST /biblio/v1/me/bibliographic-searches` route
+  registers once and accepts no client actor, Library or provider identity;
+- its strict JSON body contains required text-only `query` and optional
+  independent `author_cursor` and `work_cursor`, while unknown fields,
+  malformed JSON/UTF-8, wrong types, empty/over-limit text, checksum-valid ISBN
+  and wrong-query/group/tampered cursors fail closed;
+- the controller calls only the existing authenticated
+  `CoreApplication::bibliographicTextSearch()` boundary and contains no
+  ranking, deduplication, normalization, provider or Library logic;
+- the response uses the existing `data` envelope with separate `authors` and
+  `works` groups, each containing `items`, nullable `next_cursor` and typed
+  `provider_attempts`;
+- Author/Work serialization exposes only the existing opaque result identity,
+  provider-neutral result kind, optional canonical ID and allowlisted
+  presentation fields, with no Edition, raw provider, Library or private data;
+- normal provider miss and partial failure remain typed successful responses
+  and never discard usable local results;
+- anonymous requests return the established 401, malformed transport returns
+  safe 400, unavailable Core returns 503 and no technical/provider secret is
+  exposed;
+- MH-DISC, Wishlist, Add Book and `/me/works` exact contracts remain unchanged,
+  while Author-to-Works, Work-to-Editions, materialization, UI and consumer
+  cutover remain absent;
+- Core unit/integration, PHP syntax, PHPStan, Composer/platform, WordPress REST
+  smoke, manifest and whitespace gates pass; schema remains `1023`, no V1 data
+  is used and independent review finds no blocker.
+
+Status: **GO / CLOSED** after the clean full Core gate and independent review.
+Detailed closure evidence is recorded in
+`docs/78-mh-search-api-01-author-work-rest-transport.md`.
