@@ -3192,3 +3192,29 @@ WISH-DISC-01 is accepted when:
 Status: **TECHNICAL GO / HUMAN VISUAL ACCEPTANCE PENDING**. Schema remains
 `1023`; Biblio Core remains `2.5.0`; Biblio UI is `0.15.0`. See
 `docs/70-wish-disc-01-wishlist-discovery-integration.md`.
+
+## 97. CONFIG-F1 durable Metadata provider configuration
+
+CONFIG-F1 is accepted when:
+
+- the runtime resolver uses a defined WordPress constant before the environment
+  variable with the identical name and uses the environment only when the
+  constant is absent;
+- constant-only, environment-only, both-source and no-source cases are covered
+  deterministically without real credentials;
+- Open Library and Google Books can each be configured while the other remains
+  absent;
+- missing or invalid configuration retains the existing typed
+  `configuration_error` semantics and exposes no secret;
+- Add Book's ISBN lookup and generic bibliographic discovery consume the same
+  immutable resolved configuration;
+- ignored `.ddev/config.local.yaml` remains a valid durable local source after
+  `web/wp-config.php` regeneration, with no generated-file edit required;
+- provider order/fallback, Add Book, Wishlist, schema and UI behavior remain
+  unchanged; and
+- Core unit, integration, syntax, PHPStan, Composer/platform, WordPress smoke,
+  manifest, whitespace and independent-review gates pass.
+
+Status: **GO / CLOSED**. Biblio Core is `2.5.1`; schema remains `1023`; Biblio
+UI remains `0.15.0`. See
+`docs/71-config-f1-durable-provider-configuration.md`.

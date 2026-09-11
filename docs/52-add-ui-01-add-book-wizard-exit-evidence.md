@@ -119,6 +119,12 @@ probe is possible. In this DDEV checkout, environment values belong in ignored
 must define the two WordPress constants from those environment values before
 WordPress loads. No value is committed, logged or invented by this fix.
 
+CONFIG-F1 supersedes only that operational step: current production composition
+reads the same environment variables directly when the corresponding WordPress
+constant is absent. The constant remains the backwards-compatible higher-
+precedence source, but editing generated `web/wp-config.php` is no longer
+required. See `docs/71-config-f1-durable-provider-configuration.md`.
+
 The missing manual action had a separate cause. Core already returned HTTP 200
 with `provider_failure`, `manual_available: true` and `retry_available: true`,
 but the strict frontend decoder treated the role-aware `explicit_mappings`

@@ -494,7 +494,7 @@ Status: **Implemented**
 
 - the formal supported schema history starts at baseline version `1000`;
 - internal Fase-0 spike versions 1–5 are not production upgrade paths;
-- product `v2.001`, plugin/package `2.5.0` and schema version are independent;
+- product `v2.001`, plugin/package `2.5.1` and schema version are independent;
 - baseline installation requires an empty Core schema;
 - future schema changes use ordered forward migration steps;
 - version bump occurs only after the step postcondition succeeds;
@@ -2178,10 +2178,12 @@ empty format allowlist with evidence-only fallback. No MH-B4 review state is
 written.
 
 Production provider configuration is infrastructure-only. Open Library uses
-the optional `BIBLIO_OPEN_LIBRARY_CONTACT_EMAIL` constant and Google Books uses
-the optional `GOOGLE_BOOKS_API_KEY` constant. Missing or invalid configuration
-degrades to the controlled provider-failure/manual path and does not make Core
-unavailable.
+`BIBLIO_OPEN_LIBRARY_CONTACT_EMAIL` and Google Books uses
+`GOOGLE_BOOKS_API_KEY`. For each setting, a defined WordPress constant has
+precedence over the environment variable with the same name; if the constant
+is absent, the environment variable is read directly. Missing or invalid
+configuration degrades to the controlled provider-failure/manual path and does
+not make Core unavailable.
 
 MH-B5A itself added no Work, Edition, Item, confirmation, provenance or other
 catalog mutation and left schema at `1016`. MH-B5B now supplies the separately
@@ -2715,3 +2717,22 @@ WISH-MAN-01 rather than borrowing Add Book manual commit. Schema remains
 `1023`, Biblio Core remains `2.5.0`, and Biblio UI is `0.15.0`. No current or
 historical V1 data/count was used. Detailed evidence:
 `docs/70-wish-disc-01-wishlist-discovery-integration.md`.
+
+### CONFIG-F1 — durable Metadata provider environment configuration
+
+Status: **GO / CLOSED** after deterministic configuration tests, runtime
+resolution proof and independent review.
+
+`ProductionComposition` now resolves both provider settings once through one
+infrastructure configuration boundary and gives that same immutable snapshot
+to Add Book's ISBN lookup and generic bibliographic discovery. Per setting the
+precedence is: a defined WordPress constant, then the environment variable with
+the same name, then the existing controlled configuration-error path. A defined
+but invalid constant is not silently bypassed by an environment value.
+
+Open Library and Google Books remain independently configurable. No secret is
+stored, returned or logged, and ignored `.ddev/config.local.yaml` remains the
+local DDEV source. A generated `web/wp-config.php` edit is no longer required.
+Provider order, fallback, Add Book, Wishlist, schema and UI behavior are
+unchanged. Biblio Core is `2.5.1`; schema remains `1023`; Biblio UI remains
+`0.15.0`. Evidence: `docs/71-config-f1-durable-provider-configuration.md`.

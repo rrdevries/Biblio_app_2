@@ -399,8 +399,8 @@ Biblio Core owns versioning and migrations for its Core tables. MariaDB DDL is n
 
 The formally supported Core schema history starts at baseline version `1000`.
 The earlier internal spike versions 1–5 are not production migration sources.
-Product version (`v2.001`), Core plugin/package version (`2.5.0`) and database
-schema version are independent. Plugin/package version `2.5.0` expects formal
+Product version (`v2.001`), Core plugin/package version (`2.5.1`) and database
+schema version are independent. Plugin/package version `2.5.1` expects formal
 schema baseline `1000`.
 
 A fresh baseline installation is allowed only on an empty Core schema.
@@ -439,7 +439,7 @@ lifecycles.
 
 These constraints require no schema migration: they align public construction
 and hydration with the already formalized baseline. Product version `v2.001`,
-plugin/package version `2.5.0` and schema baseline `1000` remain independent.
+plugin/package version `2.5.1` and schema baseline `1000` remain independent.
 
 No source FK uses cascade-delete in a way that removes personal ReadingRound history when a physical source changes or ends.
 
@@ -629,6 +629,24 @@ Repository should version where practical:
 - architecture manifest.
 
 Production must never be the only place the application configuration exists.
+
+Metadata provider credentials and contact configuration are resolved at the
+production composition boundary, never in Core domain contracts. For each
+supported setting, precedence is deterministic:
+
+1. a defined WordPress constant;
+2. otherwise the environment variable with the identical name;
+3. otherwise the existing typed provider configuration error.
+
+This rule applies independently to `BIBLIO_OPEN_LIBRARY_CONTACT_EMAIL` and
+`GOOGLE_BOOKS_API_KEY`. A defined constant remains authoritative even when it
+is invalid; validation then fails closed rather than silently selecting a
+different source. `ProductionComposition` resolves one immutable snapshot for
+both Add Book metadata lookup and generic bibliographic discovery. Values are
+never logged or included in provider results, REST responses, provenance,
+fixtures or repository configuration. Local DDEV values belong in ignored
+`.ddev/config.local.yaml`; generated `web/wp-config.php` is not a required
+configuration step.
 
 ## 13. Development/test direction
 
