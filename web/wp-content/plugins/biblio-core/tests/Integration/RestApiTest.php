@@ -7,6 +7,13 @@ namespace Biblio\Core\Tests\Integration;
 use Biblio\Core\Application\Notes\Read\PrivateNoteViewCursor;
 use Biblio\Core\Application\Metadata\{CandidateClassifier,FirstSufficientMetadataLookupService,MetadataCandidate,MetadataCandidateId,MetadataLookupId,MetadataLookupSnapshot,MetadataMatchMethod};
 use Biblio\Core\Application\Metadata\Discovery\{BibliographicCandidateType,BibliographicDiscoveryCandidate,BibliographicDiscoveryQuery,BibliographicDiscoverySnapshot,BibliographicTextQuery};
+use Biblio\Core\Application\Metadata\Search\{
+    BibliographicAuthorReference,
+    BibliographicAuthorSearchResult,
+    BibliographicSearchCursorCodec,
+    BibliographicTextSearchQuery
+};
+use Biblio\Core\Catalog\AuthorId;
 use Biblio\Core\Catalog\{CanonicalIsbnIdentity,Isbn13};
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Exception\AuthorizationException;
@@ -113,6 +120,7 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             "/biblio/v1/me/wishlist/(?P<wishlist_entry_id>[^/]+)",
             "/biblio/v1/me/works",
             "/biblio/v1/me/bibliographic-discoveries",
+            "/biblio/v1/me/bibliographic-searches",
             "/biblio/v1/me/bibliographic-discoveries/"
                 . "(?P<discovery_id>[^/]+)/materializations",
             "/biblio/v1/me/works/(?P<work_id>[^/]+)/preferred-source-options",
@@ -136,7 +144,7 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             }
         }
 
-        self::assertCount(23, array_filter(
+        self::assertCount(24, array_filter(
             array_keys($routes),
             static fn (string $route): bool => str_starts_with(
                 $route,
@@ -177,6 +185,9 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         self::assertSame(["POST"], $metadataLookupMethods);
         self::assertSame(["POST"], $this->routeMethods($routes[
             "/biblio/v1/me/bibliographic-discoveries"
+        ]));
+        self::assertSame(["POST"], $this->routeMethods($routes[
+            "/biblio/v1/me/bibliographic-searches"
         ]));
         self::assertSame(["POST"], $this->routeMethods($routes[
             "/biblio/v1/me/bibliographic-discoveries/"
@@ -361,6 +372,170 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         wp_set_current_user(0);
         $anonymous = $this->server->dispatch($request);
         self::assertSame(401, $anonymous->get_status());
+    }
+
+    public function testBibliographicSearchRestIsAuthenticatedGroupedAndPartialFailureSafe(): void
+    {
+        $this->seedWork("rest-search-work", "The Dispossessed");
+        self::assertSame(1, $this->database->insert($this->tableNames->authors(), [
+            "author_id" => "rest-search-author",
+            "display_name" => "Ursula K. Le Guin",
+        ]));
+        self::assertSame(1, $this->database->insert(
+            $this->tableNames->workContributors(),
+            [
+                "work_id" => "rest-search-work",
+                "author_id" => "rest-search-author",
+                "contributor_role" => "author",
+                "contributor_position" => 1,
+            ]
+        ));
+
+        $request = $this->bibliographicSearchRequest([
+            "query" => "  Ursula   Le Guin ",
+        ]);
+        $response = $this->dispatchAsActor($request);
+
+        self::assertSame(200, $response->get_status());
+        $data = $this->successData($response);
+        self::assertSame(["query", "authors", "works"], array_keys($data));
+        self::assertSame("Ursula Le Guin", $data["query"]);
+        self::assertSame("rest-search-author", $data["authors"]["items"][0]["author_id"]);
+        self::assertSame("rest-search-work", $data["works"]["items"][0]["work_id"]);
+        self::assertSame(
+            "configuration_error",
+            $data["authors"]["provider_attempts"][0]["status"]
+        );
+        self::assertSame(
+            "configuration_error",
+            $data["works"]["provider_attempts"][0]["status"]
+        );
+        foreach (["isbn", "publisher", "publication_date", "language", "library_id", "user_id"] as $field) {
+            self::assertArrayNotHasKey($field, $data["works"]["items"][0]);
+        }
+
+        wp_set_current_user(0);
+        self::assertSame(401, $this->server->dispatch($request)->get_status());
+
+        foreach ([
+            ["query" => "Ursula Le Guin", "provider" => "open_library"],
+            ["query" => "9780441172719"],
+        ] as $body) {
+            self::assertSame(
+                400,
+                $this->dispatchAsActor(
+                    $this->bibliographicSearchRequest($body)
+                )->get_status()
+            );
+        }
+    }
+
+    public function testBibliographicSearchRestPaginatesGroupsIndependentlyAndRejectsCursorMisuse(): void
+    {
+        for ($position = 1; $position <= 12; $position++) {
+            self::assertSame(1, $this->database->insert($this->tableNames->authors(), [
+                "author_id" => sprintf("rest-page-author-%02d", $position),
+                "display_name" => sprintf("Pageable Author %02d", $position),
+            ]));
+            $this->seedWork(
+                sprintf("rest-page-work-%02d", $position),
+                sprintf("Pageable Work %02d", $position)
+            );
+        }
+
+        $first = $this->successData($this->dispatchAsActor(
+            $this->bibliographicSearchRequest(["query" => "Pageable"])
+        ));
+        self::assertCount(10, $first["authors"]["items"]);
+        self::assertCount(10, $first["works"]["items"]);
+        self::assertIsString($first["authors"]["next_cursor"]);
+        self::assertIsString($first["works"]["next_cursor"]);
+
+        $authors = $this->successData($this->dispatchAsActor(
+            $this->bibliographicSearchRequest([
+                "query" => "Pageable",
+                "author_cursor" => $first["authors"]["next_cursor"],
+            ])
+        ));
+        self::assertCount(2, $authors["authors"]["items"]);
+        self::assertCount(10, $authors["works"]["items"]);
+
+        $works = $this->successData($this->dispatchAsActor(
+            $this->bibliographicSearchRequest([
+                "query" => "Pageable",
+                "work_cursor" => $first["works"]["next_cursor"],
+            ])
+        ));
+        self::assertCount(10, $works["authors"]["items"]);
+        self::assertCount(2, $works["works"]["items"]);
+
+        foreach ([
+            [
+                "query" => "Pageable",
+                "work_cursor" => $first["authors"]["next_cursor"],
+            ],
+            [
+                "query" => "Different query",
+                "author_cursor" => $first["authors"]["next_cursor"],
+            ],
+        ] as $body) {
+            $rejected = $this->dispatchAsActor(
+                $this->bibliographicSearchRequest($body)
+            );
+            self::assertSame(400, $rejected->get_status());
+            self::assertSame(
+                "biblio_invalid_field_syntax",
+                $rejected->get_data()["code"]
+            );
+        }
+
+        $query = new BibliographicTextSearchQuery("Pageable");
+        $salt = constant("AUTH_SALT");
+        self::assertIsString($salt);
+        $cursor = (new BibliographicSearchCursorCodec(
+            hash("sha256", $salt . ":bibliographic-text-search-v1")
+        ))->encode((new BibliographicAuthorSearchResult(
+            BibliographicAuthorReference::canonical(new AuthorId("rest-page-author-01")),
+            "Pageable Author 01",
+            0
+        ))->cursor($query));
+        $wrongSlot = $this->dispatchAsActor($this->bibliographicSearchRequest([
+            "query" => "Pageable",
+            "work_cursor" => $cursor,
+        ]));
+        self::assertSame(400, $wrongSlot->get_status());
+    }
+
+    public function testBibliographicSearchRestRejectsMalformedJsonUtf8AndUnexpectedQueryInput(): void
+    {
+        foreach ([
+            ["", "biblio_missing_required_field"],
+            ["[]", "biblio_invalid_field_type"],
+            ["{", "rest_invalid_json"],
+            ["{\"query\":\"\xC3\x28\"}", "rest_invalid_json"],
+            [(string) wp_json_encode([
+                "query" => str_repeat("x", 101),
+            ]), "biblio_invalid_field_syntax"],
+            [(string) wp_json_encode([
+                "query" => "Dune",
+                "author_cursor" => [],
+            ]), "biblio_invalid_field_type"],
+        ] as [$body, $code]) {
+            $response = $this->dispatchAsActor(
+                $this->bibliographicSearchRawRequest($body)
+            );
+            self::assertSame(400, $response->get_status());
+            self::assertSame($code, $response->get_data()["code"]);
+        }
+
+        $queryFields = $this->bibliographicSearchRequest(["query" => "Dune"]);
+        $queryFields->set_query_params(["user_id" => "7"]);
+        $response = $this->dispatchAsActor($queryFields);
+        self::assertSame(400, $response->get_status());
+        self::assertSame(
+            "biblio_unknown_request_fields",
+            $response->get_data()["code"]
+        );
     }
 
     public function testBibliographicMaterializationRequiresDesignatedPersonalOwnership(): void
@@ -3592,6 +3767,26 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         ?string $nonce = "valid"
     ): WP_REST_Response {
         return $this->dispatchAsUser($request, $this->actorId, $nonce);
+    }
+
+    /** @param array<string, mixed> $body */
+    private function bibliographicSearchRequest(array $body): WP_REST_Request
+    {
+        return $this->bibliographicSearchRawRequest(
+            (string) wp_json_encode($body)
+        );
+    }
+
+    private function bibliographicSearchRawRequest(string $body): WP_REST_Request
+    {
+        $request = new WP_REST_Request(
+            "POST",
+            "/biblio/v1/me/bibliographic-searches"
+        );
+        $request->set_header("content-type", "application/json");
+        $request->set_body($body);
+
+        return $request;
     }
 
     /** @param array<string, mixed> $body */

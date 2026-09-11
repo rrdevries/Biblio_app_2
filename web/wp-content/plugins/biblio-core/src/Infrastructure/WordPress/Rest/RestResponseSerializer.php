@@ -25,6 +25,7 @@ use Biblio\Core\Application\Wishlist\WishlistEntryView;
 use Biblio\Core\Application\Catalog\LocalEditionResolutionType;
 use Biblio\Core\Application\Metadata\{AddBookCommitResult,AddBookExistingEdition,AddBookExistingItem,AddBookMetadataLookupResult,ClassifiedMetadataCandidate,MetadataCandidateId,MetadataFieldBinding,MetadataLookupStatus};
 use Biblio\Core\Application\Metadata\Discovery\{BibliographicDiscoveryCandidate,BibliographicDiscoveryResult,BibliographicMaterializationResult};
+use Biblio\Core\Application\Metadata\Search\BibliographicTextSearchResult;
 use Biblio\Core\Application\Reading\History\ReadingHistoryEntry;
 use Biblio\Core\Application\Reading\History\ReadingHistoryPage;
 use Biblio\Core\Catalog\WorkId;
@@ -47,7 +48,8 @@ final readonly class RestResponseSerializer
         private ReadingHistoryCursorCodec $historyCursors,
         private PrivateNoteCursorCodec $privateNoteCursors,
         private ?WorkDiscoveryCursorCodec $workDiscoveryCursors = null,
-        private ?PublicAssessmentCursorCodec $publicAssessmentCursors = null
+        private ?PublicAssessmentCursorCodec $publicAssessmentCursors = null,
+        private ?RestBibliographicTextSearchContract $bibliographicSearch = null
     ) {
     }
 
@@ -75,6 +77,13 @@ final readonly class RestResponseSerializer
             "results" => array_map($this->bibliographicCandidate(...), $result->candidates()),
             "provider_attempts" => $result->attempts(),
         ];
+    }
+
+    /** @return array<string,mixed> */
+    public function bibliographicTextSearch(
+        BibliographicTextSearchResult $result
+    ): array {
+        return $this->bibliographicSearchContract()->serialize($result);
     }
 
     /** @return array<string,mixed> */
@@ -773,6 +782,14 @@ final readonly class RestResponseSerializer
     private function workDiscoveryCursorCodec(): WorkDiscoveryCursorCodec
     {
         return $this->workDiscoveryCursors ?? new WorkDiscoveryCursorCodec();
+    }
+
+    private function bibliographicSearchContract(): RestBibliographicTextSearchContract
+    {
+        return $this->bibliographicSearch
+            ?? throw new LogicException(
+                "Bibliographic text-search REST contract is not configured."
+            );
     }
 
     private function publicAssessmentCursorCodec(): PublicAssessmentCursorCodec
