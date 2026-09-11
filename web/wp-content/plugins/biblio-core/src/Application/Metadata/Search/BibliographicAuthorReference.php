@@ -59,6 +59,15 @@ final readonly class BibliographicAuthorReference
         return "search-author-" . hash("sha256", "author\0" . $identity);
     }
 
+    public function cursorContextId(): string
+    {
+        return hash("sha256", implode("\0", [
+            $this->kind->value,
+            $this->authorId?->value() ?? "",
+            $this->providerIdentity?->stableKey() ?? "",
+        ]));
+    }
+
     /** @return list<string> */
     public function strongIdentityKeys(): array
     {

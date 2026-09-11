@@ -2875,3 +2875,34 @@ Google Books remain separate. Schema stays `1023`; Biblio Core is `2.8.0` and
 Biblio UI stays `0.15.1`. No current or historical V1 data was read or changed.
 Detailed evidence:
 `docs/76-mh-edition-01-lazy-editions-by-selected-work.md`.
+
+### MH-AUTHOR-01 — pageable Works by selected Author
+
+Status: **GO / CLOSED** after full Core gates and independent review.
+
+The shared application boundary accepts exactly one existing typed Author
+reference and returns pageable Work results in the established provider-neutral
+Work shape. Canonical Authors read only Works linked through the existing
+`author|co_author` contributor semantics, ordered by Work title and Work ID.
+Author existence is checked once and Authors and Series are batch-projected;
+the page uses four bounded SQL reads instead of per-Work queries.
+
+An Open Library Author uses one bounded
+`/authors/{author}/works.json?limit&offset` request. It performs no Author
+search, general Work search, Edition call or per-Work enrichment. The endpoint
+reliably supplies Work keys and titles but only Author keys, not contributor
+names; external Work `authors` therefore remains an honest empty list instead
+of fabricating names or adding forbidden calls.
+
+The signed opaque cursor binds the exact Author reference, local/external lane
+and continuation. A canonical Author reaches Open Library only when its typed
+reference already carries strong Open Library Author evidence; there is no name
+bridge. Deduplication uses only canonical Work identity, same-provider Work
+identity or a batch-verified provider mapping to a canonical Work linked to the
+selected Author. Provider miss/failure stays typed and local results survive an
+external failure.
+
+There is no REST/UI consumer, schema, Edition, Google Books, Wishlist, Add Book
+or V1 change. Schema stays `1023`; Biblio Core is `2.9.0` and Biblio UI stays
+`0.15.1`. Detailed evidence:
+`docs/77-mh-author-01-pageable-works-by-selected-author.md`.

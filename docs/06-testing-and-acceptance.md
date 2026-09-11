@@ -3387,3 +3387,34 @@ MH-EDITION-01 is accepted when:
 
 Status: **GO / CLOSED**. Detailed closure evidence is recorded in
 `docs/76-mh-edition-01-lazy-editions-by-selected-work.md`.
+
+## 103. MH-AUTHOR-01 pageable Works by selected Author
+
+MH-AUTHOR-01 is accepted when:
+
+- exactly one typed canonical or Open Library Author reference is the selector;
+  free name/title/ISBN queries and fuzzy/name bridges are absent;
+- canonical Works are deterministically pageable by Work title and ID through
+  existing `author|co_author` relations, including co-authored Works;
+- local Authors and Series are page-batched and the Work read has no hidden
+  top-ten, Edition, Item or per-Work query fan-out;
+- one Open Library page performs exactly one
+  `/authors/{author}/works.json?limit&offset` request and no Author search,
+  general Work search, Edition, Google or detail-enrichment request;
+- provider records require the exact selected Author relation, stable Work key
+  and valid title; malformed records are safely skipped and a wholly unusable
+  page is typed malformed;
+- the signed cursor binds exact Author reference, provider context, lane and
+  offset; malformed, tampered and wrong-Author cursors fail closed;
+- local precedes external, provider order stays presentation-only and dedup uses
+  only canonical, same-provider or proven Author-scoped mapped Work identity;
+  same-title Works without such proof remain separate;
+- normal miss and all existing provider failure states remain typed, with local
+  results retained on external failure;
+- MH-SEARCH, MH-EDITION, MH-DISC, Wishlist, Add Book, unit, integration, PHP
+  syntax, PHPStan, Composer/platform, WordPress smoke, manifest and whitespace
+  gates pass; schema remains `1023`, no V1 data is used and independent review
+  finds no blocker.
+
+Status: **GO / CLOSED**. Detailed closure evidence is recorded in
+`docs/77-mh-author-01-pageable-works-by-selected-author.md`.

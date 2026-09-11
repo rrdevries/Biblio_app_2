@@ -1,0 +1,27 @@
+{
+  "links": {
+    "self": "/authors/OL1A/works.json?limit=2&offset=0",
+    "author": "/authors/OL1A",
+    "next": "/authors/OL1A/works.json?limit=2&offset=2"
+  },
+  "size": 3,
+  "entries": [
+    {
+      "key": "/works/OL10W",
+      "title": "Alpha",
+      "authors": [
+        {"author": {"key": "/authors/OL1A"}},
+        {"author": {"key": "/authors/OL2A"}}
+      ],
+      "isbn": ["9780000000000"]
+    },
+    {
+      "key": "/works/OL11W",
+      "title": "Beta",
+      "authors": [
+        {"author": {"key": "/authors/OL1A"}}
+      ],
+      "publish_date": "2020"
+    }
+  ]
+}

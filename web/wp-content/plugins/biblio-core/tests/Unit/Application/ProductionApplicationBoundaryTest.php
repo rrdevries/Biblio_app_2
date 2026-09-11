@@ -158,6 +158,7 @@ final class ProductionApplicationBoundaryTest extends TestCase
             "addBookCommit",
             "addBookMetadataLookup",
             "assessmentQueries",
+            "bibliographicAuthorWorkSearch",
             "bibliographicDiscovery",
             "bibliographicEditionSearch",
             "bibliographicMaterialization",

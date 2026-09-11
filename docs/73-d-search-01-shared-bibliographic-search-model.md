@@ -1,6 +1,6 @@
 # 73 — D-SEARCH-01 Shared Bibliographic Search | Contract & UX model
 
-Status: **DECISION CANONICALIZED / AUTHOR-WORK + LAZY EDITION APPLICATION CONTRACTS IMPLEMENTED**
+Status: **DECISION CANONICALIZED / AUTHOR-WORK + WORKS-BY-AUTHOR + LAZY EDITION APPLICATION CONTRACTS IMPLEMENTED**
 
 Date: 2026-09-11
 
@@ -23,10 +23,12 @@ snapshot, count or record.
 
 MH-SEARCH-01A and MH-SEARCH-01B implement the parallel application-level text
 boundary through local canonical plus Open Library Author/Work search.
+MH-AUTHOR-01 implements pageable canonical/Open Library Works for exactly one
+selected strong Author reference.
 MH-EDITION-01 implements lazy pageable local/Open Library Editions for exactly
-one selected Work. Works-by-Author, REST/UI reachability and consumer cutover
-remain separate; therefore this document's complete progressive target is only
-partially implemented.
+one selected Work. REST/UI reachability, Google Edition leads and consumer
+cutover remain separate; therefore this document's complete progressive target
+is only partially implemented.
 
 ## 2. Search principles
 
@@ -406,7 +408,7 @@ The critical performance path is:
 
 ```text
 Author/Work discovery
-  -> explicit selection
+  -> explicit Author-to-Works or direct Work selection
   -> Edition discovery for exactly one selected Work
 ```
 
@@ -418,8 +420,8 @@ only after this structural latency reduction is implemented and measured.
 
 ## 17. Current implementation delta
 
-The current MH-DISC-01 implementation remains valid for its closed slice, but
-does not yet implement this model:
+The current MH-DISC-01 production route remains valid for its closed slice, but
+does not consume the parallel search contracts yet:
 
 - local text discovery emits Work and Edition candidates in one fixed, flat
   result set;
@@ -427,8 +429,8 @@ does not yet implement this model:
   Editions for every returned Work;
 - Google Books returns at most ten Volume-shaped Edition candidates;
 - text orchestration stops after the first provider with candidates;
-- there is no Author result type, Author search or Works-by-Author contract;
-- bibliographic results have no independent Author/Work/Edition pagination;
+- its response has no Author result type or independent Author/Work/Edition
+  pagination;
 - the Wishlist consumer renders the flat result set in a modal with immediate
   Work-only/Edition-specific actions;
 - current Wishlist, Add Book and `/me/works` clients use exact response-field
@@ -447,10 +449,11 @@ consumer contract until migration is explicitly implemented.
 1. **MH-SEARCH-01A/01B — shared paged Author/Work search:** implemented as a
    parallel contract with local canonical and Open Library results, independent
    continuations, strong identity and no consumer changes.
-2. **MH-AUTHOR-01 — Works by selected Author:** add the separate pageable local
-   and Open Library continuation from the retained strong Author reference.
-3. **MH-EDITION-01 — lazy Editions-by-Work:** add the selected-Work Edition
-   contract and remove Open Library's initial Edition fan-out.
+2. **MH-AUTHOR-01 — Works by selected Author:** implemented as a parallel
+   pageable local/Open Library boundary from the retained strong Author
+   reference.
+3. **MH-EDITION-01 — lazy Editions-by-Work:** implemented as the selected-Work
+   Edition contract without initial Edition fan-out.
 4. **MH-GBOOK-01 — Volume Edition leads:** isolate the secondary Google Volume
    path and prove that it never claims Work identity or Work-only capability.
 5. **WISH-DISC-F2 — external discovery runtime reliability:** harden and
@@ -482,13 +485,15 @@ language or no-fan-out rules above.
 
 ## 20. Outside scope and verdict
 
-D-SEARCH-01 itself added no runtime. MH-SEARCH-01B now supplies the bounded
-local/Open Library Author/Work search implementation without REST, schema,
-frontend, filter, advanced search, fuzzy search, index,
+D-SEARCH-01 itself added no runtime. MH-SEARCH-01B, MH-AUTHOR-01 and
+MH-EDITION-01 now supply bounded local/Open Library Author/Work search,
+Works-by-Author and lazy Editions-by-Work application boundaries without REST,
+schema, frontend, filter, advanced search, fuzzy search, index,
 Elasticsearch/OpenSearch, ML ranking, recommendation, Wishlist redesign, Add
 Book redesign or global app search.
 
 Verdict: **GO**. The shared one-field, Author/Work-first, ISBN-to-Edition,
 lazy-Edition model is coherent with Biblio's hierarchy, provider abstraction,
-consumer boundaries and performance goals. The initial Author/Work search is
-implemented; remaining behavior stays in the bounded follow-up slices above.
+consumer boundaries and performance goals. The Author/Work search,
+Works-by-Author and lazy Edition application paths are implemented; remaining
+behavior stays in the bounded follow-up slices above.

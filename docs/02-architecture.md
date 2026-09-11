@@ -1773,3 +1773,32 @@ local results. The result retains both provider Edition and provider Work
 identity for a later generic materialization adapter. The service is wired
 through `CoreApplication` but has no REST, UI, snapshot or materialization side
 effect. Schema remains 1023.
+
+## 43. MH-AUTHOR-01 pageable Works for one selected Author
+
+`BibliographicAuthorWorkSearchService` is the authenticated shared application
+boundary after exact Author selection. Its only selector is the existing typed
+`BibliographicAuthorReference`; it accepts no free name, query, ISBN, provider,
+actor or Library input. The output reuses `BibliographicWorkSearchResult` with
+typed provider attempts and an Author-bound opaque continuation.
+
+`WpdbBibliographicAuthorWorkSearchProvider` joins the exact canonical Author to
+Works through `work_contributors`. Existing `author` and `co_author` are the
+complete canonical role set. Work order is title then Work ID; all Authors and
+Series for the bounded Work page are loaded in two batchqueries after the Work
+query. No Edition or Item table participates.
+
+`OpenLibraryAuthorWorkSearchProvider` makes exactly one
+`/authors/{id}/works.json?limit&offset` request for the selected Open Library
+Author. It validates top-level Author context, per-record Author membership,
+stable Work keys and titles. Malformed records are skipped while valid siblings
+survive; an entirely unusable page is typed malformed. Provider Author keys
+have no display name in this response, so no Author presentation is invented
+and no detail/search enrichment is performed.
+
+The signed cursor binds the complete Author reference, `local|external` lane
+and next offset. A canonical reference enters the external lane only when it
+already carries Open Library Author evidence. Provider-to-canonical Work
+deduplication is one Author-scoped batchquery; title/name similarity is never
+used. The service is exposed through `CoreApplication` without REST/UI,
+snapshot, materialization, persistence migration or schema change.

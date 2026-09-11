@@ -7,13 +7,16 @@ namespace Biblio\Core\Infrastructure\Persistence\WordPress;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicProviderIdentityConflict;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicProviderIdentityRepository;
 use Biblio\Core\Application\Metadata\Search\BibliographicProviderEntityIdentity;
+use Biblio\Core\Application\Metadata\Search\BibliographicAuthorWorkMappingLookup;
 use Biblio\Core\Application\Metadata\Search\BibliographicWorkProviderIdentityLookup;
+use Biblio\Core\Catalog\AuthorId;
 use Biblio\Core\Catalog\EditionId;
 use Biblio\Core\Catalog\WorkId;
 use wpdb;
 
 final readonly class WpdbBibliographicProviderIdentityRepository implements
     BibliographicProviderIdentityRepository,
+    BibliographicAuthorWorkMappingLookup,
     BibliographicWorkProviderIdentityLookup
 {
     public function __construct(private wpdb $database, private CoreTableNames $tables) {}
@@ -56,6 +59,35 @@ final readonly class WpdbBibliographicProviderIdentityRepository implements
                 BibliographicProviderEntityIdentity::work($providerKey, (string) $recordId),
             $values
         );
+    }
+
+    public function mappedWorksForAuthor(
+        AuthorId $authorId,
+        string $providerKey,
+        array $providerWorkRecordIds
+    ): array {
+        if ($providerWorkRecordIds === []) { return []; }
+        $placeholders = implode(",", array_fill(0, count($providerWorkRecordIds), "%s"));
+        $rows = $this->database->get_results($this->database->prepare(
+            "SELECT identities.provider_record_id,identities.work_id "
+                . "FROM `{$this->tables->bibliographicProviderIdentities()}` identities "
+                . "INNER JOIN `{$this->tables->workContributors()}` contributors "
+                . "ON contributors.work_id=identities.work_id "
+                . "WHERE identities.provider_key=%s "
+                . "AND identities.source_entity_type='work' "
+                . "AND identities.target_type='work' "
+                . "AND contributors.author_id=%s "
+                . "AND contributors.contributor_role IN ('author','co_author') "
+                . "AND identities.provider_record_id IN ({$placeholders})",
+            $providerKey,
+            $authorId->value(),
+            ...$providerWorkRecordIds
+        ));
+        $result = [];
+        foreach ($rows as $row) {
+            $result[(string) $row->provider_record_id] = new WorkId((string) $row->work_id);
+        }
+        return $result;
     }
 
     public function claimWork(string $provider, string $sourceType, string $recordId, WorkId $workId): void
