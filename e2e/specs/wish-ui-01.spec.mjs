@@ -85,6 +85,63 @@ function externalCandidate(overrides = {}) {
     };
 }
 
+function localWorkCandidate(overrides = {}) {
+    return {
+        candidate_id: "candidate-local-work",
+        type: "local_work",
+        work_id: "e2e-work-missing-metadata",
+        edition_id: null,
+        title: "The Secret Commonwealth",
+        subtitle: null,
+        contributors: [],
+        languages: [],
+        publishers: [],
+        publication_date: null,
+        page_count: null,
+        format: null,
+        isbn_10: null,
+        isbn_13: null,
+        provider_evidence: null,
+        presentation_order: 0,
+        capabilities: {
+            can_add_work_only: true,
+            can_add_edition_specific: false,
+        },
+        ...overrides,
+    };
+}
+
+function localEditionCandidate(overrides = {}) {
+    return {
+        ...localWorkCandidate(),
+        candidate_id: "candidate-local-edition",
+        type: "local_edition",
+        work_id: "e2e-work-history",
+        edition_id: "e2e-edition-history",
+        title: HISTORY_TITLE,
+        isbn_13: "9780306406157",
+        capabilities: {
+            can_add_work_only: true,
+            can_add_edition_specific: true,
+        },
+        ...overrides,
+    };
+}
+
+function localDiscoveryResponse(query, results) {
+    return {
+        query: { type: "text", normalized: query.toLowerCase() },
+        status: "results",
+        discovery_id: null,
+        results,
+        provider_attempts: ["open_library", "google_books"].map((provider_key) => ({
+            provider_key,
+            status: "miss",
+            failure_reason: null,
+        })),
+    };
+}
+
 function wishlistEntry(overrides = {}) {
     return {
         wishlist_entry_id: "wishlist-entry-race",
@@ -169,6 +226,9 @@ test("owner list keeps one Work wish and two Edition wishes separate in the shar
 
 test("empty, add, duplicate and direct remove preserve authoritative state", async ({ page }) => {
     fixtureAction("wishlist-reset");
+    await routeDiscovery(page, async (query) => localDiscoveryResponse(query, [
+        localWorkCandidate(),
+    ]));
     await open(page);
     await expect(page.getByRole("heading", { level: 2, name: "Je verlanglijst is nog leeg" })).toBeVisible();
     await capture(page, "wishlist-empty-desktop");
@@ -194,6 +254,20 @@ test("empty, add, duplicate and direct remove preserve authoritative state", asy
 
 test("local discovery keeps concrete Editions separate and adds the selected one", async ({ page }) => {
     fixtureAction("wishlist-reset");
+    await routeDiscovery(page, async (query) => localDiscoveryResponse(query, [
+        localWorkCandidate({
+            candidate_id: "candidate-history-work",
+            work_id: "e2e-work-history",
+            title: HISTORY_TITLE,
+        }),
+        localEditionCandidate(),
+        localEditionCandidate({
+            candidate_id: "candidate-local-edition-other",
+            edition_id: "e2e-edition-history-other",
+            isbn_13: "9780380018529",
+            presentation_order: 1,
+        }),
+    ]));
     await open(page);
     await page.getByRole("button", { name: "Boek toevoegen aan verlanglijst" }).click();
     const dialog = page.getByRole("dialog", { name: "Boek toevoegen aan verlanglijst" });
@@ -210,6 +284,13 @@ test("local discovery keeps concrete Editions separate and adds the selected one
 });
 
 test("reverse Work-only conflict is product copy and never deletes two Edition wishes", async ({ page }) => {
+    await routeDiscovery(page, async (query) => localDiscoveryResponse(query, [
+        localWorkCandidate({
+            candidate_id: "candidate-history-work",
+            work_id: "e2e-work-history",
+            title: HISTORY_TITLE,
+        }),
+    ]));
     await open(page);
     const before = await rows(page).count();
     const dialog = await addWork(page, HISTORY_TITLE, HISTORY_TITLE);
@@ -223,6 +304,13 @@ test("reverse Work-only conflict is product copy and never deletes two Edition w
 
 test("a concurrent reverse conflict reloads the authoritative Edition state", async ({ page }) => {
     fixtureAction("wishlist-reset");
+    await routeDiscovery(page, async (query) => localDiscoveryResponse(query, [
+        localWorkCandidate({
+            candidate_id: "candidate-history-work",
+            work_id: "e2e-work-history",
+            title: HISTORY_TITLE,
+        }),
+    ]));
     const edition = wishlistEntry({
         target_type: "edition_specific",
         work_id: "e2e-work-history",
@@ -327,6 +415,57 @@ test("one discovery field presents external title, author, ISBN and multiple Edi
     await expect(dialog.getByRole("status")).toContainText("1 resultaat gevonden");
     await expect(dialog).toContainText("9780060512750");
     await capture(page, "wishlist-isbn-result");
+});
+
+test("text discovery keeps local-first breadth regardless of Wishlist membership", async ({ page }) => {
+    await routeDiscovery(page, async (query) => {
+        if (query === "lokale providerfout") {
+            return {
+                ...discoveryResponse(query, [], "provider_failure"),
+                status: "results",
+                results: [localWorkCandidate()],
+            };
+        }
+        return discoveryResponse(query, [
+            localWorkCandidate(),
+            externalCandidate({
+                candidate_id: "candidate-other-work",
+                type: "external_work_candidate",
+                title: "The Book of Dust",
+                subtitle: null,
+                languages: [],
+                publishers: [],
+                publication_date: null,
+                page_count: null,
+                format: null,
+                isbn_10: null,
+                isbn_13: null,
+                capabilities: {
+                    can_add_work_only: true,
+                    can_add_edition_specific: false,
+                },
+            }),
+        ]);
+    });
+    await open(page);
+    await page.getByRole("button", { name: "Boek toevoegen aan verlanglijst" }).click();
+    const dialog = page.getByRole("dialog", { name: "Boek toevoegen aan verlanglijst" });
+    const searchbox = dialog.getByRole("searchbox");
+
+    await searchbox.fill("the secret commonwealth");
+    await dialog.getByRole("button", { name: "Zoeken" }).click();
+    await expect(dialog.locator(".biblio-ui__wishlist-discovery-result")).toHaveCount(2);
+    await expect(dialog.locator(".biblio-ui__wishlist-discovery-result").first())
+        .toHaveAttribute("data-result-type", "local_work");
+    await expect(dialog.getByText("The Book of Dust", { exact: true })).toBeVisible();
+
+    await searchbox.fill("lokale providerfout");
+    await dialog.getByRole("button", { name: "Zoeken" }).click();
+    await expect(dialog.locator('[data-result-type="local_work"]')).toBeVisible();
+    await expect(dialog.getByRole("status")).toContainText("1 resultaat gevonden");
+    await expect(dialog.getByRole("status")).toContainText(
+        "Externe uitbreiding is tijdelijk niet volledig beschikbaar"
+    );
 });
 
 test("a late search response cannot replace a newer query", async ({ page }) => {
@@ -698,6 +837,13 @@ test("miss, provider failure and expired snapshot remain truthful and recoverabl
 
 test("Book Detail adds a specific Edition and refines a Work wish in place", async ({ page }) => {
     fixtureAction("wishlist-reset");
+    await routeDiscovery(page, async (query) => localDiscoveryResponse(query, [
+        localWorkCandidate({
+            candidate_id: "candidate-history-work",
+            work_id: "e2e-work-history",
+            title: HISTORY_TITLE,
+        }),
+    ]));
     await page.goto("/mijn-bibliotheek/?library_id=e2e-library-other&item_id=e2e-item-history");
     const action = page.getByRole("button", { name: "Op verlanglijst" });
     await expect(action).toBeVisible();

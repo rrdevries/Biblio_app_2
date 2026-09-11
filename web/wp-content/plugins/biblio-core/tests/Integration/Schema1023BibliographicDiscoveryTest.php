@@ -10,19 +10,27 @@ use Biblio\Core\Application\Metadata\Discovery\BibliographicRecordIdGenerator;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicCandidateType;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicDiscoveryCandidate;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicDiscoveryQuery;
+use Biblio\Core\Application\Metadata\Discovery\BibliographicDiscoveryService;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicDiscoverySnapshot;
+use Biblio\Core\Application\Metadata\Discovery\BibliographicProviderDiscoveryResult;
+use Biblio\Core\Application\Metadata\Discovery\BibliographicTextDiscoveryProvider;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicMaterializationIntent;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicMaterializationAuthorization;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicMaterializationService;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicTextQuery;
 use Biblio\Core\Application\Metadata\MetadataCandidateId;
+use Biblio\Core\Application\Metadata\CandidateClassifier;
+use Biblio\Core\Application\Metadata\FirstSufficientMetadataLookupService;
 use Biblio\Core\Application\Metadata\MetadataClock;
 use Biblio\Core\Application\Metadata\MetadataField;
 use Biblio\Core\Application\Metadata\MetadataFieldConfirmationState;
 use Biblio\Core\Application\Metadata\MetadataFieldValue;
 use Biblio\Core\Application\Metadata\MetadataLookupId;
+use Biblio\Core\Application\Metadata\MetadataLookupIdGenerator;
 use Biblio\Core\Application\Metadata\MetadataMatchMethod;
+use Biblio\Core\Application\Metadata\MetadataProvider;
 use Biblio\Core\Application\Metadata\MetadataRecordId;
+use Biblio\Core\Application\Metadata\ProviderLookupResult;
 use Biblio\Core\Catalog\CanonicalIsbnIdentity;
 use Biblio\Core\Catalog\EditionId;
 use Biblio\Core\Catalog\Edition;
@@ -49,6 +57,140 @@ use DateTimeImmutable;
 
 final class Schema1023BibliographicDiscoveryTest extends PersistenceIntegrationTestCase
 {
+    public function testTextDiscoveryRetainsBreadthAfterMaterializationAndWishlistAdd(): void
+    {
+        $actor = new UserId("breadth-actor");
+        $clock = new Schema1023FixedClock();
+        $query = BibliographicDiscoveryQuery::text(
+            new BibliographicTextQuery("harry potter")
+        );
+        $first = $this->workCandidate(
+            $query,
+            "/works/HP-ONE",
+            "Harry Potter One",
+            0
+        );
+        $second = $this->workCandidate(
+            $query,
+            "/works/HP-TWO",
+            "Harry Potter Two",
+            1
+        );
+        $snapshots = new WpdbBibliographicDiscoverySnapshotRepository(
+            $this->database,
+            $this->tableNames
+        );
+        $identities = new WpdbBibliographicProviderIdentityRepository(
+            $this->database,
+            $this->tableNames
+        );
+        $works = new WpdbWorkRepository($this->database, $this->tableNames);
+        $editions = new WpdbEditionRepository($this->database, $this->tableNames);
+        $claims = new WpdbEditionIdentifierClaimRepository(
+            $this->database,
+            $this->tableNames
+        );
+        $metadata = new WpdbBibliographicMetadataRepository(
+            $this->database,
+            $this->tableNames
+        );
+        $localEditions = new LocalEditionResolver(
+            new IsbnCanonicalizer(), $claims, $editions, $metadata
+        );
+        $transactions = new WpdbTransactionManager($this->database);
+        $discovery = new BibliographicDiscoveryService(
+            new Schema1023Actor($actor),
+            new IsbnCanonicalizer(),
+            new WpdbBibliographicLocalDiscoveryRepository(
+                $this->database,
+                $this->tableNames
+            ),
+            $localEditions,
+            $works,
+            new FirstSufficientMetadataLookupService(
+                new CandidateClassifier(),
+                new Schema1023IsbnProvider("isbn-primary"),
+                new Schema1023IsbnProvider("isbn-fallback")
+            ),
+            new Schema1023TextProvider(
+                "open_library",
+                BibliographicProviderDiscoveryResult::candidates([$first, $second])
+            ),
+            new Schema1023TextProvider(
+                "google_books",
+                BibliographicProviderDiscoveryResult::miss()
+            ),
+            $identities,
+            $snapshots,
+            new Schema1023LookupIds(),
+            $clock,
+            $transactions
+        );
+
+        $initial = $discovery->discover("harry potter");
+        self::assertCount(2, $initial->candidates());
+        $discoveryId = $initial->discoveryId()
+            ?? throw new \LogicException("Expected external discovery snapshot.");
+        $materializer = new BibliographicMaterializationService(
+            new Schema1023Actor($actor),
+            new Schema1023AllowMaterialization(),
+            $snapshots,
+            $identities,
+            $localEditions,
+            $claims,
+            $works,
+            $editions,
+            new WpdbMetadataFieldReviewRepository($this->database, $this->tableNames),
+            new Schema1023Ids(),
+            $clock,
+            $transactions
+        );
+        $materialized = $materializer->materialize(
+            $discoveryId,
+            new MetadataCandidateId($first->id()),
+            BibliographicMaterializationIntent::WorkOnly
+        );
+        self::assertSame(1, $this->database->insert(
+            $this->tableNames->wishlistWorkStates(),
+            [
+                "user_id" => $actor->value(),
+                "work_id" => $materialized->work()->id()->value(),
+                "target_type" => "work_only",
+                "created_at" => "2026-09-10 12:00:00.000000",
+                "updated_at" => "2026-09-10 12:00:00.000000",
+            ]
+        ));
+        self::assertSame(1, $this->database->insert(
+            $this->tableNames->wishlistEntries(),
+            [
+                "wishlist_entry_id" => "breadth-wishlist-entry",
+                "user_id" => $actor->value(),
+                "work_id" => $materialized->work()->id()->value(),
+                "target_type" => "work_only",
+                "edition_id" => null,
+                "created_at" => "2026-09-10 12:00:00.000000",
+                "updated_at" => "2026-09-10 12:00:00.000000",
+            ]
+        ));
+
+        $repeated = $discovery->discover("harry potter");
+
+        self::assertSame([
+            BibliographicCandidateType::LocalWork,
+            BibliographicCandidateType::ExternalWork,
+        ], array_map(static fn ($candidate) => $candidate->type(), $repeated->candidates()));
+        self::assertSame(
+            $materialized->work()->id()->value(),
+            $repeated->candidates()[0]->workId()?->value()
+        );
+        self::assertSame(
+            "/works/HP-TWO",
+            $repeated->candidates()[1]->providerRecordId()
+        );
+        self::assertSame(1, $this->countRows($this->tableNames->wishlistEntries()));
+        self::assertSame(0, $this->countRows($this->tableNames->items()));
+    }
+
     public function testLocalTextDiscoveryMatchesTitleAndAuthorTokensWithoutProviderIdentity(): void
     {
         $this->database->insert($this->tableNames->works(), [
@@ -790,6 +932,33 @@ final class Schema1023BibliographicDiscoveryTest extends PersistenceIntegrationT
         );
     }
 
+    private function workCandidate(
+        BibliographicDiscoveryQuery $query,
+        string $providerWorkId,
+        string $title,
+        int $order
+    ): BibliographicDiscoveryCandidate {
+        return BibliographicDiscoveryCandidate::external(
+            BibliographicCandidateType::ExternalWork,
+            "open_library",
+            $providerWorkId,
+            $providerWorkId,
+            new DateTimeImmutable("2026-09-10T12:00:00+00:00"),
+            MetadataMatchMethod::TextSearch,
+            $query,
+            $title,
+            null,
+            null,
+            ["Synthetic Author"],
+            [],
+            [],
+            null,
+            null,
+            null,
+            $order
+        );
+    }
+
     private function countRows(string $table): int
     {
         return (int) $this->database->get_var("SELECT COUNT(*) FROM `{$table}`");
@@ -820,4 +989,41 @@ final class Schema1023Ids implements BibliographicRecordIdGenerator
 {
     public function nextWorkId(): WorkId { return new WorkId("materialized-work"); }
     public function nextEditionId(): EditionId { return new EditionId("materialized-edition"); }
+}
+
+final class Schema1023LookupIds implements MetadataLookupIdGenerator
+{
+    private int $next = 1;
+
+    public function next(): MetadataLookupId
+    {
+        return new MetadataLookupId(sprintf("lookup-%032x", $this->next++));
+    }
+}
+
+final readonly class Schema1023TextProvider implements BibliographicTextDiscoveryProvider
+{
+    public function __construct(
+        private string $providerKey,
+        private BibliographicProviderDiscoveryResult $result
+    ) {}
+
+    public function key(): string { return $this->providerKey; }
+
+    public function search(
+        BibliographicTextQuery $query,
+        BibliographicDiscoveryQuery $identity
+    ): BibliographicProviderDiscoveryResult {
+        return $this->result;
+    }
+}
+
+final readonly class Schema1023IsbnProvider implements MetadataProvider
+{
+    public function __construct(private string $providerKey) {}
+    public function key(): string { return $this->providerKey; }
+    public function lookup(CanonicalIsbnIdentity $isbn): ProviderLookupResult
+    {
+        return ProviderLookupResult::miss();
+    }
 }

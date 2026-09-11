@@ -4,6 +4,7 @@ import test from "node:test";
 
 import { BiblioApiError } from "../../assets/js/api.js";
 import {
+    discoveryStatusCopy,
     discoveryErrorMessage,
     readWishlistEntry,
     readWishlistList,
@@ -140,4 +141,25 @@ test("Wishlist discovery distinguishes expiry from malformed and normal errors",
     assert.match(discoveryErrorMessage(expired), /verlopen of niet meer beschikbaar/);
     assert.match(discoveryErrorMessage(malformed), /niet veilig lezen/);
     assert.doesNotMatch(discoveryErrorMessage(expired), /private|snapshot|candidate/i);
+});
+
+test("Wishlist keeps local result copy truthful when external expansion fails", () => {
+    const copy = discoveryStatusCopy({
+        query: { type: "text", normalized: "harry potter" },
+        status: "results",
+        results: [{ type: "local_work" }],
+        provider_attempts: [{
+            provider_key: "open_library",
+            status: "unavailable",
+            failure_reason: "network",
+        }, {
+            provider_key: "google_books",
+            status: "miss",
+            failure_reason: null,
+        }],
+    });
+
+    assert.match(copy, /1 resultaat gevonden/);
+    assert.match(copy, /Externe uitbreiding is tijdelijk niet volledig beschikbaar/);
+    assert.doesNotMatch(copy, /open_library|google_books/);
 });

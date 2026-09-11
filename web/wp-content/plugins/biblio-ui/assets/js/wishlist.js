@@ -130,6 +130,34 @@ export function discoveryErrorMessage(error) {
     return wishlistErrorMessage(error);
 }
 
+export function discoveryStatusCopy(discovery) {
+    if (discovery.status === "no_results") {
+        return "Geen boeken gevonden.";
+    }
+    if (discovery.status === "provider_failure") {
+        return "Zoeken buiten Biblio lukt tijdelijk niet. Probeer het opnieuw.";
+    }
+    if (discovery.status === "configuration_failure") {
+        return "Zoeken buiten Biblio is tijdelijk niet beschikbaar. Probeer het later opnieuw.";
+    }
+    if (discovery.status === "invalid_provider_response") {
+        return "Externe zoekresultaten konden niet veilig worden gelezen. Probeer het opnieuw.";
+    }
+    const count = `${discovery.results.length} ${discovery.results.length === 1 ? "resultaat" : "resultaten"} gevonden.`;
+    const externalExpansionFailed = discovery.query.type === "text"
+        && discovery.results.some((candidate) => candidate.type.startsWith("local_"))
+        && !discovery.results.some((candidate) => candidate.type.startsWith("external_"))
+        && discovery.provider_attempts.some((attempt) => (
+            attempt.status === "unavailable"
+            || attempt.status === "rate_limited"
+            || attempt.status === "configuration_error"
+            || attempt.status === "invalid_response"
+        ));
+    return externalExpansionFailed
+        ? `${count} Externe uitbreiding is tijdelijk niet volledig beschikbaar.`
+        : count;
+}
+
 function el(documentImpl, tagName, {
     className,
     textContent,
@@ -482,22 +510,6 @@ export function createWishlistApp({
             || candidate.type === "external_work_candidate"
             ? "Boek"
             : "Specifieke uitgave";
-    }
-
-    function discoveryStatusCopy(discovery) {
-        if (discovery.status === "no_results") {
-            return "Geen boeken gevonden.";
-        }
-        if (discovery.status === "provider_failure") {
-            return "Zoeken buiten Biblio lukt tijdelijk niet. Probeer het opnieuw.";
-        }
-        if (discovery.status === "configuration_failure") {
-            return "Zoeken buiten Biblio is tijdelijk niet beschikbaar. Probeer het later opnieuw.";
-        }
-        if (discovery.status === "invalid_provider_response") {
-            return "Externe zoekresultaten konden niet veilig worden gelezen. Probeer het opnieuw.";
-        }
-        return `${discovery.results.length} ${discovery.results.length === 1 ? "resultaat" : "resultaten"} gevonden.`;
     }
 
     function finishWishlistMutation(dialog, added, wasPresent, action) {

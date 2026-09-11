@@ -16,6 +16,7 @@ use Biblio\Core\Application\Metadata\Discovery\BibliographicDiscoverySnapshotRep
 use Biblio\Core\Application\Metadata\Discovery\BibliographicDiscoveryStatus;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicLocalDiscoveryRepository;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicProviderDiscoveryResult;
+use Biblio\Core\Application\Metadata\Discovery\BibliographicProviderIdentityRepository;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicTextDiscoveryProvider;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicTextQuery;
 use Biblio\Core\Application\Metadata\FirstSufficientMetadataLookupService;
@@ -47,7 +48,116 @@ use PHPUnit\Framework\TestCase;
 
 final class BibliographicDiscoveryServiceTest extends TestCase
 {
-    public function testTextDiscoveryStopsAtLocalResultsWithoutProviderOrSnapshot(): void
+    public function testTextDiscoveryKeepsExternalBreadthAfterOneWorkIsMaterialized(): void
+    {
+        $text = new BibliographicTextQuery("harry potter");
+        $query = BibliographicDiscoveryQuery::text($text);
+        $firstExternal = BibliographicDiscoveryCandidate::external(
+            BibliographicCandidateType::ExternalWork,
+            "primary",
+            "provider-work-1",
+            "provider-work-1",
+            new DateTimeImmutable("2026-09-10T12:00:00+00:00"),
+            MetadataMatchMethod::TextSearch,
+            $query,
+            "Harry Potter and the Philosopher's Stone",
+            null,
+            null,
+            ["J. K. Rowling"],
+            [],
+            [],
+            null,
+            null,
+            null,
+            0
+        );
+        $secondExternal = BibliographicDiscoveryCandidate::external(
+            BibliographicCandidateType::ExternalWork,
+            "primary",
+            "provider-work-2",
+            "provider-work-2",
+            new DateTimeImmutable("2026-09-10T12:00:00+00:00"),
+            MetadataMatchMethod::TextSearch,
+            $query,
+            "Harry Potter and the Chamber of Secrets",
+            null,
+            null,
+            ["J. K. Rowling"],
+            [],
+            [],
+            null,
+            null,
+            null,
+            1
+        );
+        $local = new DiscoveryLocalRepository([]);
+        $primary = new DiscoveryTextProvider(
+            "primary",
+            BibliographicProviderDiscoveryResult::candidates([
+                $firstExternal,
+                $secondExternal,
+            ])
+        );
+        $fallback = new DiscoveryTextProvider(
+            "fallback", BibliographicProviderDiscoveryResult::miss()
+        );
+        $identities = new DiscoveryProviderIdentityRepository();
+        $snapshots = new DiscoverySnapshotRepository();
+        $service = $this->service(
+            $local, $primary, $fallback, $snapshots, null, null, $identities
+        );
+
+        $beforeMaterialization = $service->discover($text->value());
+
+        self::assertSame([
+            "provider-work-1",
+            "provider-work-2",
+        ], array_map(
+            static fn (BibliographicDiscoveryCandidate $candidate): ?string =>
+                $candidate->providerRecordId(),
+            $beforeMaterialization->candidates()
+        ));
+
+        $materializedWorkId = new WorkId("materialized-work");
+        $identities->claimWork(
+            "primary", "work", "provider-work-1", $materializedWorkId
+        );
+        $local->replaceResults([
+            BibliographicDiscoveryCandidate::localWork(
+                $materializedWorkId,
+                "Harry Potter and the Philosopher's Stone",
+                $query,
+                0,
+                ["J. K. Rowling"]
+            ),
+        ]);
+
+        $afterMaterialization = $service->discover($text->value());
+
+        self::assertSame(BibliographicDiscoveryStatus::Results, $afterMaterialization->status());
+        self::assertSame([
+            BibliographicCandidateType::LocalWork,
+            BibliographicCandidateType::ExternalWork,
+        ], array_map(
+            static fn (BibliographicDiscoveryCandidate $candidate): BibliographicCandidateType =>
+                $candidate->type(),
+            $afterMaterialization->candidates()
+        ));
+        self::assertSame(
+            "provider-work-2",
+            $afterMaterialization->candidates()[1]->providerRecordId()
+        );
+        self::assertNotNull($afterMaterialization->discoveryId());
+        self::assertSame(2, $primary->calls());
+        self::assertSame(0, $fallback->calls());
+        self::assertCount(1, $snapshots->saved()?->candidates() ?? []);
+        self::assertSame(
+            "provider-work-2",
+            array_values($snapshots->saved()?->candidates() ?? [])[0]->providerRecordId()
+        );
+    }
+
+    public function testTextDiscoveryKeepsLocalResultsWhenExternalExpansionFails(): void
     {
         $query = BibliographicDiscoveryQuery::text(new BibliographicTextQuery("Local title"));
         $local = new DiscoveryLocalRepository([
@@ -56,7 +166,11 @@ final class BibliographicDiscoveryServiceTest extends TestCase
             ),
         ]);
         $primary = new DiscoveryTextProvider(
-            "primary", BibliographicProviderDiscoveryResult::miss()
+            "primary",
+            BibliographicProviderDiscoveryResult::failure(
+                ProviderLookupStatus::Unavailable,
+                ProviderFailureReason::Network
+            )
         );
         $fallback = new DiscoveryTextProvider(
             "fallback", BibliographicProviderDiscoveryResult::miss()
@@ -69,9 +183,53 @@ final class BibliographicDiscoveryServiceTest extends TestCase
         self::assertSame(BibliographicDiscoveryStatus::Results, $result->status());
         self::assertSame(BibliographicCandidateType::LocalWork, $result->candidates()[0]->type());
         self::assertNull($result->discoveryId());
-        self::assertSame(0, $primary->calls());
-        self::assertSame(0, $fallback->calls());
+        self::assertSame(1, $primary->calls());
+        self::assertSame(1, $fallback->calls());
+        self::assertSame(ProviderLookupStatus::Unavailable->value, $result->attempts()[0]["status"]);
         self::assertNull($snapshots->saved());
+    }
+
+    public function testTextDiscoveryNeverDeduplicatesByMatchingTitleAlone(): void
+    {
+        $text = new BibliographicTextQuery("Same title");
+        $query = BibliographicDiscoveryQuery::text($text);
+        $local = BibliographicDiscoveryCandidate::localWork(
+            new WorkId("local-work"), "Same title", $query, 0
+        );
+        $external = BibliographicDiscoveryCandidate::external(
+            BibliographicCandidateType::ExternalWork,
+            "primary",
+            "unmapped-provider-work",
+            "unmapped-provider-work",
+            new DateTimeImmutable("2026-09-10T12:00:00+00:00"),
+            MetadataMatchMethod::TextSearch,
+            $query,
+            "Same title",
+            null,
+            null,
+            [],
+            [],
+            [],
+            null,
+            null,
+            null,
+            0
+        );
+
+        $result = $this->service(
+            new DiscoveryLocalRepository([$local]),
+            new DiscoveryTextProvider(
+                "primary", BibliographicProviderDiscoveryResult::candidates([$external])
+            ),
+            new DiscoveryTextProvider(
+                "fallback", BibliographicProviderDiscoveryResult::miss()
+            ),
+            new DiscoverySnapshotRepository()
+        )->discover($text->value());
+
+        self::assertCount(2, $result->candidates());
+        self::assertSame(BibliographicCandidateType::LocalWork, $result->candidates()[0]->type());
+        self::assertSame(BibliographicCandidateType::ExternalWork, $result->candidates()[1]->type());
     }
 
     public function testExternalResultsAreSnapshottedAndFallbackIsNotCalled(): void
@@ -266,7 +424,8 @@ final class BibliographicDiscoveryServiceTest extends TestCase
         BibliographicTextDiscoveryProvider $fallback,
         BibliographicDiscoverySnapshotRepository $snapshots,
         ?Edition $localEdition = null,
-        ?Work $localWork = null
+        ?Work $localWork = null,
+        ?BibliographicProviderIdentityRepository $providerIdentities = null
     ): BibliographicDiscoveryService {
         $claims = $this->createStub(EditionIdentifierClaimRepository::class);
         $claims->method("findByCanonicalIsbn13")
@@ -293,6 +452,7 @@ final class BibliographicDiscoveryServiceTest extends TestCase
             ),
             $primary,
             $fallback,
+            $providerIdentities ?? new DiscoveryProviderIdentityRepository(),
             $snapshots,
             new DiscoveryLookupIds(),
             new DiscoveryClock(),
@@ -313,6 +473,40 @@ final class DiscoveryLocalRepository implements BibliographicLocalDiscoveryRepos
     public function searchText(BibliographicDiscoveryQuery $query, int $limit = 20): array
     {
         return $this->results;
+    }
+    /** @param list<BibliographicDiscoveryCandidate> $results */
+    public function replaceResults(array $results): void { $this->results = $results; }
+}
+
+final class DiscoveryProviderIdentityRepository implements BibliographicProviderIdentityRepository
+{
+    /** @var array<string,WorkId> */
+    private array $works = [];
+    /** @var array<string,EditionId> */
+    private array $editions = [];
+
+    public function findWork(string $provider, string $sourceType, string $recordId): ?WorkId
+    {
+        return $this->works["{$provider}:{$sourceType}:{$recordId}"] ?? null;
+    }
+
+    public function findEdition(string $provider, string $recordId): ?EditionId
+    {
+        return $this->editions["{$provider}:{$recordId}"] ?? null;
+    }
+
+    public function claimWork(
+        string $provider,
+        string $sourceType,
+        string $recordId,
+        WorkId $workId
+    ): void {
+        $this->works["{$provider}:{$sourceType}:{$recordId}"] = $workId;
+    }
+
+    public function claimEdition(string $provider, string $recordId, EditionId $editionId): void
+    {
+        $this->editions["{$provider}:{$recordId}"] = $editionId;
     }
 }
 
