@@ -136,6 +136,7 @@ use Biblio\Core\Infrastructure\Metadata\ConfigurationErrorMetadataProvider;
 use Biblio\Core\Infrastructure\Metadata\ConfigurationErrorTextDiscoveryProvider;
 use Biblio\Core\Infrastructure\Metadata\GoogleBooks\{GoogleBooksConfiguration,GoogleBooksMetadataProvider,GoogleBooksTextDiscoveryProvider};
 use Biblio\Core\Infrastructure\Metadata\OpenLibrary\{OpenLibraryConfiguration,OpenLibraryMetadataProvider,OpenLibraryTextDiscoveryProvider};
+use Biblio\Core\Infrastructure\Metadata\RuntimeMetadataProviderConfiguration;
 use Biblio\Core\Infrastructure\Metadata\SystemMetadataClock;
 use Biblio\Core\Infrastructure\Metadata\WordPressProviderHttpClient;
 use Biblio\Core\Infrastructure\WordPress\Lifecycle\CoreLifecycleCoordinator;
@@ -150,13 +151,17 @@ final class ProductionComposition
 {
     private readonly CoreLifecycleCoordinator $lifecycle;
     private readonly CoreApplication $application;
+    private readonly RuntimeMetadataProviderConfiguration $providerConfiguration;
 
     public function __construct(
         wpdb $database,
         ?LifecycleStateStore $lifecycleState = null,
         ?CoreSchemaMigrationRegistry $migrationRegistry = null,
-        ?FirstSufficientMetadataLookupService $metadataLookup = null
+        ?FirstSufficientMetadataLookupService $metadataLookup = null,
+        ?RuntimeMetadataProviderConfiguration $providerConfiguration = null
     ) {
+        $this->providerConfiguration = $providerConfiguration
+            ?? new RuntimeMetadataProviderConfiguration();
         $tableNames = new CoreTableNames($database->prefix);
         $migrationRegistry ??= CoreSchemaMigrationRegistry::production(
             $database,
@@ -951,9 +956,7 @@ final class ProductionComposition
         $http = new WordPressProviderHttpClient();
         $clock = new SystemMetadataClock();
         $openLibrary = new ConfigurationErrorMetadataProvider("open_library");
-        $contact = defined("BIBLIO_OPEN_LIBRARY_CONTACT_EMAIL")
-            ? constant("BIBLIO_OPEN_LIBRARY_CONTACT_EMAIL")
-            : null;
+        $contact = $this->providerConfiguration->openLibraryContactEmail();
 
         if (is_string($contact)) {
             try {
@@ -969,21 +972,17 @@ final class ProductionComposition
         }
 
         $google = new ConfigurationErrorMetadataProvider("google_books");
-        $apiKey = defined("GOOGLE_BOOKS_API_KEY")
-            ? constant("GOOGLE_BOOKS_API_KEY")
-            : null;
+        $apiKey = $this->providerConfiguration->googleBooksApiKey();
 
-        if ($apiKey === null || is_string($apiKey)) {
-            try {
-                $google = new GoogleBooksMetadataProvider(
-                    $http,
-                    $clock,
-                    new IsbnCanonicalizer(),
-                    new GoogleBooksConfiguration($apiKey)
-                );
-            } catch (\InvalidArgumentException) {
-                // Invalid operational config degrades to a controlled result.
-            }
+        try {
+            $google = new GoogleBooksMetadataProvider(
+                $http,
+                $clock,
+                new IsbnCanonicalizer(),
+                new GoogleBooksConfiguration($apiKey)
+            );
+        } catch (\InvalidArgumentException) {
+            // Invalid operational config degrades to a controlled result.
         }
 
         return new FirstSufficientMetadataLookupService(
@@ -1000,9 +999,7 @@ final class ProductionComposition
         $clock = new SystemMetadataClock();
         $canonicalizer = new IsbnCanonicalizer();
         $openLibrary = new ConfigurationErrorTextDiscoveryProvider("open_library");
-        $contact = defined("BIBLIO_OPEN_LIBRARY_CONTACT_EMAIL")
-            ? constant("BIBLIO_OPEN_LIBRARY_CONTACT_EMAIL")
-            : null;
+        $contact = $this->providerConfiguration->openLibraryContactEmail();
         if (is_string($contact)) {
             try {
                 $openLibrary = new OpenLibraryTextDiscoveryProvider(
@@ -1017,20 +1014,16 @@ final class ProductionComposition
         }
 
         $google = new ConfigurationErrorTextDiscoveryProvider("google_books");
-        $apiKey = defined("GOOGLE_BOOKS_API_KEY")
-            ? constant("GOOGLE_BOOKS_API_KEY")
-            : null;
-        if ($apiKey === null || is_string($apiKey)) {
-            try {
-                $google = new GoogleBooksTextDiscoveryProvider(
-                    $http,
-                    $clock,
-                    $canonicalizer,
-                    new GoogleBooksConfiguration($apiKey)
-                );
-            } catch (\InvalidArgumentException) {
-                // Invalid operational config remains a typed configuration failure.
-            }
+        $apiKey = $this->providerConfiguration->googleBooksApiKey();
+        try {
+            $google = new GoogleBooksTextDiscoveryProvider(
+                $http,
+                $clock,
+                $canonicalizer,
+                new GoogleBooksConfiguration($apiKey)
+            );
+        } catch (\InvalidArgumentException) {
+            // Invalid operational config remains a typed configuration failure.
         }
 
         return [$openLibrary, $google];
