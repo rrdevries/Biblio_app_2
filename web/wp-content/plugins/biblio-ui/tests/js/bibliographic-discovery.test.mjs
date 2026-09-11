@@ -119,6 +119,52 @@ test("strict discovery decoder preserves all typed local and external results", 
     assert.equal(localEdition.edition_id, "edition-1");
 });
 
+test("strict discovery decoder accepts local-first text breadth and partial provider failure", () => {
+    const mixed = readBibliographicDiscovery({
+        query: { type: "text", normalized: "harry potter" },
+        status: "results",
+        discovery_id: "lookup-22222222222222222222222222222222",
+        results: [candidate({
+            candidate_id: "local-materialized-work",
+            work_id: "materialized-work",
+            title: "Harry Potter and the Philosopher's Stone",
+        }), candidate({
+            candidate_id: "remaining-external-work",
+            type: "external_work_candidate",
+            work_id: null,
+            title: "Harry Potter and the Chamber of Secrets",
+            provider_evidence: evidence(),
+            presentation_order: 1,
+        })],
+        provider_attempts: [{
+            provider_key: "open_library",
+            status: "candidates",
+            failure_reason: null,
+        }],
+    });
+    assert.deepEqual(mixed.results.map((result) => result.type), [
+        "local_work",
+        "external_work_candidate",
+    ]);
+
+    const localAfterFailure = readBibliographicDiscovery({
+        query: { type: "text", normalized: "local title" },
+        status: "results",
+        discovery_id: null,
+        results: [candidate()],
+        provider_attempts: [{
+            provider_key: "open_library",
+            status: "unavailable",
+            failure_reason: "network",
+        }, {
+            provider_key: "google_books",
+            status: "miss",
+            failure_reason: null,
+        }],
+    });
+    assert.equal(localAfterFailure.results[0].work_id, "work-1");
+});
+
 test("strict discovery decoder preserves miss and failure as distinct successful states", () => {
     for (const status of [
         "no_results",
@@ -193,12 +239,12 @@ test("strict discovery decoder rejects extra, coerced and inconsistent fields", 
         query: { type: "text", normalized: "mixed results" },
         status: "results",
         discovery_id: "lookup-22222222222222222222222222222222",
-        results: [candidate(), candidate({
+        results: [candidate({
             candidate_id: "external-work",
             type: "external_work_candidate",
             work_id: null,
             provider_evidence: evidence(),
-        })],
+        }), candidate()],
         provider_attempts: [{
             provider_key: "open_library",
             status: "candidates",

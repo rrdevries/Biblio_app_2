@@ -174,7 +174,7 @@ function providerAttempt(value) {
     return Object.freeze({ ...value });
 }
 
-function attemptsMatchState(status, attempts) {
+function attemptsMatchState(status, attempts, hasExternal) {
     if (attempts.length === 0) {
         return status !== "configuration_failure"
             && status !== "invalid_provider_response";
@@ -182,7 +182,10 @@ function attemptsMatchState(status, attempts) {
     const statuses = attempts.map((attempt) => attempt.status);
     const candidateCount = statuses.filter((value) => value === "candidates").length;
     if (status === "results") {
-        return candidateCount === 1 && statuses.at(-1) === "candidates";
+        return hasExternal
+            ? candidateCount === 1 && statuses.at(-1) === "candidates"
+            : candidateCount === 0
+                || (candidateCount === 1 && statuses.at(-1) === "candidates");
     }
     if (candidateCount > 0) return false;
     if (status === "no_results") return statuses.every((value) => value === "miss");
@@ -300,6 +303,11 @@ export function readBibliographicDiscovery(value) {
     const attempts = value.provider_attempts.map(providerAttempt);
     const hasExternal = results.some((candidate) => candidate.type.startsWith("external_"));
     const hasLocal = results.some((candidate) => candidate.type.startsWith("local_"));
+    let externalSeen = false;
+    const hasLocalAfterExternal = results.some((candidate) => {
+        if (candidate.type.startsWith("external_")) externalSeen = true;
+        return externalSeen && candidate.type.startsWith("local_");
+    });
     const hasWrongQueryCandidate = results.some((candidate) => (
         value.query.type === "isbn"
             ? candidate.type !== "local_edition"
@@ -317,17 +325,17 @@ export function readBibliographicDiscovery(value) {
     const hasWrongAttemptCount = value.query.type === "isbn"
         ? attempts.length !== 0
         : value.status === "results"
-            ? (hasLocal ? attempts.length !== 0 : attempts.length < 1 || attempts.length > 2)
+            ? attempts.length < 1 || attempts.length > 2
             : attempts.length !== 2;
     if (
         (hasExternal && !text(value.discovery_id))
         || (!hasExternal && value.discovery_id !== null)
-        || (hasExternal && hasLocal)
+        || (hasLocal && hasLocalAfterExternal)
         || hasWrongQueryCandidate
         || hasWrongIsbn
         || hasWrongMatchMethod
         || hasWrongAttemptCount
-        || !attemptsMatchState(value.status, attempts)
+        || !attemptsMatchState(value.status, attempts, hasExternal)
         || (value.status === "results" && results.length === 0)
         || (value.status !== "results" && results.length > 0)
     ) {

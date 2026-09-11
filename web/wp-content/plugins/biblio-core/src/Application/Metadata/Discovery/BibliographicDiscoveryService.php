@@ -30,6 +30,7 @@ final readonly class BibliographicDiscoveryService
         private FirstSufficientMetadataLookupService $isbnLookup,
         private BibliographicTextDiscoveryProvider $primaryTextProvider,
         private BibliographicTextDiscoveryProvider $fallbackTextProvider,
+        private BibliographicProviderIdentityRepository $providerIdentities,
         private BibliographicDiscoverySnapshotRepository $snapshots,
         private MetadataLookupIdGenerator $ids,
         private MetadataClock $clock,
@@ -103,25 +104,31 @@ final readonly class BibliographicDiscoveryService
         $text = new BibliographicTextQuery($input);
         $query = BibliographicDiscoveryQuery::text($text);
         $local = $this->local->searchText($query);
-        if ($local !== []) {
-            return new BibliographicDiscoveryResult(
-                $query,
-                BibliographicDiscoveryStatus::Results,
-                $local,
-                null
-            );
-        }
 
         $attempts = [];
         $primary = $this->primaryTextProvider->search($text, $query);
         $attempts[] = $this->attempt($this->primaryTextProvider, $primary);
         if ($primary->candidatesList() !== []) {
-            return $this->snapshot($query, $primary->candidatesList(), $actor, $attempts);
+            return $this->textResults(
+                $query, $local, $primary->candidatesList(), $actor, $attempts
+            );
         }
         $fallback = $this->fallbackTextProvider->search($text, $query);
         $attempts[] = $this->attempt($this->fallbackTextProvider, $fallback);
         if ($fallback->candidatesList() !== []) {
-            return $this->snapshot($query, $fallback->candidatesList(), $actor, $attempts);
+            return $this->textResults(
+                $query, $local, $fallback->candidatesList(), $actor, $attempts
+            );
+        }
+
+        if ($local !== []) {
+            return new BibliographicDiscoveryResult(
+                $query,
+                BibliographicDiscoveryStatus::Results,
+                $local,
+                null,
+                $attempts
+            );
         }
 
         return new BibliographicDiscoveryResult(
@@ -134,14 +141,108 @@ final readonly class BibliographicDiscoveryService
     }
 
     /**
+     * @param list<BibliographicDiscoveryCandidate> $local
+     * @param list<BibliographicDiscoveryCandidate> $external
+     * @param list<array{provider_key:string,status:string,failure_reason:?string}> $attempts
+     */
+    private function textResults(
+        BibliographicDiscoveryQuery $query,
+        array $local,
+        array $external,
+        \Biblio\Core\Identity\UserId $actor,
+        array $attempts
+    ): BibliographicDiscoveryResult {
+        $external = $this->withoutCanonicalLocalDuplicates($local, $external);
+        if ($external === []) {
+            return new BibliographicDiscoveryResult(
+                $query,
+                BibliographicDiscoveryStatus::Results,
+                $local,
+                null,
+                $attempts
+            );
+        }
+
+        return $this->snapshot(
+            $query,
+            $external,
+            $actor,
+            $attempts,
+            array_merge($local, $external)
+        );
+    }
+
+    /**
+     * Deduplicate only identities already proven by canonical/provider mappings.
+     * Titles and contributors deliberately play no part in this decision.
+     *
+     * @param list<BibliographicDiscoveryCandidate> $local
+     * @param list<BibliographicDiscoveryCandidate> $external
+     * @return list<BibliographicDiscoveryCandidate>
+     */
+    private function withoutCanonicalLocalDuplicates(array $local, array $external): array
+    {
+        $workIds = [];
+        $editionIds = [];
+        $isbns = [];
+        foreach ($local as $candidate) {
+            if ($candidate->workId() !== null) {
+                $workIds[$candidate->workId()->value()] = true;
+            }
+            if ($candidate->editionId() !== null) {
+                $editionIds[$candidate->editionId()->value()] = true;
+            }
+            if ($candidate->isbn() !== null) {
+                $isbns[$candidate->isbn()->isbn13()->value()] = true;
+            }
+        }
+
+        return array_values(array_filter(
+            $external,
+            function (BibliographicDiscoveryCandidate $candidate) use (
+                $workIds, $editionIds, $isbns
+            ): bool {
+                $provider = $candidate->providerKey();
+                $recordId = $candidate->providerRecordId();
+                if ($provider === null || $recordId === null) {
+                    return true;
+                }
+
+                if ($candidate->type() === BibliographicCandidateType::ExternalWork) {
+                    $mapped = $candidate->providerWorkId() === null
+                        ? null
+                        : $this->providerIdentities->findWork(
+                            $provider, "work", $candidate->providerWorkId()
+                        );
+                    $mapped ??= $this->providerIdentities->findWork(
+                        $provider, "work", $recordId
+                    );
+                    return $mapped === null || !isset($workIds[$mapped->value()]);
+                }
+
+                $mappedEdition = $this->providerIdentities->findEdition(
+                    $provider, $recordId
+                );
+                if ($mappedEdition !== null && isset($editionIds[$mappedEdition->value()])) {
+                    return false;
+                }
+                return $candidate->isbn() === null
+                    || !isset($isbns[$candidate->isbn()->isbn13()->value()]);
+            }
+        ));
+    }
+
+    /**
      * @param list<BibliographicDiscoveryCandidate> $candidates
      * @param list<array{provider_key:string,status:string,failure_reason:?string}> $attempts
+     * @param ?list<BibliographicDiscoveryCandidate> $presentedCandidates
      */
     private function snapshot(
         BibliographicDiscoveryQuery $query,
         array $candidates,
         \Biblio\Core\Identity\UserId $actor,
-        array $attempts
+        array $attempts,
+        ?array $presentedCandidates = null
     ): BibliographicDiscoveryResult {
         $id = $this->ids->next();
         $now = $this->clock->now();
@@ -159,7 +260,7 @@ final readonly class BibliographicDiscoveryService
         return new BibliographicDiscoveryResult(
             $query,
             BibliographicDiscoveryStatus::Results,
-            $candidates,
+            $presentedCandidates ?? $candidates,
             $id,
             $attempts
         );

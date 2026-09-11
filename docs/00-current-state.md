@@ -2736,3 +2736,23 @@ local DDEV source. A generated `web/wp-config.php` edit is no longer required.
 Provider order, fallback, Add Book, Wishlist, schema and UI behavior are
 unchanged. Biblio Core is `2.5.1`; schema remains `1023`; Biblio UI remains
 `0.15.0`. Evidence: `docs/71-config-f1-durable-provider-configuration.md`.
+
+### WISH-DISC-F1 — text discovery local-first breadth fix
+
+Status: **TECHNICAL GO / HUMAN QA RECHECK PENDING** after deterministic tests
+and independent review.
+
+Text discovery no longer stops when any local title/author result exists. Core
+always runs the existing conditional provider chain, returns local candidates
+first and keeps the remaining external breadth visible. It removes duplicates
+only through an existing provider-to-canonical mapping or canonical ISBN
+against the same displayed local entity; title similarity is never identity.
+
+Wishlist membership is not a discovery filter. The regression materializes an
+external Work, adds its canonical Work to the Wishlist and proves that a repeat
+query returns that local Work plus other external candidates. Provider failure
+keeps local results usable with typed attempts and provider-neutral UI copy.
+Exact local ISBN lookup, Add Book, ranking, Wishlist cardinality, Item and
+Library possession behavior are unchanged. Schema remains `1023`; Biblio Core
+is `2.5.2`; Biblio UI is `0.15.1`. No current or historical V1 data was used.
+Evidence: `docs/72-wish-disc-f1-text-discovery-breadth-fix.md`.

@@ -37,10 +37,13 @@ current V1 `/data/` was needed.
 
 `BibliographicDiscoveryQuery` is the typed `isbn|text` boundary.
 `BibliographicDiscoveryService` resolves the authenticated actor, classifies
-input, searches canonical local identity first and invokes conditional Open
-Library then Google Books only when local text search has no result. Local text
-matching uses literal normalized query tokens across Work title, Edition title
-and existing Author display names; it is not fuzzy search.
+input and searches canonical local identity first. An exact local canonical
+Edition short-circuits ISBN discovery. Text discovery always continues through
+conditional Open Library then Google Books, combines provider results after
+local candidates and deduplicates only a proven provider mapping or canonical
+ISBN against the same displayed local entity. Local text matching uses literal
+normalized query tokens across Work title, Edition title and existing Author
+display names; title similarity is neither fuzzy search nor an identity rule.
 
 The result discriminator is one of `local_work`, `local_edition`,
 `external_work_candidate` or `external_edition_candidate`. Every candidate
@@ -56,7 +59,8 @@ position solely as presentation order. Normal miss, provider failure,
 configuration failure and malformed response remain distinct typed states. A
 failed or malformed Open Library Editions follow-up fails the provider attempt
 closed and permits the normal fallback; it is never hidden as a complete
-Work-only result.
+Work-only result. When external expansion fails, any local text results remain
+usable and the provider attempts preserve that partial-failure evidence.
 
 ## Snapshots and REST
 
@@ -126,7 +130,9 @@ Versions at closure: Biblio Core `2.5.0`, schema `1023`, Biblio UI `0.14.0`.
 ## Verification
 
 Deterministic tests cover typed query classification, combined local
-title/author search, local short-circuiting, provider fallback/status,
+title/author search, ISBN-only local short-circuiting, local-first text breadth
+before and after materialization/Wishlist membership, strong-identity-only
+deduplication, provider fallback/status with retained local results,
 Open Library Work plus multiple Editions, Google Volume candidates,
 ISBN-less capability rules, actor isolation, expiry, exact replay, Work-only
 and Work+Edition materialization, provider evidence, no Item/Library/Wishlist

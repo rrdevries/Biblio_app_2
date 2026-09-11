@@ -520,6 +520,11 @@ field. Manual/no-ISBN entry and Biblio-owned covers remain independent paths.
 MH-DISC-01 adds a consumer-neutral discovery/application boundary beside the
 unchanged Add Book boundary. It owns server-side ISBN-versus-text
 classification, local-first orchestration and typed Work/Edition candidates.
+An exact local canonical Edition remains sufficient for ISBN discovery. Text
+discovery instead always extends local title/author results with the configured
+provider chain, presents local candidates first and removes an external
+duplicate only when provider identity or canonical ISBN already proves the
+same displayed local entity; title similarity is never an identity rule.
 The Open Library adapter returns provider-ranked Work candidates and performs a
 strictly bounded Editions follow-up; Google Books maps Volumes as Edition
 candidates. Provider rank is transient presentation order only.

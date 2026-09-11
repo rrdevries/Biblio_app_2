@@ -15,6 +15,7 @@ use Biblio\Core\Infrastructure\WordPress\ProductionComposition;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbMetadataLookupSnapshotRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbBibliographicDiscoverySnapshotRepository;
 use Biblio\Core\Infrastructure\Metadata\ConfigurationErrorMetadataProvider;
+use Biblio\Core\Infrastructure\Metadata\RuntimeMetadataProviderConfiguration;
 use Biblio\Core\Infrastructure\WordPress\Rest\CatalogCursorCodec;
 use Biblio\Core\Infrastructure\WordPress\Rest\PrivateNoteCursorCodec;
 use Biblio\Core\Infrastructure\WordPress\Rest\ReadingHistoryCursorCodec;
@@ -56,6 +57,11 @@ final class RestApiTest extends PersistenceIntegrationTestCase
                 new CandidateClassifier(),
                 new ConfigurationErrorMetadataProvider("open_library"),
                 new ConfigurationErrorMetadataProvider("google_books")
+            ),
+            providerConfiguration: new RuntimeMetadataProviderConfiguration(
+                static fn (string $name): bool => false,
+                static fn (string $name): mixed => null,
+                static fn (string $name): mixed => false
             )
         ))->application();
         $this->api = new RestApi(static fn () => $application);
@@ -331,6 +337,10 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             "can_add_edition_specific" => false,
         ], $data["results"][0]["capabilities"]);
         self::assertNull($data["results"][0]["provider_evidence"]);
+        self::assertSame([
+            "configuration_error",
+            "configuration_error",
+        ], array_column($data["provider_attempts"], "status"));
 
         $unknown = new WP_REST_Request(
             "POST",

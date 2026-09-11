@@ -3118,9 +3118,12 @@ MH-DISC-01 is accepted when:
 - Core classifies canonical ISBN-10/13 separately from one normalized UTF-8
   text query and a combined title/author query works without client/provider
   mode selection;
-- local Work/Edition/Author identity short-circuits external calls; otherwise
-  Open Library precedes Google Books with distinct result, miss,
-  provider/configuration failure and malformed-response states;
+- an exact local canonical Edition short-circuits external ISBN discovery;
+  text discovery always combines local title/author results with the Open
+  Library-then-Google Books provider chain, keeps local results first and
+  deduplicates only proven provider/canonical identity, never title similarity;
+- provider miss, configuration failure and malformed-response states remain
+  distinct; provider failure never removes usable local text results;
 - typed candidates distinguish local/external Work and Edition and always
   expose explicit Work-only/Edition-specific capabilities;
 - Open Library exposes bounded multiple Editions per Work without a silent
@@ -3160,6 +3163,9 @@ WISH-DISC-01 is accepted when:
 
 - one labelled query field supports title, author and ISBN through only generic
   bibliographic discovery; Core retains classification/local-first/fallback;
+- repeated text discovery remains independent of Wishlist membership: after an
+  external Work is materialized and wished, the canonical local Work and other
+  relevant external candidates remain visible for the same broad query;
 - strict decoding accepts exactly all four result discriminators, explicit
   capabilities, presentation fields, statuses and canonical materialization
   output and rejects malformed/coerced/extra data;
@@ -3218,3 +3224,28 @@ CONFIG-F1 is accepted when:
 Status: **GO / CLOSED**. Biblio Core is `2.5.1`; schema remains `1023`; Biblio
 UI remains `0.15.0`. See
 `docs/71-config-f1-durable-provider-configuration.md`.
+
+## 98. WISH-DISC-F1 text discovery breadth correction
+
+WISH-DISC-F1 is technically accepted when:
+
+- exact local canonical Edition lookup still short-circuits ISBN providers;
+- text discovery always executes the existing provider chain, combines local
+  results first and retains other external candidates after one Work is
+  materialized;
+- deduplication uses only proven provider-to-canonical mapping or canonical
+  ISBN against the same displayed local entity and never title similarity;
+- an explicit Wishlist entry for the materialized Work does not filter either
+  the local Work or remaining external candidates;
+- provider failure retains usable local results and typed attempt evidence, and
+  the UI communicates incomplete external expansion without provider names;
+- snapshots contain only external candidates and no Item or Library possession
+  side effect is introduced;
+- Core, REST, Metadata Hub, Add Book, Wishlist, frontend, guarded browser,
+  syntax, PHPStan, Composer/platform, WordPress smoke, manifest, whitespace,
+  cleanup/fingerprint and independent-review gates pass; and
+- no current or historical V1 data is used.
+
+Status: **TECHNICAL GO / HUMAN QA RECHECK PENDING**. Biblio Core is `2.5.2`;
+schema remains `1023`; Biblio UI is `0.15.1`. See
+`docs/72-wish-disc-f1-text-discovery-breadth-fix.md`.

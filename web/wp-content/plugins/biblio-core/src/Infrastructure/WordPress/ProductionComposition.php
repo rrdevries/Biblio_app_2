@@ -828,6 +828,7 @@ final class ProductionComposition
             $metadataLookup,
             $primaryTextProvider,
             $fallbackTextProvider,
+            $bibliographicProviderIdentities,
             $bibliographicDiscoverySnapshots,
             new OpaqueMetadataLookupIdGenerator(),
             $metadataClock,

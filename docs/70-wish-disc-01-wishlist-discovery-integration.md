@@ -17,7 +17,10 @@ Wishlist count or current V1 record was used or required.
 The add dialog sends exactly one query to
 `POST /biblio/v1/me/bibliographic-discoveries`. Core alone classifies ISBN or
 text, performs local-first title/author/ISBN discovery and conditional provider
-fallback. The strict UI decoder accepts only the current envelope, query type,
+fallback. An exact local ISBN Edition may end discovery, while text discovery
+always combines local results first with remaining external candidates. It is
+independent of Wishlist membership and removes no title-only lookalikes. The
+strict UI decoder accepts only the current envelope, query type,
 typed status, four result discriminators, explicit capabilities, canonical
 local identity, temporary external identity, presentation fields, provider
 attempt/evidence allowlists and presentation order.
@@ -75,7 +78,9 @@ language.
 
 Normal no-result, temporary provider failure, configuration failure and invalid
 provider response are distinct successful discovery states. Provider failure
-never becomes false zero-result copy; retry is an explicit fresh query. A 409
+never becomes false zero-result copy: local text results remain usable and the
+UI calmly reports when external expansion was not fully available. Retry is an
+explicit fresh query. A 409
 `biblio_metadata_lookup_snapshot_unavailable` is privacy-collapsed and therefore
 shown truthfully as `verlopen of niet meer beschikbaar`; the UI never claims
 expiry as the only cause and never silently refetches/materializes.
