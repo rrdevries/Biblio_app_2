@@ -3249,3 +3249,38 @@ WISH-DISC-F1 is technically accepted when:
 Status: **TECHNICAL GO / HUMAN QA RECHECK PENDING**. Biblio Core is `2.5.2`;
 schema remains `1023`; Biblio UI is `0.15.1`. See
 `docs/72-wish-disc-f1-text-discovery-breadth-fix.md`.
+
+## 99. D-SEARCH-01 shared bibliographic search decision
+
+D-SEARCH-01 is accepted when the canonical documentation proves that:
+
+- one labelled default field accepts title, Author or ISBN and only Core
+  classifies valid ISBN versus general text;
+- text discovery exposes distinct pageable Author and Work groups without
+  guessing the user's entity intent;
+- strong Author results retain Author identity and continue to pageable Works;
+- Work results contain no Edition publication fields and offer explicit
+  Work-level use or lazy Editions-by-Work;
+- ISBN returns concrete Edition discovery without a mandatory Work list;
+- no initial text path fans out Editions over multiple Works and every Edition
+  remains an explicit separate choice;
+- pagination has no silent hard top-ten, ranking has no winner/confidence
+  semantics and deduplication is strong-identity-only;
+- Work language is only a preference/relevance signal while Edition language
+  is concrete metadata with `Alle talen` as the default filter state;
+- provider capabilities stay asymmetric and provider-neutral: Open Library can
+  support Author/Work/Edition paths, while a Google Volume without reliable
+  Work identity stays out of initial results and is only an explicitly opened,
+  separate Edition lead, never an invented Work;
+- Wishlist, Add Book and future consumers reuse one search foundation and own
+  only post-selection behavior;
+- rich discovery is a progressive full-page App Shell flow with immediate
+  loading, retained local results and truthful partial-provider states;
+- current production behavior, REST, schema, provider adapters, Wishlist, Add
+  Book and V1 data remain unchanged; and
+- an independent review finds no bibliographic, UX, provider-abstraction,
+  performance, reuse or scope blocker.
+
+Status: **GO / DECISION CANONICALIZED / IMPLEMENTATION NOT STARTED**. Schema
+remains `1023`; Biblio Core remains `2.5.2`; Biblio UI remains `0.15.1`. See
+`docs/73-d-search-01-shared-bibliographic-search-model.md`.

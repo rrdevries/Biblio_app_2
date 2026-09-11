@@ -1643,3 +1643,34 @@ pending lock serializes materialization, add and refinement. PATCH retains the
 existing owner-scoped entry-ID refinement boundary; reverse collapse stays a
 Core-owned 409. Book Detail uses the same Wishlist REST semantics, while
 `/me/works` remains available to Hierna lezen and other existing consumers.
+
+## 39. D-SEARCH-01 shared bibliographic discovery target
+
+D-SEARCH-01 defines the next target contract above the current MH-DISC-01
+foundation. One shared application boundary classifies `isbn|text`; text
+returns independently pageable Author and Work groups, supports pageable
+Works-by-Author and performs pageable Editions-by-Work only after exact Work
+selection. ISBN returns concrete Edition results directly. Provider capability
+ports distinguish Author search, Work search, Works-by-Author,
+Editions-by-Work, ISBN lookup and optional Edition leads; adapters need not
+implement every capability.
+
+The target removes Open Library's current eager Editions request for each text
+Work and does not reinterpret Google Volume records as Work identity. Local
+canonical results may precede external results, but presentation order never
+becomes confidence, selection or merge. Deduplication remains strong-identity-
+only. A Google Edition lead without reliable Work identity stays out of the
+initial result set, requires an explicit secondary Edition-search action and
+cannot expose Work-only capability. Explicit Edition selection may create its
+required new provisional Biblio parent Work but never merge it to an existing
+Work by text.
+
+Because current Wishlist, Add Book and `/me/works` decoders use exact
+allowlists, the shared typed page contract must be parallel/versioned or move
+Core and every affected consumer atomically; an apparently additive field is
+not presumed compatible. Shared discovery does not imply one shared write
+endpoint: Wishlist retains authenticated personal ownership and Add Book
+retains explicit Library Context plus `catalog.item_add` authorization after
+selection. Existing snapshot, materialization, evidence and authorization
+boundaries stay intact until explicit implementation slices migrate them. See
+`docs/73-d-search-01-shared-bibliographic-search-model.md`.

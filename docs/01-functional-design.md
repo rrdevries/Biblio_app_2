@@ -485,6 +485,33 @@ the active Eigenaar of the actor's server-resolved designated personal
 Privébibliotheek; the request carries no Library selector. See
 `docs/69-mh-disc-01-bibliographic-discovery-foundation.md`.
 
+### Shared bibliographic search
+
+D-SEARCH-01 defines the target discovery model shared by Wishlist, Add Book,
+later Gewenste aanwinsten and future bibliographic consumers. The default is
+one field, `Zoek op titel, auteur of ISBN`. Core classifies a valid ISBN as
+Edition intent; every other input remains a general text query and is not
+guessed to be title or Author intent.
+
+Text results are Author- and Work-first in separate pageable groups. A strong
+Author result continues to pageable Works by that Author. A Work result shows
+Work title, Authors and reliable Series context without Edition publication
+fields. Editions are loaded lazily only for the explicitly selected Work; no
+initial Work-to-Edition fan-out is allowed. ISBN instead goes directly to
+concrete Edition discovery. Edition pages may later filter real Edition
+language with `Alle talen` as default; language is only a preference/relevance
+signal during Work discovery.
+
+Ranking never selects or merges. Deduplication requires canonical or proven
+provider identity, including canonical ISBN for the same Edition; title,
+Author-plus-title and similarity never suffice. A stable Volume-shaped result
+without reliable Work identity stays out of initial results and may appear only
+after an explicit secondary action as a separate Edition lead without Work-only
+intent. Rich discovery uses a full App Shell screen with progressive guidance
+and explicit loading/partial-failure states. Consumer-specific logic starts
+only after selection. See
+`docs/73-d-search-01-shared-bibliographic-search-model.md`.
+
 Independent Biblio-owned or user-supplied cover acquisition/management is
 V2.002+. Existing V1 cover references/assets remain migration inventory and
 may not be silently discarded.

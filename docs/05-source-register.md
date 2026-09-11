@@ -287,6 +287,27 @@ It is separate from Library ownership, acquisition, possession, Collections
 and Hierna lezen. The supplied decision text is product authority; no earlier
 snapshot or reported Wishlist count is current V1 truth.
 
+## Approved D-SEARCH-01 shared bibliographic search decision — 2026-09-11
+Status: `ACTUEEL`
+
+Canonicalized in:
+
+- `docs/00-current-state.md`;
+- `docs/01-functional-design.md` §4;
+- `docs/02-architecture.md` §39;
+- `docs/03-scope-and-deferred.md`;
+- `docs/06-testing-and-acceptance.md` §99;
+- `docs/31-biblio-design-system.md` §13.1;
+- `docs/48-add-book-wizard-ux-canonical-design.md`;
+- `docs/73-d-search-01-shared-bibliographic-search-model.md`.
+
+The approved target uses one default title/Author/ISBN field, server-side ISBN
+classification, distinct pageable Author and Work results, Author→Works and
+lazy Work→Editions. It preserves provider asymmetry, strong-identity-only
+deduplication and consumer-specific authorization after selection. The
+decision changes no current runtime, REST, provider, schema, Wishlist or Add
+Book behavior and uses no V1 data.
+
 ## Authority rule
 
 Historical timestamps do not determine authority.

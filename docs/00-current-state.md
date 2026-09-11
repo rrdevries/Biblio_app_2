@@ -2756,3 +2756,30 @@ Exact local ISBN lookup, Add Book, ranking, Wishlist cardinality, Item and
 Library possession behavior are unchanged. Schema remains `1023`; Biblio Core
 is `2.5.2`; Biblio UI is `0.15.1`. No current or historical V1 data was used.
 Evidence: `docs/72-wish-disc-f1-text-discovery-breadth-fix.md`.
+
+### D-SEARCH-01 — shared bibliographic search model
+
+Status: **DECISION CANONICALIZED / IMPLEMENTATION NOT STARTED** after the
+documentation checks and independent review.
+
+Biblio's future shared discovery uses one default field, `Zoek op titel, auteur
+of ISBN`. Core recognizes valid ISBN server-side; all other input remains one
+general bibliographic text query. Text discovery is Author- and Work-first,
+with Authors and Works in distinct pageable groups. Selecting an Author opens
+pageable Works; selecting a Work may use that Work directly or lazily discover
+its pageable Editions. ISBN goes directly to concrete Edition discovery.
+
+No text query may fan out Editions for every returned Work. Ranking affects
+presentation only, deduplication uses strong identity only and Work language is
+a preference signal while Edition language is concrete filterable metadata.
+Google Volume results without reliable Work identity stay out of the initial
+result set and may appear only after an explicit secondary action as separately
+labelled Edition leads with Edition-specific continuation; they never become
+invented Works or Work-only choices.
+
+The rich shared flow belongs on its own App Shell screen as progressive guided
+discovery, not in a narrow modal. Current MH-DISC-01, WISH-DISC-01 and Add Book
+production behavior remains unchanged until bounded implementation slices
+replace it. Schema stays `1023`; Biblio Core stays `2.5.2`; Biblio UI stays
+`0.15.1`. No V1 data was used. Canonical decision:
+`docs/73-d-search-01-shared-bibliographic-search-model.md`.

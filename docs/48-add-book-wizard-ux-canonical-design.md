@@ -16,6 +16,13 @@ selection/fusion, Work-match behavior, collector-detail design or Book Detail.
 ADR-014 and MH-B5A/MH-B5B remain the authoritative server-side contracts. This
 document supplies their user-facing wizard design only.
 
+Post-decision note: D-SEARCH-01 defines a later shared Author/Work-first text
+entry with lazy Edition discovery. That target is not implemented and does not
+change this wizard's current ISBN/manual start, Edition review, Library Context
+or Item commit. A later `ADD-SEARCH-01` consumer slice must integrate the shared
+selection contract without replacing these boundaries. See
+`docs/73-d-search-01-shared-bibliographic-search-model.md`.
+
 ## 1. One wizard and its start
 
 There is one Add Book Wizard. Metadata lookup, manual entry and existing

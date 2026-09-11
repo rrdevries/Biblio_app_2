@@ -425,6 +425,22 @@ Een lang editformulier mag sectienavigatie links, hoofdformulier midden en
 optionele context/preview rechts gebruiken, met open secties en dividers in
 plaats van card-stapeling.
 
+### 13.1 Gedeelde bibliografische discovery
+
+De rijke gedeelde zoekflow van D-SEARCH-01 gebruikt een eigen scherm binnen de
+App Shell en niet een krappe modal. Eén primair veld leidt naar zichtbaar
+gescheiden Auteur- en Boek/Work-resultaten; Author→Works en Work→Editions
+ontvouwen progressief zonder verplichte rigide wizardstappen. Kleine
+bevestigingen, conflicten en refinements mogen wel in een dialog.
+
+Lokale resultaten mogen vroeg bruikbaar zijn terwijl externe uitbreiding
+zichtbaar doorlaadt. Loading, gedeeltelijke provideruitval, empty en retry zijn
+tekstueel onderscheiden; reeds bruikbare lokale resultaten verdwijnen nooit
+door provideruitval. Resultaatgroepen en hun `Meer …`-acties blijven keyboard-
+en screenreader-navigeerbaar. De functionele entity-, identity-, ranking- en
+consumerregels staan canoniek in
+`docs/73-d-search-01-shared-bibliographic-search-model.md`.
+
 ## 14. Detailgrammatica
 
 Status: **Definitief**.
