@@ -59,6 +59,15 @@ final readonly class BibliographicWorkReference
         return "search-work-" . hash("sha256", "work\0" . $identity);
     }
 
+    public function cursorContextId(): string
+    {
+        return hash("sha256", implode("\0", [
+            $this->kind->value,
+            $this->workId?->value() ?? "",
+            $this->providerIdentity?->stableKey() ?? "",
+        ]));
+    }
+
     /** @return list<string> */
     public function strongIdentityKeys(): array
     {

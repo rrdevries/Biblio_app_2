@@ -6,12 +6,15 @@ namespace Biblio\Core\Infrastructure\Persistence\WordPress;
 
 use Biblio\Core\Application\Metadata\Discovery\BibliographicProviderIdentityConflict;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicProviderIdentityRepository;
+use Biblio\Core\Application\Metadata\Search\BibliographicProviderEntityIdentity;
+use Biblio\Core\Application\Metadata\Search\BibliographicWorkProviderIdentityLookup;
 use Biblio\Core\Catalog\EditionId;
 use Biblio\Core\Catalog\WorkId;
 use wpdb;
 
 final readonly class WpdbBibliographicProviderIdentityRepository implements
-    BibliographicProviderIdentityRepository
+    BibliographicProviderIdentityRepository,
+    BibliographicWorkProviderIdentityLookup
 {
     public function __construct(private wpdb $database, private CoreTableNames $tables) {}
 
@@ -35,6 +38,24 @@ final readonly class WpdbBibliographicProviderIdentityRepository implements
             $provider, $recordId
         ));
         return is_string($value) ? new EditionId($value) : null;
+    }
+
+    public function providerWorkIdentities(WorkId $workId, string $providerKey): array
+    {
+        $values = $this->database->get_col($this->database->prepare(
+            "SELECT provider_record_id "
+                . "FROM `{$this->tables->bibliographicProviderIdentities()}` "
+                . "WHERE provider_key=%s AND source_entity_type='work' "
+                . "AND target_type='work' AND work_id=%s "
+                . "ORDER BY provider_record_id ASC",
+            $providerKey,
+            $workId->value()
+        ));
+        return array_map(
+            static fn (mixed $recordId): BibliographicProviderEntityIdentity =>
+                BibliographicProviderEntityIdentity::work($providerKey, (string) $recordId),
+            $values
+        );
     }
 
     public function claimWork(string $provider, string $sourceType, string $recordId, WorkId $workId): void
