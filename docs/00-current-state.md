@@ -2950,3 +2950,24 @@ provider-only; no composite is guessed from names or Works. There is no route
 that consumes the selector yet, no Author-to-Works REST implementation, no
 persistence/schema/UI/provider-search/consumer/V1 change. Schema remains
 `1023`; Biblio Core is `2.11.0`; Biblio UI remains `0.15.1`.
+
+### MH-AUTHOR-API-01 — selected Author to Works REST transport
+
+Status: **GO / CLOSED** after the recorded gates and independent review.
+
+Authenticated `POST /biblio/v1/me/bibliographic-author-works` accepts only a
+required server-issued `author_selector` and optional opaque `cursor`. The
+shared D-AUTHOR-REF-01 codec verifies and reconstructs the exact typed Author
+reference before the existing MH-AUTHOR-01 service runs. Raw canonical or
+provider Author IDs, names, provider choice, actor and Library context are not
+accepted.
+
+The response contains only `items`, `next_cursor` and typed
+`provider_attempts`. A Work exposes result identity, nullable canonical Work
+ID, nullable typed provider Work identity, title, Authors and reliable Series
+context; no Edition or private/Library fields are present. Canonical-only,
+provider-only and trusted composite selectors preserve existing local-first,
+deduplication, cursor and partial-failure semantics. There is no UI or consumer
+cutover. Schema remains `1023`; Biblio Core is `2.12.0`; Biblio UI remains
+`0.15.1`. Detailed evidence:
+`docs/80-mh-author-api-01-selected-author-works-rest.md`.

@@ -1862,3 +1862,26 @@ revocation. No currently mutable Author mapping exists to revalidate. If a
 future durable/revocable Author mapping is introduced, that mapping boundary
 must define use-time revalidation before a composite is consumed. No schema,
 persistence, endpoint, UI or consumer behavior is added here.
+
+## 46. MH-AUTHOR-API-01 selected Author Works REST transport
+
+`POST /biblio/v1/me/bibliographic-author-works` is the single authenticated
+transport boundary for an already selected Author. Its strict JSON object
+contains required `author_selector` and optional nullable `cursor`; query
+parameters and raw Author, provider, user or Library identity are rejected.
+
+`RestBibliographicAuthorWorkSearchContract` verifies the selector with the
+same `BibliographicAuthorSelectorCodec` instance used by top-level Author
+search issuance, then delegates cursor decoding and serialization to the
+existing `BibliographicAuthorWorkSearchContract`. Selector and cursor HMAC
+secrets are independently domain-separated derivatives of WordPress
+`AUTH_SALT`. The controller calls only
+`CoreApplication::bibliographicAuthorWorkSearch()`.
+
+The response uses the established `data` envelope around `items`, nullable
+`next_cursor` and typed `provider_attempts`. Work items retain result identity,
+nullable canonical Work ID, nullable provider-scoped Work identity, title,
+Authors and Series. They expose no Edition, provider payload, Library or user
+data. Local/external orchestration, strong-identity deduplication and partial
+failure remain application-owned. No Edition query, persistence, schema, UI,
+materialization or consumer cutover is added.

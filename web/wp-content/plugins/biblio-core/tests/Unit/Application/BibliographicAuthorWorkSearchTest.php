@@ -55,9 +55,18 @@ final class BibliographicAuthorWorkSearchTest extends TestCase
 
         self::assertSame(["items", "next_cursor", "provider_attempts"], array_keys($payload));
         self::assertSame(
-            ["result_id", "result_kind", "work_id", "title", "authors", "series"],
+            [
+                "result_id",
+                "result_kind",
+                "work_id",
+                "provider_identity",
+                "title",
+                "authors",
+                "series",
+            ],
             array_keys($payload["items"][0])
         );
+        self::assertNull($payload["items"][0]["provider_identity"]);
         self::assertArrayNotHasKey("isbn", $payload["items"][0]);
         self::assertArrayNotHasKey("publication_date", $payload["items"][0]);
         self::assertSame(

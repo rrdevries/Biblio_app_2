@@ -3490,3 +3490,33 @@ Status: **GO / CLOSED** after the full Core/UI gates and independent second
 review. Schema remains `1023`; Biblio Core is `2.11.0`; Biblio UI remains
 `0.15.1`. Closure evidence is recorded in
 `docs/79-d-author-ref-01-signed-author-selector-handoff.md`.
+
+## 106. MH-AUTHOR-API-01 selected Author Works REST transport
+
+MH-AUTHOR-API-01 is accepted when:
+
+- exactly one authenticated `POST /biblio/v1/me/bibliographic-author-works`
+  route registers once and accepts only required `author_selector` plus
+  optional nullable `cursor`;
+- the D-AUTHOR-REF-01 codec is the sole Author authority boundary and bad,
+  tampered, unknown-version/type/field and unsupported-provider selectors fail
+  closed without name lookup or client-composed identity;
+- canonical-only, provider-only and trusted composite references reach the
+  existing authenticated MH-AUTHOR service with no Library Context;
+- the existing Author-bound cursor supports continuation and rejects malformed,
+  tampered and different-Author/reference use;
+- the response contains only Work identity, nullable canonical/provider Work
+  reference, title, Authors, Series, continuation and typed provider attempts,
+  with no Edition, Library, user or raw provider data;
+- local-first ordering, strong-identity deduplication and typed miss/failure
+  behavior remain application-owned, including local retention on composite
+  external failure;
+- MH-SEARCH, selector, MH-AUTHOR, MH-EDITION, MH-DISC, Wishlist and Add Book
+  regressions plus PHP syntax, PHPStan, Composer/platform, WordPress smoke,
+  manifest and whitespace gates pass; and
+- schema stays `1023`, no V1 data is used, no UI/consumer cutover occurs and
+  independent review finds no blocker.
+
+Status: **GO / CLOSED** after the full gates and independent review. Biblio
+Core is `2.12.0`; Biblio UI remains `0.15.1`. Closure evidence is recorded in
+`docs/80-mh-author-api-01-selected-author-works-rest.md`.

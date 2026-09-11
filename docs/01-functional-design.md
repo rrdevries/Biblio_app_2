@@ -562,6 +562,15 @@ canonical mapping remains provider-only. The future MH-AUTHOR-API-01 accepts
 only this selector and reconstructs the typed `BibliographicAuthorReference`
 server-side.
 
+MH-AUTHOR-API-01 now makes that exact selection reachable through authenticated
+`POST /biblio/v1/me/bibliographic-author-works`. The client supplies only the
+opaque `author_selector` and optional opaque continuation; visible Author
+data never becomes authority. Canonical-only selection searches local Works,
+provider-only selection searches the selected provider Author, and a trusted
+composite preserves the existing local-then-external behavior. The response
+ends at Work identity/title/Authors/reliable Series context. Work-to-Editions
+and every UI consumer remain separate follow-up work.
+
 Independent Biblio-owned or user-supplied cover acquisition/management is
 V2.002+. Existing V1 cover references/assets remain migration inventory and
 may not be silently discarded.
