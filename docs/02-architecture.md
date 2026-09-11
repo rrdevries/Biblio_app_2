@@ -1707,5 +1707,38 @@ Capability asymmetry uses two small ports,
 Implementing one does not imply the other. No provider adapter, orchestrator,
 REST controller, WordPress composition, durable snapshot or schema change is
 introduced. The existing MH-DISC and `/me/works` boundaries remain production
-contracts while MH-SEARCH-01B supplies a later implementation behind the new
-ports.
+contracts. This was the 01A boundary before MH-SEARCH-01B supplied the
+implementation behind the new ports.
+
+## 41. MH-SEARCH-01B local and Open Library Author/Work search
+
+`BibliographicTextSearchService` is the small authenticated application
+orchestrator behind the parallel 01A contract. It accepts no actor, provider or
+Library identity. It queries local Author and Work capability implementations,
+then the separately supplied Open Library Author and Work ports. Google Books
+is not composed into either lane.
+
+`WpdbBibliographicSearchProvider` reads only schema-1023 canonical Authors,
+Works, contributor relations and Series relations. Author and Work queries use
+the existing literal normalized-token convention and stable database ordering;
+related Authors and Series are batch-loaded for the selected Work page.
+
+`OpenLibraryBibliographicSearchProvider` maps `/search/authors.json` to strong
+provider-scoped Author references and `/search.json` to strong provider-scoped
+Work references. It requests only allowlisted Work-level fields and never calls
+an Edition, Works-by-Author or Work-detail endpoint. Open Library relevance is
+stored only as `presentation_order`. Its `offset/limit` continuation becomes
+01A's signed opaque application cursor rather than a public provider token.
+
+The result records typed Open Library attempts per entity group by reusing
+`ProviderLookupStatus` and `ProviderFailureReason`. Configuration resolution
+still follows the single durable constant-then-environment resolver. A failed
+or malformed provider page becomes partial external failure evidence while the
+local page remains usable. Deduplication uses reference identity plus an
+existing provider-Work-to-canonical-Work mapping when the mapped local result
+is present; text equality is never consulted.
+
+Production composition exposes the service through `CoreApplication`, but no
+REST controller or frontend consumes it yet. MH-DISC-01, Wishlist, Add Book,
+`/me/works` and Hierna lezen remain unchanged. There is no persistence or
+schema migration.

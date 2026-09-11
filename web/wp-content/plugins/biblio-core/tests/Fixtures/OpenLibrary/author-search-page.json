@@ -1,0 +1,8 @@
+{
+  "numFound": 2,
+  "start": 0,
+  "docs": [
+    {"key": "OL23919A", "name": "J. K. Rowling"},
+    {"key": "OL123456A", "name": "Joanne Rowling"}
+  ]
+}

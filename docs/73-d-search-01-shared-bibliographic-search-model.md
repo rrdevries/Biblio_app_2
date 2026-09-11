@@ -1,6 +1,6 @@
 # 73 — D-SEARCH-01 Shared Bibliographic Search | Contract & UX model
 
-Status: **DECISION CANONICALIZED / IMPLEMENTATION NOT STARTED**
+Status: **DECISION CANONICALIZED / INITIAL AUTHOR-WORK SEARCH IMPLEMENTED**
 
 Date: 2026-09-11
 
@@ -20,6 +20,12 @@ The current Work → Edition → Item model, canonical ISBN rules, Metadata Hub
 evidence governance, provisional catalog rules and server-side authorization
 remain authoritative. D-SEARCH-01 adds no current V1 dependency and uses no V1
 snapshot, count or record.
+
+MH-SEARCH-01A and MH-SEARCH-01B now implement the parallel application-level
+text boundary through local canonical plus Open Library Author/Work search.
+Works-by-Author, Editions-by-Work, REST/UI reachability and consumer cutover
+remain separate; therefore this document's complete progressive target is only
+partially implemented.
 
 ## 2. Search principles
 
@@ -437,13 +443,11 @@ consumer contract until migration is explicitly implemented.
 
 ## 18. Recommended bounded implementation slices
 
-1. **MH-SEARCH-01 — shared paged search contract:** introduce provider-neutral
-   query classification, Author/Work page types, independent continuation and
-   capability ports without changing consumers. Introduce it as a parallel or
-   explicitly versioned contract; do not silently widen exact existing
-   decoders.
-2. **MH-OL-AUTHOR-01 — Open Library Author path:** implement stable Author
-   search plus pageable Works-by-Author and retain explicit Author identity.
+1. **MH-SEARCH-01A/01B — shared paged Author/Work search:** implemented as a
+   parallel contract with local canonical and Open Library results, independent
+   continuations, strong identity and no consumer changes.
+2. **MH-AUTHOR-01 — Works by selected Author:** add the separate pageable local
+   and Open Library continuation from the retained strong Author reference.
 3. **MH-EDITION-01 — lazy Editions-by-Work:** add the selected-Work Edition
    contract and remove Open Library's initial Edition fan-out.
 4. **MH-GBOOK-01 — Volume Edition leads:** isolate the secondary Google Volume
@@ -477,12 +481,13 @@ language or no-fan-out rules above.
 
 ## 20. Outside scope and verdict
 
-D-SEARCH-01 adds no search engine, provider adapter, REST shape, schema,
-frontend, filter, advanced-search implementation, fuzzy search, index,
+D-SEARCH-01 itself added no runtime. MH-SEARCH-01B now supplies the bounded
+local/Open Library Author/Work search implementation without REST, schema,
+frontend, filter, advanced search, fuzzy search, index,
 Elasticsearch/OpenSearch, ML ranking, recommendation, Wishlist redesign, Add
 Book redesign or global app search.
 
 Verdict: **GO**. The shared one-field, Author/Work-first, ISBN-to-Edition,
 lazy-Edition model is coherent with Biblio's hierarchy, provider abstraction,
-consumer boundaries and performance goals. Implementation remains entirely in
-the bounded follow-up slices above.
+consumer boundaries and performance goals. The initial Author/Work search is
+implemented; remaining behavior stays in the bounded follow-up slices above.

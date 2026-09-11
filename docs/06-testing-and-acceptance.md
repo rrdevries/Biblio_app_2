@@ -3281,8 +3281,9 @@ D-SEARCH-01 is accepted when the canonical documentation proves that:
 - an independent review finds no bibliographic, UX, provider-abstraction,
   performance, reuse or scope blocker.
 
-Status: **GO / DECISION CANONICALIZED / IMPLEMENTATION NOT STARTED**. Schema
-remains `1023`; Biblio Core remains `2.5.2`; Biblio UI remains `0.15.1`. See
+Status: **GO / DECISION CANONICALIZED / INITIAL AUTHOR-WORK SEARCH
+IMPLEMENTED**. Schema remains `1023`; the current Core version is recorded by
+the latest implementation slice; Biblio UI remains `0.15.1`. See
 `docs/73-d-search-01-shared-bibliographic-search-model.md`.
 
 ## 100. MH-SEARCH-01A pageable Author/Work contract foundation
@@ -3316,6 +3317,36 @@ MH-SEARCH-01A is accepted when:
 - independent review finds no identity, pagination, strictness, compatibility,
   authorization or scope blocker.
 
-Status: **GO / CLOSED**. Schema remains `1023`; Biblio Core is `2.6.0`;
-Biblio UI remains `0.15.1`. See
+Status: **GO / CLOSED**. At 01A closure schema remained `1023`, Biblio Core was
+`2.6.0` and Biblio UI was `0.15.1`. See
 `docs/74-mh-search-01a-pageable-author-work-contract.md`.
+
+## 101. MH-SEARCH-01B local plus Open Library Author/Work discovery
+
+MH-SEARCH-01B is accepted when:
+
+- local canonical Authors and Works populate the separate 01A result groups
+  through deterministic pagination, with Work title plus ordered Authors and
+  reliable stored Series context only;
+- Open Library Author results require stable Author keys and Work results
+  require stable Work keys, with no raw provider object leaving the adapter;
+- Author and Work continuation is independently query/group/lane-bound and a
+  provider `offset` never becomes a public consumer token;
+- every text call still attempts external Author and Work expansion when local
+  results exist, while local results always present first;
+- duplicate collapse uses only canonical, same-provider or proven mapped Work
+  identity, and same-name Authors or same-title Works without that evidence stay
+  separate;
+- normal provider miss, configuration error, malformed response and technical
+  failure remain typed per group, with local results retained;
+- one Work search page performs one `/search.json` call and no Edition,
+  Editions-by-Work, Work-detail or per-result enrichment call;
+- Google Books, Works-by-Author, Editions-by-Work, REST/UI and all consumer
+  cutovers remain absent;
+- MH-DISC, Wishlist, Add Book and `/me/works` regression suites remain green;
+- schema stays `1023`, no V1 source/snapshot/count is used and an independent
+  review finds no identity, cursor, failure, security, compatibility or scope
+  blocker.
+
+Status: **GO / CLOSED**. Detailed closure evidence is
+recorded in `docs/75-mh-search-01b-local-open-library-author-work-discovery.md`.

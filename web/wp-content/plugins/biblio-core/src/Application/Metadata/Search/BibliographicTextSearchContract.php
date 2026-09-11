@@ -65,14 +65,36 @@ final readonly class BibliographicTextSearchContract
                 "next_cursor" => $result->authors()->nextCursor() === null
                     ? null
                     : $this->cursors->encode($result->authors()->nextCursor()),
+                "provider_attempts" => $this->serializeAttempts(
+                    $result->authorProviderAttempts()
+                ),
             ],
             "works" => [
                 "items" => array_map($this->serializeWork(...), $result->works()->items()),
                 "next_cursor" => $result->works()->nextCursor() === null
                     ? null
                     : $this->cursors->encode($result->works()->nextCursor()),
+                "provider_attempts" => $this->serializeAttempts(
+                    $result->workProviderAttempts()
+                ),
             ],
         ];
+    }
+
+    /**
+     * @param list<BibliographicSearchProviderAttempt> $attempts
+     * @return list<array{provider_key:string,status:string,failure_reason:?string}>
+     */
+    private function serializeAttempts(array $attempts): array
+    {
+        return array_map(
+            static fn (BibliographicSearchProviderAttempt $attempt): array => [
+                "provider_key" => $attempt->providerKey(),
+                "status" => $attempt->status()->value,
+                "failure_reason" => $attempt->failureReason()?->value,
+            ],
+            $attempts
+        );
     }
 
     /** @return array<string,mixed> */

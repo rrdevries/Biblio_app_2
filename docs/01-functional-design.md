@@ -528,8 +528,26 @@ deduplicate; name/title similarity never does. Separate Author-search and
 Work-search ports make unsupported capabilities explicit without requiring a
 fictive symmetrical provider. The contract is not yet reachable over REST and
 does not change current Wishlist, Add Book or `/me/works` behavior. Later
-MH-SEARCH-01B populates the contract; Works-by-Author and Editions-by-Work each
-remain their own bounded continuation slice.
+MH-SEARCH-01B was reserved to populate the contract; Works-by-Author and
+Editions-by-Work each remain their own bounded continuation slice.
+
+MH-SEARCH-01B now populates that parallel contract with local canonical plus
+Open Library search. Local Author search matches normalized text against
+canonical display names. Local Work search requires every normalized token to
+match the Work title or a linked Author display name, then projects ordered
+canonical Authors and reliable stored Series context. Open Library Author
+results require a stable Author key; Open Library Work results require a real
+Work key and expose only title and Author names. Each group uses its own
+application cursor over a provider `offset/limit` continuation.
+
+Local results precede external results, while an external request still runs
+when local text results exist. Existing provider-to-canonical Work mappings and
+same-provider entity keys are the only external dedup evidence; equal names or
+titles remain separate. Provider miss, configuration error, malformed response
+and technical failure remain typed per group and never remove usable local
+results. Initial search performs exactly one Author search request and one Work
+search request and no Edition request. Google Books, Works-by-Author,
+Editions-by-Work, REST/UI and consumer cutover remain outside this slice.
 
 Independent Biblio-owned or user-supplied cover acquisition/management is
 V2.002+. Existing V1 cover references/assets remain migration inventory and

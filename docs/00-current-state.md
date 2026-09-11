@@ -2759,8 +2759,7 @@ Evidence: `docs/72-wish-disc-f1-text-discovery-breadth-fix.md`.
 
 ### D-SEARCH-01 — shared bibliographic search model
 
-Status: **DECISION CANONICALIZED / IMPLEMENTATION NOT STARTED** after the
-documentation checks and independent review.
+Status: **DECISION CANONICALIZED / INITIAL AUTHOR-WORK SEARCH IMPLEMENTED**.
 
 Biblio's future shared discovery uses one default field, `Zoek op titel, auteur
 of ISBN`. Core recognizes valid ISBN server-side; all other input remains one
@@ -2814,6 +2813,33 @@ REST route, production composition, provider adapter, persistence or schema
 change. Existing MH-DISC-01, Wishlist, Add Book and `/me/works` contracts and
 strict decoders remain unchanged until explicit consumer cutover slices.
 
-Schema remains `1023`; Biblio Core is `2.6.0`; Biblio UI remains `0.15.1`.
-No V1 data was used. Detailed evidence:
+At 01A closure schema remained `1023`, Biblio Core was `2.6.0` and Biblio UI
+was `0.15.1`. No V1 data was used. Detailed evidence:
 `docs/74-mh-search-01a-pageable-author-work-contract.md`.
+
+### MH-SEARCH-01B — local plus Open Library Author/Work discovery
+
+Status: **GO / CLOSED** after the full Core/UI gates and independent review.
+
+The parallel 01A application contract is now populated by canonical local and
+Open Library text search. Local Authors match canonical display names. Local
+Works match normalized tokens across Work title or linked Author display name
+and batch-project ordered Authors plus stored Series context. Open Library uses
+one Author search and one Work search request with stable provider-scoped
+entity keys; it performs no Edition request or per-Work enrichment.
+
+Author and Work pages remain independently cursor-pageable. Local canonical
+results sort before external results, provider order remains presentation-only
+and deduplication uses only canonical, same-provider or proven mapped Work
+identity. Equal Author names and Work titles are deliberately not merged.
+Typed miss, configuration, malformed-response and technical-failure attempts
+are retained per group, and external failure never removes local results.
+
+The service is authenticated, accepts no Library/provider/target-user input and
+is exposed through production Core composition without a REST or UI consumer.
+Existing MH-DISC-01, Wishlist, Add Book, `/me/works` and Hierna lezen contracts
+remain unchanged. Google Books, Works-by-Author and Editions-by-Work are not
+part of this slice. Schema remains `1023`; Biblio UI remains `0.15.1`. No V1
+data or historical snapshot was read or changed. Biblio Core is `2.7.0`.
+Detailed evidence:
+`docs/75-mh-search-01b-local-open-library-author-work-discovery.md`.
