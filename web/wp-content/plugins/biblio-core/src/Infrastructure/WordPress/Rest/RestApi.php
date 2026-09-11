@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Biblio\Core\Infrastructure\WordPress\Rest;
 
 use Biblio\Core\Application\CoreApplication;
+use Biblio\Core\Application\Metadata\Search\BibliographicAuthorSelectorCodec;
 use Biblio\Core\Application\Metadata\Search\BibliographicSearchCursorCodec;
 use Biblio\Core\Application\Metadata\Search\BibliographicTextSearchContract;
 use Closure;
@@ -27,6 +28,9 @@ final class RestApi
             new BibliographicTextSearchContract(
                 new BibliographicSearchCursorCodec(
                     self::bibliographicSearchCursorSecret()
+                ),
+                new BibliographicAuthorSelectorCodec(
+                    self::bibliographicAuthorSelectorSecret()
                 )
             )
         );
@@ -76,5 +80,15 @@ final class RestApi
         }
 
         return hash("sha256", $salt . ":bibliographic-text-search-v1");
+    }
+
+    private static function bibliographicAuthorSelectorSecret(): string
+    {
+        $salt = defined("AUTH_SALT") ? constant("AUTH_SALT") : null;
+        if (!is_string($salt) || trim($salt) === "") {
+            throw new LogicException("WordPress authentication salt is unavailable.");
+        }
+
+        return hash("sha256", $salt . ":bibliographic-author-selector-v1");
     }
 }
