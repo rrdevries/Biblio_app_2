@@ -8,4 +8,5 @@ enum BibliographicProviderEntityType: string
 {
     case Author = "author";
     case Work = "work";
+    case Edition = "edition";
 }

@@ -2843,3 +2843,35 @@ part of this slice. Schema remains `1023`; Biblio UI remains `0.15.1`. No V1
 data or historical snapshot was read or changed. Biblio Core is `2.7.0`.
 Detailed evidence:
 `docs/75-mh-search-01b-local-open-library-author-work-discovery.md`.
+
+### MH-EDITION-01 — lazy Editions by selected Work
+
+Status: **GO / CLOSED** after full Core gates and independent review.
+
+The shared application boundary now accepts exactly one existing typed Work
+reference and returns pageable concrete Editions. Canonical Works read local
+Editions in deterministic Edition-title/ID order without Item or Library joins.
+An Open Library Work uses one bounded
+`/works/{work}/editions.json?limit&offset` request and no Work search,
+multi-Work fan-out or per-Edition enrichment.
+
+The signed opaque cursor binds the exact Work reference, local/external lane
+and continuation. Local results precede external results. A canonical Work
+uses an external lane only with exactly one proven Open Library Work mapping;
+zero or multiple mappings never cause an inferred choice. Deduplication uses
+only canonical Edition ID, canonical ISBN, same provider Edition ID or proven
+provider mapping. Same-title Editions remain separate.
+
+Concrete nullable metadata includes title/subtitle, contributors, languages,
+publishers, publication date, ISBN-10/13, format and page count. ISBN-less
+Open Library Editions remain valid with strong Edition and parent Work
+identity. Provider miss/failure remains typed and external failure retains
+local results. Provider Edition plus provider Work identity and candidate
+context remain available for a later generic materialization adapter, but this
+slice performs no snapshot, materialization or product write.
+
+There is no REST/UI consumer or Wishlist/Add Book cutover. Author-to-Works and
+Google Books remain separate. Schema stays `1023`; Biblio Core is `2.8.0` and
+Biblio UI stays `0.15.1`. No current or historical V1 data was read or changed.
+Detailed evidence:
+`docs/76-mh-edition-01-lazy-editions-by-selected-work.md`.

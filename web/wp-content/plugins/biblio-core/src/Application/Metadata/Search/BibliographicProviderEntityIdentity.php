@@ -36,6 +36,11 @@ final readonly class BibliographicProviderEntityIdentity
         return new self(BibliographicProviderEntityType::Work, $providerKey, $providerRecordId);
     }
 
+    public static function edition(string $providerKey, string $providerRecordId): self
+    {
+        return new self(BibliographicProviderEntityType::Edition, $providerKey, $providerRecordId);
+    }
+
     public function entityType(): BibliographicProviderEntityType { return $this->entityType; }
     public function providerKey(): string { return $this->providerKey; }
     public function providerRecordId(): string { return $this->providerRecordId; }

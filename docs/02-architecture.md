@@ -1742,3 +1742,34 @@ Production composition exposes the service through `CoreApplication`, but no
 REST controller or frontend consumes it yet. MH-DISC-01, Wishlist, Add Book,
 `/me/works` and Hierna lezen remain unchanged. There is no persistence or
 schema migration.
+
+## 42. MH-EDITION-01 lazy Editions for one selected Work
+
+`BibliographicEditionSearchService` is the authenticated shared application
+boundary after exact Work selection. Its input is the existing typed
+`BibliographicWorkReference`; it accepts no free text, ISBN selector, provider,
+actor or Library identity. Its output is one provider-neutral Edition page
+with canonical/provider identity, concrete nullable metadata, materialization
+capabilities, typed provider attempts and an opaque continuation.
+
+Canonical Work reads use `WpdbBibliographicEditionSearchProvider` and only the
+`editions`, Work-contributor and Author tables. Ordering is Edition title then
+Edition ID. The read does not join Items or Library possession. Open Library
+reads use one `/works/{id}/editions.json` request with `limit` and `offset`;
+there is no Work search, multiple-Work fan-out or per-Edition enrichment.
+
+The cursor is signed/versioned and binds the exact Work reference, local or
+external lane and next offset. Local results exhaust before external results.
+A canonical Work activates the Open Library lane only with exactly one proven
+Open Library Work mapping; zero or multiple mappings never trigger an inferred
+choice. Deduplication uses canonical Edition ID, canonical ISBN, the same
+provider Edition ID or a proven provider-Edition mapping only.
+
+Open Library records require stable Edition ID, valid title and the selected
+Work relation. Missing ISBN remains valid; missing metadata stays absent.
+Provider miss, configuration, malformed response, timeout, network, HTTP and
+rate-limit semantics reuse the existing taxonomy, and external failure retains
+local results. The result retains both provider Edition and provider Work
+identity for a later generic materialization adapter. The service is wired
+through `CoreApplication` but has no REST, UI, snapshot or materialization side
+effect. Schema remains 1023.

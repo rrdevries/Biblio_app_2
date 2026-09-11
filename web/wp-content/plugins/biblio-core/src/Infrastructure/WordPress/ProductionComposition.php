@@ -42,7 +42,7 @@ use Biblio\Core\Application\Library\LibraryAccessService;
 use Biblio\Core\Application\Library\LibraryContextQueryService;
 use Biblio\Core\Application\Metadata\{AddBookCommitService,AddBookMetadataLookupService,AddBookMetadataReviewPolicy,CandidateClassifier,FirstSufficientMetadataLookupService};
 use Biblio\Core\Application\Metadata\Discovery\{BibliographicDiscoveryService,BibliographicMaterializationService,BibliographicTextDiscoveryProvider,DesignatedPersonalBibliographicAuthorization};
-use Biblio\Core\Application\Metadata\Search\BibliographicTextSearchService;
+use Biblio\Core\Application\Metadata\Search\{BibliographicEditionSearchService,BibliographicExternalEditionSearchProvider,BibliographicTextSearchService};
 use Biblio\Core\Application\Notes\CorrectPrivateNoteReadingRoundService;
 use Biblio\Core\Application\Notes\CreatePrivateNoteService;
 use Biblio\Core\Application\Notes\DeletePrivateNoteService;
@@ -132,13 +132,15 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbBibliographicDiscoveryS
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbBibliographicLocalDiscoveryRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbBibliographicProviderIdentityRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbBibliographicSearchProvider;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbBibliographicEditionSearchProvider;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrationRegistry;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrator;
 use Biblio\Core\Infrastructure\Metadata\ConfigurationErrorMetadataProvider;
 use Biblio\Core\Infrastructure\Metadata\ConfigurationErrorTextDiscoveryProvider;
 use Biblio\Core\Infrastructure\Metadata\ConfigurationErrorBibliographicSearchProvider;
+use Biblio\Core\Infrastructure\Metadata\ConfigurationErrorBibliographicEditionSearchProvider;
 use Biblio\Core\Infrastructure\Metadata\GoogleBooks\{GoogleBooksConfiguration,GoogleBooksMetadataProvider,GoogleBooksTextDiscoveryProvider};
-use Biblio\Core\Infrastructure\Metadata\OpenLibrary\{OpenLibraryBibliographicSearchProvider,OpenLibraryConfiguration,OpenLibraryMetadataProvider,OpenLibraryTextDiscoveryProvider};
+use Biblio\Core\Infrastructure\Metadata\OpenLibrary\{OpenLibraryBibliographicSearchProvider,OpenLibraryConfiguration,OpenLibraryEditionSearchProvider,OpenLibraryMetadataProvider,OpenLibraryTextDiscoveryProvider};
 use Biblio\Core\Infrastructure\Metadata\RuntimeMetadataProviderConfiguration;
 use Biblio\Core\Infrastructure\Metadata\SystemMetadataClock;
 use Biblio\Core\Infrastructure\Metadata\WordPressProviderHttpClient;
@@ -864,6 +866,15 @@ final class ProductionComposition
             $openLibraryBibliographicSearch,
             $bibliographicProviderIdentities
         );
+        $bibliographicEditionSearch = new BibliographicEditionSearchService(
+            $authenticatedUser,
+            new WpdbBibliographicEditionSearchProvider($database, $tableNames),
+            $this->bibliographicEditionSearchProvider(),
+            $bibliographicProviderIdentities,
+            $bibliographicProviderIdentities,
+            $editionIdentifierClaims,
+            $editionRepository
+        );
 
         $this->application = new CoreApplication(
             $personalLibraries,
@@ -946,6 +957,7 @@ final class ProductionComposition
             $wishlistRemove,
             $myWishlist,
             $bibliographicTextSearch,
+            $bibliographicEditionSearch,
             $bibliographicDiscovery,
             $bibliographicMaterialization
         );
@@ -1018,6 +1030,25 @@ final class ProductionComposition
             try {
                 $provider = new OpenLibraryBibliographicSearchProvider(
                     new WordPressProviderHttpClient(),
+                    new OpenLibraryConfiguration("Biblio", "2.001", $contact)
+                );
+            } catch (\InvalidArgumentException) {
+                // Invalid operational config remains a typed configuration failure.
+            }
+        }
+        return $provider;
+    }
+
+    private function bibliographicEditionSearchProvider(): BibliographicExternalEditionSearchProvider
+    {
+        $provider = new ConfigurationErrorBibliographicEditionSearchProvider("open_library");
+        $contact = $this->providerConfiguration->openLibraryContactEmail();
+        if (is_string($contact)) {
+            try {
+                $provider = new OpenLibraryEditionSearchProvider(
+                    new WordPressProviderHttpClient(),
+                    new SystemMetadataClock(),
+                    new IsbnCanonicalizer(),
                     new OpenLibraryConfiguration("Biblio", "2.001", $contact)
                 );
             } catch (\InvalidArgumentException) {

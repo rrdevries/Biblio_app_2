@@ -3350,3 +3350,40 @@ MH-SEARCH-01B is accepted when:
 
 Status: **GO / CLOSED**. Detailed closure evidence is
 recorded in `docs/75-mh-search-01b-local-open-library-author-work-discovery.md`.
+
+## 102. MH-EDITION-01 lazy Editions by selected Work
+
+MH-EDITION-01 is accepted when:
+
+- one typed canonical or Open Library Work reference is the only selector;
+  free text, ISBN-as-Work, Google Volume and fuzzy Work lookup are absent;
+- canonical Editions are deterministically pageable by Edition title and ID,
+  remain valid without Items and expose only existing canonical metadata;
+- one Open Library page makes exactly one
+  `/works/{work}/editions.json?limit&offset` request and no Work search,
+  additional Work, Google or per-Edition detail request;
+- stable provider Edition identity and valid title are required, wrong Work
+  relations fail/reject safely, valid sibling records survive and ISBN-less
+  strongly identified Editions remain representable;
+- title/subtitle, language, publishers, publication date, ISBN-10/13, format
+  and page count remain nullable concrete Edition metadata and never mutate
+  Work;
+- the signed opaque continuation binds exact Work, provider/reference, lane
+  and offset; malformed, tampered and wrong-Work cursors fail closed, while
+  `null` means end without a hidden total limit;
+- local results precede external results, an external lane for a canonical Work
+  requires exactly one proven Open Library Work mapping and strong-identity
+  dedup never uses title/author/publisher/year similarity;
+- normal miss and every existing provider failure class stay typed, with local
+  results retained on external failure;
+- provider Edition plus provider Work identity and allowlisted candidate
+  context support a later adapter into existing generic materialization, while
+  this slice itself creates no canonical Work/Edition, Item, Library, Wishlist,
+  ReadingRound or other product state;
+- MH-SEARCH, MH-DISC, Wishlist, Add Book, unit, integration, PHP syntax,
+  PHPStan, Composer/platform, WordPress smoke, manifest and whitespace gates
+  pass; schema remains `1023`, no V1 data is used and independent review finds
+  no blocker.
+
+Status: **GO / CLOSED**. Detailed closure evidence is recorded in
+`docs/76-mh-edition-01-lazy-editions-by-selected-work.md`.

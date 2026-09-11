@@ -1,6 +1,6 @@
 # 73 — D-SEARCH-01 Shared Bibliographic Search | Contract & UX model
 
-Status: **DECISION CANONICALIZED / INITIAL AUTHOR-WORK SEARCH IMPLEMENTED**
+Status: **DECISION CANONICALIZED / AUTHOR-WORK + LAZY EDITION APPLICATION CONTRACTS IMPLEMENTED**
 
 Date: 2026-09-11
 
@@ -21,9 +21,10 @@ evidence governance, provisional catalog rules and server-side authorization
 remain authoritative. D-SEARCH-01 adds no current V1 dependency and uses no V1
 snapshot, count or record.
 
-MH-SEARCH-01A and MH-SEARCH-01B now implement the parallel application-level
-text boundary through local canonical plus Open Library Author/Work search.
-Works-by-Author, Editions-by-Work, REST/UI reachability and consumer cutover
+MH-SEARCH-01A and MH-SEARCH-01B implement the parallel application-level text
+boundary through local canonical plus Open Library Author/Work search.
+MH-EDITION-01 implements lazy pageable local/Open Library Editions for exactly
+one selected Work. Works-by-Author, REST/UI reachability and consumer cutover
 remain separate; therefore this document's complete progressive target is only
 partially implemented.
 

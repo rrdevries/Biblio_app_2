@@ -2,6 +2,10 @@
 
 Status: **GO / CLOSED**
 
+Post-closure note: MH-EDITION-01 now consumes its strong Work reference for
+lazy pageable Editions without changing the MH-SEARCH-01B contract; see
+`docs/76-mh-edition-01-lazy-editions-by-selected-work.md`.
+
 Date: 2026-09-11
 
 Task severity: **High**. The implementation audit preceded all changes; the
