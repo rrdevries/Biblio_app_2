@@ -3520,3 +3520,41 @@ MH-AUTHOR-API-01 is accepted when:
 Status: **GO / CLOSED** after the full gates and independent review. Biblio
 Core is `2.12.0`; Biblio UI remains `0.15.1`. Closure evidence is recorded in
 `docs/80-mh-author-api-01-selected-author-works-rest.md`.
+
+## 107. D-WORK-REF-01 signed Work selector handoff
+
+D-WORK-REF-01 is accepted when:
+
+- canonical-only, Open-Library-provider-only and trusted composite Work
+  references issue an opaque selector and decode to the exact typed reference;
+- version `1`, token type `work_selector`, strict form-specific fields and an
+  `AUTH_SALT`-derived Work-specific HMAC domain are enforced;
+- malformed/unsigned/bad-signature input, unknown or reordered fields,
+  unsupported providers, bad Work IDs, wrong form/type/version and changes to
+  canonical ID, provider or provider Work ID all fail closed;
+- composite issuance and decode each require the exact current existing
+  provider-Work-to-canonical-Work mapping, while missing/changed mappings fail
+  without canonical-only/provider-only downgrade or automatic remapping;
+- current schema-1023 ambiguity is recorded as unrepresentable because the
+  exact provider identity is a primary key, rather than being simulated with
+  an invalid schema state;
+- canonical-only performs no provider enrichment and provider-only requires no
+  canonical mapping; MH-EDITION-01 retains its own exact-one mapping resolution;
+- top-level Work and Author-to-Works result serializers issue `work_selector`
+  directly from their typed reference, while Author results, Author selector,
+  cursors and existing presentation/provider fields retain their meaning;
+- `result_id`, visible `work_id` and `provider_identity` are never treated as
+  selected-Work authority;
+- no Work-to-Editions route, provider search, materialization, mapping write,
+  schema/persistence, UI, consumer or V1 behavior is introduced;
+- Work selector, stale/tamper/cross-binding, both REST serializers,
+  MH-SEARCH, Author selector/API, MH-EDITION, MH-DISC, Wishlist and Add Book
+  regressions plus Composer/platform, PHP syntax, PHPStan, WordPress smoke,
+  manifest and whitespace gates pass; and
+- independent second review finds no identity, mapping freshness,
+  cryptography, compatibility or scope blocker.
+
+Status: **GO / CLOSED**. Product remains `v2.001`, schema
+remains `1023`, Biblio Core is `2.13.0` and Biblio UI remains `0.15.1`.
+Closure evidence is recorded in
+`docs/81-d-work-ref-01-signed-work-selector-handoff.md`.

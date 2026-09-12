@@ -2,6 +2,10 @@
 
 Status: **GO / CLOSED**
 
+Post-closure note: D-WORK-REF-01 now adds `work_selector` to each Work item
+without changing this route's request, grouping, cursors or Author projection;
+see `docs/81-d-work-ref-01-signed-work-selector-handoff.md`.
+
 Date: 2026-09-11
 
 Task severity: **High**. The REST audit preceded all changes. Primary

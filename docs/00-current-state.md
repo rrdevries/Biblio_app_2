@@ -2971,3 +2971,35 @@ deduplication, cursor and partial-failure semantics. There is no UI or consumer
 cutover. Schema remains `1023`; Biblio Core is `2.12.0`; Biblio UI remains
 `0.15.1`. Detailed evidence:
 `docs/80-mh-author-api-01-selected-author-works-rest.md`.
+
+### D-WORK-REF-01 — signed Work selector handoff
+
+Status: **GO / CLOSED**.
+
+Every Work item returned by authenticated top-level Author/Work search and by
+selected-Author Works now adds one opaque signed `work_selector`. The version-1
+selector represents exactly one canonical Work, one Open Library Work, or a
+canonical Work plus already trusted Open Library Work evidence. Existing
+`result_id`, nullable `work_id` and the Author-to-Works `provider_identity`
+remain presentation/data fields and are not selection authority.
+
+`BibliographicWorkSelectorCodec` issues only from the typed
+`BibliographicWorkReference` retained by the result DTO. It uses a Work-specific
+`AUTH_SALT`-derived HMAC domain, strict form-specific payload fields and the
+Open Library `/works/OL…W` allowlist. It is stateless, query-independent and
+non-expiring; `AUTH_SALT` rotation invalidates issued selectors.
+
+Composite issuance and every composite decode re-read the current schema-1023
+provider-Work-to-canonical-Work mapping and accept only the exact same edge.
+Missing or changed mappings fail closed without downgrade or remap. Healthy
+schema 1023 cannot represent two targets for one exact provider Work because
+that identity is the mapping table's primary key. Canonical-only and
+provider-only verification do not require a mapping; MH-EDITION-01 retains its
+own exact-one reverse lookup for later canonical-only use.
+
+No Work-to-Editions REST route, search/provider behavior, materialization,
+mapping write, persistence/schema, UI, consumer or V1 behavior is added.
+MH-EDITION-API-01 may now consume only `work_selector` in its separate slice.
+Schema remains `1023`; Biblio Core is `2.13.0`; Biblio UI remains `0.15.1`.
+Detailed evidence:
+`docs/81-d-work-ref-01-signed-work-selector-handoff.md`.

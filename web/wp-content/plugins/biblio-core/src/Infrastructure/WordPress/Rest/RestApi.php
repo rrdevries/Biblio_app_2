@@ -5,13 +5,18 @@ declare(strict_types=1);
 namespace Biblio\Core\Infrastructure\WordPress\Rest;
 
 use Biblio\Core\Application\CoreApplication;
+use Biblio\Core\Application\Metadata\Discovery\BibliographicProviderIdentityRepository;
 use Biblio\Core\Application\Metadata\Search\BibliographicAuthorSelectorCodec;
 use Biblio\Core\Application\Metadata\Search\BibliographicAuthorWorkSearchContract;
 use Biblio\Core\Application\Metadata\Search\BibliographicAuthorWorkSearchCursorCodec;
 use Biblio\Core\Application\Metadata\Search\BibliographicSearchCursorCodec;
 use Biblio\Core\Application\Metadata\Search\BibliographicTextSearchContract;
+use Biblio\Core\Application\Metadata\Search\BibliographicWorkSelectorCodec;
+use Biblio\Core\Infrastructure\Persistence\WordPress\CoreTableNames;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbBibliographicProviderIdentityRepository;
 use Closure;
 use LogicException;
+use wpdb;
 
 final class RestApi
 {
@@ -19,7 +24,10 @@ final class RestApi
     private readonly RestController $controller;
 
     /** @param Closure(): ?CoreApplication $applicationProvider */
-    public function __construct(Closure $applicationProvider)
+    public function __construct(
+        Closure $applicationProvider,
+        ?BibliographicProviderIdentityRepository $providerIdentities = null
+    )
     {
         $catalogCursors = new CatalogCursorCodec();
         $historyCursors = new ReadingHistoryCursorCodec();
@@ -29,12 +37,17 @@ final class RestApi
         $authorSelectors = new BibliographicAuthorSelectorCodec(
             self::bibliographicAuthorSelectorSecret()
         );
+        $workSelectors = new BibliographicWorkSelectorCodec(
+            self::bibliographicWorkSelectorSecret(),
+            $providerIdentities ?? self::bibliographicProviderIdentities()
+        );
         $bibliographicSearch = new RestBibliographicTextSearchContract(
             new BibliographicTextSearchContract(
                 new BibliographicSearchCursorCodec(
                     self::bibliographicSearchCursorSecret()
                 ),
-                $authorSelectors
+                $authorSelectors,
+                $workSelectors
             )
         );
         $bibliographicAuthorWorks = new RestBibliographicAuthorWorkSearchContract(
@@ -42,7 +55,8 @@ final class RestApi
             new BibliographicAuthorWorkSearchContract(
                 new BibliographicAuthorWorkSearchCursorCodec(
                     self::bibliographicAuthorWorkSearchCursorSecret()
-                )
+                ),
+                $workSelectors
             )
         );
         $this->controller = new RestController(
@@ -103,6 +117,30 @@ final class RestApi
         }
 
         return hash("sha256", $salt . ":bibliographic-author-selector-v1");
+    }
+
+    private static function bibliographicWorkSelectorSecret(): string
+    {
+        $salt = defined("AUTH_SALT") ? constant("AUTH_SALT") : null;
+        if (!is_string($salt) || trim($salt) === "") {
+            throw new LogicException("WordPress authentication salt is unavailable.");
+        }
+
+        return hash("sha256", $salt . ":bibliographic-work-selector-v1");
+    }
+
+    private static function bibliographicProviderIdentities():
+        BibliographicProviderIdentityRepository
+    {
+        global $wpdb;
+        if (!$wpdb instanceof wpdb) {
+            throw new LogicException("WordPress database connection is unavailable.");
+        }
+
+        return new WpdbBibliographicProviderIdentityRepository(
+            $wpdb,
+            new CoreTableNames($wpdb->prefix)
+        );
     }
 
     private static function bibliographicAuthorWorkSearchCursorSecret(): string

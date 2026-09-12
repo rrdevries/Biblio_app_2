@@ -571,6 +571,21 @@ composite preserves the existing local-then-external behavior. The response
 ends at Work identity/title/Authors/reliable Series context. Work-to-Editions
 and every UI consumer remain separate follow-up work.
 
+D-WORK-REF-01 now adds the equivalent authority-bearing handoff for a selected
+Work. Every Work result from the top-level search and selected-Author Works
+response receives one opaque signed `work_selector`, issued only from its
+typed server-side `BibliographicWorkReference`. It represents canonical-only,
+Open-Library-provider-only or canonical plus already trusted Open Library Work
+evidence. The client never reconstructs authority from `result_id`, visible
+`work_id`, provider metadata, title, Authors or other presentation data.
+
+A composite Work selector is valid only while the exact current
+provider-Work-to-canonical-Work mapping still exists. Issuance and verification
+both re-read that mapping; removal or a different target fails closed without
+downgrade, automatic remapping or a new search/mapping write. Canonical-only
+and provider-only selectors remain valid without mapping enrichment. The
+separate MH-EDITION-API-01 transport must later accept only this selector.
+
 Independent Biblio-owned or user-supplied cover acquisition/management is
 V2.002+. Existing V1 cover references/assets remain migration inventory and
 may not be silently discarded.

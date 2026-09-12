@@ -352,8 +352,16 @@ top-level Author result includes one opaque signed `author_selector`. It
 represents exactly a canonical Author, an Open Library provider Author, or a
 canonical Author with server-proven Open Library evidence. The client never
 constructs or combines those identities, and `result_id` remains presentation
-identity rather than selection authority. The future MH-AUTHOR-API-01 accepts
-only this selector.
+identity rather than selection authority. MH-AUTHOR-API-01 accepts only this
+selector.
+
+D-WORK-REF-01 supplies the corresponding selected-Work authority on every Work
+from top-level search and selected-Author Works: one opaque signed
+`work_selector`, issued directly from the typed Work reference. Canonical,
+Open Library provider and trusted composite forms remain distinct. A composite
+is accepted only while its exact current provider-to-canonical Work mapping is
+still present; no display/result field can reconstruct this authority. The
+separate MH-EDITION-API-01 must accept only this selector.
 
 ## 14. Consumer behavior
 

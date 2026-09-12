@@ -2,6 +2,11 @@
 
 Status: **GO / CLOSED** after the recorded gates and independent review.
 
+Post-closure note: D-WORK-REF-01 now supplies the server-issued signed selected-
+Work authority required by future MH-EDITION-API-01. This application service's
+typed Work contract and canonical-only exact-one mapping resolution are
+unchanged; see `docs/81-d-work-ref-01-signed-work-selector-handoff.md`.
+
 Date: 2026-09-11
 
 Task severity: **High**. The implementation audit preceded every change; the

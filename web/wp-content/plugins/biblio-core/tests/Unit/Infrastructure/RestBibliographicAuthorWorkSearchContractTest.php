@@ -18,6 +18,7 @@ use Biblio\Core\Application\Metadata\Search\{
     BibliographicSearchProviderAttempt,
     BibliographicWorkAuthor,
     BibliographicWorkReference,
+    BibliographicWorkSelectorCodec,
     BibliographicWorkSearchResult
 };
 use Biblio\Core\Catalog\AuthorId;
@@ -229,6 +230,7 @@ final class RestBibliographicAuthorWorkSearchContractTest extends TestCase
             "result_id",
             "result_kind",
             "work_id",
+            "work_selector",
             "provider_identity",
             "title",
             "authors",
@@ -239,6 +241,13 @@ final class RestBibliographicAuthorWorkSearchContractTest extends TestCase
             "provider_key" => "open_library",
             "record_id" => "/works/OL1W",
         ], $payload["items"][0]["provider_identity"]);
+        $selectedWork = (new BibliographicWorkSelectorCodec(
+            self::SELECTOR_SECRET . "-work"
+        ))->decode($payload["items"][0]["work_selector"]);
+        self::assertSame(
+            "/works/OL1W",
+            $selectedWork->providerIdentity()?->providerRecordId()
+        );
         self::assertSame([
             "provider_key" => "open_library",
             "status" => "unavailable",
@@ -261,7 +270,10 @@ final class RestBibliographicAuthorWorkSearchContractTest extends TestCase
     {
         return new RestBibliographicAuthorWorkSearchContract(
             $this->selectors(),
-            new BibliographicAuthorWorkSearchContract($this->cursors())
+            new BibliographicAuthorWorkSearchContract(
+                $this->cursors(),
+                new BibliographicWorkSelectorCodec(self::SELECTOR_SECRET . "-work")
+            )
         );
     }
 

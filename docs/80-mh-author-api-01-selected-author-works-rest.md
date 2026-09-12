@@ -2,6 +2,10 @@
 
 Status: **GO / CLOSED** after the recorded gates and independent review.
 
+Post-closure note: D-WORK-REF-01 now adds `work_selector` to each returned Work
+while retaining `provider_identity` as visible data rather than authority; see
+`docs/81-d-work-ref-01-signed-work-selector-handoff.md`.
+
 Date: 2026-09-11
 
 Task severity: **High**. The signed-selector prerequisite was verified before

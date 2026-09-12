@@ -22,6 +22,7 @@ use Biblio\Core\Application\Metadata\Search\{
     BibliographicSearchProviderFailure,
     BibliographicWorkAuthor,
     BibliographicWorkReference,
+    BibliographicWorkSelectorCodec,
     BibliographicWorkSearchResult
 };
 use Biblio\Core\Catalog\{AuthorId,WorkId};
@@ -44,7 +45,8 @@ final class BibliographicAuthorWorkSearchTest extends TestCase
             1
         );
         $contract = new BibliographicAuthorWorkSearchContract(
-            new BibliographicAuthorWorkSearchCursorCodec(self::CURSOR_SECRET)
+            new BibliographicAuthorWorkSearchCursorCodec(self::CURSOR_SECRET),
+            new BibliographicWorkSelectorCodec(self::CURSOR_SECRET . "-selector")
         );
 
         $payload = $contract->serialize(new BibliographicAuthorWorkSearchPage(
@@ -59,6 +61,7 @@ final class BibliographicAuthorWorkSearchTest extends TestCase
                 "result_id",
                 "result_kind",
                 "work_id",
+                "work_selector",
                 "provider_identity",
                 "title",
                 "authors",
@@ -108,7 +111,8 @@ final class BibliographicAuthorWorkSearchTest extends TestCase
     public function testContractRejectsUnknownAndCoercedRequestFields(): void
     {
         $contract = new BibliographicAuthorWorkSearchContract(
-            new BibliographicAuthorWorkSearchCursorCodec(self::CURSOR_SECRET)
+            new BibliographicAuthorWorkSearchCursorCodec(self::CURSOR_SECRET),
+            new BibliographicWorkSelectorCodec(self::CURSOR_SECRET . "-selector")
         );
         $author = BibliographicAuthorReference::canonical(new AuthorId("author-request"));
         foreach ([["unknown" => true], ["cursor" => 10]] as $payload) {

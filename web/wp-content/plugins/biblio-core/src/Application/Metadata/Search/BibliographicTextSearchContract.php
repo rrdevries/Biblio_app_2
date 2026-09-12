@@ -11,7 +11,8 @@ final readonly class BibliographicTextSearchContract
 {
     public function __construct(
         private BibliographicSearchCursorCodec $cursors,
-        private BibliographicAuthorSelectorCodec $authorSelectors
+        private BibliographicAuthorSelectorCodec $authorSelectors,
+        private BibliographicWorkSelectorCodec $workSelectors
     ) {}
 
     /** @param array<string,mixed> $payload */
@@ -108,6 +109,7 @@ final readonly class BibliographicTextSearchContract
             "result_id" => $work->reference()->resultId(),
             "result_kind" => $work->reference()->kind()->value,
             "work_id" => $work->reference()->workId()?->value(),
+            "work_selector" => $this->workSelectors->encode($work->reference()),
             "title" => $work->title(),
             "authors" => array_map(
                 static fn (BibliographicWorkAuthor $author): array => [

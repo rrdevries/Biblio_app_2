@@ -1885,3 +1885,45 @@ Authors and Series. They expose no Edition, provider payload, Library or user
 data. Local/external orchestration, strong-identity deduplication and partial
 failure remain application-owned. No Edition query, persistence, schema, UI,
 materialization or consumer cutover is added.
+
+## 47. D-WORK-REF-01 signed Work selector handoff
+
+`BibliographicWorkSelectorCodec` is the shared issue/verify boundary between
+typed Work results and future selected-Work transport. It signs strict
+version-1 JSON as `base64url(payload).base64url(HMAC-SHA256)` with the separate
+`bibliographic-work-selector-v1` domain derived from WordPress `AUTH_SALT`.
+The payload is not encrypted because its bibliographic identities are not
+secret; authenticity and integrity are required.
+
+The three forms have different exact field sets: canonical carries `WorkId`,
+provider carries Open Library provider plus `/works/OL…W`, and composite
+carries both. Unknown/reordered/additional fields, invalid form/version/type,
+unsupported provider, malformed identity, invalid encoding and bad signature
+fail closed. Neither `result_id`, visible `work_id` nor serialized provider
+metadata is accepted as authority.
+
+The same codec instance is shared by `BibliographicTextSearchContract` and
+`BibliographicAuthorWorkSearchContract`. Each serializer passes the retained
+typed `BibliographicWorkReference` directly; it never rebuilds a reference
+from result fields. Current production local results are canonical-only and
+Open Library results provider-only. Composite support remains available only
+for a server pipeline that already supplies canonical plus provider evidence.
+
+Unlike the Author selector, a composite Work edge is mutable storage truth.
+The codec therefore uses the existing
+`BibliographicProviderIdentityRepository::findWork()` read during composite
+issuance and again on every decode. Only an exact current
+`provider + source type work + provider Work ID -> canonical WorkId` match is
+accepted. Missing or changed mappings reject the token without downgrade or
+remapping. Schema 1023's provider-identity primary key makes two simultaneous
+canonical targets for one exact provider Work unrepresentable in a healthy
+schema. Core currently exposes claim-only/conflict writes rather than an
+explicit revoke/remap operation, but the read-time rule also protects direct
+or future lifecycle changes.
+
+Canonical-only decode does not resolve provider identity; MH-EDITION-01 retains
+its existing exact-one reverse lookup when it later needs an external lane.
+Provider-only decode requires no canonical mapping. The selector is stateless,
+query-independent and has no TTL; `AUTH_SALT` rotation provides global
+invalidation. No new repository, table, session, token registry, schema,
+endpoint or product write is introduced.
