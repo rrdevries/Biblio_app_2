@@ -228,6 +228,7 @@ export function createWishlistApp({
         documentImpl,
         eventTarget,
         overviewUrl: root.dataset.overviewUrl,
+        searchUrl: root.dataset.searchUrl,
         wishlistUrl: root.dataset.wishlistUrl,
         nextReadingUrl: root.dataset.nextReadingUrl,
         activeDestination: "wishlist",

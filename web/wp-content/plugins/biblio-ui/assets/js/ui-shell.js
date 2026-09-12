@@ -36,6 +36,7 @@ export function createLibraryShell(mount, {
     documentImpl = globalThis.document,
     eventTarget = globalThis,
     overviewUrl,
+    searchUrl,
     wishlistUrl,
     nextReadingUrl,
     activeDestination = "library",
@@ -92,6 +93,7 @@ export function createLibraryShell(mount, {
     });
     const destinations = [
         ["library", "Mijn Bibliotheek", overviewUrl, "books"],
+        ["search", "Zoeken", searchUrl, "search"],
         ["wishlist", "Verlanglijst", wishlistUrl, "bookmark"],
         ["next-reading", "Hierna lezen", nextReadingUrl, "book-open"],
     ];

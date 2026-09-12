@@ -67,6 +67,7 @@ test("shell composes Ink Light sidebar, remembered rail and mobile off-canvas", 
         documentImpl,
         eventTarget,
         overviewUrl: "https://example.test/mijn-bibliotheek/",
+        searchUrl: "https://example.test/zoeken/",
         wishlistUrl: "https://example.test/verlanglijst/",
         nextReadingUrl: "https://example.test/hierna-lezen/",
         activeDestination: "wishlist",
@@ -84,10 +85,12 @@ test("shell composes Ink Light sidebar, remembered rail and mobile off-canvas", 
     const links = allByClass(shell, "biblio-ui__nav-link");
     assert.deepEqual(links.map((link) => link.getAttribute("title")), [
         "Mijn Bibliotheek",
+        "Zoeken",
         "Verlanglijst",
         "Hierna lezen",
     ]);
     assert.deepEqual(links.map((link) => link.getAttribute("aria-current")), [
+        null,
         null,
         "page",
         null,

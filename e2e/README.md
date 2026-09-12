@@ -5,6 +5,8 @@ Vertical Slice 1A, the ReadingRound end evidence in Vertical Slice 1B, the
 Reading History browser evidence in Vertical Slice 1C and the authenticated
 Private Notes browser evidence in Vertical Slice 1D. It also contains the
 standalone Next Reading adapter evidence for capability C7.
+It also covers SEARCH-UI-01A's authenticated full-page top-level Author/Work
+search, independent group pagination and desktop/tablet/mobile composition.
 
 ## Safety boundary
 
@@ -72,6 +74,14 @@ the existing authenticated Core application services. The C7 browser spec is
 serial and proves empty, add, duplicate, reorder, direct remove and Undo,
 preferred-source changes, stale recovery, ownership privacy, keyboard flow and
 narrow responsive behavior.
+
+The SEARCH-UI-01A layer creates one temporary marked Page at `/zoeken/` only
+when no ordinary Page with that slug exists. Its browser spec intercepts the
+authenticated Core route with contract-faithful Author/Work pages so it can
+deterministically prove grouping, independent cursors, selector non-disclosure,
+partial and full failure states, focus/live announcements and responsive
+layout without creating bibliographic domain data. Cleanup removes only a Page
+that carries the exact E2E marker.
 
 Cleanup removes ReadingRounds by the exact allowlisted Work set, including
 source-free, ExternalLoan and legacy rows, then removes the three exact

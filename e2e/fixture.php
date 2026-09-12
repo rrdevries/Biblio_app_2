@@ -71,6 +71,7 @@ const BIBLIO_E2E_NOTE_REFLOW = "e2e-private-note-reflow";
 const BIBLIO_E2E_NOTE_FOREIGN = "e2e-private-note-foreign";
 const BIBLIO_E2E_C7_PAGE_SLUG = "hierna-lezen";
 const BIBLIO_E2E_WISHLIST_PAGE_SLUG = "verlanglijst";
+const BIBLIO_E2E_SEARCH_PAGE_SLUG = "zoeken";
 const BIBLIO_E2E_C7_UNAVAILABLE_ITEM = "e2e-item-c7-unavailable";
 const BIBLIO_E2E_C7_LOAN = "e2e-external-loan-c7";
 const BIBLIO_E2E_C7_FOREIGN_LOAN = "e2e-external-loan-c7-foreign";
@@ -836,6 +837,36 @@ function biblioE2eCreateWishlistPage(): void
 
     if (is_wp_error($result)) {
         throw new RuntimeException("Could not create exact Wishlist fixture Page.");
+    }
+}
+
+function biblioE2eCreateSearchPage(): void
+{
+    $existing = get_page_by_path(BIBLIO_E2E_SEARCH_PAGE_SLUG, OBJECT, "page");
+    if ($existing instanceof WP_Post) {
+        if (
+            $existing->post_status !== "publish"
+            || trim($existing->post_content) !== "[biblio_search_app]"
+        ) {
+            biblioE2eFail("the Search Page slug is already occupied.");
+        }
+
+        return;
+    }
+
+    $result = wp_insert_post([
+        "post_title" => "Zoeken",
+        "post_name" => BIBLIO_E2E_SEARCH_PAGE_SLUG,
+        "post_type" => "page",
+        "post_status" => "publish",
+        "post_content" => "[biblio_search_app]",
+        "meta_input" => [
+            BIBLIO_E2E_MARKER_KEY => BIBLIO_E2E_MARKER_VALUE,
+        ],
+    ], true);
+
+    if (is_wp_error($result)) {
+        throw new RuntimeException("Could not create exact Search fixture Page.");
     }
 }
 
@@ -1770,6 +1801,7 @@ function biblioE2eSetup(wpdb $database): void
     biblioE2eSeedWishlist($database, true);
     biblioE2eCreateNextReadingPage();
     biblioE2eCreateWishlistPage();
+    biblioE2eCreateSearchPage();
 }
 
 biblioE2eGuard();
