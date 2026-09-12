@@ -273,6 +273,7 @@ biblioUiAssertFalse(
 require_once __DIR__ . "/../src/LibraryAppShortcode.php";
 require_once __DIR__ . "/../src/NextReadingAppShortcode.php";
 require_once __DIR__ . "/../src/WishlistAppShortcode.php";
+require_once __DIR__ . "/../src/SearchAppShortcode.php";
 require_once __DIR__ . "/../src/Plugin.php";
 
 $plugin = new \Biblio\UI\Plugin("/plugin/biblio-ui.php");
@@ -280,9 +281,9 @@ $plugin->boot();
 $plugin->boot();
 
 biblioUiAssertSame(
-    3,
+    4,
     count($biblioUiTestActions["init"] ?? []),
-    "Plugin boot must register all three init hooks exactly once."
+    "Plugin boot must register all four init hooks exactly once."
 );
 biblioUiAssertSame(
     1,
@@ -316,6 +317,12 @@ biblioUiAssertSame(
     ["existing", \Biblio\UI\Plugin::PAGE_BODY_CLASS],
     biblioUiRunFilter("body_class", ["existing"]),
     "The Wishlist Page must receive the scoped App Shell body class."
+);
+$biblioUiTestCurrentPageSlug = \Biblio\UI\SearchAppShortcode::PAGE_SLUG;
+biblioUiAssertSame(
+    ["existing", \Biblio\UI\Plugin::PAGE_BODY_CLASS],
+    biblioUiRunFilter("body_class", ["existing"]),
+    "The Search Page must receive the scoped App Shell body class."
 );
 $biblioUiTestCurrentPageSlug = null;
 $biblioUiTestPageChecks = [];
@@ -352,6 +359,11 @@ biblioUiAssertContains(
     "The Next Reading login redirect is missing."
 );
 biblioUiAssertContains(
+    'data-search-url="https://example.test/zoeken/"',
+    $nextReadingMount,
+    "The Next Reading shared Search destination is missing."
+);
+biblioUiAssertContains(
     'data-wishlist-url="https://example.test/verlanglijst/"',
     $nextReadingMount,
     "The Next Reading shared Wishlist destination is missing."
@@ -379,6 +391,11 @@ biblioUiAssertContains(
     "The Wishlist mount marker is missing."
 );
 biblioUiAssertContains(
+    'data-search-url="https://example.test/zoeken/"',
+    $wishlistMount,
+    "The Wishlist shared Search destination is missing."
+);
+biblioUiAssertContains(
     'data-wishlist-url="https://example.test/verlanglijst/"',
     $wishlistMount,
     "The canonical Wishlist URL is missing."
@@ -387,6 +404,35 @@ biblioUiAssertContains(
     'data-next-reading-url="https://example.test/hierna-lezen/"',
     $wishlistMount,
     "The Wishlist shared Next Reading destination is missing."
+);
+
+biblioUiAssertSame(
+    1,
+    $biblioUiTestShortcodeRegistrations[\Biblio\UI\SearchAppShortcode::TAG]
+        ?? 0,
+    "The Search app shortcode must register exactly once."
+);
+$searchShortcode =
+    $biblioUiTestShortcodes[\Biblio\UI\SearchAppShortcode::TAG] ?? null;
+if (!is_callable($searchShortcode)) {
+    throw new RuntimeException("The Search app shortcode is not callable.");
+}
+$searchMount = $searchShortcode([], null, \Biblio\UI\SearchAppShortcode::TAG);
+biblioUiAssertContains(
+    "data-biblio-search-root",
+    $searchMount,
+    "The Search mount marker is missing."
+);
+biblioUiAssertContains(
+    'data-search-url="https://example.test/zoeken/"',
+    $searchMount,
+    "The canonical Search URL is missing."
+);
+biblioUiAssertContains(
+    'data-login-url="https://example.test/wp-login.php?redirect_to='
+        . 'https%3A%2F%2Fexample.test%2Fzoeken%2F',
+    $searchMount,
+    "The Search login redirect is missing."
 );
 
 biblioUiAssertSame(
@@ -427,6 +473,11 @@ biblioUiAssertContains(
     "The canonical overview URL is missing."
 );
 biblioUiAssertContains(
+    'data-search-url="https://example.test/zoeken/"',
+    $mount,
+    "The shared Search destination is missing."
+);
+biblioUiAssertContains(
     'data-wishlist-url="https://example.test/verlanglijst/"',
     $mount,
     "The shared Wishlist destination is missing."
@@ -444,20 +495,21 @@ biblioUiAssertContains(
     "The escaped login URL is missing."
 );
 biblioUiAssertSame(
-    ["biblio/v1/", "biblio/v1/", "biblio/v1/"],
+    ["biblio/v1/", "biblio/v1/", "biblio/v1/", "biblio/v1/"],
     $biblioUiTestRestPaths,
     "The REST root must use the existing biblio/v1 namespace."
 );
 biblioUiAssertSame(
-    ["wp_rest", "wp_rest", "wp_rest"],
+    ["wp_rest", "wp_rest", "wp_rest", "wp_rest"],
     $biblioUiTestNonceActions,
     "The mount must use the standard WordPress REST nonce action."
 );
 biblioUiAssertSame(
     [
-        "/hierna-lezen/", "/mijn-bibliotheek/", "/verlanglijst/",
-        "/verlanglijst/", "/mijn-bibliotheek/", "/hierna-lezen/",
-        "/mijn-bibliotheek/", "/verlanglijst/", "/hierna-lezen/",
+        "/hierna-lezen/", "/mijn-bibliotheek/", "/zoeken/", "/verlanglijst/",
+        "/verlanglijst/", "/mijn-bibliotheek/", "/zoeken/", "/hierna-lezen/",
+        "/zoeken/", "/mijn-bibliotheek/", "/verlanglijst/", "/hierna-lezen/",
+        "/mijn-bibliotheek/", "/zoeken/", "/verlanglijst/", "/hierna-lezen/",
     ],
     $biblioUiTestHomePaths,
     "All personal navigation URLs must be server-generated from canonical paths."
@@ -466,6 +518,7 @@ biblioUiAssertSame(
     [
         "https://example.test/hierna-lezen/",
         "https://example.test/verlanglijst/",
+        "https://example.test/zoeken/",
         "https://example.test/mijn-bibliotheek/",
     ],
     $biblioUiTestLoginRedirects,
@@ -528,7 +581,7 @@ biblioUiAssertSame(
             "id" => \Biblio\UI\Plugin::WISHLIST_SCRIPT_MODULE_ID,
             "import" => "static",
         ]],
-        "version" => "0.15.1",
+        "version" => "0.16.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[\Biblio\UI\Plugin::SCRIPT_MODULE_ID] ?? null,
@@ -539,7 +592,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/api.js",
         "dependencies" => [],
-        "version" => "0.15.1",
+        "version" => "0.16.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -552,7 +605,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/catalog-query.js",
         "dependencies" => [],
-        "version" => "0.15.1",
+        "version" => "0.16.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -568,7 +621,7 @@ biblioUiAssertSame(
             "id" => \Biblio\UI\Plugin::CATALOG_QUERY_SCRIPT_MODULE_ID,
             "import" => "static",
         ]],
-        "version" => "0.15.1",
+        "version" => "0.16.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -581,7 +634,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/library-state.js",
         "dependencies" => [],
-        "version" => "0.15.1",
+        "version" => "0.16.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -594,7 +647,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/overview-view.js",
         "dependencies" => [],
-        "version" => "0.15.1",
+        "version" => "0.16.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -607,7 +660,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/ui-preferences.js",
         "dependencies" => [],
-        "version" => "0.15.1",
+        "version" => "0.16.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -623,13 +676,32 @@ biblioUiAssertSame(
             "id" => \Biblio\UI\Plugin::UI_PREFERENCES_SCRIPT_MODULE_ID,
             "import" => "static",
         ]],
-        "version" => "0.15.1",
+        "version" => "0.16.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
         \Biblio\UI\Plugin::UI_SHELL_SCRIPT_MODULE_ID
     ] ?? null,
     "The UI-shell Script Module registration contract is incorrect."
+);
+biblioUiAssertSame(
+    [
+        "source" => "https://example.test/wp-content/plugins/biblio-ui/"
+            . "assets/js/bibliographic-search.js",
+        "dependencies" => [[
+            "id" => \Biblio\UI\Plugin::API_SCRIPT_MODULE_ID,
+            "import" => "static",
+        ], [
+            "id" => \Biblio\UI\Plugin::UI_SHELL_SCRIPT_MODULE_ID,
+            "import" => "static",
+        ]],
+        "version" => "0.16.0",
+        "arguments" => [],
+    ],
+    $biblioUiTestRegisteredModules[
+        \Biblio\UI\Plugin::SEARCH_SCRIPT_MODULE_ID
+    ] ?? null,
+    "The Search Script Module registration contract is incorrect."
 );
 biblioUiAssertSame(
     [
@@ -642,7 +714,7 @@ biblioUiAssertSame(
             "id" => \Biblio\UI\Plugin::UI_SHELL_SCRIPT_MODULE_ID,
             "import" => "static",
         ]],
-        "version" => "0.15.1",
+        "version" => "0.16.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -661,7 +733,7 @@ biblioUiAssertSame(
             "id" => \Biblio\UI\Plugin::UI_SHELL_SCRIPT_MODULE_ID,
             "import" => "static",
         ]],
-        "version" => "0.15.1",
+        "version" => "0.16.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -674,7 +746,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/private-notes.js",
         "dependencies" => [],
-        "version" => "0.15.1",
+        "version" => "0.16.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -687,7 +759,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/reading-history.js",
         "dependencies" => [],
-        "version" => "0.15.1",
+        "version" => "0.16.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -700,7 +772,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/detail-view.js",
         "dependencies" => [],
-        "version" => "0.15.1",
+        "version" => "0.16.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -713,7 +785,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/start-reading-view.js",
         "dependencies" => [],
-        "version" => "0.15.1",
+        "version" => "0.16.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -726,7 +798,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/end-reading-view.js",
         "dependencies" => [],
-        "version" => "0.15.1",
+        "version" => "0.16.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -739,7 +811,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/add-book-wizard.js",
         "dependencies" => [],
-        "version" => "0.15.1",
+        "version" => "0.16.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -752,7 +824,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/css/app.css",
         "dependencies" => [],
-        "version" => "0.15.1",
+        "version" => "0.16.0",
         "media" => "all",
     ],
     $biblioUiTestRegisteredStyles[\Biblio\UI\Plugin::STYLE_HANDLE] ?? null,
@@ -774,8 +846,8 @@ biblioUiAssertSame(
 );
 biblioUiAssertSame(
     [
-        "hierna-lezen", "verlanglijst", "mijn-bibliotheek",
-        "hierna-lezen", "verlanglijst", "mijn-bibliotheek",
+        "hierna-lezen", "verlanglijst", "zoeken", "mijn-bibliotheek",
+        "hierna-lezen", "verlanglijst", "zoeken", "mijn-bibliotheek",
     ],
     $biblioUiTestPageChecks,
     "Every asset decision must use the planned Page slug."
@@ -808,6 +880,20 @@ biblioUiAssertSame(
     [\Biblio\UI\Plugin::STYLE_HANDLE],
     $biblioUiTestEnqueuedStyles,
     "The shared stylesheet must load on the Wishlist Page."
+);
+$biblioUiTestEnqueuedModules = [];
+$biblioUiTestEnqueuedStyles = [];
+$biblioUiTestCurrentPageSlug = "zoeken";
+biblioUiRunAction("wp_enqueue_scripts");
+biblioUiAssertSame(
+    [\Biblio\UI\Plugin::SEARCH_SCRIPT_MODULE_ID],
+    $biblioUiTestEnqueuedModules,
+    "Only the Search module must load on its isolated Page."
+);
+biblioUiAssertSame(
+    [\Biblio\UI\Plugin::STYLE_HANDLE],
+    $biblioUiTestEnqueuedStyles,
+    "The shared stylesheet must load on the Search Page."
 );
 biblioUiAssertSame(
     true,
@@ -891,6 +977,11 @@ biblioUiAssertSame(
 );
 biblioUiAssertSame(
     true,
+    is_file(__DIR__ . "/../assets/js/bibliographic-search.js"),
+    "The Search Script Module file must exist."
+);
+biblioUiAssertSame(
+    true,
     is_file(__DIR__ . "/../assets/js/bibliographic-discovery.js"),
     "The shared bibliographic discovery decoder file must exist."
 );
@@ -903,9 +994,9 @@ biblioUiAssertSame(
 require __DIR__ . "/../biblio-ui.php";
 
 biblioUiAssertSame(
-    6,
+    8,
     count($biblioUiTestActions["init"] ?? []),
-    "The plugin entry point must register all three additional init hooks."
+    "The plugin entry point must register all four additional init hooks."
 );
 biblioUiAssertSame(
     2,
@@ -918,7 +1009,7 @@ biblioUiAssertSame(
     "The plugin entry point must register one additional body-class filter."
 );
 biblioUiAssertSame(
-    "0.15.1",
+    "0.16.0",
     \Biblio\UI\Plugin::VERSION,
     "The plugin version must remain the single asset cache-busting version."
 );
@@ -934,23 +1025,24 @@ biblioUiAssertFalse(
 echo "OK: Biblio UI isolated smoke test passed." . PHP_EOL;
 echo "Lifecycle: idempotent" . PHP_EOL;
 echo "Shortcode config: escaped server values" . PHP_EOL;
-echo "Script Module: biblio-ui/app@0.15.1" . PHP_EOL;
-echo "API Script Module: biblio-ui/api@0.15.1" . PHP_EOL;
-echo "Catalog Query Script Module: biblio-ui/catalog-query@0.15.1" . PHP_EOL;
-echo "Route Script Module: biblio-ui/route-state@0.15.1" . PHP_EOL;
-echo "Library Script Module: biblio-ui/library-state@0.15.1" . PHP_EOL;
-echo "Overview Script Module: biblio-ui/overview-view@0.15.1" . PHP_EOL;
-echo "UI Preferences Script Module: biblio-ui/ui-preferences@0.15.1" . PHP_EOL;
-echo "UI Shell Script Module: biblio-ui/ui-shell@0.15.1" . PHP_EOL;
-echo "Private Notes Script Module: biblio-ui/private-notes@0.15.1" . PHP_EOL;
-echo "Reading History Script Module: biblio-ui/reading-history@0.15.1" . PHP_EOL;
-echo "Detail Script Module: biblio-ui/detail-view@0.15.1" . PHP_EOL;
-echo "Start Reading Script Module: biblio-ui/start-reading-view@0.15.1" . PHP_EOL;
-echo "End Reading Script Module: biblio-ui/end-reading-view@0.15.1" . PHP_EOL;
-echo "Add Book Script Module: biblio-ui/add-book-wizard@0.15.1" . PHP_EOL;
-echo "Next Reading Script Module: biblio-ui/next-reading@0.15.1" . PHP_EOL;
-echo "Wishlist Script Module: biblio-ui/wishlist@0.15.1" . PHP_EOL;
-echo "Stylesheet: biblio-ui@0.15.1" . PHP_EOL;
+echo "Script Module: biblio-ui/app@0.16.0" . PHP_EOL;
+echo "API Script Module: biblio-ui/api@0.16.0" . PHP_EOL;
+echo "Catalog Query Script Module: biblio-ui/catalog-query@0.16.0" . PHP_EOL;
+echo "Route Script Module: biblio-ui/route-state@0.16.0" . PHP_EOL;
+echo "Library Script Module: biblio-ui/library-state@0.16.0" . PHP_EOL;
+echo "Overview Script Module: biblio-ui/overview-view@0.16.0" . PHP_EOL;
+echo "UI Preferences Script Module: biblio-ui/ui-preferences@0.16.0" . PHP_EOL;
+echo "UI Shell Script Module: biblio-ui/ui-shell@0.16.0" . PHP_EOL;
+echo "Private Notes Script Module: biblio-ui/private-notes@0.16.0" . PHP_EOL;
+echo "Reading History Script Module: biblio-ui/reading-history@0.16.0" . PHP_EOL;
+echo "Detail Script Module: biblio-ui/detail-view@0.16.0" . PHP_EOL;
+echo "Start Reading Script Module: biblio-ui/start-reading-view@0.16.0" . PHP_EOL;
+echo "End Reading Script Module: biblio-ui/end-reading-view@0.16.0" . PHP_EOL;
+echo "Add Book Script Module: biblio-ui/add-book-wizard@0.16.0" . PHP_EOL;
+echo "Next Reading Script Module: biblio-ui/next-reading@0.16.0" . PHP_EOL;
+echo "Wishlist Script Module: biblio-ui/wishlist@0.16.0" . PHP_EOL;
+echo "Search Script Module: biblio-ui/bibliographic-search@0.16.0" . PHP_EOL;
+echo "Stylesheet: biblio-ui@0.16.0" . PHP_EOL;
 echo "Global enqueue: no" . PHP_EOL;
 echo "Library Page enqueue: yes" . PHP_EOL;
 echo "Elementor loaded: no" . PHP_EOL;

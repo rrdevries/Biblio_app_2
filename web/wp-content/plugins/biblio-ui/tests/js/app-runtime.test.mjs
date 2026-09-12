@@ -48,6 +48,7 @@ function mount() {
             restRoot: "https://example.test/wp-json/biblio/v1/",
             restNonce: "rest-nonce",
             overviewUrl: "https://example.test/mijn-bibliotheek/",
+            searchUrl: "https://example.test/zoeken/",
             wishlistUrl: "https://example.test/verlanglijst/",
             nextReadingUrl: "https://example.test/hierna-lezen/",
             loginUrl: "https://example.test/wp-login.php?redirect_to=library",

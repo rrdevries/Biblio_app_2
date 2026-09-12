@@ -572,6 +572,7 @@ function bootstrap() {
         const api = createBiblioApi({ restRoot: root.dataset.restRoot, restNonce: root.dataset.restNonce });
         const shell = createLibraryShell(root, {
             overviewUrl: root.dataset.overviewUrl,
+            searchUrl: root.dataset.searchUrl,
             wishlistUrl: root.dataset.wishlistUrl,
             nextReadingUrl: root.dataset.nextReadingUrl,
             activeDestination: "next-reading",

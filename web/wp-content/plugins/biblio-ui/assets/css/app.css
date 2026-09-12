@@ -854,6 +854,10 @@ body.admin-bar.biblio-app-shell-page {
     mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6.5 3.75h11v16.5L12 16.6l-5.5 3.65V3.75Z' fill='none' stroke='black' stroke-width='1.6' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
+[data-biblio-ui-root] .biblio-ui__icon[data-biblio-icon="search"] {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='10.5' cy='10.5' r='6.5' fill='none' stroke='black' stroke-width='1.6'/%3E%3Cpath d='m15.5 15.5 4.25 4.25' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
 [data-biblio-ui-root] .biblio-ui__icon[data-biblio-icon="user"] {
     mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='8' r='3.25' fill='none' stroke='black' stroke-width='1.6'/%3E%3Cpath d='M5.5 20c.35-4 2.5-6 6.5-6s6.15 2 6.5 6' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");
 }
@@ -1990,6 +1994,214 @@ body.admin-bar.biblio-app-shell-page {
 @media (prefers-reduced-motion: no-preference) {
     [data-biblio-ui-root] :where(.biblio-ui__sidebar, .biblio-ui__nav-scrim) {
         transition: opacity 160ms ease, transform 160ms ease, visibility 160ms ease;
+    }
+}
+
+[data-biblio-search-root] .biblio-ui__bibliographic-search {
+    gap: var(--biblio-space-8);
+}
+
+[data-biblio-search-root] .biblio-ui__search-page-header {
+    display: grid;
+    gap: var(--biblio-space-2);
+    max-inline-size: var(--biblio-reading-max);
+}
+
+[data-biblio-search-root] :where(.biblio-ui__search-page-header .biblio-ui__eyebrow, .biblio-ui__search-result-kind) {
+    color: var(--biblio-color-brass);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.075em;
+    text-transform: uppercase;
+}
+
+[data-biblio-search-root] .biblio-ui__search-intro,
+[data-biblio-search-root] .biblio-ui__search-help,
+[data-biblio-search-root] .biblio-ui__search-welcome > p,
+[data-biblio-search-root] .biblio-ui__search-empty > p {
+    color: var(--biblio-color-text-muted);
+}
+
+[data-biblio-search-root] .biblio-ui__bibliographic-search-form {
+    display: grid;
+    gap: var(--biblio-space-2);
+    inline-size: min(100%, 64rem);
+}
+
+[data-biblio-search-root] .biblio-ui__bibliographic-search-form > label {
+    font-weight: 600;
+}
+
+[data-biblio-search-root] .biblio-ui__bibliographic-search-field {
+    display: grid;
+    gap: var(--biblio-space-3);
+    grid-template-columns: minmax(0, 1fr) auto;
+}
+
+[data-biblio-search-root] .biblio-ui__bibliographic-search-field input {
+    background: var(--biblio-color-surface);
+    border: var(--biblio-boundary-width) solid var(--biblio-color-border-strong);
+    border-radius: var(--biblio-radius-control);
+    color: var(--biblio-color-text-primary);
+    font: inherit;
+    inline-size: 100%;
+    min-block-size: 3rem;
+    min-inline-size: 0;
+    padding: var(--biblio-space-2) var(--biblio-space-4);
+}
+
+[data-biblio-search-root] .biblio-ui__bibliographic-search-field input:focus-visible {
+    border-color: var(--biblio-color-focus);
+}
+
+[data-biblio-search-root] .biblio-ui__search-help,
+[data-biblio-search-root] .biblio-ui__field-error {
+    font-size: 0.8125rem;
+    min-block-size: 1.25rem;
+}
+
+[data-biblio-search-root] .biblio-ui__search-tabs {
+    border-block-end: var(--biblio-boundary-width) solid var(--biblio-color-border);
+    display: flex;
+    gap: var(--biblio-space-6);
+}
+
+[data-biblio-search-root] .biblio-ui__search-tab {
+    color: var(--biblio-color-text-muted);
+    min-block-size: var(--biblio-control-min);
+    padding: var(--biblio-space-2) var(--biblio-space-1);
+}
+
+[data-biblio-search-root] .biblio-ui__search-tab--active {
+    border-block-end: 2px solid var(--biblio-color-brass);
+    color: var(--biblio-color-text-primary);
+    font-weight: 700;
+}
+
+[data-biblio-search-root] .biblio-ui__search-results,
+[data-biblio-search-root] .biblio-ui__search-result-groups,
+[data-biblio-search-root] .biblio-ui__search-result-group,
+[data-biblio-search-root] .biblio-ui__search-error,
+[data-biblio-search-root] .biblio-ui__search-welcome {
+    display: grid;
+    gap: var(--biblio-space-4);
+    min-inline-size: 0;
+}
+
+[data-biblio-search-root] .biblio-ui__search-welcome {
+    border-block: var(--biblio-boundary-width) solid var(--biblio-color-border);
+    max-inline-size: var(--biblio-reading-max);
+    padding-block: var(--biblio-space-12);
+}
+
+[data-biblio-search-root] .biblio-ui__search-result-groups {
+    gap: var(--biblio-space-12);
+}
+
+[data-biblio-search-root] .biblio-ui__search-result-group > h2 {
+    border-block-end: var(--biblio-boundary-width) solid var(--biblio-color-border);
+    padding-block-end: var(--biblio-space-3);
+}
+
+[data-biblio-search-root] :where(.biblio-ui__author-results, .biblio-ui__work-results) {
+    display: grid;
+    gap: var(--biblio-space-4);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+[data-biblio-search-root] .biblio-ui__author-results {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+[data-biblio-search-root] .biblio-ui__author-result {
+    background: color-mix(in srgb, var(--biblio-color-surface) 56%, transparent);
+    border-inline-start: 2px solid color-mix(in srgb, var(--biblio-color-brass) 58%, var(--biblio-color-border));
+    display: grid;
+    gap: var(--biblio-space-1);
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+    padding: var(--biblio-space-4);
+}
+
+[data-biblio-search-root] .biblio-ui__author-result-name,
+[data-biblio-search-root] .biblio-ui__work-result-title {
+    font-family: var(--biblio-font-serif);
+    font-size: clamp(1.2rem, 1.08rem + 0.45vw, 1.5rem);
+    font-weight: 600;
+    line-height: 1.18;
+}
+
+[data-biblio-search-root] .biblio-ui__work-results {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+[data-biblio-search-root] .biblio-ui__work-result {
+    align-items: start;
+    background: color-mix(in srgb, var(--biblio-color-surface) 64%, transparent);
+    border: var(--biblio-boundary-width) solid var(--biblio-color-border);
+    border-radius: var(--biblio-radius-control);
+    display: grid;
+    gap: var(--biblio-space-4);
+    grid-template-columns: 4.75rem minmax(0, 1fr);
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+    padding: var(--biblio-space-4);
+}
+
+[data-biblio-search-root] .biblio-ui__search-cover {
+    box-shadow: none;
+    inline-size: 4.75rem;
+}
+
+[data-biblio-search-root] .biblio-ui__search-cover .biblio-ui__cover-label {
+    font-size: 0.75rem;
+    padding-inline: var(--biblio-space-1);
+}
+
+[data-biblio-search-root] .biblio-ui__work-result-identity {
+    display: grid;
+    gap: var(--biblio-space-1);
+    min-inline-size: 0;
+}
+
+[data-biblio-search-root] .biblio-ui__search-partial {
+    max-inline-size: var(--biblio-reading-max);
+}
+
+[data-biblio-search-root] .biblio-ui__search-pagination-error {
+    max-inline-size: var(--biblio-reading-max);
+}
+
+@media (max-width: 1023px) {
+    [data-biblio-search-root] .biblio-ui__work-results {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 767px) {
+    [data-biblio-search-root] .biblio-ui__bibliographic-search {
+        gap: var(--biblio-space-6);
+    }
+
+    [data-biblio-search-root] .biblio-ui__bibliographic-search-field,
+    [data-biblio-search-root] .biblio-ui__author-results {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    [data-biblio-search-root] .biblio-ui__bibliographic-search-field .biblio-ui__control,
+    [data-biblio-search-root] .biblio-ui__search-result-group > .biblio-ui__control,
+    [data-biblio-search-root] .biblio-ui__search-error > .biblio-ui__control {
+        inline-size: 100%;
+    }
+
+    [data-biblio-search-root] .biblio-ui__work-result {
+        grid-template-columns: 4rem minmax(0, 1fr);
+    }
+
+    [data-biblio-search-root] .biblio-ui__search-cover {
+        inline-size: 4rem;
     }
 }
 

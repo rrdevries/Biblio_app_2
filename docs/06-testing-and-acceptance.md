@@ -3595,3 +3595,45 @@ Status: **GO / CLOSED** after the recorded gates and review. Product remains
 `v2.001`, schema remains `1023`, Biblio Core is `2.14.0` and Biblio UI remains
 `0.15.1`. Closure evidence is recorded in
 `docs/82-mh-edition-api-01-selected-work-editions-rest.md`.
+
+## 109. SEARCH-UI-01A full-page bibliographic search
+
+SEARCH-UI-01A is accepted only when:
+
+- an ordinary `/zoeken/` Page mounts `[biblio_search_app]` in the one existing
+  Biblio App Shell, with no modal/drawer or Elementor-owned behavior;
+- explicit keyboard form submission calls only authenticated
+  `POST /biblio/v1/me/bibliographic-searches` with the normalized query and
+  nullable independent Author/Work cursors;
+- `Alles` renders non-interleaved `Auteurs` and `Boeken` regions, omits empty
+  groups and fabricates no total count, Edition/ISBN metadata, covers, tabs,
+  filters or inactive controls;
+- `Meer auteurs` and `Meer boeken` append only their own lane, retain the other
+  lane/cursor and provide deterministic focus plus live announcements,
+  including a valid continuation with zero new items;
+- strict decoding retains each opaque `author_selector` and `work_selector` in
+  frontend state without parsing, reconstruction, DOM/accessibility exposure or
+  `result_id` authority;
+- idle, pending `aria-busy`, complete empty, Authors-only, Works-only,
+  authentication, nonce-refresh, transport and partial-provider states use safe
+  presentation and retain usable results;
+- request abort/revision prevents stale replacement, pagination has no
+  temporarily active dead controls and query reset clears both old lanes;
+- the LAB `Editorial Library × Serious Utility` direction is recognizable at
+  1440, tablet and mobile widths with portrait covers, no horizontal overflow
+  and no `Alles` filter plane;
+- no provider request, Author/Work/Edition creation, materialization, Wishlist,
+  Add Book, Item, Library or other mutation is introduced;
+- Author-to-Works, Work-to-Editions, ISBN routing, specialised tabs/Books view,
+  the separate right filter plane, advanced search, URL/history state and
+  consumer actions remain explicitly deferred;
+- complete Biblio UI unit/smoke, guarded browser, relevant Core/REST, PHP/JS
+  syntax, PHPStan, WordPress, manifest and whitespace gates pass; and
+- independent second review finds no remaining requirements, accessibility,
+  identity, state, fixture-safety, compatibility or scope blocker.
+
+Status: **GO / CLOSED** after the complete UI/Core/browser gates and
+independent re-review.
+Product remains `v2.001`, schema remains `1023`, Biblio Core remains `2.14.0`
+and Biblio UI is `0.16.0`. No V1 data is used. Closure evidence is recorded in
+`docs/83-search-ui-01a-full-page-bibliographic-search.md`.

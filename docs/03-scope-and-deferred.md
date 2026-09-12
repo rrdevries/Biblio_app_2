@@ -240,9 +240,12 @@ The following remains deferred independently of D-SCOPE-01:
 - e-books, audiobooks, digital files, licenses and other media;
 - generic `Andere fysieke bron` outside approved source types;
 - smart Hierna-lezen availability or automatic source preference;
-- global external catalog search outside the bounded personal Wishlist
-  consumer, popularity/collaborative filtering and black-box ranking;
-  MH-DISC-01 plus WISH-DISC-01 keep provider order presentation-only;
+- selected-Author Works and selected-Work Editions interaction from the
+  SEARCH-UI-01A top-level full-page text results; ISBN routing, specialised
+  Books/Authors tabs, the separate Books filter plane, URL/history state and
+  consumer actions also remain follow-up work;
+- popularity/collaborative filtering and black-box ranking; shared search and
+  MH-DISC-01/WISH-DISC-01 keep provider order presentation-only;
 - automatic central Work/Author/Series merge, broad bibliographic editing,
   record fusion, OCR/vision, community Metadata Graph and paid-feed expansion;
 - generic Relationship management UI;

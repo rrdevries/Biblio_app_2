@@ -1956,3 +1956,42 @@ enrichment, persistence or materialization.
 The route is additive and uses the established `data` envelope and safe REST
 error mapping. It adds no Library Context, client user identity, schema,
 frontend or consumer behavior.
+
+## 49. SEARCH-UI-01A full-page bibliographic search
+
+SEARCH-UI-01A is a presentation-only Biblio UI module. An ordinary WordPress
+Page at `/zoeken/` contains `[biblio_search_app]`; `SearchAppShortcode` emits
+the same strict mount configuration and shared App Shell destinations as the
+existing Library, Wishlist and Next Reading screens. `Plugin` registers and
+enqueues `bibliographic-search.js` only on that Page. Elementor remains a Page
+shell and owns no search or identity behavior.
+
+The module uses the central `createBiblioApi` client and one authenticated
+Core-owned boundary: `POST /biblio/v1/me/bibliographic-searches`. Its local,
+immutable state has one submitted query and two independent result lanes. An
+initial request replaces both lanes. Author continuation sends only
+`author_cursor`; Work continuation sends only `work_cursor`; the response's
+other lane is deliberately ignored during append. No browser provider request,
+ranking, deduplication, total-count calculation or write exists.
+
+REST decoding is strict at the UI boundary. Authors retain an opaque
+`author_selector`; Works retain an opaque `work_selector`. These values stay in
+memory and are never parsed, reconstructed, copied into the DOM or treated as
+authority through `result_id`. This prepares a later selected-entity component
+without making any 01A result interactive. Abort plus request revision protects
+against stale replacement, and group-specific loading, focus restoration and
+live announcements protect independent pagination.
+
+The App Shell remains the only navigation/layout system. Search-specific CSS
+is root-scoped and reuses the existing Ink/Soft-Ivory, typography, spacing,
+hairline, radius, focus and reduced-motion tokens. `Alles` has semantically
+separate Author and Book regions, portrait no-cover treatments and no filter
+rail. The component boundary leaves room for later specialised tabs and the
+approved separate Book filter plane without rendering inactive controls.
+
+State is intentionally Page-local: the current frontend has no shared router
+whose history contract can be reused without expanding this slice. ISBN is
+likewise not routed because the only accepted top-level transport is text-only
+and no existing small bridge provides the required concrete-Edition flow.
+These are explicit follow-ups, not client-side substitutions. Schema stays
+`1023`; Biblio Core and all backend contracts remain unchanged.

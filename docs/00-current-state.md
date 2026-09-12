@@ -3027,3 +3027,35 @@ per-Edition enrichment, materialization, Item/Library/Wishlist mutation, UI or
 consumer cutover is added. Schema remains `1023`; Biblio Core is `2.14.0`;
 Biblio UI remains `0.15.1`. Detailed evidence:
 `docs/82-mh-edition-api-01-selected-work-editions-rest.md`.
+
+### SEARCH-UI-01A — full-page bibliographic search
+
+Status: **GO / CLOSED** after the complete UI/Core/browser gates and
+independent re-review.
+
+The existing App Shell now has an additive full-page Search module at the
+ordinary `/zoeken/` Page through `[biblio_search_app]`. Its only functional
+view is `Alles`: an explicit form submits title/Author text to authenticated
+`POST /biblio/v1/me/bibliographic-searches`, then renders `Auteurs` and
+`Boeken` as separate semantic groups. Each group appends through its own opaque
+cursor without replacing the other group or its cursor.
+
+The strict UI decoder retains `author_selector` and `work_selector` only as
+opaque in-memory model state. No selector/result identity appears in DOM or
+accessible copy, and 01A exposes no Author-to-Works or Work-to-Editions action.
+There are no provider calls, materialization, Wishlist/Add Book actions or
+other writes. Loading, empty, safe session/transport and typed partial-provider
+states remain local presentation behavior.
+
+The Page uses the current Soft-Ivory/Ink tokens, editorial type hierarchy,
+portrait no-cover treatment and shared responsive navigation. Browser review
+at 1440, 900 and 390 px is clean. ISBN remains explicitly unpromised with
+`Zoek op titel of auteur`: the top-level route is text-only and no small
+existing read-only bridge provides the full concrete-Edition flow. Specialised
+tabs, selected-entity drill-down, URL/history state, the approved separate
+Books filter plane, advanced search and consumer actions remain follow-up.
+
+Schema stays `1023`; Biblio Core remains `2.14.0`; Biblio UI is `0.16.0` for
+the production Page module and shared navigation/CSS. No V1 data was used.
+Detailed scope and evidence:
+`docs/83-search-ui-01a-full-page-bibliographic-search.md`.

@@ -597,6 +597,39 @@ Edition data, continuation and provider attempts, including valid ISBN-less
 Editions. No UI, consumer cutover, materialization or Item/Library mutation is
 part of this backend transport.
 
+SEARCH-UI-01A now exposes the shared top-level text search as a full Page in
+the existing Biblio App Shell at `/zoeken/`, mounted through
+`[biblio_search_app]`. The functional `Alles` view submits only on the search
+form, calls `POST /biblio/v1/me/bibliographic-searches` and presents Authors
+and Works as separate `Auteurs` and `Boeken` groups. A new query replaces both
+groups and resets both continuations. `Meer auteurs` and `Meer boeken` append
+only to their own group with that group's opaque cursor; the other group and
+its continuation remain intact.
+
+The browser retains each server-issued `author_selector` and `work_selector`
+only as opaque frontend-model state for a later selected-entity interaction.
+It does not parse, display, reconstruct or submit either selector in 01A, and
+no result is an active drill-down control. The page performs no provider,
+materialization, Wishlist, Add Book, Item or Library write. It renders
+truthful idle, loading, empty, transport/session and partial-provider states
+without exposing raw provider errors or fabricated totals.
+
+The current top-level route is deliberately text-only and rejects a valid
+ISBN. Because no existing small, source-neutral browser wiring provides a
+complete ISBN-to-concrete-Edition flow without new search/identity decisions,
+01A labels the field `Zoek op titel of auteur` and explicitly marks ISBN search
+as follow-up. Query state remains local to the Page; URL/history integration is
+also deferred rather than introducing a new router.
+
+The approved later specialised `Zoeken → Boeken` direction remains a
+portrait-cover grid with a separate right-hand filter plane. That plane starts
+at result height, leaves a clear gutter and uses a compact `Zoeken in`
+dropdown, never radio buttons. `Boeksoort` is a multi-option group rather than
+a checkbox; `Taal` belongs under `Over de uitgave`; rating and `In mijn
+bibliotheek` filters are excluded. None of that rail, its filters, specialised
+tabs, advanced search, Author-to-Works, Work-to-Editions or consumer actions is
+implemented by SEARCH-UI-01A.
+
 Independent Biblio-owned or user-supplied cover acquisition/management is
 V2.002+. Existing V1 cover references/assets remain migration inventory and
 may not be silently discarded.
