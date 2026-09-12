@@ -2,6 +2,12 @@
 
 Status: **GO / CLOSED**
 
+Post-closure note: MH-EDITION-API-01 now uses this codec as the sole
+selected-Work authority for its authenticated Work-to-Editions REST route.
+Verification, including current composite mapping revalidation, completes
+before the existing Edition-search application service is invoked; see
+`docs/82-mh-edition-api-01-selected-work-editions-rest.md`.
+
 Date: 2026-09-12
 
 Task severity: **High**. The read-only identity, mapping, signing, REST and

@@ -1927,3 +1927,32 @@ Provider-only decode requires no canonical mapping. The selector is stateless,
 query-independent and has no TTL; `AUTH_SALT` rotation provides global
 invalidation. No new repository, table, session, token registry, schema,
 endpoint or product write is introduced.
+
+## 48. MH-EDITION-API-01 selected Work Editions REST transport
+
+`POST /biblio/v1/me/bibliographic-work-editions` is the single authenticated
+transport adapter from a selected Work to the existing pageable Edition-search
+application boundary. `RestBibliographicWorkEditionSearchContract` owns only
+the exact `work_selector`/nullable `cursor` body shape, selector verification,
+transport error adaptation and typed page serialization.
+
+The same production `BibliographicWorkSelectorCodec` used by Work-result
+serializers is injected into this adapter. Decode returns the trusted
+`BibliographicWorkReference`; the REST controller never inspects selector
+payload fields, combines identities or performs mapping resolution. Composite
+mapping freshness therefore remains one server-owned boundary and is checked
+before `BibliographicEditionSearchService::search()` can run.
+
+`RestRequestParser` rejects query input and malformed/non-object/unknown JSON
+fields. The controller delegates exactly once to
+`CoreApplication::bibliographicEditionSearch()`, and
+`RestResponseSerializer` accepts only `BibliographicEditionSearchPage`. The
+application service continues to own actor authentication, local/external lane
+selection, exact-Work cursor binding, ordering, strong-identity deduplication,
+provider attempts and partial failure. External paging still performs at most
+one Open Library `/works/{work-id}/editions.json` call and no REST-owned search,
+enrichment, persistence or materialization.
+
+The route is additive and uses the established `data` envelope and safe REST
+error mapping. It adds no Library Context, client user identity, schema,
+frontend or consumer behavior.

@@ -14,16 +14,18 @@ use Biblio\Core\Application\Metadata\Search\{
     BibliographicProviderEntityIdentity,
     BibliographicSearchCursorCodec,
     BibliographicTextSearchQuery,
+    BibliographicWorkReference,
     BibliographicWorkSelectorCodec
 };
 use Biblio\Core\Catalog\AuthorId;
-use Biblio\Core\Catalog\{CanonicalIsbnIdentity,Isbn13};
+use Biblio\Core\Catalog\{CanonicalIsbnIdentity,Isbn13,WorkId};
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Exception\AuthorizationException;
 use Biblio\Core\Exception\ValidationException;
 use Biblio\Core\Infrastructure\WordPress\ProductionComposition;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbMetadataLookupSnapshotRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbBibliographicDiscoverySnapshotRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbBibliographicProviderIdentityRepository;
 use Biblio\Core\Infrastructure\Metadata\ConfigurationErrorMetadataProvider;
 use Biblio\Core\Infrastructure\Metadata\RuntimeMetadataProviderConfiguration;
 use Biblio\Core\Infrastructure\WordPress\Rest\CatalogCursorCodec;
@@ -125,6 +127,7 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             "/biblio/v1/me/bibliographic-discoveries",
             "/biblio/v1/me/bibliographic-searches",
             "/biblio/v1/me/bibliographic-author-works",
+            "/biblio/v1/me/bibliographic-work-editions",
             "/biblio/v1/me/bibliographic-discoveries/"
                 . "(?P<discovery_id>[^/]+)/materializations",
             "/biblio/v1/me/works/(?P<work_id>[^/]+)/preferred-source-options",
@@ -148,7 +151,7 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             }
         }
 
-        self::assertCount(25, array_filter(
+        self::assertCount(26, array_filter(
             array_keys($routes),
             static fn (string $route): bool => str_starts_with(
                 $route,
@@ -195,6 +198,9 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         ]));
         self::assertSame(["POST"], $this->routeMethods($routes[
             "/biblio/v1/me/bibliographic-author-works"
+        ]));
+        self::assertSame(["POST"], $this->routeMethods($routes[
+            "/biblio/v1/me/bibliographic-work-editions"
         ]));
         self::assertSame(["POST"], $this->routeMethods($routes[
             "/biblio/v1/me/bibliographic-discoveries/"
@@ -737,6 +743,427 @@ final class RestApiTest extends PersistenceIntegrationTestCase
                 $this->bibliographicAuthorWorksRawRequest($body)
             )->get_status());
         }
+    }
+
+    public function testBibliographicWorkEditionsRestPaginatesCanonicalEditionsAndBindsCursor(): void
+    {
+        foreach (["rest-edition-work-a", "rest-edition-work-b"] as $workId) {
+            $this->seedWork($workId, $workId);
+        }
+        for ($position = 1; $position <= 12; $position++) {
+            self::assertSame(1, $this->database->insert($this->tableNames->editions(), [
+                "edition_id" => sprintf("rest-edition-%02d", $position),
+                "work_id" => "rest-edition-work-a",
+                "edition_title" => sprintf("Concrete Edition %02d", $position),
+                "isbn_10" => null,
+                "isbn_13" => null,
+                "explicitly_no_isbn" => 0,
+            ]));
+        }
+        $selectorA = $this->workSelectorCodec()->encode(
+            BibliographicWorkReference::canonical(new WorkId("rest-edition-work-a"))
+        );
+        $selectorB = $this->workSelectorCodec()->encode(
+            BibliographicWorkReference::canonical(new WorkId("rest-edition-work-b"))
+        );
+
+        $firstResponse = $this->dispatchAsActor(
+            $this->bibliographicWorkEditionsRequest(["work_selector" => $selectorA])
+        );
+        self::assertSame(200, $firstResponse->get_status());
+        $first = $this->successData($firstResponse);
+        self::assertSame(["items", "next_cursor", "provider_attempts"], array_keys($first));
+        self::assertCount(10, $first["items"]);
+        self::assertIsString($first["next_cursor"]);
+        self::assertSame("rest-edition-01", $first["items"][0]["edition_id"]);
+        self::assertSame("Concrete Edition 01", $first["items"][0]["title"]);
+        self::assertFalse($first["items"][0]["requires_materialization"]);
+        self::assertSame([], $first["provider_attempts"]);
+
+        $second = $this->successData($this->dispatchAsActor(
+            $this->bibliographicWorkEditionsRequest([
+                "work_selector" => $selectorA,
+                "cursor" => $first["next_cursor"],
+            ])
+        ));
+        self::assertCount(2, $second["items"]);
+        self::assertNull($second["next_cursor"]);
+        self::assertSame("rest-edition-12", $second["items"][1]["edition_id"]);
+
+        $crossBound = $this->dispatchAsActor(
+            $this->bibliographicWorkEditionsRequest([
+                "work_selector" => $selectorB,
+                "cursor" => $first["next_cursor"],
+            ])
+        );
+        self::assertSame(400, $crossBound->get_status());
+        self::assertSame("biblio_invalid_field_syntax", $crossBound->get_data()["code"]);
+
+        foreach (["item_id", "library_id", "user_id", "private_note"] as $field) {
+            self::assertArrayNotHasKey($field, $first["items"][0]);
+        }
+        self::assertSame(0, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->items()}`"
+        ));
+    }
+
+    public function testBibliographicWorkEditionsRestUsesOneExactProviderRequestPerPage(): void
+    {
+        $this->rebuildApiWithOpenLibraryConfiguration();
+        $requests = [];
+        $httpFixture = static function (
+            mixed $preempt,
+            array $arguments,
+            string $url
+        ) use (&$requests): array {
+            $requests[] = $url;
+            self::assertSame("GET", $arguments["method"] ?? "GET");
+            $offset = count($requests) === 1 ? 0 : 10;
+            self::assertSame(
+                "https://openlibrary.org/works/OL50W/editions.json?limit=10&offset={$offset}",
+                $url
+            );
+            $entries = [];
+            $last = $offset === 0 ? 10 : 11;
+            for ($position = $offset + 1; $position <= $last; $position++) {
+                $entry = [
+                    "key" => sprintf("/books/OL%dM", 500 + $position),
+                    "title" => sprintf("Provider Edition %02d", $position),
+                    "works" => [["key" => "/works/OL50W"]],
+                ];
+                if ($position === 1) {
+                    $entry["subtitle"] = "Reliable subtitle";
+                    $entry["languages"] = [["key" => "/languages/eng"]];
+                    $entry["publishers"] = ["Example Press"];
+                    $entry["publish_date"] = "2001-04";
+                    $entry["physical_format"] = "Paperback";
+                    $entry["number_of_pages"] = 320;
+                    $entry["contributors"] = [["name" => "Example Translator"]];
+                }
+                $entries[] = $entry;
+            }
+            $links = ["work" => "/works/OL50W"];
+            if ($offset === 0) {
+                $links["next"] = "/works/OL50W/editions.json?limit=10&offset=10";
+            }
+            return [
+                "headers" => [],
+                "body" => (string) wp_json_encode([
+                    "size" => 11,
+                    "links" => $links,
+                    "entries" => $entries,
+                ]),
+                "response" => ["code" => 200, "message" => "OK"],
+                "cookies" => [],
+                "filename" => null,
+            ];
+        };
+        add_filter("pre_http_request", $httpFixture, 10, 3);
+        try {
+            $selector = $this->workSelectorCodec()->encode(
+                BibliographicWorkReference::external(
+                    BibliographicProviderEntityIdentity::work(
+                        "open_library",
+                        "/works/OL50W"
+                    )
+                )
+            );
+            $first = $this->successData($this->dispatchAsActor(
+                $this->bibliographicWorkEditionsRequest(["work_selector" => $selector])
+            ));
+            self::assertCount(10, $first["items"]);
+            self::assertIsString($first["next_cursor"]);
+            self::assertNull($first["items"][0]["isbn_13"]);
+            self::assertSame(["eng"], $first["items"][0]["languages"]);
+            self::assertSame(["Example Press"], $first["items"][0]["publishers"]);
+            self::assertSame("2001-04", $first["items"][0]["publication_date"]);
+            self::assertSame("Paperback", $first["items"][0]["format"]);
+            self::assertSame(320, $first["items"][0]["page_count"]);
+            self::assertSame("candidates", $first["provider_attempts"][0]["status"]);
+
+            $second = $this->successData($this->dispatchAsActor(
+                $this->bibliographicWorkEditionsRequest([
+                    "work_selector" => $selector,
+                    "cursor" => $first["next_cursor"],
+                ])
+            ));
+            self::assertCount(1, $second["items"]);
+            self::assertNull($second["next_cursor"]);
+            self::assertCount(2, $requests);
+            foreach ($requests as $url) {
+                self::assertStringNotContainsString("/search", $url);
+                self::assertStringNotContainsString("/authors/", $url);
+                self::assertStringNotContainsString("/books/", $url);
+            }
+            self::assertSame(0, (int) $this->database->get_var(
+                "SELECT COUNT(*) FROM `{$this->tableNames->works()}`"
+            ));
+            self::assertSame(0, (int) $this->database->get_var(
+                "SELECT COUNT(*) FROM `{$this->tableNames->editions()}`"
+            ));
+            self::assertSame(0, (int) $this->database->get_var(
+                "SELECT COUNT(*) FROM `{$this->tableNames->items()}`"
+            ));
+        } finally {
+            remove_filter("pre_http_request", $httpFixture, 10);
+        }
+    }
+
+    public function testBibliographicWorkEditionsRestPreservesProviderMissAndMalformedFailure(): void
+    {
+        $this->rebuildApiWithOpenLibraryConfiguration();
+        $calls = 0;
+        $httpFixture = static function (
+            mixed $preempt,
+            array $arguments,
+            string $url
+        ) use (&$calls): array {
+            $calls++;
+            self::assertSame(
+                "https://openlibrary.org/works/OL66W/editions.json?limit=10&offset=0",
+                $url
+            );
+            return [
+                "headers" => [],
+                "body" => $calls === 1
+                    ? (string) wp_json_encode([
+                        "size" => 0,
+                        "links" => ["work" => "/works/OL66W"],
+                        "entries" => [],
+                    ])
+                    : "{}",
+                "response" => ["code" => 200, "message" => "OK"],
+                "cookies" => [],
+                "filename" => null,
+            ];
+        };
+        add_filter("pre_http_request", $httpFixture, 10, 3);
+        try {
+            $selector = $this->workSelectorCodec()->encode(
+                BibliographicWorkReference::external(
+                    BibliographicProviderEntityIdentity::work(
+                        "open_library",
+                        "/works/OL66W"
+                    )
+                )
+            );
+
+            $missResponse = $this->dispatchAsActor(
+                $this->bibliographicWorkEditionsRequest(["work_selector" => $selector])
+            );
+            self::assertSame(200, $missResponse->get_status());
+            $miss = $this->successData($missResponse);
+            self::assertSame([], $miss["items"]);
+            self::assertNull($miss["next_cursor"]);
+            self::assertSame("miss", $miss["provider_attempts"][0]["status"]);
+            self::assertNull($miss["provider_attempts"][0]["failure_reason"]);
+
+            $malformedResponse = $this->dispatchAsActor(
+                $this->bibliographicWorkEditionsRequest(["work_selector" => $selector])
+            );
+            self::assertSame(200, $malformedResponse->get_status());
+            $malformed = $this->successData($malformedResponse);
+            self::assertSame([], $malformed["items"]);
+            self::assertNull($malformed["next_cursor"]);
+            self::assertSame(
+                "invalid_response",
+                $malformed["provider_attempts"][0]["status"]
+            );
+            self::assertSame(
+                "malformed",
+                $malformed["provider_attempts"][0]["failure_reason"]
+            );
+            self::assertSame(2, $calls);
+        } finally {
+            remove_filter("pre_http_request", $httpFixture, 10);
+        }
+    }
+
+    public function testBibliographicWorkEditionsRestRevalidatesCompositeAndRetainsLocalOnFailure(): void
+    {
+        $this->seedWork("rest-composite-work", "Composite Work");
+        $this->seedWork("rest-composite-other", "Other Work");
+        self::assertSame(1, $this->database->insert($this->tableNames->editions(), [
+            "edition_id" => "rest-composite-local-edition",
+            "work_id" => "rest-composite-work",
+            "edition_title" => "Local Edition",
+            "isbn_10" => null,
+            "isbn_13" => null,
+            "explicitly_no_isbn" => 0,
+        ]));
+        $provider = BibliographicProviderEntityIdentity::work(
+            "open_library",
+            "/works/OL77W"
+        );
+        $identities = new WpdbBibliographicProviderIdentityRepository(
+            $this->database,
+            $this->tableNames
+        );
+        $identities->claimWork(
+            "open_library",
+            "work",
+            "/works/OL77W",
+            new WorkId("rest-composite-work")
+        );
+        $selector = $this->workSelectorCodec()->encode(
+            BibliographicWorkReference::canonical(
+                new WorkId("rest-composite-work"),
+                $provider
+            )
+        );
+
+        $this->rebuildApiWithOpenLibraryConfiguration();
+        $successfulCalls = 0;
+        $successFixture = static function (
+            mixed $preempt,
+            array $arguments,
+            string $url
+        ) use (&$successfulCalls): array {
+            $successfulCalls++;
+            self::assertSame(
+                "https://openlibrary.org/works/OL77W/editions.json?limit=9&offset=0",
+                $url
+            );
+            return [
+                "headers" => [],
+                "body" => (string) wp_json_encode([
+                    "size" => 1,
+                    "links" => ["work" => "/works/OL77W"],
+                    "entries" => [[
+                        "key" => "/books/OL771M",
+                        "title" => "External Edition",
+                        "works" => [["key" => "/works/OL77W"]],
+                    ]],
+                ]),
+                "response" => ["code" => 200, "message" => "OK"],
+                "cookies" => [],
+                "filename" => null,
+            ];
+        };
+        add_filter("pre_http_request", $successFixture, 10, 3);
+        try {
+            $data = $this->successData($this->dispatchAsActor(
+                $this->bibliographicWorkEditionsRequest(["work_selector" => $selector])
+            ));
+            self::assertSame(
+                ["Local Edition", "External Edition"],
+                array_column($data["items"], "title")
+            );
+            self::assertSame("candidates", $data["provider_attempts"][0]["status"]);
+            self::assertSame(1, $successfulCalls);
+        } finally {
+            remove_filter("pre_http_request", $successFixture, 10);
+        }
+
+        $failureCalls = 0;
+        $failureFixture = static function () use (&$failureCalls): array {
+            $failureCalls++;
+            return [
+                "headers" => [],
+                "body" => "{}",
+                "response" => ["code" => 429, "message" => "Rate limited"],
+                "cookies" => [],
+                "filename" => null,
+            ];
+        };
+        add_filter("pre_http_request", $failureFixture, 10, 3);
+        try {
+            $partial = $this->successData($this->dispatchAsActor(
+                $this->bibliographicWorkEditionsRequest(["work_selector" => $selector])
+            ));
+            self::assertSame(["Local Edition"], array_column($partial["items"], "title"));
+            self::assertSame("rate_limited", $partial["provider_attempts"][0]["status"]);
+            self::assertSame("rate_limited", $partial["provider_attempts"][0]["failure_reason"]);
+            self::assertSame(1, $failureCalls);
+        } finally {
+            remove_filter("pre_http_request", $failureFixture, 10);
+        }
+
+        self::assertSame(1, $this->database->delete(
+            $this->tableNames->bibliographicProviderIdentities(),
+            [
+                "provider_key" => "open_library",
+                "source_entity_type" => "work",
+                "provider_record_id" => "/works/OL77W",
+                "target_type" => "work",
+            ],
+            ["%s", "%s", "%s", "%s"]
+        ));
+        $staleCalls = 0;
+        $staleFixture = static function () use (&$staleCalls): array {
+            $staleCalls++;
+            throw new RuntimeException("Stale selector reached the provider.");
+        };
+        add_filter("pre_http_request", $staleFixture, 10, 3);
+        try {
+            $removed = $this->dispatchAsActor(
+                $this->bibliographicWorkEditionsRequest(["work_selector" => $selector])
+            );
+            self::assertSame(400, $removed->get_status());
+            self::assertSame("biblio_invalid_field_syntax", $removed->get_data()["code"]);
+            self::assertSame(0, $staleCalls);
+
+            $identities->claimWork(
+                "open_library",
+                "work",
+                "/works/OL77W",
+                new WorkId("rest-composite-other")
+            );
+            $changed = $this->dispatchAsActor(
+                $this->bibliographicWorkEditionsRequest(["work_selector" => $selector])
+            );
+            self::assertSame(400, $changed->get_status());
+            self::assertSame("biblio_invalid_field_syntax", $changed->get_data()["code"]);
+            self::assertSame(0, $staleCalls);
+        } finally {
+            remove_filter("pre_http_request", $staleFixture, 10);
+        }
+    }
+
+    public function testBibliographicWorkEditionsRestIsAuthenticatedAndStrict(): void
+    {
+        $this->seedWork("rest-strict-work", "Strict Work");
+        $selector = $this->workSelectorCodec()->encode(
+            BibliographicWorkReference::canonical(new WorkId("rest-strict-work"))
+        );
+
+        foreach ([
+            [],
+            ["work_selector" => 42],
+            ["work_selector" => $selector, "work_id" => "rest-strict-work"],
+            ["work_selector" => $selector, "provider" => "open_library"],
+            ["work_selector" => $selector, "provider_work_id" => "/works/OL1W"],
+            ["work_selector" => $selector, "result_id" => "search-work-untrusted"],
+            ["work_selector" => $selector, "title" => "Strict Work"],
+            ["work_selector" => $selector, "isbn" => "9780441172719"],
+            ["work_selector" => $selector, "author_id" => "author"],
+            ["work_selector" => $selector, "library_id" => "library"],
+            ["work_selector" => $selector, "user_id" => $this->actorId],
+            ["work_selector" => $selector . "x"],
+            ["work_selector" => $selector, "cursor" => false],
+            ["work_selector" => $selector, "cursor" => "not-a-cursor"],
+        ] as $body) {
+            self::assertSame(400, $this->dispatchAsActor(
+                $this->bibliographicWorkEditionsRequest($body)
+            )->get_status());
+        }
+
+        $queryRequest = $this->bibliographicWorkEditionsRequest([
+            "work_selector" => $selector,
+        ]);
+        $queryRequest->set_query_params(["library_id" => "library"]);
+        self::assertSame(400, $this->dispatchAsActor($queryRequest)->get_status());
+
+        foreach (["{", "{\"work_selector\":\"\xC3\x28\"}"] as $body) {
+            self::assertSame(400, $this->dispatchAsActor(
+                $this->bibliographicWorkEditionsRawRequest($body)
+            )->get_status());
+        }
+
+        wp_set_current_user(0);
+        self::assertSame(401, $this->server->dispatch(
+            $this->bibliographicWorkEditionsRequest(["work_selector" => $selector])
+        )->get_status());
     }
 
     public function testBibliographicSearchRestRejectsMalformedJsonUtf8AndUnexpectedQueryInput(): void
@@ -4042,6 +4469,26 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         return $request;
     }
 
+    /** @param array<string, mixed> $body */
+    private function bibliographicWorkEditionsRequest(array $body): WP_REST_Request
+    {
+        return $this->bibliographicWorkEditionsRawRequest(
+            (string) wp_json_encode($body)
+        );
+    }
+
+    private function bibliographicWorkEditionsRawRequest(string $body): WP_REST_Request
+    {
+        $request = new WP_REST_Request(
+            "POST",
+            "/biblio/v1/me/bibliographic-work-editions"
+        );
+        $request->set_header("content-type", "application/json");
+        $request->set_body($body);
+
+        return $request;
+    }
+
     private function authorSelectorCodec(): BibliographicAuthorSelectorCodec
     {
         $salt = constant("AUTH_SALT");
@@ -4056,7 +4503,11 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         $salt = constant("AUTH_SALT");
         self::assertIsString($salt);
         return new BibliographicWorkSelectorCodec(
-            hash("sha256", $salt . ":bibliographic-work-selector-v1")
+            hash("sha256", $salt . ":bibliographic-work-selector-v1"),
+            new WpdbBibliographicProviderIdentityRepository(
+                $this->database,
+                $this->tableNames
+            )
         );
     }
 

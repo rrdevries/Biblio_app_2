@@ -3003,3 +3003,27 @@ MH-EDITION-API-01 may now consume only `work_selector` in its separate slice.
 Schema remains `1023`; Biblio Core is `2.13.0`; Biblio UI remains `0.15.1`.
 Detailed evidence:
 `docs/81-d-work-ref-01-signed-work-selector-handoff.md`.
+
+### MH-EDITION-API-01 — selected Work Editions REST transport
+
+Status: **GO / CLOSED** after the recorded quality gates and independent
+second review.
+
+Authenticated clients can now request the Editions for exactly one selected
+Work through `POST /biblio/v1/me/bibliographic-work-editions`. The strict body
+accepts only the server-issued opaque `work_selector` and an optional nullable
+opaque Edition cursor. The shared D-WORK-REF-01 codec verifies the selector
+and reconstructs the trusted `BibliographicWorkReference` before the existing
+MH-EDITION-01 application service starts; raw Work/provider identity and
+presentation data are never selection authority.
+
+The response contains only `items`, `next_cursor` and typed
+`provider_attempts`. Canonical-only, provider-only and currently proven
+composite selectors preserve the existing local/external, pagination, strong-
+identity deduplication and partial-failure behavior. Removed or changed
+composite mappings fail closed before Edition discovery. One external page
+uses exactly one `/works/{work-id}/editions.json` request; no search,
+per-Edition enrichment, materialization, Item/Library/Wishlist mutation, UI or
+consumer cutover is added. Schema remains `1023`; Biblio Core is `2.14.0`;
+Biblio UI remains `0.15.1`. Detailed evidence:
+`docs/82-mh-edition-api-01-selected-work-editions-rest.md`.

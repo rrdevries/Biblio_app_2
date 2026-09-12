@@ -255,6 +255,11 @@ final class RestController
             "callback" => [$this, "createBibliographicAuthorWorkSearch"],
             "permission_callback" => [$this, "authenticated"],
         ]);
+        register_rest_route(self::NAMESPACE, "/me/bibliographic-work-editions", [
+            "methods" => WP_REST_Server::CREATABLE,
+            "callback" => [$this, "createBibliographicWorkEditionSearch"],
+            "permission_callback" => [$this, "authenticated"],
+        ]);
         register_rest_route(
             self::NAMESPACE,
             "/me/bibliographic-discoveries/(?P<discovery_id>[^/]+)/materializations",
@@ -853,6 +858,22 @@ final class RestController
 
             return $this->success(
                 $this->responses->bibliographicAuthorWorks($page)
+            );
+        });
+    }
+
+    public function createBibliographicWorkEditionSearch(
+        WP_REST_Request $request
+    ): WP_REST_Response|WP_Error {
+        return $this->execute(function (
+            CoreApplication $application
+        ) use ($request): WP_REST_Response {
+            $page = $application->bibliographicEditionSearch()->search(
+                $this->requests->bibliographicWorkEditions($request)
+            );
+
+            return $this->success(
+                $this->responses->bibliographicWorkEditions($page)
             );
         });
     }

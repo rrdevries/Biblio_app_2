@@ -2,6 +2,11 @@
 
 Status: **DECISION CANONICALIZED / AUTHOR-WORK + WORKS-BY-AUTHOR + LAZY EDITION APPLICATION CONTRACTS IMPLEMENTED**
 
+Post-closure note: MH-EDITION-API-01 now exposes the lazy selected-Work Edition
+application contract through its own authenticated strict REST boundary. This
+does not implement SEARCH-UI-01 or any Wishlist/Add Book consumer cutover; see
+`docs/82-mh-edition-api-01-selected-work-editions-rest.md`.
+
 Date: 2026-09-11
 
 Task severity: **High** because this decision crosses shared bibliographic

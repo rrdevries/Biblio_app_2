@@ -584,7 +584,18 @@ provider-Work-to-canonical-Work mapping still exists. Issuance and verification
 both re-read that mapping; removal or a different target fails closed without
 downgrade, automatic remapping or a new search/mapping write. Canonical-only
 and provider-only selectors remain valid without mapping enrichment. The
-separate MH-EDITION-API-01 transport must later accept only this selector.
+client cannot manufacture an alternative identity path.
+
+MH-EDITION-API-01 now makes the exact selected-Work handoff reachable through
+authenticated `POST /biblio/v1/me/bibliographic-work-editions`. The client
+supplies only `work_selector` and an optional opaque continuation. The selector
+verifier reconstructs the trusted Work reference before the existing
+MH-EDITION-01 service runs. Canonical-only, provider-only and currently proven
+composite references keep the existing local/external semantics; a stale
+composite is rejected before discovery. The response contains typed concrete
+Edition data, continuation and provider attempts, including valid ISBN-less
+Editions. No UI, consumer cutover, materialization or Item/Library mutation is
+part of this backend transport.
 
 Independent Biblio-owned or user-supplied cover acquisition/management is
 V2.002+. Existing V1 cover references/assets remain migration inventory and

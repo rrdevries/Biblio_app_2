@@ -4,7 +4,9 @@ Status: **GO / CLOSED**
 
 Post-closure note: D-WORK-REF-01 now adds `work_selector` to each Work item
 without changing this route's request, grouping, cursors or Author projection;
-see `docs/81-d-work-ref-01-signed-work-selector-handoff.md`.
+MH-EDITION-API-01 consumes that selector only at its separate selected-Work
+route. See `docs/81-d-work-ref-01-signed-work-selector-handoff.md` and
+`docs/82-mh-edition-api-01-selected-work-editions-rest.md`.
 
 Date: 2026-09-11
 
@@ -119,8 +121,8 @@ Wishlist or Library mutation occurs.
 MH-AUTHOR-01 Works-by-Author and MH-EDITION-01 Editions-by-Work stay
 application-only. D-AUTHOR-REF-01 supplies only the signed Author-selector
 handoff; the route that accepts it still belongs to MH-AUTHOR-API-01.
-MH-EDITION-API-01, SEARCH-UI-01 and every Wishlist/Add Book consumer cutover
-also remain separate.
+MH-EDITION-API-01 is now implemented as its own route. SEARCH-UI-01 and every
+Wishlist/Add Book consumer cutover remain separate.
 
 ## 11. Tests and quality gates
 

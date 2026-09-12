@@ -2,10 +2,12 @@
 
 Status: **GO / CLOSED** after the recorded gates and independent review.
 
-Post-closure note: D-WORK-REF-01 now supplies the server-issued signed selected-
-Work authority required by future MH-EDITION-API-01. This application service's
-typed Work contract and canonical-only exact-one mapping resolution are
-unchanged; see `docs/81-d-work-ref-01-signed-work-selector-handoff.md`.
+Post-closure note: D-WORK-REF-01 supplies the server-issued signed selected-
+Work authority and MH-EDITION-API-01 now passes its verified typed reference to
+this service through a strict authenticated REST boundary. This application's
+identity, paging, provider and failure semantics remain unchanged; see
+`docs/81-d-work-ref-01-signed-work-selector-handoff.md` and
+`docs/82-mh-edition-api-01-selected-work-editions-rest.md`.
 
 Date: 2026-09-11
 
@@ -135,8 +137,9 @@ consumer. Existing strict decoders therefore need no widening.
 ## 13. Deferred
 
 Author-to-Works remains MH-AUTHOR-01. Google Volume/Edition leads remain
-MH-GBOOK-01. REST/UI reachability, language filters, Wishlist cutover and Add
-Book cutover remain separate consumer/transport slices.
+MH-GBOOK-01. REST reachability is implemented by MH-EDITION-API-01; UI
+reachability, language filters, Wishlist cutover and Add Book cutover remain
+separate consumer slices.
 
 ## 14. Tests and quality gates
 

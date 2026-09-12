@@ -3558,3 +3558,40 @@ Status: **GO / CLOSED**. Product remains `v2.001`, schema
 remains `1023`, Biblio Core is `2.13.0` and Biblio UI remains `0.15.1`.
 Closure evidence is recorded in
 `docs/81-d-work-ref-01-signed-work-selector-handoff.md`.
+
+## 108. MH-EDITION-API-01 selected Work Editions REST transport
+
+MH-EDITION-API-01 is accepted when:
+
+- exactly one authenticated POST route exists at
+  `/biblio/v1/me/bibliographic-work-editions`, with the established `/me`
+  permission and response-envelope behavior;
+- its strict JSON body accepts only required `work_selector` and optional
+  nullable `cursor`; raw Work/provider/result identity, title, ISBN, Author,
+  Library, user and query fields fail closed;
+- the shared D-WORK-REF-01 verifier reconstructs the exact typed Work reference
+  before the existing Edition-search application service runs;
+- canonical-only, provider-only and currently valid composite selectors retain
+  MH-EDITION-01 local/external behavior, while removed or changed composite
+  mappings are rejected before any provider request;
+- the opaque Edition cursor stays bound to the exact Work/reference/provider
+  context and lane; valid continuation works while cross-Work, malformed and
+  tampered cursors fail closed;
+- the typed response contains only Edition `items`, nullable `next_cursor` and
+  `provider_attempts`, retains valid ISBN-less Editions and leaks no selector,
+  mapping, signing, Item, Library, user or private data;
+- provider miss and typed provider failures remain safe HTTP 200 results where
+  appropriate, and an external failure never removes usable local Editions;
+- every external page performs exactly one selected-Work Editions request with
+  no Work/Author search, Google, Work detail or per-Edition enrichment;
+- no Work, Edition, Item, materialization, Wishlist or Library write occurs;
+- MH-EDITION, Work selector, shared search, selected-Author Works, MH-DISC,
+  Wishlist, Add Book, Hierna lezen and `/me/works` regressions plus Composer,
+  PHP syntax, PHPStan, WordPress smoke, manifest and whitespace gates pass;
+- schema stays `1023`, no V1 data is used, no frontend/consumer cutover occurs
+  and the independent second review finds no blocker.
+
+Status: **GO / CLOSED** after the recorded gates and review. Product remains
+`v2.001`, schema remains `1023`, Biblio Core is `2.14.0` and Biblio UI remains
+`0.15.1`. Closure evidence is recorded in
+`docs/82-mh-edition-api-01-selected-work-editions-rest.md`.
