@@ -17,7 +17,7 @@ use wpdb;
 
 final class Plugin
 {
-    public const VERSION = "2.13.0";
+    public const VERSION = "2.14.0";
 
     private bool $hooksRegistered = false;
     private bool $initialized = false;

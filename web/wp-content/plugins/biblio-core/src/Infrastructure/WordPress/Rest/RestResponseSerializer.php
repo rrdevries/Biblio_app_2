@@ -27,6 +27,7 @@ use Biblio\Core\Application\Metadata\{AddBookCommitResult,AddBookExistingEdition
 use Biblio\Core\Application\Metadata\Discovery\{BibliographicDiscoveryCandidate,BibliographicDiscoveryResult,BibliographicMaterializationResult};
 use Biblio\Core\Application\Metadata\Search\BibliographicTextSearchResult;
 use Biblio\Core\Application\Metadata\Search\BibliographicAuthorWorkSearchPage;
+use Biblio\Core\Application\Metadata\Search\BibliographicEditionSearchPage;
 use Biblio\Core\Application\Reading\History\ReadingHistoryEntry;
 use Biblio\Core\Application\Reading\History\ReadingHistoryPage;
 use Biblio\Core\Catalog\WorkId;
@@ -51,7 +52,8 @@ final readonly class RestResponseSerializer
         private ?WorkDiscoveryCursorCodec $workDiscoveryCursors = null,
         private ?PublicAssessmentCursorCodec $publicAssessmentCursors = null,
         private ?RestBibliographicTextSearchContract $bibliographicSearch = null,
-        private ?RestBibliographicAuthorWorkSearchContract $bibliographicAuthorWorks = null
+        private ?RestBibliographicAuthorWorkSearchContract $bibliographicAuthorWorks = null,
+        private ?RestBibliographicWorkEditionSearchContract $bibliographicWorkEditions = null
     ) {
     }
 
@@ -93,6 +95,13 @@ final readonly class RestResponseSerializer
         BibliographicAuthorWorkSearchPage $page
     ): array {
         return $this->bibliographicAuthorWorksContract()->serialize($page);
+    }
+
+    /** @return array<string,mixed> */
+    public function bibliographicWorkEditions(
+        BibliographicEditionSearchPage $page
+    ): array {
+        return $this->bibliographicWorkEditionsContract()->serialize($page);
     }
 
     /** @return array<string,mixed> */
@@ -806,6 +815,14 @@ final readonly class RestResponseSerializer
         return $this->bibliographicAuthorWorks
             ?? throw new LogicException(
                 "Bibliographic Author Works REST contract is not configured."
+            );
+    }
+
+    private function bibliographicWorkEditionsContract(): RestBibliographicWorkEditionSearchContract
+    {
+        return $this->bibliographicWorkEditions
+            ?? throw new LogicException(
+                "Bibliographic Work Editions REST contract is not configured."
             );
     }
 

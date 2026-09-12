@@ -9,6 +9,8 @@ use Biblio\Core\Application\Metadata\Discovery\BibliographicProviderIdentityRepo
 use Biblio\Core\Application\Metadata\Search\BibliographicAuthorSelectorCodec;
 use Biblio\Core\Application\Metadata\Search\BibliographicAuthorWorkSearchContract;
 use Biblio\Core\Application\Metadata\Search\BibliographicAuthorWorkSearchCursorCodec;
+use Biblio\Core\Application\Metadata\Search\BibliographicEditionSearchContract;
+use Biblio\Core\Application\Metadata\Search\BibliographicEditionSearchCursorCodec;
 use Biblio\Core\Application\Metadata\Search\BibliographicSearchCursorCodec;
 use Biblio\Core\Application\Metadata\Search\BibliographicTextSearchContract;
 use Biblio\Core\Application\Metadata\Search\BibliographicWorkSelectorCodec;
@@ -59,6 +61,14 @@ final class RestApi
                 $workSelectors
             )
         );
+        $bibliographicWorkEditions = new RestBibliographicWorkEditionSearchContract(
+            $workSelectors,
+            new BibliographicEditionSearchContract(
+                new BibliographicEditionSearchCursorCodec(
+                    self::bibliographicEditionSearchCursorSecret()
+                )
+            )
+        );
         $this->controller = new RestController(
             $applicationProvider,
             new RestRequestParser(
@@ -69,7 +79,8 @@ final class RestApi
                 $publicAssessmentCursors,
                 null,
                 $bibliographicSearch,
-                $bibliographicAuthorWorks
+                $bibliographicAuthorWorks,
+                $bibliographicWorkEditions
             ),
             new RestResponseSerializer(
                 $catalogCursors,
@@ -78,7 +89,8 @@ final class RestApi
                 $workDiscoveryCursors,
                 $publicAssessmentCursors,
                 $bibliographicSearch,
-                $bibliographicAuthorWorks
+                $bibliographicAuthorWorks,
+                $bibliographicWorkEditions
             ),
             new RestErrorMapper()
         );
@@ -151,5 +163,15 @@ final class RestApi
         }
 
         return hash("sha256", $salt . ":bibliographic-author-work-search-v1");
+    }
+
+    private static function bibliographicEditionSearchCursorSecret(): string
+    {
+        $salt = defined("AUTH_SALT") ? constant("AUTH_SALT") : null;
+        if (!is_string($salt) || trim($salt) === "") {
+            throw new LogicException("WordPress authentication salt is unavailable.");
+        }
+
+        return hash("sha256", $salt . ":bibliographic-edition-search-v1");
     }
 }
