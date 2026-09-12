@@ -13,7 +13,8 @@ use Biblio\Core\Application\Metadata\Search\{
     BibliographicAuthorSelectorCodec,
     BibliographicProviderEntityIdentity,
     BibliographicSearchCursorCodec,
-    BibliographicTextSearchQuery
+    BibliographicTextSearchQuery,
+    BibliographicWorkSelectorCodec
 };
 use Biblio\Core\Catalog\AuthorId;
 use Biblio\Core\Catalog\{CanonicalIsbnIdentity,Isbn13};
@@ -419,6 +420,11 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         self::assertSame("rest-search-author", $selectedAuthor->authorId()?->value());
         self::assertNull($selectedAuthor->providerIdentity());
         self::assertSame("rest-search-work", $data["works"]["items"][0]["work_id"]);
+        $selectedWork = $this->workSelectorCodec()->decode(
+            $data["works"]["items"][0]["work_selector"]
+        );
+        self::assertSame("rest-search-work", $selectedWork->workId()?->value());
+        self::assertNull($selectedWork->providerIdentity());
         self::assertSame(
             "configuration_error",
             $data["authors"]["provider_attempts"][0]["status"]
@@ -558,6 +564,12 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         self::assertSame(["items", "next_cursor", "provider_attempts"], array_keys($canonicalData));
         self::assertSame("rest-author-work", $canonicalData["items"][0]["work_id"]);
         self::assertNull($canonicalData["items"][0]["provider_identity"]);
+        self::assertSame(
+            "rest-author-work",
+            $this->workSelectorCodec()->decode(
+                $canonicalData["items"][0]["work_selector"]
+            )->workId()?->value()
+        );
         self::assertSame([], $canonicalData["provider_attempts"]);
 
         $failedComposite = $this->successData($this->dispatchAsActor(
@@ -614,6 +626,12 @@ final class RestApiTest extends PersistenceIntegrationTestCase
                 "provider_key" => "open_library",
                 "record_id" => "/works/OL99W",
             ], $providerData["items"][0]["provider_identity"]);
+            self::assertSame(
+                "/works/OL99W",
+                $this->workSelectorCodec()->decode(
+                    $providerData["items"][0]["work_selector"]
+                )->providerIdentity()?->providerRecordId()
+            );
             self::assertSame("candidates", $providerData["provider_attempts"][0]["status"]);
 
             $compositeData = $this->successData($this->dispatchAsActor(
@@ -4030,6 +4048,15 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         self::assertIsString($salt);
         return new BibliographicAuthorSelectorCodec(
             hash("sha256", $salt . ":bibliographic-author-selector-v1")
+        );
+    }
+
+    private function workSelectorCodec(): BibliographicWorkSelectorCodec
+    {
+        $salt = constant("AUTH_SALT");
+        self::assertIsString($salt);
+        return new BibliographicWorkSelectorCodec(
+            hash("sha256", $salt . ":bibliographic-work-selector-v1")
         );
     }
 

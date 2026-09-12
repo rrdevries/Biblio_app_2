@@ -17,6 +17,7 @@ use Biblio\Core\Application\Metadata\Search\{
     BibliographicTextSearchResult,
     BibliographicWorkAuthor,
     BibliographicWorkReference,
+    BibliographicWorkSelectorCodec,
     BibliographicWorkSearchPage,
     BibliographicWorkSearchResult
 };
@@ -178,8 +179,23 @@ final class RestBibliographicTextSearchContractTest extends TestCase
         );
         self::assertArrayNotHasKey("provider_record_id", $payload["authors"]["items"][0]);
         self::assertSame(
-            ["result_id", "result_kind", "work_id", "title", "authors", "series"],
+            [
+                "result_id",
+                "result_kind",
+                "work_id",
+                "work_selector",
+                "title",
+                "authors",
+                "series",
+            ],
             array_keys($payload["works"]["items"][0])
+        );
+        $selectedWork = (new BibliographicWorkSelectorCodec(
+            self::SELECTOR_SECRET . "-work"
+        ))->decode($payload["works"]["items"][0]["work_selector"]);
+        self::assertSame(
+            "/works/OL1W",
+            $selectedWork->providerIdentity()?->providerRecordId()
         );
         foreach (["isbn", "publisher", "publication_date", "language", "library_id", "user_id"] as $field) {
             self::assertArrayNotHasKey($field, $payload["works"]["items"][0]);
@@ -196,7 +212,8 @@ final class RestBibliographicTextSearchContractTest extends TestCase
         return new RestBibliographicTextSearchContract(
             new BibliographicTextSearchContract(
                 $this->codec(),
-                new BibliographicAuthorSelectorCodec(self::SELECTOR_SECRET)
+                new BibliographicAuthorSelectorCodec(self::SELECTOR_SECRET),
+                new BibliographicWorkSelectorCodec(self::SELECTOR_SECRET . "-work")
             )
         );
     }

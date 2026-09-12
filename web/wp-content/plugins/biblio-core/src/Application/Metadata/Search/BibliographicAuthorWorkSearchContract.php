@@ -8,7 +8,10 @@ use Biblio\Core\Exception\ValidationException;
 
 final readonly class BibliographicAuthorWorkSearchContract
 {
-    public function __construct(private BibliographicAuthorWorkSearchCursorCodec $cursors) {}
+    public function __construct(
+        private BibliographicAuthorWorkSearchCursorCodec $cursors,
+        private BibliographicWorkSelectorCodec $workSelectors
+    ) {}
 
     /** @param array<string,mixed> $payload */
     public function decodeRequest(
@@ -55,6 +58,7 @@ final readonly class BibliographicAuthorWorkSearchContract
             "result_id" => $work->reference()->resultId(),
             "result_kind" => $work->reference()->kind()->value,
             "work_id" => $work->reference()->workId()?->value(),
+            "work_selector" => $this->workSelectors->encode($work->reference()),
             "provider_identity" => $provider === null ? null : [
                 "provider_key" => $provider->providerKey(),
                 "record_id" => $provider->providerRecordId(),

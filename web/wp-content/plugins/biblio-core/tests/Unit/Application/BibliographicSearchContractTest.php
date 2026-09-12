@@ -22,6 +22,7 @@ use Biblio\Core\Application\Metadata\Search\{
     BibliographicTextSearchResult,
     BibliographicWorkAuthor,
     BibliographicWorkReference,
+    BibliographicWorkSelectorCodec,
     BibliographicWorkSearchPage,
     BibliographicWorkSearchProvider,
     BibliographicWorkSearchResult,
@@ -109,8 +110,21 @@ final class BibliographicSearchContractTest extends TestCase
         );
         self::assertSame("local_canonical", $payload["works"]["items"][0]["result_kind"]);
         self::assertSame("work-dispossessed", $payload["works"]["items"][0]["work_id"]);
+        $selectedWork = (new BibliographicWorkSelectorCodec(
+            self::SELECTOR_SECRET . "-work"
+        ))->decode($payload["works"]["items"][0]["work_selector"]);
+        self::assertSame("work-dispossessed", $selectedWork->workId()?->value());
+        self::assertNull($selectedWork->providerIdentity());
         self::assertSame(
-            ["result_id", "result_kind", "work_id", "title", "authors", "series"],
+            [
+                "result_id",
+                "result_kind",
+                "work_id",
+                "work_selector",
+                "title",
+                "authors",
+                "series",
+            ],
             array_keys($payload["works"]["items"][0])
         );
         self::assertArrayNotHasKey("isbn", $payload["works"]["items"][0]);
@@ -456,7 +470,8 @@ final class BibliographicSearchContractTest extends TestCase
     {
         return new BibliographicTextSearchContract(
             new BibliographicSearchCursorCodec(self::CURSOR_SECRET),
-            new BibliographicAuthorSelectorCodec(self::SELECTOR_SECRET)
+            new BibliographicAuthorSelectorCodec(self::SELECTOR_SECRET),
+            new BibliographicWorkSelectorCodec(self::SELECTOR_SECRET . "-work")
         );
     }
 
