@@ -2037,7 +2037,7 @@ body.admin-bar.biblio-app-shell-page {
 [data-biblio-search-root] .biblio-ui__bibliographic-search-form {
     display: grid;
     gap: var(--biblio-space-2);
-    inline-size: min(100%, 52rem);
+    inline-size: min(100%, 58rem);
 }
 
 [data-biblio-search-root] .biblio-ui__bibliographic-search-form > label {
@@ -2046,20 +2046,28 @@ body.admin-bar.biblio-app-shell-page {
 
 [data-biblio-search-root] .biblio-ui__bibliographic-search-field {
     display: grid;
-    gap: var(--biblio-space-3);
+    gap: 0;
     grid-template-columns: minmax(0, 1fr) auto;
 }
 
 [data-biblio-search-root] .biblio-ui__bibliographic-search-field input {
     background: var(--biblio-color-surface);
     border: var(--biblio-boundary-width) solid var(--biblio-color-border-strong);
-    border-radius: var(--biblio-radius-control);
+    border-radius: var(--biblio-radius-control) 0 0 var(--biblio-radius-control);
     color: var(--biblio-color-text-primary);
     font: inherit;
     inline-size: 100%;
-    min-block-size: 2.75rem;
+    min-block-size: 3.25rem;
     min-inline-size: 0;
-    padding: var(--biblio-space-2) var(--biblio-space-4);
+    padding: var(--biblio-space-3) var(--biblio-space-5);
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+[data-biblio-search-root] .biblio-ui__bibliographic-search-field .biblio-ui__control {
+    border-left: 0;
+    border-radius: 0 var(--biblio-radius-control) var(--biblio-radius-control) 0;
+    min-block-size: 3.25rem;
+    padding-inline: var(--biblio-space-6);
 }
 
 [data-biblio-search-root] .biblio-ui__bibliographic-search--results :where(.biblio-ui__bibliographic-search-form > label, .biblio-ui__search-help) {
@@ -2074,6 +2082,11 @@ body.admin-bar.biblio-app-shell-page {
 
 [data-biblio-search-root] .biblio-ui__bibliographic-search-field input:focus-visible {
     border-color: var(--biblio-color-focus);
+}
+
+[data-biblio-search-root] .biblio-ui__bibliographic-search-field:focus-within input,
+[data-biblio-search-root] .biblio-ui__bibliographic-search-field:focus-within .biblio-ui__control {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--biblio-color-focus) 18%, transparent);
 }
 
 [data-biblio-search-root] .biblio-ui__search-help,
@@ -2129,7 +2142,7 @@ body.admin-bar.biblio-app-shell-page {
 [data-biblio-search-root] .biblio-ui__search-layout {
     align-items: start;
     display: grid;
-    gap: var(--biblio-space-8);
+    gap: var(--biblio-space-6);
     grid-template-columns: minmax(0, 1fr) minmax(15rem, 17rem);
     min-inline-size: 0;
 }
@@ -2140,21 +2153,26 @@ body.admin-bar.biblio-app-shell-page {
 
 [data-biblio-search-root] .biblio-ui__search-rail {
     display: grid;
-    gap: var(--biblio-space-4);
+    gap: var(--biblio-space-3);
     min-inline-size: 0;
 }
 
 [data-biblio-search-root] .biblio-ui__search-rail-card {
     background: color-mix(in srgb, var(--biblio-color-surface) 68%, transparent);
     border: var(--biblio-boundary-width) solid var(--biblio-color-border);
-    border-radius: var(--biblio-radius-control);
+    border-radius: var(--biblio-radius-compact);
+    border-left: 0.25rem solid var(--biblio-color-border-strong);
     display: grid;
     gap: var(--biblio-space-2);
-    padding: var(--biblio-space-6);
+    padding: var(--biblio-space-5);
+}
+
+[data-biblio-search-root] .biblio-ui__search-scope {
+    border-left-color: var(--biblio-color-brass);
 }
 
 [data-biblio-search-root] .biblio-ui__search-rail-card h2 {
-    font-size: 1.25rem;
+    font-size: 1.15rem;
 }
 
 [data-biblio-search-root] .biblio-ui__search-rail-kicker {
@@ -2232,7 +2250,7 @@ body.admin-bar.biblio-app-shell-page {
     border: var(--biblio-boundary-width) solid var(--biblio-color-border);
     border-radius: var(--biblio-radius-compact);
     display: grid;
-    gap: var(--biblio-space-1);
+    gap: var(--biblio-space-2);
     min-inline-size: 0;
     overflow-wrap: anywhere;
     padding: var(--biblio-space-3) var(--biblio-space-4);
@@ -2261,19 +2279,60 @@ body.admin-bar.biblio-app-shell-page {
     border-radius: 0;
     display: grid;
     gap: var(--biblio-space-3);
+    justify-self: start;
     grid-template-rows: auto 1fr;
     min-inline-size: 0;
     overflow-wrap: anywhere;
     padding: 0;
 }
 
+[data-biblio-search-root] .biblio-ui__work-results--preview .biblio-ui__work-result {
+    max-inline-size: 13.75rem;
+}
+
+[data-biblio-search-root] .biblio-ui__work-results--preview.biblio-ui__work-results--sparse {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 [data-biblio-search-root] .biblio-ui__search-cover {
-    box-shadow: var(--biblio-cover-shadow);
-    inline-size: 100%;
+    aspect-ratio: var(--biblio-cover-ratio);
+    background: color-mix(in srgb, var(--biblio-color-surface-elevated) 68%, transparent);
+    border: var(--biblio-boundary-width) solid var(--biblio-color-border-strong);
+    border-radius: var(--biblio-radius-compact);
+    box-shadow: none;
+    display: grid;
+    inline-size: 10.75rem;
+    justify-items: center;
+    max-inline-size: 100%;
+    padding: var(--biblio-space-4);
+    position: relative;
+}
+
+[data-biblio-search-root] .biblio-ui__search-cover--empty {
+    align-content: center;
+}
+
+[data-biblio-search-root] .biblio-ui__search-cover--empty::before {
+    background: color-mix(in srgb, var(--biblio-color-surface-muted) 36%, transparent);
+    border: var(--biblio-boundary-width) dashed var(--biblio-color-border);
+    content: "";
+    border-radius: calc(var(--biblio-radius-compact) - 1px);
+    inset: var(--biblio-space-1);
+    position: absolute;
+    z-index: 0;
 }
 
 [data-biblio-search-root] .biblio-ui__search-cover .biblio-ui__cover-label {
-    font-size: 0.75rem;
+    color: var(--biblio-color-text-secondary);
+    font-weight: 600;
+    position: relative;
+    text-align: center;
+    text-transform: uppercase;
+    z-index: 1;
+}
+
+[data-biblio-search-root] .biblio-ui__search-cover .biblio-ui__cover-label {
+    font-size: 0.8125rem;
     padding-inline: var(--biblio-space-1);
 }
 
@@ -2299,6 +2358,10 @@ body.admin-bar.biblio-app-shell-page {
     [data-biblio-search-root] .biblio-ui__work-results--preview,
     [data-biblio-search-root] .biblio-ui__work-results--full {
         grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    [data-biblio-search-root] .biblio-ui__work-results--preview.biblio-ui__work-results--sparse {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
@@ -2339,6 +2402,11 @@ body.admin-bar.biblio-app-shell-page {
     [data-biblio-search-root] .biblio-ui__work-result {
         grid-template-columns: 5rem minmax(0, 1fr);
         grid-template-rows: none;
+    }
+
+    [data-biblio-search-root] .biblio-ui__search-cover {
+        inline-size: 4.75rem;
+        padding: var(--biblio-space-2);
     }
 
     [data-biblio-search-root] .biblio-ui__search-view-all {

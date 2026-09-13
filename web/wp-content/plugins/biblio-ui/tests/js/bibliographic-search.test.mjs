@@ -235,7 +235,10 @@ test("production module uses one read-only search route and exposes no selector 
     assert.match(source, /role: "tab"/);
     assert.match(source, /ArrowRight/);
     assert.match(source, /Bekijk alle/);
-    assert.match(source, /Zoekhulp en zoekstatus/);
+    assert.match(source, /Zoekscope/);
+    assert.match(source, /Biblio-catalogus/);
+    assert.match(source, /Externe bron/);
+    assert.match(source, /Inclusief aangesloten bibliografische bronnen/);
     assert.match(source, /Externe resultaten konden niet volledig worden geladen/);
     assert.match(source, /type: "search"/);
     assert.match(source, /aria-live/);
@@ -246,6 +249,7 @@ test("production module uses one read-only search route and exposes no selector 
     assert.doesNotMatch(source, /api\.(?:patch|delete)\(/);
     assert.doesNotMatch(source, /materializations|bibliographic-discoveries|openlibrary|google/i);
     assert.doesNotMatch(source, /textContent:\s*(?:author|work)\.(?:author_selector|work_selector|result_id)/);
+    assert.doesNotMatch(source, /In Biblio|Uit bibliografische bron/);
     assert.doesNotMatch(source, /Bekijk werken|Bekijk uitgaven|Series.*tab|Collections.*tab/i);
 });
 

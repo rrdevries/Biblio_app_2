@@ -143,7 +143,12 @@ test("keyboard submit renders separate Author and Book groups without exposing s
     await expect(page.locator("body")).not.toContainText("private-work-selector");
     await expect(page.getByRole("button", { name: "Bekijk alle boeken" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Bekijk alle auteurs" })).toBeVisible();
-    await expect(page.getByRole("complementary", { name: "Zoekhulp en zoekstatus" })).toContainText("Zoektip");
+    const rightRail = page.getByRole("complementary", { name: "Zoekscope, zoekstatus en zoektip" });
+    await expect(rightRail).toBeVisible();
+    await expect(rightRail).toContainText("Zoeken in");
+    await expect(rightRail).toContainText("Zoektip");
+    await expect(page.getByRole("complementary", { name: "Zoekhulp en zoekstatus" })).toHaveCount(0);
+    await expect(rightRail.getByRole("status")).toHaveCount(0);
     expect(requests).toEqual([{
         query: "Ursula Le Guin",
         author_cursor: null,
@@ -443,8 +448,9 @@ test("duplicate Author names stay separate with truthful source context", async 
     await search(page, "Peter King");
 
     await expect(page.locator(".biblio-ui__author-result")).toHaveCount(2);
-    await expect(page.getByText("In Biblio", { exact: true })).toBeVisible();
-    await expect(page.getByText("Uit bibliografische bron", { exact: true })).toBeVisible();
+    await expect(page.locator(".biblio-ui__author-result-context")).toHaveText(["Biblio-catalogus", "Externe bron"]);
+    await expect(page.getByText("In Biblio", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("Uit bibliografische bron", { exact: true })).toHaveCount(0);
 });
 
 test("responsive visual contract stays calm and overflow-free", async ({ page }) => {
