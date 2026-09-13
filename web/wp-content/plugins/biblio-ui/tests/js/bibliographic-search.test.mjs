@@ -230,6 +230,12 @@ test("production module uses one read-only search route and exposes no selector 
     assert.match(source, /work_cursor:/);
     assert.match(source, /Meer auteurs/);
     assert.match(source, /Meer boeken/);
+    assert.match(source, /SEARCH_TABS = \["all", "books", "authors"\]/);
+    assert.match(source, /role: "tablist"/);
+    assert.match(source, /role: "tab"/);
+    assert.match(source, /ArrowRight/);
+    assert.match(source, /Bekijk alle/);
+    assert.match(source, /Zoekhulp en zoekstatus/);
     assert.match(source, /Externe resultaten konden niet volledig worden geladen/);
     assert.match(source, /type: "search"/);
     assert.match(source, /aria-live/);
@@ -240,7 +246,7 @@ test("production module uses one read-only search route and exposes no selector 
     assert.doesNotMatch(source, /api\.(?:patch|delete)\(/);
     assert.doesNotMatch(source, /materializations|bibliographic-discoveries|openlibrary|google/i);
     assert.doesNotMatch(source, /textContent:\s*(?:author|work)\.(?:author_selector|work_selector|result_id)/);
-    assert.doesNotMatch(source, /Bekijk werken|Bekijk uitgaven|Series.*tab/i);
+    assert.doesNotMatch(source, /Bekijk werken|Bekijk uitgaven|Series.*tab|Collections.*tab/i);
 });
 
 test("search CSS reuses tokens, portrait covers and responsive stacking", async () => {
@@ -251,7 +257,9 @@ test("search CSS reuses tokens, portrait covers and responsive stacking", async 
     assert.match(searchCss, /var\(--biblio-font-serif\)/);
     assert.match(searchCss, /biblio-ui__search-cover/);
     assert.doesNotMatch(searchCss, /aspect-ratio:\s*1\s*\/\s*1/);
-    assert.match(searchCss, /@media \(max-width: 1023px\)/);
+    assert.match(searchCss, /grid-template-columns: repeat\(5, minmax\(0, 1fr\)\)/);
+    assert.match(searchCss, /biblio-ui__search-layout/);
+    assert.match(searchCss, /@media \(max-width: 1199px\)/);
     assert.match(searchCss, /@media \(max-width: 767px\)/);
 }
 );
