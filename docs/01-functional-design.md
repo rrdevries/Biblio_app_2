@@ -621,14 +621,32 @@ complete ISBN-to-concrete-Edition flow without new search/identity decisions,
 as follow-up. Query state remains local to the Page; URL/history integration is
 also deferred rather than introducing a new router.
 
-The approved later specialised `Zoeken → Boeken` direction remains a
+SEARCH-UI-01A-F1 corrects only the Page composition against the approved LAB
+baseline. After a completed query, `Alles`, `Boeken` and `Auteurs` are real
+accessible tabs over the same retained Page state and never trigger a new
+search. `Alles` shows a bounded Books-first preview followed by compact Authors;
+`Bekijk alle boeken` and `Bekijk alle auteurs` select the corresponding tab.
+Only those specialised tabs expose their existing category-specific
+continuation. Equal Author names remain separate under strong-identity policy;
+the existing `result_kind` may be presented as provider-neutral `In Biblio` or
+`Uit bibliografische bron` context, but selectors and provider IDs remain
+hidden.
+
+The results composition has a separate desktop right rail, moving below the
+results on smaller screens. It contains only truthful search guidance and a
+conditional compact external-status card. The backend exposes neither totals
+nor an explicit cross-entity Best Match, so badges and Best Match are absent.
+Series/Collections result tabs, filter/sort controls and advanced search are
+also absent rather than rendered as inactive promises.
+
+The approved later richer `Zoeken → Boeken` direction remains a
 portrait-cover grid with a separate right-hand filter plane. That plane starts
 at result height, leaves a clear gutter and uses a compact `Zoeken in`
 dropdown, never radio buttons. `Boeksoort` is a multi-option group rather than
 a checkbox; `Taal` belongs under `Over de uitgave`; rating and `In mijn
-bibliotheek` filters are excluded. None of that rail, its filters, specialised
-tabs, advanced search, Author-to-Works, Work-to-Editions or consumer actions is
-implemented by SEARCH-UI-01A.
+bibliotheek` filters are excluded. F1 provides only the structural truthful
+rail and category tabs; none of the filter plane's controls, advanced search,
+Author-to-Works, Work-to-Editions or consumer actions is implemented.
 
 Independent Biblio-owned or user-supplied cover acquisition/management is
 V2.002+. Existing V1 cover references/assets remain migration inventory and

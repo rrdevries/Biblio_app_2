@@ -3,6 +3,10 @@
 Date: 2026-09-13
 Status: **GO / CLOSED**
 
+Post-closure note: the human visual comparison against the approved LAB image
+was NO-GO. SEARCH-UI-01A-F1 corrects the composition without changing this
+slice's backend contract; see `docs/84-search-ui-01a-f1-lab-alignment.md`.
+
 ## 1. Frontend audit
 
 The existing Biblio UI already had the required single App Shell, Page-scoped

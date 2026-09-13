@@ -3030,15 +3030,18 @@ Biblio UI remains `0.15.1`. Detailed evidence:
 
 ### SEARCH-UI-01A — full-page bibliographic search
 
-Status: **GO / CLOSED** after the complete UI/Core/browser gates and
+Status: **TECHNICAL GO / HUMAN VISUAL ACCEPTANCE PENDING** after the
+SEARCH-UI-01A-F1 LAB-alignment correction, complete UI/Core/browser gates and
 independent re-review.
 
 The existing App Shell now has an additive full-page Search module at the
 ordinary `/zoeken/` Page through `[biblio_search_app]`. Its only functional
-view is `Alles`: an explicit form submits title/Author text to authenticated
-`POST /biblio/v1/me/bibliographic-searches`, then renders `Auteurs` and
-`Boeken` as separate semantic groups. Each group appends through its own opaque
-cursor without replacing the other group or its cursor.
+explicit form submits title/Author text to authenticated
+`POST /biblio/v1/me/bibliographic-searches`. After submission the Page uses the
+compact `Zoekresultaten` hierarchy and functional `Alles`, `Boeken` and
+`Auteurs` tabs without another search request. `Alles` is a bounded Books-first
+preview; specialised tabs retain all loaded results and expose only their own
+opaque-cursor continuation.
 
 The strict UI decoder retains `author_selector` and `work_selector` only as
 opaque in-memory model state. No selector/result identity appears in DOM or
@@ -3047,15 +3050,16 @@ There are no provider calls, materialization, Wishlist/Add Book actions or
 other writes. Loading, empty, safe session/transport and typed partial-provider
 states remain local presentation behavior.
 
-The Page uses the current Soft-Ivory/Ink tokens, editorial type hierarchy,
-portrait no-cover treatment and shared responsive navigation. Browser review
-at 1440, 900 and 390 px is clean. ISBN remains explicitly unpromised with
-`Zoek op titel of auteur`: the top-level route is text-only and no small
-existing read-only bridge provides the full concrete-Edition flow. Specialised
-tabs, selected-entity drill-down, URL/history state, the approved separate
-Books filter plane, advanced search and consumer actions remain follow-up.
+The current Soft-Ivory/Ink App Shell stays canonical. The search content now
+uses the approved LAB composition: five-item portrait Book preview where width
+allows, compact editorial Author rows and a separate desktop right rail that
+contains only truthful search help and conditional partial-failure status. At
+tablet/mobile widths the rail moves below results. No total badges, Best Match,
+Series/Collections results, filters, sort or advanced-search controls are
+fabricated. ISBN, selected-entity drill-down, URL/history state, functional
+filters and consumer actions remain follow-up.
 
-Schema stays `1023`; Biblio Core remains `2.14.0`; Biblio UI is `0.16.0` for
-the production Page module and shared navigation/CSS. No V1 data was used.
+Schema stays `1023`; Biblio Core remains `2.14.0`; Biblio UI is `0.16.1` for
+the presentation correction. No V1 data was used.
 Detailed scope and evidence:
-`docs/83-search-ui-01a-full-page-bibliographic-search.md`.
+`docs/84-search-ui-01a-f1-lab-alignment.md`.

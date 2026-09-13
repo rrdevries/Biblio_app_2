@@ -3605,9 +3605,11 @@ SEARCH-UI-01A is accepted only when:
 - explicit keyboard form submission calls only authenticated
   `POST /biblio/v1/me/bibliographic-searches` with the normalized query and
   nullable independent Author/Work cursors;
-- `Alles` renders non-interleaved `Auteurs` and `Boeken` regions, omits empty
-  groups and fabricates no total count, Edition/ISBN metadata, covers, tabs,
-  filters or inactive controls;
+- functional `Alles`, `Boeken` and `Auteurs` tabs retain the same loaded Page
+  state, trigger no new search request and support Arrow/Home/End keyboard use;
+- `Alles` renders a bounded Books-first preview and compact Authors, with real
+  `Bekijk alle` transitions and no fabricated total count, Edition/ISBN data,
+  cover, Best Match, Series/Collections result or inactive control;
 - `Meer auteurs` and `Meer boeken` append only their own lane, retain the other
   lane/cursor and provide deterministic focus plus live announcements,
   including a valid continuation with zero new items;
@@ -3619,21 +3621,25 @@ SEARCH-UI-01A is accepted only when:
   presentation and retain usable results;
 - request abort/revision prevents stale replacement, pagination has no
   temporarily active dead controls and query reset clears both old lanes;
-- the LAB `Editorial Library × Serious Utility` direction is recognizable at
-  1440, tablet and mobile widths with portrait covers, no horizontal overflow
-  and no `Alles` filter plane;
+- the approved LAB `Editorial Library × Serious Utility` composition is
+  recognizable at 1440, 900 and 390 px with a results-state header, compact
+  search, five-item desktop Book preview, compact Authors, portrait no-cover
+  treatment, desktop main/rail gutter, stacked responsive rail and no overflow;
+- the right rail contains only truthful search help and conditional compact
+  external status; it exposes no fake filters, sort, Library scope or advanced
+  search;
 - no provider request, Author/Work/Edition creation, materialization, Wishlist,
   Add Book, Item, Library or other mutation is introduced;
-- Author-to-Works, Work-to-Editions, ISBN routing, specialised tabs/Books view,
-  the separate right filter plane, advanced search, URL/history state and
-  consumer actions remain explicitly deferred;
+- Author-to-Works, Work-to-Editions, ISBN routing, totals, Best Match,
+  Series/Collections results, functional filters/sort, advanced search,
+  URL/history state and consumer actions remain explicitly deferred;
 - complete Biblio UI unit/smoke, guarded browser, relevant Core/REST, PHP/JS
   syntax, PHPStan, WordPress, manifest and whitespace gates pass; and
 - independent second review finds no remaining requirements, accessibility,
   identity, state, fixture-safety, compatibility or scope blocker.
 
-Status: **GO / CLOSED** after the complete UI/Core/browser gates and
-independent re-review.
+Status: **TECHNICAL GO / HUMAN VISUAL ACCEPTANCE PENDING** after the F1
+correction, complete UI/Core/browser gates and independent re-review.
 Product remains `v2.001`, schema remains `1023`, Biblio Core remains `2.14.0`
-and Biblio UI is `0.16.0`. No V1 data is used. Closure evidence is recorded in
-`docs/83-search-ui-01a-full-page-bibliographic-search.md`.
+and Biblio UI is `0.16.1`. No V1 data is used. Closure evidence is recorded in
+`docs/84-search-ui-01a-f1-lab-alignment.md`.

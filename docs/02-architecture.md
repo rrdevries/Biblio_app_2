@@ -1984,10 +1984,20 @@ live announcements protect independent pagination.
 
 The App Shell remains the only navigation/layout system. Search-specific CSS
 is root-scoped and reuses the existing Ink/Soft-Ivory, typography, spacing,
-hairline, radius, focus and reduced-motion tokens. `Alles` has semantically
-separate Author and Book regions, portrait no-cover treatments and no filter
-rail. The component boundary leaves room for later specialised tabs and the
-approved separate Book filter plane without rendering inactive controls.
+hairline, radius, focus and reduced-motion tokens. SEARCH-UI-01A-F1 adds one
+Page-local `activeTab` presentation value over the retained query/result lanes.
+The accessible `Alles`, `Boeken` and `Auteurs` tabs re-render the same data and
+never invoke transport. `Alles` slices only its visible preview; it never
+duplicates or truncates the stored result lanes. Category continuation remains
+available only in its specialised tab.
+
+The F1 results layout is a root-scoped main/rail CSS grid. The rail is a
+separate desktop plane and moves after results below 1200 px; it has no backend
+or state authority and renders only search help plus conditional typed partial-
+failure status. There is no total/ranking derivation, Best Match heuristic,
+Series/Collections aggregation, cover acquisition or filter/sort control. The
+component boundary still leaves room for those separately contracted features
+without rendering inactive controls now.
 
 State is intentionally Page-local: the current frontend has no shared router
 whose history contract can be reused without expanding this slice. ISBN is

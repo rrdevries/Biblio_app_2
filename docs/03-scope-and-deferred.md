@@ -241,9 +241,10 @@ The following remains deferred independently of D-SCOPE-01:
 - generic `Andere fysieke bron` outside approved source types;
 - smart Hierna-lezen availability or automatic source preference;
 - selected-Author Works and selected-Work Editions interaction from the
-  SEARCH-UI-01A top-level full-page text results; ISBN routing, specialised
-  Books/Authors tabs, the separate Books filter plane, URL/history state and
-  consumer actions also remain follow-up work;
+  SEARCH-UI-01A top-level full-page text results; ISBN routing, real totals,
+  cross-entity Best Match, Series/Collections results, functional filter/sort
+  controls, advanced search, URL/history state and consumer actions also remain
+  follow-up work;
 - popularity/collaborative filtering and black-box ranking; shared search and
   MH-DISC-01/WISH-DISC-01 keep provider order presentation-only;
 - automatic central Work/Author/Series merge, broad bibliographic editing,

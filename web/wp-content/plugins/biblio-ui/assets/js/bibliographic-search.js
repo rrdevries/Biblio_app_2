@@ -48,6 +48,9 @@ const FAILED_STATUSES = new Set([
     "invalid_response",
 ]);
 const GROUPS = new Set(["authors", "works"]);
+const SEARCH_TABS = ["all", "books", "authors"];
+const ALL_WORK_PREVIEW_LIMIT = 5;
+const ALL_AUTHOR_PREVIEW_LIMIT = 4;
 const MAX_QUERY_LENGTH = 100;
 
 function record(value) {
@@ -378,17 +381,15 @@ export function createBibliographicSearchApp({
         textContent: "Zoeken",
         attrs: { id: "biblio-search-title", tabindex: "-1" },
     });
-    header.append(
-        el(documentImpl, "p", {
-            className: "biblio-ui__eyebrow",
-            textContent: "Bibliografisch zoeken",
-        }),
-        title,
-        el(documentImpl, "p", {
-            className: "biblio-ui__search-intro",
-            textContent: "Vind auteurs en boeken in Biblio en in aangesloten bibliografische bronnen.",
-        })
-    );
+    const eyebrow = el(documentImpl, "p", {
+        className: "biblio-ui__eyebrow",
+        textContent: "Bibliografisch zoeken",
+    });
+    const intro = el(documentImpl, "p", {
+        className: "biblio-ui__search-intro",
+        textContent: "Vind auteurs en boeken in Biblio en in aangesloten bibliografische bronnen.",
+    });
+    header.append(eyebrow, title, intro);
 
     const form = el(documentImpl, "form", {
         className: "biblio-ui__bibliographic-search-form",
@@ -431,25 +432,44 @@ export function createBibliographicSearchApp({
 
     const navigation = el(documentImpl, "nav", {
         className: "biblio-ui__search-tabs",
-        attrs: { "aria-label": "Zoekweergave" },
+        attrs: { "aria-label": "Zoekweergave", hidden: "" },
     });
-    navigation.append(el(documentImpl, "span", {
-        className: "biblio-ui__search-tab biblio-ui__search-tab--active",
-        textContent: "Alles",
-        attrs: { "aria-current": "page" },
+    const tabList = el(documentImpl, "div", {
+        className: "biblio-ui__search-tab-list",
+        attrs: { role: "tablist", "aria-label": "Resultaatcategorie" },
+    });
+    const tabLabels = { all: "Alles", books: "Boeken", authors: "Auteurs" };
+    const tabButtons = new Map(SEARCH_TABS.map((tab) => {
+        const button = el(documentImpl, "button", {
+            className: "biblio-ui__search-tab",
+            textContent: tabLabels[tab],
+            attrs: {
+                id: `biblio-search-tab-${tab}`,
+                type: "button",
+                role: "tab",
+                "aria-controls": "biblio-search-panel",
+                "aria-selected": tab === "all" ? "true" : "false",
+                tabindex: tab === "all" ? "0" : "-1",
+                "data-search-tab": tab,
+            },
+        });
+        tabList.append(button);
+        return [tab, button];
     }));
+    navigation.append(tabList);
     const live = el(documentImpl, "div", {
         className: "biblio-ui__visually-hidden",
         attrs: { role: "status", "aria-live": "polite", "aria-atomic": "true" },
     });
     const results = el(documentImpl, "div", {
         className: "biblio-ui__search-results",
-        attrs: { "aria-busy": "false" },
+        attrs: { id: "biblio-search-panel", "aria-busy": "false" },
     });
     view.append(header, form, navigation, live, results);
     host.replaceChildren(view);
 
     let state = initialBibliographicSearchState();
+    let activeTab = "all";
     let submittedQuery = "";
     let phase = "idle";
     let requestError = null;
@@ -462,15 +482,6 @@ export function createBibliographicSearchApp({
     function announce(message) {
         live.textContent = "";
         queueMicrotaskImpl(() => { live.textContent = message; });
-    }
-
-    function appendPartialStatus(container) {
-        if (!attemptsFailed([...state.authorAttempts, ...state.workAttempts])) return;
-        container.append(el(documentImpl, "p", {
-            className: "biblio-ui__status-panel biblio-ui__status-panel--warning biblio-ui__search-partial",
-            textContent: "Externe resultaten konden niet volledig worden geladen.",
-            attrs: { role: "status" },
-        }));
     }
 
     function recoveryControl(error) {
@@ -518,17 +529,32 @@ export function createBibliographicSearchApp({
         }
     }
 
-    function authorSection() {
+    function sectionHeading(section, titleText, titleId, viewAllTab = null) {
+        const heading = el(documentImpl, "div", {
+            className: "biblio-ui__search-section-heading",
+        });
+        heading.append(el(documentImpl, "h2", {
+            textContent: titleText,
+            attrs: { id: titleId, tabindex: "-1" },
+        }));
+        if (viewAllTab !== null) {
+            const viewAll = control(documentImpl, `Bekijk alle ${titleText.toLowerCase()}`, `view-${viewAllTab}`, "quiet");
+            viewAll.className += " biblio-ui__search-view-all";
+            viewAll.addEventListener("click", () => switchTab(viewAllTab, true));
+            heading.append(viewAll);
+        }
+        section.append(heading);
+    }
+
+    function authorSection({ preview = false } = {}) {
         const section = el(documentImpl, "section", {
-            className: "biblio-ui__search-result-group biblio-ui__search-authors",
+            className: `biblio-ui__search-result-group biblio-ui__search-authors${preview ? " biblio-ui__search-result-group--preview" : ""}`,
             attrs: { "aria-labelledby": "biblio-search-authors-title" },
         });
-        section.append(el(documentImpl, "h2", {
-            textContent: "Auteurs",
-            attrs: { id: "biblio-search-authors-title", tabindex: "-1" },
-        }));
+        sectionHeading(section, "Auteurs", "biblio-search-authors-title", preview ? "authors" : null);
         const list = el(documentImpl, "ul", { className: "biblio-ui__author-results" });
-        state.authors.forEach((author, index) => {
+        const authors = preview ? state.authors.slice(0, ALL_AUTHOR_PREVIEW_LIMIT) : state.authors;
+        authors.forEach((author, index) => {
             const item = el(documentImpl, "li", {
                 className: "biblio-ui__author-result",
                 attrs: {
@@ -538,33 +564,35 @@ export function createBibliographicSearchApp({
                 },
             });
             item.append(
-                el(documentImpl, "p", {
-                    className: "biblio-ui__search-result-kind",
-                    textContent: "Auteur",
-                }),
                 el(documentImpl, "h3", {
                     className: "biblio-ui__author-result-name",
                     textContent: author.display_name,
+                }),
+                el(documentImpl, "p", {
+                    className: "biblio-ui__author-result-context",
+                    textContent: author.result_kind === "local_canonical"
+                        ? "In Biblio"
+                        : "Uit bibliografische bron",
                 })
             );
             list.append(item);
         });
         section.append(list);
-        appendPagination(section, "authors", state.authorCursor);
+        if (!preview) appendPagination(section, "authors", state.authorCursor);
         return section;
     }
 
-    function workSection() {
+    function workSection({ preview = false } = {}) {
         const section = el(documentImpl, "section", {
-            className: "biblio-ui__search-result-group biblio-ui__search-works",
+            className: `biblio-ui__search-result-group biblio-ui__search-works${preview ? " biblio-ui__search-result-group--preview" : ""}`,
             attrs: { "aria-labelledby": "biblio-search-works-title" },
         });
-        section.append(el(documentImpl, "h2", {
-            textContent: "Boeken",
-            attrs: { id: "biblio-search-works-title", tabindex: "-1" },
-        }));
-        const list = el(documentImpl, "ul", { className: "biblio-ui__work-results" });
-        state.works.forEach((work, index) => {
+        sectionHeading(section, "Boeken", "biblio-search-works-title", preview ? "books" : null);
+        const list = el(documentImpl, "ul", {
+            className: `biblio-ui__work-results${preview ? " biblio-ui__work-results--preview" : " biblio-ui__work-results--full"}`,
+        });
+        const works = preview ? state.works.slice(0, ALL_WORK_PREVIEW_LIMIT) : state.works;
+        works.forEach((work, index) => {
             const item = el(documentImpl, "li", {
                 className: "biblio-ui__work-result",
                 attrs: {
@@ -585,10 +613,6 @@ export function createBibliographicSearchApp({
                 className: "biblio-ui__work-result-identity",
             });
             identity.append(
-                el(documentImpl, "p", {
-                    className: "biblio-ui__search-result-kind",
-                    textContent: "Boek",
-                }),
                 el(documentImpl, "h3", {
                     className: "biblio-ui__work-result-title",
                     textContent: work.title,
@@ -608,8 +632,105 @@ export function createBibliographicSearchApp({
             list.append(item);
         });
         section.append(list);
-        appendPagination(section, "works", state.workCursor);
+        if (!preview) appendPagination(section, "works", state.workCursor);
         return section;
+    }
+
+    function searchTipCard() {
+        const card = el(documentImpl, "section", {
+            className: "biblio-ui__search-rail-card biblio-ui__search-tip",
+            attrs: { "aria-labelledby": "biblio-search-tip-title" },
+        });
+        card.append(
+            el(documentImpl, "p", {
+                className: "biblio-ui__search-rail-kicker",
+                textContent: "Zoekhulp",
+            }),
+            el(documentImpl, "h2", {
+                textContent: "Zoektip",
+                attrs: { id: "biblio-search-tip-title" },
+            }),
+            el(documentImpl, "p", { textContent: "Zoek op titel of auteur." }),
+            el(documentImpl, "p", {
+                className: "biblio-ui__search-rail-note",
+                textContent: "ISBN zoeken wordt later aangesloten.",
+            })
+        );
+        return card;
+    }
+
+    function partialStatusCard(hasResults) {
+        const card = el(documentImpl, "section", {
+            className: "biblio-ui__search-rail-card biblio-ui__search-partial",
+            attrs: { role: "status", "aria-labelledby": "biblio-search-partial-title" },
+        });
+        card.append(
+            el(documentImpl, "p", {
+                className: "biblio-ui__search-rail-kicker",
+                textContent: "Zoekstatus",
+            }),
+            el(documentImpl, "h2", {
+                textContent: "Resultaten",
+                attrs: { id: "biblio-search-partial-title" },
+            }),
+            el(documentImpl, "p", {
+                textContent: "Externe resultaten konden niet volledig worden geladen.",
+            }),
+            el(documentImpl, "p", {
+                className: "biblio-ui__search-rail-note",
+                textContent: hasResults
+                    ? "Beschikbare resultaten blijven zichtbaar."
+                    : "Lokale resultaten blijven beschikbaar.",
+            })
+        );
+        if (!hasResults) card.append(retryControl());
+        return card;
+    }
+
+    function resultLayout(main, { partial = false, hasResults = false } = {}) {
+        const layout = el(documentImpl, "div", { className: "biblio-ui__search-layout" });
+        const rail = el(documentImpl, "aside", {
+            className: "biblio-ui__search-rail",
+            attrs: { "aria-label": "Zoekhulp en zoekstatus" },
+        });
+        if (partial) rail.append(partialStatusCard(hasResults));
+        rail.append(searchTipCard());
+        layout.append(main, rail);
+        return layout;
+    }
+
+    function updateTabs() {
+        for (const [tab, button] of tabButtons) {
+            const selected = tab === activeTab;
+            button.className = `biblio-ui__search-tab${selected ? " biblio-ui__search-tab--active" : ""}`;
+            button.setAttribute("aria-selected", selected ? "true" : "false");
+            button.setAttribute("tabindex", selected ? "0" : "-1");
+        }
+        results.setAttribute("aria-labelledby", `biblio-search-tab-${activeTab}`);
+    }
+
+    function switchTab(tab, focusTab = false) {
+        if (!SEARCH_TABS.includes(tab) || phase !== "results") return;
+        activeTab = tab;
+        updateTabs();
+        render();
+        announce(`${tabLabels[tab]} weergegeven.`);
+        if (focusTab) queueMicrotaskImpl(() => tabButtons.get(tab)?.focus());
+    }
+
+    for (const [tab, button] of tabButtons) {
+        button.addEventListener("click", () => switchTab(tab));
+        button.addEventListener("keydown", (event) => {
+            const current = SEARCH_TABS.indexOf(tab);
+            let next = null;
+            if (event.key === "ArrowRight") next = (current + 1) % SEARCH_TABS.length;
+            if (event.key === "ArrowLeft") next = (current - 1 + SEARCH_TABS.length) % SEARCH_TABS.length;
+            if (event.key === "Home") next = 0;
+            if (event.key === "End") next = SEARCH_TABS.length - 1;
+            if (next === null) return;
+            event.preventDefault();
+            switchTab(SEARCH_TABS[next], true);
+        });
     }
 
     function retryControl() {
@@ -619,8 +740,23 @@ export function createBibliographicSearchApp({
     }
 
     function render() {
+        const hasSubmittedQuery = submittedQuery !== "";
+        view.className = `biblio-ui__view biblio-ui__bibliographic-search${hasSubmittedQuery ? " biblio-ui__bibliographic-search--results" : ""}`;
+        eyebrow.textContent = hasSubmittedQuery ? "Zoeken" : "Bibliografisch zoeken";
+        title.textContent = hasSubmittedQuery ? "Zoekresultaten" : "Zoeken";
+        intro.textContent = hasSubmittedQuery
+            ? `Resultaten voor “${submittedQuery}”`
+            : "Vind auteurs en boeken in Biblio en in aangesloten bibliografische bronnen.";
         submit.disabled = phase === "loading";
         results.setAttribute("aria-busy", phase === "loading" ? "true" : "false");
+        navigation.hidden = phase !== "results";
+        if (phase === "results") {
+            results.setAttribute("role", "tabpanel");
+            updateTabs();
+        } else {
+            results.removeAttribute("role");
+            results.removeAttribute("aria-labelledby");
+        }
         results.replaceChildren();
 
         if (phase === "idle") {
@@ -678,49 +814,58 @@ export function createBibliographicSearchApp({
         const hasWorks = state.works.length > 0;
         const failed = attemptsFailed([...state.authorAttempts, ...state.workAttempts]);
 
-        if (!hasAuthors && !hasWorks) {
-            if (failed) {
-                const unavailable = el(documentImpl, "section", {
-                    className: "biblio-ui__status-panel biblio-ui__status-panel--warning biblio-ui__search-error",
-                    attrs: { role: "status", "aria-labelledby": "biblio-search-incomplete-title" },
-                });
-                unavailable.append(
-                    el(documentImpl, "h2", {
-                        textContent: "Zoeken is niet volledig gelukt",
-                        attrs: { id: "biblio-search-incomplete-title" },
-                    }),
-                    el(documentImpl, "p", {
-                        textContent: "Externe resultaten konden niet volledig worden geladen.",
-                    }),
-                    retryControl()
-                );
-                results.append(unavailable);
-            } else {
-                const empty = el(documentImpl, "section", {
-                    className: "biblio-ui__empty-state biblio-ui__search-empty",
-                    attrs: { "aria-labelledby": "biblio-search-empty-title" },
-                });
-                empty.append(
-                    el(documentImpl, "h2", {
-                        textContent: "Geen auteurs of boeken gevonden",
-                        attrs: { id: "biblio-search-empty-title" },
-                    }),
-                    el(documentImpl, "p", {
-                        textContent: "Controleer de spelling of probeer een andere titel of auteursnaam.",
-                    })
-                );
-                results.append(empty);
-            }
+        const hasResults = hasAuthors || hasWorks;
+        const main = el(documentImpl, "div", { className: "biblio-ui__search-main" });
+
+        if (!hasResults) {
+            const empty = el(documentImpl, "section", {
+                className: "biblio-ui__empty-state biblio-ui__search-empty",
+                attrs: { "aria-labelledby": "biblio-search-empty-title" },
+            });
+            empty.append(
+                el(documentImpl, "h2", {
+                    textContent: failed ? "Geen lokale resultaten beschikbaar" : "Geen auteurs of boeken gevonden",
+                    attrs: { id: "biblio-search-empty-title" },
+                }),
+                el(documentImpl, "p", {
+                    textContent: failed
+                        ? "De externe zoekstatus staat hiernaast."
+                        : "Controleer de spelling of probeer een andere titel of auteursnaam.",
+                })
+            );
+            main.append(empty);
+            results.append(resultLayout(main, { partial: failed, hasResults: false }));
             return;
         }
 
-        appendPartialStatus(results);
-        const groups = el(documentImpl, "div", {
-            className: "biblio-ui__search-result-groups",
+        const groups = el(documentImpl, "div", { className: "biblio-ui__search-result-groups" });
+        if (activeTab === "all") {
+            if (hasWorks) groups.append(workSection({ preview: true }));
+            if (hasAuthors) groups.append(authorSection({ preview: true }));
+        } else if (activeTab === "books") {
+            if (hasWorks) {
+                groups.append(workSection());
+            } else {
+                groups.append(categoryEmpty("Boeken", "Geen boeken gevonden voor deze zoekopdracht."));
+            }
+        } else if (hasAuthors) {
+            groups.append(authorSection());
+        } else {
+            groups.append(categoryEmpty("Auteurs", "Geen auteurs gevonden voor deze zoekopdracht."));
+        }
+        main.append(groups);
+        results.append(resultLayout(main, { partial: failed, hasResults: true }));
+    }
+
+    function categoryEmpty(titleText, message) {
+        const empty = el(documentImpl, "section", {
+            className: "biblio-ui__empty-state biblio-ui__search-empty",
         });
-        if (hasAuthors) groups.append(authorSection());
-        if (hasWorks) groups.append(workSection());
-        results.append(groups);
+        empty.append(
+            el(documentImpl, "h2", { textContent: titleText }),
+            el(documentImpl, "p", { textContent: message })
+        );
+        return empty;
     }
 
     async function submitQuery(rawQuery = input.value) {
@@ -738,6 +883,7 @@ export function createBibliographicSearchApp({
         input.removeAttribute("aria-invalid");
         input.value = query;
         submittedQuery = query;
+        activeTab = "all";
         controller?.abort();
         controller = abortControllerFactory();
         const requestRevision = ++revision;
