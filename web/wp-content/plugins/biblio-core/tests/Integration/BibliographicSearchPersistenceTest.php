@@ -104,6 +104,74 @@ final class BibliographicSearchPersistenceTest extends PersistenceIntegrationTes
         self::assertSame("/authors/OL502A", $claims["author-two"][0]->providerRecordId());
     }
 
+    public function testLocalAuthorDisambiguationUsesOneBatchForZeroOneTwoAndManyWorks(): void
+    {
+        foreach ([
+            ["context-zero", "Context Zero", "resolved"],
+            ["context-one", "Context One", "provisional"],
+            ["context-two", "Context Two", "resolved"],
+            ["context-many", "Context Many", "provisional"],
+            ["context-peter-a", "Peter King", "resolved"],
+            ["context-peter-b", "Peter King", "provisional"],
+        ] as [$authorId, $displayName, $identityStatus]) {
+            self::assertSame(1, $this->database->insert($this->tableNames->authors(), [
+                "author_id" => $authorId,
+                "display_name" => $displayName,
+                "identity_status" => $identityStatus,
+            ]));
+        }
+
+        $works = [
+            ["context-work-one", "Only Work", "context-one", "co_author"],
+            ["context-work-two-a", "Two A", "context-two", "author"],
+            ["context-work-two-b", "Two B", "context-two", "co_author"],
+            ["context-work-many-a", "Many A", "context-many", "author"],
+            ["context-work-many-b", "Many B", "context-many", "author"],
+            ["context-work-many-c", "Many C", "context-many", "co_author"],
+            ["context-work-many-d", "Many D", "context-many", "co_author"],
+            ["context-work-alpha", "Work Alpha", "context-peter-a", "author"],
+            ["context-work-beta", "Work Beta", "context-peter-b", "author"],
+        ];
+        foreach ($works as [$workId, $title, $authorId, $role]) {
+            self::assertSame(1, $this->database->insert($this->tableNames->works(), [
+                "work_id" => $workId,
+                "work_title" => $title,
+                "work_title_status" => "librarian_confirmed",
+            ]));
+            self::assertSame(1, $this->database->insert($this->tableNames->workContributors(), [
+                "work_id" => $workId,
+                "author_id" => $authorId,
+                "contributor_role" => $role,
+                "contributor_position" => 1,
+            ]));
+        }
+
+        $provider = new WpdbBibliographicSearchProvider($this->database, $this->tableNames);
+        $authorIds = array_map(static fn (string $id): AuthorId => new AuthorId($id), [
+            "context-zero", "context-one", "context-two", "context-many",
+            "context-peter-a", "context-peter-b",
+        ]);
+        $before = $this->database->num_queries;
+        $contexts = $provider->localAuthorDisambiguations($authorIds);
+
+        self::assertSame(1, $this->database->num_queries - $before);
+        self::assertSame(0, $contexts["context-zero"]->linkedWorkCount());
+        self::assertNull($contexts["context-zero"]->representativeWorkTitle());
+        self::assertSame(1, $contexts["context-one"]->linkedWorkCount());
+        self::assertSame("Only Work", $contexts["context-one"]->representativeWorkTitle());
+        self::assertSame(2, $contexts["context-two"]->linkedWorkCount());
+        self::assertNull($contexts["context-two"]->representativeWorkTitle());
+        self::assertSame(4, $contexts["context-many"]->linkedWorkCount());
+        self::assertNull($contexts["context-many"]->representativeWorkTitle());
+        self::assertSame("Work Alpha", $contexts["context-peter-a"]->representativeWorkTitle());
+        self::assertSame("Work Beta", $contexts["context-peter-b"]->representativeWorkTitle());
+        self::assertNull($contexts["context-peter-a"]->birthYear());
+
+        $beforeEmpty = $this->database->num_queries;
+        self::assertSame([], $provider->localAuthorDisambiguations([]));
+        self::assertSame(0, $this->database->num_queries - $beforeEmpty);
+    }
+
     public function testLocalCanonicalTieOrderRemainsStableAcrossUnicodePageBoundary(): void
     {
         $broaderNames = [
@@ -192,7 +260,8 @@ final class BibliographicSearchPersistenceTest extends PersistenceIntegrationTes
             $external,
             $external,
             $identities,
-            $identities
+            $identities,
+            $local
         ))->search(new BibliographicTextSearchRequest($query));
 
         self::assertSame([
@@ -211,6 +280,10 @@ final class BibliographicSearchPersistenceTest extends PersistenceIntegrationTes
             $result->authors()->items()[0]->reference()->providerIdentity()?->providerRecordId()
         );
         self::assertSame("work-it", $result->works()->items()[0]->reference()->workId()?->value());
+        self::assertSame(1, $result->authors()->items()[0]->disambiguation()->linkedWorkCount());
+        self::assertSame("It", $result->authors()->items()[0]->disambiguation()->representativeWorkTitle());
+        self::assertNull($result->authors()->items()[0]->disambiguation()->birthYear());
+        self::assertNull($result->authors()->items()[1]->disambiguation()->linkedWorkCount());
         self::assertSame([9], $external->authorLimits);
         self::assertSame($before, $this->rowCounts($tables));
     }

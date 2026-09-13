@@ -878,7 +878,8 @@ final class ProductionComposition
             $openLibraryBibliographicSearch,
             $openLibraryBibliographicSearch,
             $bibliographicProviderIdentities,
-            $bibliographicProviderIdentities
+            $bibliographicProviderIdentities,
+            $localBibliographicSearch
         );
         $bibliographicAuthorWorkSearch = new BibliographicAuthorWorkSearchService(
             $authenticatedUser,
