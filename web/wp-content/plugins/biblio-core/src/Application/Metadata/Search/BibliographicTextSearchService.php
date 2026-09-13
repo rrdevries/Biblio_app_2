@@ -19,7 +19,8 @@ final readonly class BibliographicTextSearchService
         private BibliographicAuthorSearchProvider $externalAuthors,
         private BibliographicWorkSearchProvider $externalWorks,
         private BibliographicProviderIdentityRepository $providerIdentities,
-        private BibliographicAuthorProviderIdentityLookup $authorProviderIdentities
+        private BibliographicAuthorProviderIdentityLookup $authorProviderIdentities,
+        private BibliographicAuthorDisambiguationLookup $authorDisambiguations
     ) {
     }
 
@@ -51,7 +52,9 @@ final readonly class BibliographicTextSearchService
             $offset = $cursor?->nextOffset() ?? 0;
             $local = $this->localAuthors->searchAuthors($query, $offset, self::PAGE_SIZE);
             $this->assertAuthorSourceProgress($local, $offset, self::PAGE_SIZE);
-            $items = $this->canonicalAuthorEvidence($local->items());
+            $items = $this->canonicalAuthorDisambiguation(
+                $this->canonicalAuthorEvidence($local->items())
+            );
             if ($local->nextOffset() !== null) {
                 return [new BibliographicAuthorSearchPage(
                     $query,
@@ -231,6 +234,34 @@ final readonly class BibliographicTextSearchService
                 return $item->withReference(
                     BibliographicAuthorReference::canonical($authorId, $identities[0])
                 );
+            },
+            $items
+        );
+    }
+
+    /**
+     * @param list<BibliographicAuthorSearchResult> $items
+     * @return list<BibliographicAuthorSearchResult>
+     */
+    private function canonicalAuthorDisambiguation(array $items): array
+    {
+        $authorIds = [];
+        foreach ($items as $item) {
+            $authorId = $item->reference()->authorId();
+            if ($authorId !== null) { $authorIds[] = $authorId; }
+        }
+        if ($authorIds === []) { return $items; }
+
+        $contexts = $this->authorDisambiguations->localAuthorDisambiguations($authorIds);
+        return array_map(
+            static function (BibliographicAuthorSearchResult $item) use ($contexts): BibliographicAuthorSearchResult {
+                $authorId = $item->reference()->authorId();
+                if ($authorId === null) { return $item; }
+                $context = $contexts[$authorId->value()] ?? null;
+                if ($context === null) {
+                    throw new \LogicException("Canonical Author disambiguation is incomplete.");
+                }
+                return $item->withDisambiguation($context);
             },
             $items
         );

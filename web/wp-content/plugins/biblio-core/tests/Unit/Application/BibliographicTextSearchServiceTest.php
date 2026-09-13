@@ -7,6 +7,8 @@ namespace Biblio\Core\Tests\Unit\Application;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicProviderIdentityRepository;
 use Biblio\Core\Application\Metadata\ProviderFailureReason;
 use Biblio\Core\Application\Metadata\ProviderLookupStatus;
+use Biblio\Core\Application\Metadata\Search\BibliographicAuthorDisambiguation;
+use Biblio\Core\Application\Metadata\Search\BibliographicAuthorDisambiguationLookup;
 use Biblio\Core\Application\Metadata\Search\BibliographicAuthorReference;
 use Biblio\Core\Application\Metadata\Search\BibliographicAuthorMatchQuality;
 use Biblio\Core\Application\Metadata\Search\BibliographicAuthorProviderIdentityLookup;
@@ -120,6 +122,8 @@ final class BibliographicTextSearchServiceTest extends TestCase
                 "/authors/OL19981A"
             ),
         ];
+        $local->authorDisambiguations["author-stephen"] =
+            BibliographicAuthorDisambiguation::local(1, "It");
 
         $result = $this->service($local, $external, $identities)->search(
             new BibliographicTextSearchRequest($query)
@@ -136,7 +140,79 @@ final class BibliographicTextSearchServiceTest extends TestCase
         self::assertSame("/authors/OL20001A", $items[2]->reference()->providerIdentity()?->providerRecordId());
         self::assertSame(1, $identities->mappedAuthorCalls);
         self::assertSame(1, $identities->authorClaimCalls);
+        self::assertSame(1, $local->authorDisambiguationCalls);
+        self::assertSame(1, $items[0]->disambiguation()->linkedWorkCount());
+        self::assertSame("It", $items[0]->disambiguation()->representativeWorkTitle());
+        self::assertNull($items[1]->disambiguation()->linkedWorkCount());
         self::assertSame(9, $external->authorLimit);
+    }
+
+    public function testLocalAuthorContextProjectsZeroOneTwoAndManyWithoutChangingOrder(): void
+    {
+        $query = new BibliographicTextSearchQuery("author");
+        $local = new SearchFakeProvider([
+            $this->localAuthor($query, "author-zero", "Author Zero", 0),
+            $this->localAuthor($query, "author-one", "Author One", 1),
+            $this->localAuthor($query, "author-two", "Author Two", 2),
+            $this->localAuthor($query, "author-many", "Author Many", 3),
+        ], []);
+        $local->authorDisambiguations = [
+            "author-zero" => BibliographicAuthorDisambiguation::local(0, null),
+            "author-one" => BibliographicAuthorDisambiguation::local(1, "Only Work"),
+            "author-two" => BibliographicAuthorDisambiguation::local(2, null),
+            "author-many" => BibliographicAuthorDisambiguation::local(27, null),
+        ];
+
+        $items = $this->service($local, new SearchFakeProvider([], []))->search(
+            new BibliographicTextSearchRequest($query)
+        )->authors()->items();
+
+        self::assertSame([
+            "author-zero", "author-one", "author-two", "author-many",
+        ], array_map(static fn ($item): ?string => $item->reference()->authorId()?->value(), $items));
+        self::assertSame([0, 1, 2, 27], array_map(
+            static fn ($item): ?int => $item->disambiguation()->linkedWorkCount(),
+            $items
+        ));
+        self::assertSame([null, "Only Work", null, null], array_map(
+            static fn ($item): ?string => $item->disambiguation()->representativeWorkTitle(),
+            $items
+        ));
+        self::assertSame([null, null, null, null], array_map(
+            static fn ($item): ?int => $item->disambiguation()->birthYear(),
+            $items
+        ));
+        self::assertSame(1, $local->authorDisambiguationCalls);
+    }
+
+    public function testSameNameAuthorsKeepSeparateLocalContextAndExternalRemainsUnknown(): void
+    {
+        $query = new BibliographicTextSearchQuery("peter king");
+        $local = new SearchFakeProvider([
+            $this->localAuthor($query, "author-peter-a", "Peter King", 0),
+            $this->localAuthor($query, "author-peter-b", "Peter King", 1),
+        ], []);
+        $local->authorDisambiguations = [
+            "author-peter-a" => BibliographicAuthorDisambiguation::local(1, "Work Alpha"),
+            "author-peter-b" => BibliographicAuthorDisambiguation::local(1, "Work Beta"),
+        ];
+        $external = new SearchFakeProvider([
+            $this->externalAuthor($query, "/authors/OL70001A", "Peter King", 0),
+        ], []);
+
+        $items = $this->service($local, $external)->search(
+            new BibliographicTextSearchRequest($query)
+        )->authors()->items();
+
+        self::assertCount(3, $items);
+        self::assertSame(["Work Alpha", "Work Beta", null], array_map(
+            static fn ($item): ?string => $item->disambiguation()->representativeWorkTitle(),
+            $items
+        ));
+        self::assertSame([1, 1, null], array_map(
+            static fn ($item): ?int => $item->disambiguation()->linkedWorkCount(),
+            $items
+        ));
     }
 
     public function testRemovedMappingIsReReadAndNoLongerSuppressesExternalAuthor(): void
@@ -179,7 +255,8 @@ final class BibliographicTextSearchServiceTest extends TestCase
             $external,
             $external,
             $identities,
-            $identities
+            $identities,
+            $local
         );
 
         $first = $service->search(new BibliographicTextSearchRequest($query));
@@ -228,7 +305,8 @@ final class BibliographicTextSearchServiceTest extends TestCase
             $external,
             $external,
             $identities,
-            $identities
+            $identities,
+            $local
         );
 
         $first = $service->search(new BibliographicTextSearchRequest($query));
@@ -328,6 +406,7 @@ final class BibliographicTextSearchServiceTest extends TestCase
         self::assertSame(ProviderFailureReason::Configuration, $result->authorProviderAttempts()[0]->failureReason());
         self::assertSame(ProviderLookupStatus::InvalidResponse, $result->workProviderAttempts()[0]->status());
         self::assertSame(ProviderFailureReason::Malformed, $result->workProviderAttempts()[0]->failureReason());
+        self::assertSame(0, $result->authors()->items()[0]->disambiguation()->linkedWorkCount());
     }
 
     public function testValidEmptyProviderPagesAreIndependentNormalMisses(): void
@@ -342,6 +421,7 @@ final class BibliographicTextSearchServiceTest extends TestCase
         self::assertSame([], $result->authors()->items());
         self::assertSame([], $result->works()->items());
         self::assertSame(ProviderLookupStatus::Miss, $result->authorProviderAttempts()[0]->status());
+        self::assertSame(0, $provider->authorDisambiguationCalls);
         self::assertSame(ProviderLookupStatus::Miss, $result->workProviderAttempts()[0]->status());
         self::assertNull($result->authorProviderAttempts()[0]->failureReason());
         self::assertNull($result->workProviderAttempts()[0]->failureReason());
@@ -409,7 +489,8 @@ final class BibliographicTextSearchServiceTest extends TestCase
             $provider,
             $provider,
             new SearchIdentityRepository(),
-            new SearchIdentityRepository()
+            new SearchIdentityRepository(),
+            $provider
         );
 
         $this->expectException(AuthenticationException::class);
@@ -435,7 +516,8 @@ final class BibliographicTextSearchServiceTest extends TestCase
             $external,
             $external,
             $identities ?? new SearchIdentityRepository(),
-            $identities ?? new SearchIdentityRepository()
+            $identities ?? new SearchIdentityRepository(),
+            $local
         );
     }
 
@@ -504,7 +586,8 @@ final class BibliographicTextSearchServiceTest extends TestCase
 
 final class SearchFakeProvider implements
     BibliographicAuthorSearchProvider,
-    BibliographicWorkSearchProvider
+    BibliographicWorkSearchProvider,
+    BibliographicAuthorDisambiguationLookup
 {
     public int $authorCalls = 0;
     public int $workCalls = 0;
@@ -513,6 +596,9 @@ final class SearchFakeProvider implements
     public ?BibliographicSearchCursor $workCursor = null;
     public ?BibliographicSearchProviderFailure $authorFailure = null;
     public ?BibliographicSearchProviderFailure $workFailure = null;
+    /** @var array<string,BibliographicAuthorDisambiguation> */
+    public array $authorDisambiguations = [];
+    public int $authorDisambiguationCalls = 0;
 
     /**
      * @param list<BibliographicAuthorSearchResult> $authors
@@ -556,6 +642,17 @@ final class SearchFakeProvider implements
             $this->works,
             $this->moreWorks && $last !== null ? $last->cursor($query) : null
         );
+    }
+
+    public function localAuthorDisambiguations(array $authorIds): array
+    {
+        $this->authorDisambiguationCalls++;
+        $result = [];
+        foreach ($authorIds as $authorId) {
+            $result[$authorId->value()] = $this->authorDisambiguations[$authorId->value()]
+                ?? BibliographicAuthorDisambiguation::local(0, null);
+        }
+        return $result;
     }
 }
 
@@ -606,7 +703,8 @@ final class SearchIdentityRepository implements
 
 final class PagingSearchFakeProvider implements
     BibliographicAuthorSearchProvider,
-    BibliographicWorkSearchProvider
+    BibliographicWorkSearchProvider,
+    BibliographicAuthorDisambiguationLookup
 {
     /** @var list<int> */ public array $authorOffsets = [];
     /** @var list<int> */ public array $authorLimits = [];
@@ -638,5 +736,14 @@ final class PagingSearchFakeProvider implements
         ?BibliographicSearchCursor $cursor = null
     ): BibliographicWorkSearchPage {
         return new BibliographicWorkSearchPage($query, $this->works, null);
+    }
+
+    public function localAuthorDisambiguations(array $authorIds): array
+    {
+        $result = [];
+        foreach ($authorIds as $authorId) {
+            $result[$authorId->value()] = BibliographicAuthorDisambiguation::local(0, null);
+        }
+        return $result;
     }
 }

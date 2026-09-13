@@ -3294,3 +3294,27 @@ Product remains `v2.001`; schema remains `1024`; Biblio Core is `2.20.0` and
 Biblio UI remains `0.17.0`. Local context, external context and REST/UI
 presentation stay deferred to SEARCH-AUTH-01B, 01C and SEARCH-AUTH-UI-01.
 Closure evidence: `docs/93-search-auth-01a-ranking-mapped-dedup-pagination.md`.
+
+### SEARCH-AUTH-01B — local Author disambiguation context
+
+Status: **GO / CLOSED**.
+
+Every canonical Author on the current Author application page now receives an
+internal immutable context with an authoritative platform-wide count of
+distinct canonical Works linked through `author|co_author`. Count zero yields
+no representative title; count one yields exactly that Work's canonical title;
+count two or more yields no arbitrary representative. External Authors retain
+null count/title context and all birth years remain null in this slice.
+
+One bounded aggregate query handles all canonical Author IDs on the page and
+hydrates a Work title only for single-Work Authors. Empty local pages skip the
+read. The query contains no Library, Edition, Item, provider or ownership
+scope. Context does not enter ranking, identity, mapped deduplication,
+pagination, cursors or selector authority. Provider calls, REST Author keys and
+Biblio UI remain unchanged.
+
+Product remains `v2.001`; schema remains `1024`; Biblio Core is `2.21.0` and
+Biblio UI remains `0.17.0`. No runtime mutation, backfill or V1 source was used.
+External context stays deferred to SEARCH-AUTH-01C; REST/UI cutover stays
+deferred to SEARCH-AUTH-UI-01. Closure evidence:
+`docs/94-search-auth-01b-local-author-disambiguation-context.md`.

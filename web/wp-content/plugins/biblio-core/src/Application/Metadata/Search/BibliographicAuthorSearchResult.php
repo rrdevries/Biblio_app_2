@@ -12,12 +12,14 @@ final readonly class BibliographicAuthorSearchResult
     private BibliographicAuthorMatchQuality $matchQuality;
     private string $normalizedName;
     private string $nameGroupId;
+    private BibliographicAuthorDisambiguation $disambiguation;
 
     public function __construct(
         private BibliographicAuthorReference $reference,
         private string $displayName,
         private int $presentationOrder,
-        private BibliographicTextSearchQuery $query
+        private BibliographicTextSearchQuery $query,
+        ?BibliographicAuthorDisambiguation $disambiguation = null
     ) {
         self::assertText($displayName, Author::MAX_NAME_LENGTH, "Author name");
         self::assertOrder($presentationOrder);
@@ -27,6 +29,7 @@ final readonly class BibliographicAuthorSearchResult
                 ? BibliographicAuthorMatchQuality::Exact
                 : BibliographicAuthorMatchQuality::Broader;
         $this->nameGroupId = "author-name-" . hash("sha256", $this->normalizedName);
+        $this->disambiguation = $disambiguation ?? BibliographicAuthorDisambiguation::unknown();
     }
 
     public function reference(): BibliographicAuthorReference { return $this->reference; }
@@ -34,6 +37,7 @@ final readonly class BibliographicAuthorSearchResult
     public function presentationOrder(): int { return $this->presentationOrder; }
     public function matchQuality(): BibliographicAuthorMatchQuality { return $this->matchQuality; }
     public function nameGroupId(): string { return $this->nameGroupId; }
+    public function disambiguation(): BibliographicAuthorDisambiguation { return $this->disambiguation; }
 
     public function withReference(BibliographicAuthorReference $reference): self
     {
@@ -41,9 +45,21 @@ final readonly class BibliographicAuthorSearchResult
             $reference,
             $this->displayName,
             $this->presentationOrder,
-            $this->query
+            $this->query,
+            $this->disambiguation
         );
         return $result;
+    }
+
+    public function withDisambiguation(BibliographicAuthorDisambiguation $disambiguation): self
+    {
+        return new self(
+            $this->reference,
+            $this->displayName,
+            $this->presentationOrder,
+            $this->query,
+            $disambiguation
+        );
     }
 
     /** @return array{int,int,int,string} */

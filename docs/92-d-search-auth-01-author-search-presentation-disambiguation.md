@@ -1,12 +1,13 @@
 # 92 — D-SEARCH-AUTH-01 Author search presentation & disambiguation
 
-Status: **DESIGN GO / IMPLEMENTED THROUGH SEARCH-AUTH-01A**
+Status: **DESIGN GO / IMPLEMENTED THROUGH SEARCH-AUTH-01B**
 
 Date: 2026-09-13
 
 Implementation progress: SEARCH-AUTH-01A is GO/CLOSED for ranking, current
-mapped deduplication and source-progress paging. SEARCH-AUTH-01B, 01C and
-SEARCH-AUTH-UI-01 remain pending bounded slices.
+mapped deduplication and source-progress paging. SEARCH-AUTH-01B is GO/CLOSED
+for local canonical linked-Work context. SEARCH-AUTH-01C and SEARCH-AUTH-UI-01
+remain pending bounded slices.
 
 Task severity: **High** because the decision crosses Author identity, search
 ranking, provider normalization, REST projection, pagination and ordinary-user
@@ -52,7 +53,7 @@ provider request.
 7. The UI remains provider-independent and exposes no provider ID, selector or
    provider-specific field name.
 
-## 3. Current capability audit
+## 3. Design-time capability audit before implementation
 
 | Audit question | Current technical truth | Design consequence |
 |---|---|---|

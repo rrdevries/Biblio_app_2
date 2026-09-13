@@ -2164,3 +2164,27 @@ docs/92 explicitly excludes alias expansion.
 REST continues to serialize the same five Author item fields. `match_quality`
 and `name_group_id` stay internal until SEARCH-AUTH-UI-01. There is no schema,
 provider-enrichment, materialization, UI or V1-data change.
+
+## 55. SEARCH-AUTH-01B local Author disambiguation projection
+
+`BibliographicAuthorSearchResult` now always owns one immutable
+`BibliographicAuthorDisambiguation`. External candidates start with the neutral
+all-null value. The Author composer replaces that value only for canonical
+Authors on the current page, through the dedicated
+`BibliographicAuthorDisambiguationLookup` port. The fixed internal fields are
+nullable representative Work title, nullable linked Work count and nullable
+birth year; 01B populates only the first two local semantics and keeps birth
+year null.
+
+The WordPress adapter executes one bounded aggregate query for at most ten
+Author IDs. It counts distinct `work_id` values only for `author|co_author` and
+sets a single Work ID only when that count equals one; only that ID is joined
+to `works` for its canonical title. Missing contributor rows are initialized as
+authoritative count zero. The query has no Library, Edition, Item, provider or
+ownership join and the empty batch performs no query.
+
+Context is applied after existing canonical provider-claim evidence and before
+external composition. It never participates in sort keys, identity keys,
+mapped suppression, cursors or selector authority. REST deliberately ignores
+the internal object until SEARCH-AUTH-UI-01 ships its strict decoder atomically;
+Open Library normalization remains SEARCH-AUTH-01C. Schema stays 1024.

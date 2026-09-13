@@ -3944,3 +3944,30 @@ SEARCH-AUTH-01A is accepted only when:
 Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1024`;
 Biblio Core is `2.20.0`; Biblio UI remains `0.17.0`. Exact evidence is in
 `docs/93-search-auth-01a-ranking-mapped-dedup-pagination.md`.
+
+## 118. SEARCH-AUTH-01B local Author disambiguation context
+
+SEARCH-AUTH-01B is accepted only when:
+
+- each canonical Author on the current application page receives an
+  authoritative non-negative linked Work count, including zero;
+- only distinct canonical Works connected through `author|co_author` count;
+  Edition contributors, Items, holdings, Wishlist and Library Context cannot
+  affect the result;
+- count zero and count two or more produce a null representative title, while
+  count one produces exactly that canonical Work title;
+- provisional and resolved Authors use identical semantics, same-name Authors
+  remain separate and context cannot affect ranking, identity or deduplication;
+- all canonical Authors on a page use one bounded aggregate query, the query
+  count is independent of Author count and an empty local page skips the read;
+- mapped suppression, Author cursor v2, page boundaries, provider failure and
+  provider request counts remain unchanged;
+- external context remains all-null, the public five-key REST Author item and
+  Biblio UI remain unchanged, and no provider code/request is added;
+- schema stays 1024, no runtime record/backfill or V1 source is used; and
+- unit, focused persistence, syntax, PHPStan, Composer/platform, WordPress
+  smoke, manifest, whitespace, one final Core gate and independent review pass.
+
+Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1024`;
+Biblio Core is `2.21.0`; Biblio UI remains `0.17.0`. Exact evidence is in
+`docs/94-search-auth-01b-local-author-disambiguation-context.md`.

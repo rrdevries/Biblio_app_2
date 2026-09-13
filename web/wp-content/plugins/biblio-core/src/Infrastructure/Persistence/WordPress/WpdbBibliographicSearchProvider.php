@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Biblio\Core\Infrastructure\Persistence\WordPress;
 
 use Biblio\Core\Application\Metadata\Search\BibliographicAuthorNameNormalizer;
+use Biblio\Core\Application\Metadata\Search\BibliographicAuthorDisambiguation;
+use Biblio\Core\Application\Metadata\Search\BibliographicAuthorDisambiguationLookup;
 use Biblio\Core\Application\Metadata\Search\BibliographicAuthorReference;
 use Biblio\Core\Application\Metadata\Search\BibliographicAuthorSearchProvider;
 use Biblio\Core\Application\Metadata\Search\BibliographicAuthorSearchResult;
@@ -29,7 +31,8 @@ use wpdb;
 
 final readonly class WpdbBibliographicSearchProvider implements
     BibliographicAuthorSearchProvider,
-    BibliographicWorkSearchProvider
+    BibliographicWorkSearchProvider,
+    BibliographicAuthorDisambiguationLookup
 {
     private const string PROVIDER_KEY = "local";
 
@@ -91,6 +94,46 @@ final readonly class WpdbBibliographicSearchProvider implements
         if ($offset < 0 || $offset > 1000000 || $limit < 1
             || $limit > BibliographicTextSearchService::PAGE_SIZE) {
             throw new \InvalidArgumentException("Invalid local Author search source window.");
+        }
+    }
+
+    public function localAuthorDisambiguations(array $authorIds): array
+    {
+        if (count($authorIds) > BibliographicTextSearchService::PAGE_SIZE) {
+            throw new \InvalidArgumentException("Author context batch exceeds search page size.");
+        }
+
+        $result = [];
+        foreach ($authorIds as $authorId) {
+            $result[$authorId->value()] = BibliographicAuthorDisambiguation::local(0, null);
+        }
+        if ($authorIds === []) { return $result; }
+
+        $contributors = $this->tables->workContributors();
+        $works = $this->tables->works();
+        $placeholders = implode(",", array_fill(0, count($authorIds), "%s"));
+        $rows = $this->database->get_results($this->database->prepare(
+            "SELECT linked.author_id,linked.linked_work_count,w.work_title FROM ("
+                . "SELECT wc.author_id,COUNT(DISTINCT wc.work_id) AS linked_work_count,"
+                . "CASE WHEN COUNT(DISTINCT wc.work_id)=1 THEN MIN(wc.work_id) ELSE NULL END AS single_work_id "
+                . "FROM `{$contributors}` wc WHERE wc.author_id IN ({$placeholders}) "
+                . "AND wc.contributor_role IN ('author','co_author') GROUP BY wc.author_id"
+                . ") linked LEFT JOIN `{$works}` w ON w.work_id=linked.single_work_id "
+                . "ORDER BY linked.author_id",
+            ...array_map(static fn (AuthorId $id): string => $id->value(), $authorIds)
+        ));
+
+        try {
+            foreach ($rows as $row) {
+                $count = (int) $row->linked_work_count;
+                $result[(string) $row->author_id] = BibliographicAuthorDisambiguation::local(
+                    $count,
+                    $count === 1 ? (string) $row->work_title : null
+                );
+            }
+            return $result;
+        } catch (Throwable $exception) {
+            throw $this->invalid("Stored Author disambiguation data is invalid.", $exception);
         }
     }
 

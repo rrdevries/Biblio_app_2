@@ -561,6 +561,14 @@ not visible. Unmapped same-name Authors remain separate. The public Author
 result fields, Work search group and UI are unchanged pending their explicit
 later slices.
 
+SEARCH-AUTH-01B now adds the internal local Author context without changing
+that order or public transport. Every canonical Author returned on the current
+application page receives the platform-wide count of distinct canonical Works
+linked through `author|co_author`. Only a count of exactly one carries that
+Work's canonical title; zero and multiple Works carry no representative title.
+External Authors retain unknown local count/title context. The read is one
+bounded batch independent of Library, Edition and Item state.
+
 D-AUTHOR-REF-01 adds the authority-bearing handoff for a selected Author.
 Every top-level Author result receives one opaque signed `author_selector`.
 It represents exactly one canonical Author, one Open Library Author, or a
