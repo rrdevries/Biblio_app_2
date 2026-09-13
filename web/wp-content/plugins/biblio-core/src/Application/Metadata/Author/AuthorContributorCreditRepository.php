@@ -16,7 +16,9 @@ interface AuthorContributorCreditRepository
         AuthorContributorCredit $credit
     ): AuthorContributorCredit;
 
-    public function observeEvidence(AuthorCreditEvidence $evidence): void;
+    public function observeEvidence(
+        AuthorCreditEvidence $evidence
+    ): AuthorMaterializationWriteDisposition;
 
     public function setReviewReasonIfVersionMatches(
         AuthorContributorCreditId $creditId,

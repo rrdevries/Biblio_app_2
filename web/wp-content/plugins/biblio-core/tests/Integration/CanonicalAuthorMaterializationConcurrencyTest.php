@@ -14,6 +14,62 @@ use RuntimeException;
 
 final class CanonicalAuthorMaterializationConcurrencyTest extends PersistenceIntegrationTestCase
 {
+    public function testConcurrentIdenticalNameOnlyCreditConvergesWithoutOrphan(): void
+    {
+        $this->seedWork("work-one");
+        $results = $this->runWorkers([
+            ["name_credit", "work-one", "unused", "volume-one", "Peter King", "a", 1],
+            ["name_credit", "work-one", "unused", "volume-one", "Peter King", "b", 1],
+        ]);
+
+        self::assertSame(1, $this->countRows($this->tableNames->authors()));
+        self::assertSame(0, $this->countRows($this->tableNames->bibliographicProviderIdentities()));
+        self::assertSame(1, $this->countRows($this->tableNames->authorContributorCredits()));
+        self::assertSame(1, $this->countRows($this->tableNames->authorCreditEvidence()));
+        self::assertSame(1, $this->countRows($this->tableNames->workContributors()));
+        self::assertSame(2, (int) $this->database->get_var(
+            "SELECT observation_count FROM `{$this->tableNames->authorCreditEvidence()}`"
+        ));
+        self::assertSame(1, array_sum(array_column($results, "races")));
+        self::assertCount(1, array_unique(array_column($results, "author_id")));
+    }
+
+    public function testConcurrentSameNameOnIndependentWorksCreatesTwoAuthors(): void
+    {
+        $this->seedWork("work-one");
+        $this->seedWork("work-two");
+        $results = $this->runWorkers([
+            ["name_credit", "work-one", "unused", "volume-shared", "Peter King", "a", 1],
+            ["name_credit", "work-two", "unused", "volume-shared", "Peter King", "b", 1],
+        ]);
+
+        self::assertSame(2, $this->countRows($this->tableNames->authors()));
+        self::assertSame(0, $this->countRows($this->tableNames->bibliographicProviderIdentities()));
+        self::assertSame(2, $this->countRows($this->tableNames->authorContributorCredits()));
+        self::assertSame(2, $this->countRows($this->tableNames->authorCreditEvidence()));
+        self::assertSame(2, $this->countRows($this->tableNames->workContributors()));
+        self::assertSame(0, array_sum(array_column($results, "races")));
+        self::assertCount(2, array_unique(array_column($results, "author_id")));
+    }
+
+    public function testConcurrentIndependentCreditsAtSamePositionFailClosed(): void
+    {
+        $this->seedWork("work-one");
+        $results = $this->runWorkers([
+            ["name_edge", "work-one", "unused", "volume-one", "Peter King", "a", 1],
+            ["name_edge", "work-one", "unused", "volume-two", "Peter King", "b", 1],
+        ]);
+
+        self::assertSame(1, $this->countRows($this->tableNames->authors()));
+        self::assertSame(2, $this->countRows($this->tableNames->authorContributorCredits()));
+        self::assertSame(2, $this->countRows($this->tableNames->authorCreditEvidence()));
+        self::assertSame(1, $this->countRows($this->tableNames->workContributors()));
+        self::assertSame(1, array_sum(array_column($results, "races")));
+        $statuses = array_values(array_unique(array_column($results, "status")));
+        sort($statuses);
+        self::assertSame(["materialized", "position_conflict"], $statuses);
+    }
+
     public function testConcurrentSameProviderAuthorConvergesToOneAuthorAndClaim(): void
     {
         $this->seedWork("work-one");

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Application\Metadata\Author;
 
-use Biblio\Core\Catalog\AuthorId;
+use Biblio\Core\Catalog\{AuthorId,AuthorIdentityStatus};
 
 final readonly class CanonicalAuthorMaterializationResult
 {
@@ -12,9 +12,11 @@ final readonly class CanonicalAuthorMaterializationResult
         private AuthorMaterializationStatus $status,
         private ?AuthorId $authorId,
         private AuthorContributorCreditId $creditId,
+        private ?AuthorIdentityStatus $authorIdentityStatus,
         private AuthorMaterializationWriteDisposition $author,
         private AuthorMaterializationWriteDisposition $providerClaim,
         private AuthorMaterializationWriteDisposition $credit,
+        private AuthorMaterializationWriteDisposition $evidence,
         private AuthorMaterializationWriteDisposition $contributorEdge
     ) {
     }
@@ -22,6 +24,10 @@ final readonly class CanonicalAuthorMaterializationResult
     public function status(): AuthorMaterializationStatus { return $this->status; }
     public function authorId(): ?AuthorId { return $this->authorId; }
     public function creditId(): AuthorContributorCreditId { return $this->creditId; }
+    public function authorIdentityStatus(): ?AuthorIdentityStatus
+    {
+        return $this->authorIdentityStatus;
+    }
     public function author(): AuthorMaterializationWriteDisposition
     {
         return $this->author;
@@ -33,6 +39,10 @@ final readonly class CanonicalAuthorMaterializationResult
     public function credit(): AuthorMaterializationWriteDisposition
     {
         return $this->credit;
+    }
+    public function evidence(): AuthorMaterializationWriteDisposition
+    {
+        return $this->evidence;
     }
     public function contributorEdge(): AuthorMaterializationWriteDisposition
     {

@@ -51,14 +51,15 @@ final readonly class CanonicalAuthorMaterializer
 
         if ($existingCredit !== null) {
             if ($existingCredit->status() === AuthorContributorCreditStatus::Unresolved) {
-                $this->observe($existingCredit->id(), $input);
+                $evidenceDisposition = $this->observe($existingCredit->id(), $input);
                 return $this->positionConflictResult(
                     $mappedAuthorId,
                     $existingCredit->id(),
                     $mappedAuthorId === null
                         ? AuthorMaterializationWriteDisposition::NotWritten
                         : AuthorMaterializationWriteDisposition::Reused,
-                    AuthorMaterializationWriteDisposition::Reused
+                    AuthorMaterializationWriteDisposition::Reused,
+                    $evidenceDisposition
                 );
             }
 
@@ -68,7 +69,7 @@ final readonly class CanonicalAuthorMaterializer
                 );
             if ($mappedAuthorId !== null
                 && $mappedAuthorId->value() !== $creditAuthorId->value()) {
-                $this->observe($existingCredit->id(), $input);
+                $evidenceDisposition = $this->observe($existingCredit->id(), $input);
                 $this->flagReviewReason(
                     $existingCredit,
                     AuthorCreditReviewReason::IdentityConflict,
@@ -76,7 +77,8 @@ final readonly class CanonicalAuthorMaterializer
                 );
                 return $this->identityConflictResult(
                     $mappedAuthorId,
-                    $existingCredit->id()
+                    $existingCredit->id(),
+                    $evidenceDisposition
                 );
             }
 
@@ -97,7 +99,10 @@ final readonly class CanonicalAuthorMaterializer
                     if ($winner?->value() === $creditAuthorId->value()) {
                         $claimDisposition = AuthorMaterializationWriteDisposition::Reused;
                     } elseif ($winner !== null) {
-                        $this->observe($existingCredit->id(), $input);
+                        $evidenceDisposition = $this->observe(
+                            $existingCredit->id(),
+                            $input
+                        );
                         $this->flagReviewReason(
                             $existingCredit,
                             AuthorCreditReviewReason::IdentityConflict,
@@ -105,7 +110,8 @@ final readonly class CanonicalAuthorMaterializer
                         );
                         return $this->identityConflictResult(
                             $winner,
-                            $existingCredit->id()
+                            $existingCredit->id(),
+                            $evidenceDisposition
                         );
                     } else {
                         throw new AuthorProviderClaimRace();
@@ -116,7 +122,7 @@ final readonly class CanonicalAuthorMaterializer
 
             $edgeState = $this->edgeState($input, $creditAuthorId);
             if ($edgeState === ContributorEdgeState::Conflict) {
-                $this->observe($existingCredit->id(), $input);
+                $evidenceDisposition = $this->observe($existingCredit->id(), $input);
                 $this->flagReviewReason(
                     $existingCredit,
                     AuthorCreditReviewReason::StructuralAmbiguity,
@@ -126,7 +132,8 @@ final readonly class CanonicalAuthorMaterializer
                     $creditAuthorId,
                     $existingCredit->id(),
                     $claimDisposition,
-                    AuthorMaterializationWriteDisposition::Reused
+                    AuthorMaterializationWriteDisposition::Reused,
+                    $evidenceDisposition
                 );
             }
 
@@ -135,13 +142,14 @@ final readonly class CanonicalAuthorMaterializer
                 $this->addEdge($input, $creditAuthorId);
                 $edgeDisposition = AuthorMaterializationWriteDisposition::Created;
             }
-            $this->observe($existingCredit->id(), $input);
+            $evidenceDisposition = $this->observe($existingCredit->id(), $input);
             return $this->materializedResult(
                 $creditAuthorId,
                 $existingCredit->id(),
                 AuthorMaterializationWriteDisposition::Reused,
                 $claimDisposition,
                 AuthorMaterializationWriteDisposition::Reused,
+                $evidenceDisposition,
                 $edgeDisposition
             );
         }
@@ -152,12 +160,13 @@ final readonly class CanonicalAuthorMaterializer
             $edgeState = $this->edgeState($input, $mappedAuthorId);
             if ($edgeState === ContributorEdgeState::Conflict) {
                 $this->createUnresolvedCredit($creditId, $key, $input, $now);
-                $this->observe($creditId, $input);
+                $evidenceDisposition = $this->observe($creditId, $input);
                 return $this->positionConflictResult(
                     $mappedAuthorId,
                     $creditId,
                     AuthorMaterializationWriteDisposition::Reused,
-                    AuthorMaterializationWriteDisposition::Created
+                    AuthorMaterializationWriteDisposition::Created,
+                    $evidenceDisposition
                 );
             }
 
@@ -171,7 +180,7 @@ final readonly class CanonicalAuthorMaterializer
             $creditDisposition = $storedCredit->id()->value() === $creditId->value()
                 ? AuthorMaterializationWriteDisposition::Created
                 : AuthorMaterializationWriteDisposition::Reused;
-            $this->observe($storedCredit->id(), $input);
+            $evidenceDisposition = $this->observe($storedCredit->id(), $input);
 
             $edgeDisposition = AuthorMaterializationWriteDisposition::Reused;
             if ($edgeState === ContributorEdgeState::Absent) {
@@ -184,18 +193,20 @@ final readonly class CanonicalAuthorMaterializer
                 AuthorMaterializationWriteDisposition::Reused,
                 AuthorMaterializationWriteDisposition::Reused,
                 $creditDisposition,
+                $evidenceDisposition,
                 $edgeDisposition
             );
         }
 
         if ($this->edgeState($input, null) === ContributorEdgeState::Conflict) {
             $this->createUnresolvedCredit($creditId, $key, $input, $now);
-            $this->observe($creditId, $input);
+            $evidenceDisposition = $this->observe($creditId, $input);
             return $this->positionConflictResult(
                 null,
                 $creditId,
                 AuthorMaterializationWriteDisposition::NotWritten,
-                AuthorMaterializationWriteDisposition::Created
+                AuthorMaterializationWriteDisposition::Created,
+                $evidenceDisposition
             );
         }
 
@@ -224,7 +235,7 @@ final readonly class CanonicalAuthorMaterializer
             $authorId,
             $now
         );
-        $this->observe($storedCredit->id(), $input);
+        $evidenceDisposition = $this->observe($storedCredit->id(), $input);
         $this->addEdge($input, $authorId);
 
         return $this->materializedResult(
@@ -233,6 +244,129 @@ final readonly class CanonicalAuthorMaterializer
             AuthorMaterializationWriteDisposition::Created,
             AuthorMaterializationWriteDisposition::Created,
             AuthorMaterializationWriteDisposition::Created,
+            $evidenceDisposition,
+            AuthorMaterializationWriteDisposition::Created
+        );
+    }
+
+    /**
+     * This method must run inside the caller-owned transaction. Expected race
+     * signals deliberately escape so the caller can retry the complete operation.
+     */
+    public function materializeNameOnlyAuthor(
+        NameOnlyAuthorCredit $input
+    ): CanonicalAuthorMaterializationResult {
+        $now = $this->clock->now();
+        $key = AuthorContributorCreditKey::fromSource(
+            $input->workId(),
+            $input->role(),
+            $input->position(),
+            $input->observedDisplayName(),
+            $input->sourceIdentity()
+        );
+        $existingCredit = $this->credits->findByKey($key);
+
+        if ($existingCredit !== null) {
+            if ($existingCredit->status() === AuthorContributorCreditStatus::Unresolved) {
+                $evidenceDisposition = $this->observe($existingCredit->id(), $input);
+                return $this->positionConflictResult(
+                    null,
+                    $existingCredit->id(),
+                    AuthorMaterializationWriteDisposition::NotWritten,
+                    AuthorMaterializationWriteDisposition::Reused,
+                    $evidenceDisposition
+                );
+            }
+
+            $authorId = $existingCredit->authorId()
+                ?? throw new PersistenceException(
+                    "Linked Author contributor credit has no Author."
+                );
+            $this->authors->find($authorId)
+                ?? throw new PersistenceException(
+                    "Linked Author contributor credit points to a missing Author."
+                );
+            $edgeState = $this->edgeState($input, $authorId);
+            if ($edgeState === ContributorEdgeState::Conflict) {
+                $evidenceDisposition = $this->observe($existingCredit->id(), $input);
+                $this->flagReviewReason(
+                    $existingCredit,
+                    AuthorCreditReviewReason::StructuralAmbiguity,
+                    $now
+                );
+                return $this->positionConflictResult(
+                    $authorId,
+                    $existingCredit->id(),
+                    AuthorMaterializationWriteDisposition::NotWritten,
+                    AuthorMaterializationWriteDisposition::Reused,
+                    $evidenceDisposition
+                );
+            }
+
+            $edgeDisposition = AuthorMaterializationWriteDisposition::Reused;
+            if ($edgeState === ContributorEdgeState::Absent) {
+                $this->addEdge($input, $authorId);
+                $edgeDisposition = AuthorMaterializationWriteDisposition::Created;
+            }
+            $evidenceDisposition = $this->observe($existingCredit->id(), $input);
+            return $this->materializedResult(
+                $authorId,
+                $existingCredit->id(),
+                AuthorMaterializationWriteDisposition::Reused,
+                AuthorMaterializationWriteDisposition::NotWritten,
+                AuthorMaterializationWriteDisposition::Reused,
+                $evidenceDisposition,
+                $edgeDisposition
+            );
+        }
+
+        $creditId = $this->ids->nextCreditId();
+        if ($this->edgeState($input, null) === ContributorEdgeState::Conflict) {
+            try {
+                $this->createUnresolvedCredit($creditId, $key, $input, $now);
+            } catch (AuthorContributorCreditConflict) {
+                throw new AuthorContributorCreditRace();
+            }
+            $evidenceDisposition = $this->observe($creditId, $input);
+            return $this->positionConflictResult(
+                null,
+                $creditId,
+                AuthorMaterializationWriteDisposition::NotWritten,
+                AuthorMaterializationWriteDisposition::Created,
+                $evidenceDisposition
+            );
+        }
+
+        $authorId = $this->ids->nextAuthorId();
+        $this->authors->add(new Author(
+            $authorId,
+            AuthorContributorCreditKey::normalizeObservedName(
+                $input->observedDisplayName()
+            ),
+            AuthorIdentityStatus::Provisional,
+            AuthorDisplayNameStatus::Observed
+        ));
+        try {
+            $storedCredit = $this->createLinkedCredit(
+                $creditId,
+                $key,
+                $input,
+                $authorId,
+                $now
+            );
+        } catch (AuthorContributorCreditConflict) {
+            throw new AuthorContributorCreditRace();
+        }
+        $evidenceDisposition = $this->observe($storedCredit->id(), $input);
+        $this->addEdge($input, $authorId);
+
+        return $this->materializedResult(
+            $authorId,
+            $storedCredit->id(),
+            AuthorMaterializationWriteDisposition::Created,
+            AuthorMaterializationWriteDisposition::NotWritten,
+            AuthorMaterializationWriteDisposition::Created,
+            $evidenceDisposition,
             AuthorMaterializationWriteDisposition::Created
         );
     }
@@ -271,7 +405,7 @@ final readonly class CanonicalAuthorMaterializer
     private function createLinkedCredit(
         AuthorContributorCreditId $creditId,
         AuthorContributorCreditKey $key,
-        StrongOpenLibraryAuthorCredit $input,
+        AuthorMaterializationCredit $input,
         AuthorId $authorId,
         \DateTimeImmutable $now
     ): AuthorContributorCredit {
@@ -294,7 +428,7 @@ final readonly class CanonicalAuthorMaterializer
     private function createUnresolvedCredit(
         AuthorContributorCreditId $creditId,
         AuthorContributorCreditKey $key,
-        StrongOpenLibraryAuthorCredit $input,
+        AuthorMaterializationCredit $input,
         \DateTimeImmutable $now
     ): void {
         $this->credits->create(new AuthorContributorCredit(
@@ -315,19 +449,9 @@ final readonly class CanonicalAuthorMaterializer
 
     private function observe(
         AuthorContributorCreditId $creditId,
-        StrongOpenLibraryAuthorCredit $input
-    ): void {
-        $this->credits->observeEvidence(AuthorCreditEvidence::provider(
-            $creditId,
-            OpenLibraryAuthorId::PROVIDER_KEY,
-            $input->sourceType()->value,
-            $input->sourceRecordId(),
-            $input->providerAuthorId()->value(),
-            $input->observedDisplayName(),
-            $input->role(),
-            $input->position(),
-            $input->observedAt()
-        ));
+        AuthorMaterializationCredit $input
+    ): AuthorMaterializationWriteDisposition {
+        return $this->credits->observeEvidence($input->evidence($creditId));
     }
 
     private function flagReviewReason(
@@ -357,7 +481,7 @@ final readonly class CanonicalAuthorMaterializer
     }
 
     private function edgeState(
-        StrongOpenLibraryAuthorCredit $input,
+        AuthorMaterializationCredit $input,
         ?AuthorId $authorId
     ): ContributorEdgeState {
         $contributors = $this->authors->contributorsForWorks([$input->workId()]);
@@ -377,7 +501,7 @@ final readonly class CanonicalAuthorMaterializer
     }
 
     private function addEdge(
-        StrongOpenLibraryAuthorCredit $input,
+        AuthorMaterializationCredit $input,
         AuthorId $authorId
     ): void {
         try {
@@ -398,30 +522,36 @@ final readonly class CanonicalAuthorMaterializer
         AuthorMaterializationWriteDisposition $author,
         AuthorMaterializationWriteDisposition $claim,
         AuthorMaterializationWriteDisposition $credit,
+        AuthorMaterializationWriteDisposition $evidence,
         AuthorMaterializationWriteDisposition $edge
     ): CanonicalAuthorMaterializationResult {
         return new CanonicalAuthorMaterializationResult(
             AuthorMaterializationStatus::Materialized,
             $authorId,
             $creditId,
+            $this->authorIdentityStatus($authorId),
             $author,
             $claim,
             $credit,
+            $evidence,
             $edge
         );
     }
 
     private function identityConflictResult(
         AuthorId $authorId,
-        AuthorContributorCreditId $creditId
+        AuthorContributorCreditId $creditId,
+        AuthorMaterializationWriteDisposition $evidence
     ): CanonicalAuthorMaterializationResult {
         return new CanonicalAuthorMaterializationResult(
             AuthorMaterializationStatus::IdentityConflict,
             $authorId,
             $creditId,
+            $this->authorIdentityStatus($authorId),
             AuthorMaterializationWriteDisposition::Reused,
             AuthorMaterializationWriteDisposition::Reused,
             AuthorMaterializationWriteDisposition::Reused,
+            $evidence,
             AuthorMaterializationWriteDisposition::NotWritten
         );
     }
@@ -430,18 +560,29 @@ final readonly class CanonicalAuthorMaterializer
         ?AuthorId $authorId,
         AuthorContributorCreditId $creditId,
         AuthorMaterializationWriteDisposition $claim,
-        AuthorMaterializationWriteDisposition $credit
+        AuthorMaterializationWriteDisposition $credit,
+        AuthorMaterializationWriteDisposition $evidence
     ): CanonicalAuthorMaterializationResult {
         return new CanonicalAuthorMaterializationResult(
             AuthorMaterializationStatus::PositionConflict,
             $authorId,
             $creditId,
+            $authorId === null ? null : $this->authorIdentityStatus($authorId),
             $authorId === null
                 ? AuthorMaterializationWriteDisposition::NotWritten
                 : AuthorMaterializationWriteDisposition::Reused,
             $claim,
             $credit,
+            $evidence,
             AuthorMaterializationWriteDisposition::NotWritten
         );
+    }
+
+    private function authorIdentityStatus(AuthorId $authorId): AuthorIdentityStatus
+    {
+        return $this->authors->find($authorId)?->identityStatus()
+            ?? throw new PersistenceException(
+                "Materialization result points to a missing canonical Author."
+            );
     }
 }
