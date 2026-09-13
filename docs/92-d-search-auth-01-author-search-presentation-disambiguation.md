@@ -1,8 +1,12 @@
 # 92 — D-SEARCH-AUTH-01 Author search presentation & disambiguation
 
-Status: **DESIGN GO / IMPLEMENTATION NOT STARTED**
+Status: **DESIGN GO / IMPLEMENTED THROUGH SEARCH-AUTH-01A**
 
 Date: 2026-09-13
+
+Implementation progress: SEARCH-AUTH-01A is GO/CLOSED for ranking, current
+mapped deduplication and source-progress paging. SEARCH-AUTH-01B, 01C and
+SEARCH-AUTH-UI-01 remain pending bounded slices.
 
 Task severity: **High** because the decision crosses Author identity, search
 ranking, provider normalization, REST projection, pagination and ordinary-user
@@ -150,11 +154,17 @@ This confirms the proposed model. Canonical breadth takes priority over an
 external exact match because the product has already decided that known Biblio
 Authors precede discovery candidates.
 
-Within a canonical tier, deterministic order is:
+Within a canonical tier, deterministic order preserves the bounded local
+source contract:
 
 ```text
-folded display name, original display name, canonical Author ID
+original display name, canonical Author ID
 ```
+
+The application carries that source position through composition rather than
+re-sorting it with a second Unicode collation. Unicode case/whitespace folding
+still determines exact versus broader and `name_group_id`; it does not replace
+the existing stable local tie-order.
 
 There is no popularity, Work-count, recency, resolved/provisional or
 Librarian-status score.

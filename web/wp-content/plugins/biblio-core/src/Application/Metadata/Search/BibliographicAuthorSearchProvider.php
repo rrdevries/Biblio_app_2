@@ -10,6 +10,7 @@ interface BibliographicAuthorSearchProvider
 
     public function searchAuthors(
         BibliographicTextSearchQuery $query,
-        ?BibliographicSearchCursor $cursor = null
-    ): BibliographicAuthorSearchPage;
+        int $offset = 0,
+        int $limit = BibliographicTextSearchService::PAGE_SIZE
+    ): BibliographicAuthorSearchSourcePage;
 }

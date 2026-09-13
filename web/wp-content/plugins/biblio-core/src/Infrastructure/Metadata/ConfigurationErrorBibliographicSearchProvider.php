@@ -6,7 +6,7 @@ namespace Biblio\Core\Infrastructure\Metadata;
 
 use Biblio\Core\Application\Metadata\ProviderFailureReason;
 use Biblio\Core\Application\Metadata\ProviderLookupStatus;
-use Biblio\Core\Application\Metadata\Search\BibliographicAuthorSearchPage;
+use Biblio\Core\Application\Metadata\Search\BibliographicAuthorSearchSourcePage;
 use Biblio\Core\Application\Metadata\Search\BibliographicAuthorSearchProvider;
 use Biblio\Core\Application\Metadata\Search\BibliographicSearchCursor;
 use Biblio\Core\Application\Metadata\Search\BibliographicSearchProviderFailure;
@@ -30,8 +30,9 @@ final readonly class ConfigurationErrorBibliographicSearchProvider implements
 
     public function searchAuthors(
         BibliographicTextSearchQuery $query,
-        ?BibliographicSearchCursor $cursor = null
-    ): BibliographicAuthorSearchPage {
+        int $offset = 0,
+        int $limit = 10
+    ): BibliographicAuthorSearchSourcePage {
         throw new BibliographicSearchProviderFailure(
             ProviderLookupStatus::ConfigurationError,
             ProviderFailureReason::Configuration

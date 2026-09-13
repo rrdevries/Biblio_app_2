@@ -16,7 +16,8 @@ final readonly class BibliographicAuthorWorkSearchService
         private AuthenticatedUser $authenticatedUser,
         private BibliographicAuthorWorkSearchProvider $localWorks,
         private BibliographicAuthorWorkSearchProvider $externalWorks,
-        private BibliographicAuthorWorkMappingLookup $workMappings
+        private BibliographicAuthorWorkMappingLookup $workMappings,
+        private BibliographicAuthorProviderIdentityLookup $authorProviderIdentities
     ) {
     }
 
@@ -25,6 +26,9 @@ final readonly class BibliographicAuthorWorkSearchService
     ): BibliographicAuthorWorkSearchPage {
         $this->authenticatedUser->requireUserId();
         $author = $request->author();
+        // A composite selector is mutable mapping evidence. Revalidate it at
+        // every consumption, before even the canonical Works lane is read.
+        $providerAuthor = $this->providerAuthor($author);
         $cursor = $request->cursor();
         $items = [];
 
@@ -51,7 +55,6 @@ final readonly class BibliographicAuthorWorkSearchService
             }
         }
 
-        $providerAuthor = $this->providerAuthor($author);
         if ($providerAuthor === null) {
             if ($cursor?->lane() === BibliographicAuthorWorkSearchLane::External) {
                 throw new ValidationException(
@@ -128,6 +131,20 @@ final readonly class BibliographicAuthorWorkSearchService
     ): ?BibliographicProviderEntityIdentity {
         $identity = $author->providerIdentity();
         if ($identity !== null && $identity->providerKey() === $this->externalWorks->key()) {
+            $authorId = $author->authorId();
+            if ($authorId !== null) {
+                $claimsByAuthor = $this->authorProviderIdentities->providerAuthorIdentities(
+                    $identity->providerKey(),
+                    [$authorId]
+                );
+                $claims = $claimsByAuthor[$authorId->value()] ?? [];
+                if (count($claims) !== 1
+                    || $claims[0]->stableKey() !== $identity->stableKey()) {
+                    throw new ValidationException(
+                        "Selected composite Author mapping is no longer current."
+                    );
+                }
+            }
             return $identity;
         }
         if ($author->authorId() === null) {

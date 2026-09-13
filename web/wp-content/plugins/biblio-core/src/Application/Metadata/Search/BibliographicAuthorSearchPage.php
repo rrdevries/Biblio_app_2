@@ -15,12 +15,15 @@ final readonly class BibliographicAuthorSearchPage
     public function __construct(
         private BibliographicTextSearchQuery $query,
         array $items,
-        private ?BibliographicSearchCursor $nextCursor
+        private ?BibliographicAuthorSearchCursor $nextCursor
     ) {
         $previous = null;
         $identities = [];
         if (!array_is_list($items)) {
             throw new ValidationException("Bibliographic Author results must be a list.");
+        }
+        if (count($items) > BibliographicTextSearchService::PAGE_SIZE) {
+            throw new ValidationException("Bibliographic Author page exceeds its maximum size.");
         }
         foreach ($items as $item) {
             if (!$item instanceof BibliographicAuthorSearchResult) {
@@ -44,15 +47,12 @@ final readonly class BibliographicAuthorSearchPage
 
     public function query(): BibliographicTextSearchQuery { return $this->query; }
     /** @return list<BibliographicAuthorSearchResult> */ public function items(): array { return $this->items; }
-    public function nextCursor(): ?BibliographicSearchCursor { return $this->nextCursor; }
+    public function nextCursor(): ?BibliographicAuthorSearchCursor { return $this->nextCursor; }
 
-    private function assertCursor(?BibliographicSearchCursor $cursor): void
+    private function assertCursor(?BibliographicAuthorSearchCursor $cursor): void
     {
         if ($cursor === null) { return; }
-        $last = $this->items === [] ? null : $this->items[array_key_last($this->items)];
-        if ($last === null || $cursor->group() !== BibliographicSearchGroup::Authors
-            || $cursor->query()->value() !== $this->query->value()
-            || $cursor->sortKey() !== $last->sortKey()) {
+        if ($cursor->query()->value() !== $this->query->value()) {
             throw new ValidationException("Invalid next cursor for bibliographic Author page.");
         }
     }

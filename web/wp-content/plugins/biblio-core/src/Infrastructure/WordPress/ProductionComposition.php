@@ -877,12 +877,14 @@ final class ProductionComposition
             $localBibliographicSearch,
             $openLibraryBibliographicSearch,
             $openLibraryBibliographicSearch,
+            $bibliographicProviderIdentities,
             $bibliographicProviderIdentities
         );
         $bibliographicAuthorWorkSearch = new BibliographicAuthorWorkSearchService(
             $authenticatedUser,
             new WpdbBibliographicAuthorWorkSearchProvider($database, $tableNames),
             $this->bibliographicAuthorWorkSearchProvider(),
+            $bibliographicProviderIdentities,
             $bibliographicProviderIdentities
         );
         $bibliographicEditionSearch = new BibliographicEditionSearchService(

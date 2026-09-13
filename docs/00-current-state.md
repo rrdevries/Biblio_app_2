@@ -3236,7 +3236,7 @@ Closure evidence: `docs/91-search-runtime-01-f1-case-insensitive-local-matching.
 
 ### D-SEARCH-AUTH-01 — Author search presentation and disambiguation
 
-Status: **DESIGN GO / IMPLEMENTATION NOT STARTED**.
+Status: **DESIGN GO / IMPLEMENTED THROUGH SEARCH-AUTH-01A**.
 
 The final ordinary-user Author-search model is one provider-independent
 experience. Canonical Authors precede external candidates; within each source
@@ -3259,7 +3259,38 @@ external candidates. Additional Authors use explicit bounded `Meer auteurs`
 disclosure with no total or infinite scroll.
 
 Implementation is deliberately split into ranking/cursor/mapped dedup, local
-batch context, external same-request context and final UI presentation. Schema
-remains `1024`; Biblio Core remains `2.19.0`; Biblio UI remains `0.17.0`. No
-current or historical V1 data was used. Canonical decision:
+batch context, external same-request context and final UI presentation. The
+first slice is now closed; the latter three remain pending. Schema remains
+`1024`; Biblio Core is `2.20.0`; Biblio UI remains `0.17.0`. No current or
+historical V1 data was used. Canonical decision:
 `docs/92-d-search-auth-01-author-search-presentation-disambiguation.md`.
+
+### SEARCH-AUTH-01A — Author ranking, mapped dedup and source pagination
+
+Status: **GO / CLOSED**.
+
+Top-level Author Search now classifies every canonical and external result as
+presentation-only `exact|broader` using Unicode case-folding and conservative
+whitespace normalization. The application order is canonical exact, canonical
+broader, external exact, external broader. Provider relevance remains the
+tie-breaker inside an external tier; equal names never become identity.
+
+Current Open Library Author claims are read in bounded batches. An external
+Author with a proven current mapping is suppressed, while each local page also
+batch-loads supported claims so exactly one safe claim can issue the existing
+composite selector. Author-to-Works revalidates that exact mutable mapping on
+every composite use. No name lookup, hydration expansion, cache or Search write
+was added.
+
+Author paging now uses a signed version-2 source-progress cursor bound to the
+query, `authors` group, `local|external` phase, next source offset and fixed
+ordering contract. Local traversal finishes before external traversal. A mixed
+page requests only its remaining `1..10` provider capacity, suppressed rows
+still advance the source offset and a zero-visible mapped page may truthfully
+retain continuation. Work cursor v1 and the current REST Author field allowlist
+remain unchanged.
+
+Product remains `v2.001`; schema remains `1024`; Biblio Core is `2.20.0` and
+Biblio UI remains `0.17.0`. Local context, external context and REST/UI
+presentation stay deferred to SEARCH-AUTH-01B, 01C and SEARCH-AUTH-UI-01.
+Closure evidence: `docs/93-search-auth-01a-ranking-mapped-dedup-pagination.md`.

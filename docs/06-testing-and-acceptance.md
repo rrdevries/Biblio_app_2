@@ -3905,7 +3905,42 @@ D-SEARCH-AUTH-01 is accepted when the canonical decision proves that:
 - no schema, runtime data, code, V1 source or implementation change enters the
   design slice.
 
-Status: **DESIGN GO / IMPLEMENTATION NOT STARTED**. Schema remains `1024`,
-Biblio Core remains `2.19.0` and Biblio UI remains `0.17.0`. Canonical decision
+Status: **DESIGN GO / IMPLEMENTED THROUGH SEARCH-AUTH-01A**. Schema remains
+`1024`, Biblio Core is `2.20.0` and Biblio UI remains `0.17.0`. Canonical decision
 is recorded in
 `docs/92-d-search-auth-01-author-search-presentation-disambiguation.md`.
+
+## 117. SEARCH-AUTH-01A Author ranking, mapped dedup and pagination
+
+SEARCH-AUTH-01A is accepted only when:
+
+- Unicode case plus whitespace normalization deterministically classifies
+  exact/broader without punctuation, diacritic, initials, alias or fuzzy
+  normalization, and this metadata has no identity effect;
+- application order is canonical exact, canonical broader, external exact,
+  external broader, with stable canonical tie-breaks and provider order inside
+  each bounded external tier;
+- unmapped same-name canonical/provider identities remain separate, while only
+  a current exact provider-Author mapping suppresses its external row;
+- canonical claim reads and external mapping reads are bounded batches with no
+  per-candidate query, and composite selector use revalidates current mapping;
+- canonical traversal does not trigger or discard an external Author request,
+  a mixed page requests exact remaining capacity `1..10`, and no page exceeds
+  ten visible Authors;
+- Author cursor v2 is signed and bound to query, group, phase, source offset and
+  ordering contract; old Author v1, wrong-group/query, malformed and tampered
+  input fail closed while Work cursor v1 remains compatible;
+- suppressed rows advance source position, zero-visible pages can continue,
+  repeated cursors are deterministic and no external row is refetched or lost;
+- provider miss/failure taxonomy and local survival remain unchanged and each
+  external page performs at most one Author Search request with no enrichment;
+- REST keeps the exact existing Author item allowlist and the Work/selected
+  Author/selected Work contracts remain compatible;
+- Search is read-only, schema stays 1024, no V1 source is used and local
+  context, external context and REST/UI presentation remain deferred; and
+- unit, integration, request-structure, syntax, PHPStan, Composer/platform,
+  WordPress smoke, manifest, whitespace and independent review gates pass.
+
+Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1024`;
+Biblio Core is `2.20.0`; Biblio UI remains `0.17.0`. Exact evidence is in
+`docs/93-search-auth-01a-ranking-mapped-dedup-pagination.md`.

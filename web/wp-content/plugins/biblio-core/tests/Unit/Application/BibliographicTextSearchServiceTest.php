@@ -8,9 +8,14 @@ use Biblio\Core\Application\Metadata\Discovery\BibliographicProviderIdentityRepo
 use Biblio\Core\Application\Metadata\ProviderFailureReason;
 use Biblio\Core\Application\Metadata\ProviderLookupStatus;
 use Biblio\Core\Application\Metadata\Search\BibliographicAuthorReference;
+use Biblio\Core\Application\Metadata\Search\BibliographicAuthorMatchQuality;
+use Biblio\Core\Application\Metadata\Search\BibliographicAuthorProviderIdentityLookup;
 use Biblio\Core\Application\Metadata\Search\BibliographicAuthorSearchPage;
+use Biblio\Core\Application\Metadata\Search\BibliographicAuthorSearchCursor;
+use Biblio\Core\Application\Metadata\Search\BibliographicAuthorSearchLane;
 use Biblio\Core\Application\Metadata\Search\BibliographicAuthorSearchProvider;
 use Biblio\Core\Application\Metadata\Search\BibliographicAuthorSearchResult;
+use Biblio\Core\Application\Metadata\Search\BibliographicAuthorSearchSourcePage;
 use Biblio\Core\Application\Metadata\Search\BibliographicProviderEntityIdentity;
 use Biblio\Core\Application\Metadata\Search\BibliographicSearchCursor;
 use Biblio\Core\Application\Metadata\Search\BibliographicSearchProviderFailure;
@@ -33,6 +38,213 @@ use PHPUnit\Framework\TestCase;
 
 final class BibliographicTextSearchServiceTest extends TestCase
 {
+    public function testAuthorMatchQualityUsesOnlyUnicodeCaseAndWhitespace(): void
+    {
+        $query = new BibliographicTextSearchQuery("stephen\u{00A0}king");
+        foreach (["Stephen King", "STEPHEN   KING", "stephen\tking"] as $name) {
+            self::assertSame(
+                BibliographicAuthorMatchQuality::Exact,
+                $this->externalAuthor($query, "/authors/OL" . md5($name) . "A", $name, 0)
+                    ->matchQuality()
+            );
+        }
+        foreach (["Stephen D. King", "Stephen King-Hall", "José Saramago"] as $name) {
+            self::assertSame(
+                BibliographicAuthorMatchQuality::Broader,
+                $this->externalAuthor($query, "/authors/OL" . md5($name) . "A", $name, 0)
+                    ->matchQuality()
+            );
+        }
+
+        $rowling = $this->externalAuthor(
+            new BibliographicTextSearchQuery("JK Rowling"),
+            "/authors/OL999A",
+            "J. K. Rowling",
+            0
+        );
+        self::assertSame(BibliographicAuthorMatchQuality::Broader, $rowling->matchQuality());
+        self::assertStringStartsWith("author-name-", $rowling->nameGroupId());
+    }
+
+    public function testAuthorCompositionUsesFourTiersAndPreservesProviderOrderWithinTier(): void
+    {
+        $query = new BibliographicTextSearchQuery("stephen king");
+        $local = new SearchFakeProvider([
+            $this->localAuthor($query, "author-exact", "Stephen King", 0),
+            $this->localAuthor($query, "author-broader", "Stephen King-Hall", 1),
+        ], []);
+        $external = new SearchFakeProvider([
+            $this->externalAuthor($query, "/authors/OL1A", "Anthony Stephen King", 0),
+            $this->externalAuthor($query, "/authors/OL2A", "STEPHEN KING", 1),
+            $this->externalAuthor($query, "/authors/OL3A", "stephen king", 2),
+            $this->externalAuthor($query, "/authors/OL4A", "Stephen D. King", 3),
+        ], []);
+
+        $items = $this->service($local, $external)->search(
+            new BibliographicTextSearchRequest($query)
+        )->authors()->items();
+
+        self::assertSame([
+            "author-exact",
+            "author-broader",
+            "/authors/OL2A",
+            "/authors/OL3A",
+            "/authors/OL1A",
+            "/authors/OL4A",
+        ], array_map(static fn (BibliographicAuthorSearchResult $item): string =>
+            $item->reference()->authorId()?->value()
+                ?? $item->reference()->providerIdentity()?->providerRecordId()
+                ?? "",
+            $items
+        ));
+    }
+
+    public function testMappedExternalIsSuppressedButUnmappedSameNamesRemainAndReadsAreBatched(): void
+    {
+        $query = new BibliographicTextSearchQuery("stephen king");
+        $local = new SearchFakeProvider([
+            $this->localAuthor($query, "author-stephen", "Stephen King", 0),
+        ], []);
+        $external = new SearchFakeProvider([
+            $this->externalAuthor($query, "/authors/OL19981A", "Stephen King", 0),
+            $this->externalAuthor($query, "/authors/OL20000A", "Stephen King", 1),
+            $this->externalAuthor($query, "/authors/OL20001A", "STEPHEN KING", 2),
+            $this->externalAuthor($query, "/authors/OL20002A", "Stephen King", 3),
+        ], []);
+        $identities = new SearchIdentityRepository();
+        $identities->authorMappings["/authors/OL19981A"] = new AuthorId("author-stephen");
+        $identities->authorMappings["/authors/OL20002A"] = new AuthorId("author-different");
+        $identities->authorClaims["author-stephen"] = [
+            BibliographicProviderEntityIdentity::author(
+                "open_library",
+                "/authors/OL19981A"
+            ),
+        ];
+
+        $result = $this->service($local, $external, $identities)->search(
+            new BibliographicTextSearchRequest($query)
+        );
+        $items = $result->authors()->items();
+
+        self::assertCount(3, $items);
+        self::assertSame("author-stephen", $items[0]->reference()->authorId()?->value());
+        self::assertSame(
+            "/authors/OL19981A",
+            $items[0]->reference()->providerIdentity()?->providerRecordId()
+        );
+        self::assertSame("/authors/OL20000A", $items[1]->reference()->providerIdentity()?->providerRecordId());
+        self::assertSame("/authors/OL20001A", $items[2]->reference()->providerIdentity()?->providerRecordId());
+        self::assertSame(1, $identities->mappedAuthorCalls);
+        self::assertSame(1, $identities->authorClaimCalls);
+        self::assertSame(9, $external->authorLimit);
+    }
+
+    public function testRemovedMappingIsReReadAndNoLongerSuppressesExternalAuthor(): void
+    {
+        $query = new BibliographicTextSearchQuery("stephen king");
+        $local = new SearchFakeProvider([], []);
+        $external = new SearchFakeProvider([
+            $this->externalAuthor($query, "/authors/OL50001A", "Stephen King", 0),
+        ], []);
+        $identities = new SearchIdentityRepository();
+        $identities->authorMappings["/authors/OL50001A"] = new AuthorId("author-old");
+        $service = $this->service($local, $external, $identities);
+
+        self::assertSame([], $service->search(
+            new BibliographicTextSearchRequest($query)
+        )->authors()->items());
+        unset($identities->authorMappings["/authors/OL50001A"]);
+
+        $current = $service->search(new BibliographicTextSearchRequest($query));
+        self::assertCount(1, $current->authors()->items());
+        self::assertSame(2, $identities->mappedAuthorCalls);
+    }
+
+    public function testMappedSuppressionAdvancesSourceAndCanReturnZeroVisibleWithContinuation(): void
+    {
+        $query = new BibliographicTextSearchQuery("stephen king");
+        $authors = [];
+        $identities = new SearchIdentityRepository();
+        for ($position = 0; $position < 11; $position++) {
+            $recordId = "/authors/OL" . (30000 + $position) . "A";
+            $authors[] = $this->externalAuthor($query, $recordId, "Stephen King", $position);
+            $identities->authorMappings[$recordId] = new AuthorId("mapped-{$position}");
+        }
+        $local = new PagingSearchFakeProvider([], []);
+        $external = new PagingSearchFakeProvider($authors, []);
+        $service = new BibliographicTextSearchService(
+            new ControllableAuthenticatedUser(new UserId("search-actor")),
+            $local,
+            $local,
+            $external,
+            $external,
+            $identities,
+            $identities
+        );
+
+        $first = $service->search(new BibliographicTextSearchRequest($query));
+        self::assertSame([], $first->authors()->items());
+        self::assertSame(BibliographicAuthorSearchLane::External, $first->authors()->nextCursor()?->lane());
+        self::assertSame(10, $first->authors()->nextCursor()?->nextOffset());
+        self::assertSame(ProviderLookupStatus::Candidates, $first->authorProviderAttempts()[0]->status());
+
+        $request = new BibliographicTextSearchRequest($query, $first->authors()->nextCursor());
+        $second = $service->search($request);
+        $replay = $service->search($request);
+        self::assertSame([], $second->authors()->items());
+        self::assertNull($second->authors()->nextCursor());
+        self::assertSame($second->authors()->items(), $replay->authors()->items());
+        self::assertSame([0, 10, 10], $external->authorOffsets);
+    }
+
+    public function testMixedPageRequestsOnlyRemainingCapacityWithoutCandidateLoss(): void
+    {
+        $query = new BibliographicTextSearchQuery("author");
+        $localAuthors = [];
+        for ($position = 0; $position < 7; $position++) {
+            $localAuthors[] = $this->localAuthor(
+                $query,
+                "local-{$position}",
+                "Author Local {$position}",
+                $position
+            );
+        }
+        $externalAuthors = [];
+        for ($position = 0; $position < 5; $position++) {
+            $externalAuthors[] = $this->externalAuthor(
+                $query,
+                "/authors/OL" . (40000 + $position) . "A",
+                "Author External {$position}",
+                $position
+            );
+        }
+        $local = new PagingSearchFakeProvider($localAuthors, []);
+        $external = new PagingSearchFakeProvider($externalAuthors, []);
+        $identities = new SearchIdentityRepository();
+        $service = new BibliographicTextSearchService(
+            new ControllableAuthenticatedUser(new UserId("search-actor")),
+            $local,
+            $local,
+            $external,
+            $external,
+            $identities,
+            $identities
+        );
+
+        $first = $service->search(new BibliographicTextSearchRequest($query));
+        self::assertCount(10, $first->authors()->items());
+        self::assertSame([3], $external->authorLimits);
+        self::assertSame(3, $first->authors()->nextCursor()?->nextOffset());
+
+        $second = $service->search(new BibliographicTextSearchRequest(
+            $query,
+            $first->authors()->nextCursor()
+        ));
+        self::assertCount(2, $second->authors()->items());
+        self::assertSame([0, 3], $external->authorOffsets);
+        self::assertSame([3, 10], $external->authorLimits);
+    }
+
     public function testCombinesLocalBeforeExternalWithoutMergingTextLookalikes(): void
     {
         $query = new BibliographicTextSearchQuery("Ursula Le Guin");
@@ -144,19 +356,23 @@ final class BibliographicTextSearchServiceTest extends TestCase
         $external = new SearchFakeProvider([$author], [$work]);
         $request = new BibliographicTextSearchRequest(
             $query,
-            $author->cursor($query),
+            new BibliographicAuthorSearchCursor(
+                $query,
+                BibliographicAuthorSearchLane::External,
+                10
+            ),
             $work->cursor($query)
         );
 
         $this->service($local, $external)->search($request);
 
-        self::assertSame(9, $external->authorCursor?->presentationOrder());
+        self::assertSame(10, $external->authorOffset);
         self::assertSame(19, $external->workCursor?->presentationOrder());
-        self::assertNull($local->authorCursor);
+        self::assertSame(0, $local->authorCalls);
         self::assertNull($local->workCursor);
     }
 
-    public function testExternalSearchStillRunsWhenLocalPageContinues(): void
+    public function testExternalAuthorSearchWaitsUntilLocalTraversalFinishes(): void
     {
         $query = new BibliographicTextSearchQuery("broad query");
         $authors = [];
@@ -179,7 +395,7 @@ final class BibliographicTextSearchServiceTest extends TestCase
         self::assertCount(10, $result->works()->items());
         self::assertNotNull($result->authors()->nextCursor());
         self::assertNotNull($result->works()->nextCursor());
-        self::assertSame(1, $external->authorCalls);
+        self::assertSame(0, $external->authorCalls);
         self::assertSame(1, $external->workCalls);
     }
 
@@ -192,6 +408,7 @@ final class BibliographicTextSearchServiceTest extends TestCase
             $provider,
             $provider,
             $provider,
+            new SearchIdentityRepository(),
             new SearchIdentityRepository()
         );
 
@@ -217,6 +434,7 @@ final class BibliographicTextSearchServiceTest extends TestCase
             $local,
             $external,
             $external,
+            $identities ?? new SearchIdentityRepository(),
             $identities ?? new SearchIdentityRepository()
         );
     }
@@ -230,7 +448,8 @@ final class BibliographicTextSearchServiceTest extends TestCase
         return new BibliographicAuthorSearchResult(
             BibliographicAuthorReference::canonical(new AuthorId($id)),
             $name,
-            $order
+            $order,
+            $query
         );
     }
 
@@ -245,7 +464,8 @@ final class BibliographicTextSearchServiceTest extends TestCase
                 BibliographicProviderEntityIdentity::author("open_library", $id)
             ),
             $name,
-            $order
+            $order,
+            $query
         );
     }
 
@@ -288,7 +508,8 @@ final class SearchFakeProvider implements
 {
     public int $authorCalls = 0;
     public int $workCalls = 0;
-    public ?BibliographicSearchCursor $authorCursor = null;
+    public ?int $authorOffset = null;
+    public ?int $authorLimit = null;
     public ?BibliographicSearchCursor $workCursor = null;
     public ?BibliographicSearchProviderFailure $authorFailure = null;
     public ?BibliographicSearchProviderFailure $workFailure = null;
@@ -309,16 +530,16 @@ final class SearchFakeProvider implements
 
     public function searchAuthors(
         BibliographicTextSearchQuery $query,
-        ?BibliographicSearchCursor $cursor = null
-    ): BibliographicAuthorSearchPage {
+        int $offset = 0,
+        int $limit = BibliographicTextSearchService::PAGE_SIZE
+    ): BibliographicAuthorSearchSourcePage {
         $this->authorCalls++;
-        $this->authorCursor = $cursor;
+        $this->authorOffset = $offset;
+        $this->authorLimit = $limit;
         if ($this->authorFailure !== null) { throw $this->authorFailure; }
-        $last = $this->authors === [] ? null : $this->authors[array_key_last($this->authors)];
-        return new BibliographicAuthorSearchPage(
-            $query,
+        return new BibliographicAuthorSearchSourcePage(
             $this->authors,
-            $this->moreAuthors && $last !== null ? $last->cursor($query) : null
+            $this->moreAuthors ? $offset + count($this->authors) : null
         );
     }
 
@@ -338,10 +559,18 @@ final class SearchFakeProvider implements
     }
 }
 
-final class SearchIdentityRepository implements BibliographicProviderIdentityRepository
+final class SearchIdentityRepository implements
+    BibliographicProviderIdentityRepository,
+    BibliographicAuthorProviderIdentityLookup
 {
     /** @var array<string,WorkId> */
     public array $workMappings = [];
+    /** @var array<string,AuthorId> */
+    public array $authorMappings = [];
+    /** @var array<string,list<BibliographicProviderEntityIdentity>> */
+    public array $authorClaims = [];
+    public int $mappedAuthorCalls = 0;
+    public int $authorClaimCalls = 0;
 
     public function findWork(string $provider, string $sourceType, string $recordId): ?WorkId
     {
@@ -349,6 +578,65 @@ final class SearchIdentityRepository implements BibliographicProviderIdentityRep
     }
 
     public function findEdition(string $provider, string $recordId): ?EditionId { return null; }
+    public function mappedAuthors(string $providerKey, array $providerAuthorRecordIds): array
+    {
+        $this->mappedAuthorCalls++;
+        $result = [];
+        foreach ($providerAuthorRecordIds as $recordId) {
+            if (isset($this->authorMappings[$recordId])) {
+                $result[$recordId] = $this->authorMappings[$recordId];
+            }
+        }
+        return $result;
+    }
+    public function providerAuthorIdentities(string $providerKey, array $authorIds): array
+    {
+        $this->authorClaimCalls++;
+        $result = [];
+        foreach ($authorIds as $authorId) {
+            if (isset($this->authorClaims[$authorId->value()])) {
+                $result[$authorId->value()] = $this->authorClaims[$authorId->value()];
+            }
+        }
+        return $result;
+    }
     public function claimWork(string $provider, string $sourceType, string $recordId, WorkId $workId): void {}
     public function claimEdition(string $provider, string $recordId, EditionId $editionId): void {}
+}
+
+final class PagingSearchFakeProvider implements
+    BibliographicAuthorSearchProvider,
+    BibliographicWorkSearchProvider
+{
+    /** @var list<int> */ public array $authorOffsets = [];
+    /** @var list<int> */ public array $authorLimits = [];
+
+    /**
+     * @param list<BibliographicAuthorSearchResult> $authors
+     * @param list<BibliographicWorkSearchResult> $works
+     */
+    public function __construct(private array $authors, private array $works) {}
+
+    public function key(): string { return "open_library"; }
+
+    public function searchAuthors(
+        BibliographicTextSearchQuery $query,
+        int $offset = 0,
+        int $limit = BibliographicTextSearchService::PAGE_SIZE
+    ): BibliographicAuthorSearchSourcePage {
+        $this->authorOffsets[] = $offset;
+        $this->authorLimits[] = $limit;
+        $items = array_slice($this->authors, $offset, $limit);
+        $next = $offset + count($items) < count($this->authors)
+            ? $offset + count($items)
+            : null;
+        return new BibliographicAuthorSearchSourcePage($items, $next);
+    }
+
+    public function searchWorks(
+        BibliographicTextSearchQuery $query,
+        ?BibliographicSearchCursor $cursor = null
+    ): BibliographicWorkSearchPage {
+        return new BibliographicWorkSearchPage($query, $this->works, null);
+    }
 }

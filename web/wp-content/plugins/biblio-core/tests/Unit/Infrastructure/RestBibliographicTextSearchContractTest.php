@@ -6,6 +6,8 @@ namespace Biblio\Core\Tests\Unit\Infrastructure;
 
 use Biblio\Core\Application\Metadata\Search\{
     BibliographicAuthorReference,
+    BibliographicAuthorSearchCursor,
+    BibliographicAuthorSearchLane,
     BibliographicAuthorSearchPage,
     BibliographicAuthorSearchResult,
     BibliographicAuthorSelectorCodec,
@@ -40,7 +42,8 @@ final class RestBibliographicTextSearchContractTest extends TestCase
         $author = new BibliographicAuthorSearchResult(
             BibliographicAuthorReference::canonical(new AuthorId("author-le-guin")),
             "Ursula K. Le Guin",
-            0
+            0,
+            $query
         );
         $work = new BibliographicWorkSearchResult(
             BibliographicWorkReference::canonical(new WorkId("work-earthsea")),
@@ -53,7 +56,11 @@ final class RestBibliographicTextSearchContractTest extends TestCase
 
         $decoded = $this->transport()->decodeRequest([
             "query" => "  Ursula   Le Guin ",
-            "author_cursor" => $codec->encode($author->cursor($query)),
+            "author_cursor" => $codec->encode(new BibliographicAuthorSearchCursor(
+                $query,
+                BibliographicAuthorSearchLane::Local,
+                1
+            )),
             "work_cursor" => $codec->encode($work->cursor($query)),
         ]);
 
@@ -104,9 +111,14 @@ final class RestBibliographicTextSearchContractTest extends TestCase
         $author = new BibliographicAuthorSearchResult(
             BibliographicAuthorReference::canonical(new AuthorId("author-herbert")),
             "Frank Herbert",
-            0
+            0,
+            $query
         );
-        $cursor = $this->codec()->encode($author->cursor($query));
+        $cursor = $this->codec()->encode(new BibliographicAuthorSearchCursor(
+            $query,
+            BibliographicAuthorSearchLane::Local,
+            1
+        ));
 
         foreach ([
             ["query" => "Dune", "work_cursor" => $cursor],
@@ -135,7 +147,8 @@ final class RestBibliographicTextSearchContractTest extends TestCase
                 )
             ),
             "Octavia E. Butler",
-            0
+            0,
+            $query
         );
         $work = new BibliographicWorkSearchResult(
             BibliographicWorkReference::external(

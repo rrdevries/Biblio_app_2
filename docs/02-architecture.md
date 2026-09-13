@@ -2123,3 +2123,44 @@ Production composition supplies the existing Author, provider-claim and credit
 repositories to this shared boundary. No HTTP client is injected into the
 materializer and no extra provider request, Search write, REST/UI change,
 Library/Item mutation or Add Book participant is added. Schema remains 1024.
+
+## 54. SEARCH-AUTH-01A Author composition and source progress
+
+`BibliographicAuthorSearchResult` now owns a typed `exact|broader` match class
+and deterministic `author-name-<sha256>` presentation group. Both derive from
+one mbstring normalizer that Unicode-case-folds and collapses Unicode
+whitespace/separators. They are sorting/grouping metadata only and never enter
+strong identity keys or selector authority.
+
+The Author provider port is separated from the composed application page. A
+source call accepts explicit offset and `1..10` limit and returns source items
+plus its next consumed offset. The composer finishes canonical pages first,
+loads provider claims for each local page in one batch, and requests only
+`10 - local_count` external rows on a mixed final page. One second batch maps
+the fetched provider Author IDs to canonical Author IDs. Current mappings
+suppress only those strong provider identities; no normalized name participates.
+
+The Author application cursor uses payload version 2 and binds normalized
+query, exact `authors` group, `local|external` phase, next source offset and
+`canonical_exact_broader_external_exact_broader_v1`. It may accompany an empty
+visible page. The old Author v1 last-visible payload fails closed; Work cursor
+v1 retains its existing payload and page invariant.
+
+Local search orders the bounded SQL source by exact class and the existing
+binary display-name/Author-ID order. Application composition carries source
+position as that same stable tie-order, avoiding a second Unicode collation
+across page boundaries. External items are partitioned only within
+the fetched bounded provider page, retaining provider order inside each match
+tier. One request never crawls later provider pages to find exact matches.
+
+Exactly one current supported provider claim may enrich a canonical typed
+reference for composite selector issuance. Selected-Author Works re-reads the
+exact provider Author mapping before using a composite reference and fails
+closed on removal, reassignment or a newly ambiguous second supported claim.
+No canonical hydration is needed because
+external traversal begins only after the complete local predicate traversal;
+docs/92 explicitly excludes alias expansion.
+
+REST continues to serialize the same five Author item fields. `match_quality`
+and `name_group_id` stay internal until SEARCH-AUTH-UI-01. There is no schema,
+provider-enrichment, materialization, UI or V1-data change.

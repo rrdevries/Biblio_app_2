@@ -551,6 +551,16 @@ search request and no Edition request. Google Books, Works-by-Author,
 Editions-by-Work, UI and consumer cutover remain outside this slice. Only the
 top-level Author/Work search is now REST-reachable through MH-SEARCH-API-01.
 
+SEARCH-AUTH-01A refines only the Author application group. Canonical exact,
+canonical broader, external exact and external broader are fixed presentation
+tiers; case/whitespace normalization never becomes identity. Canonical Author
+pages are exhausted before external traversal. A final mixed page requests
+only the remaining capacity, and a signed Author-specific source cursor tracks
+consumed local/provider rows even when a proven mapped external duplicate is
+not visible. Unmapped same-name Authors remain separate. The public Author
+result fields, Work search group and UI are unchanged pending their explicit
+later slices.
+
 D-AUTHOR-REF-01 adds the authority-bearing handoff for a selected Author.
 Every top-level Author result receives one opaque signed `author_selector`.
 It represents exactly one canonical Author, one Open Library Author, or a

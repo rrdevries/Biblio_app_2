@@ -523,11 +523,11 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         self::assertIsString($salt);
         $cursor = (new BibliographicSearchCursorCodec(
             hash("sha256", $salt . ":bibliographic-text-search-v1")
-        ))->encode((new BibliographicAuthorSearchResult(
-            BibliographicAuthorReference::canonical(new AuthorId("rest-page-author-01")),
-            "Pageable Author 01",
-            0
-        ))->cursor($query));
+        ))->encode(new \Biblio\Core\Application\Metadata\Search\BibliographicAuthorSearchCursor(
+            $query,
+            \Biblio\Core\Application\Metadata\Search\BibliographicAuthorSearchLane::Local,
+            1
+        ));
         $wrongSlot = $this->dispatchAsActor($this->bibliographicSearchRequest([
             "query" => "Pageable",
             "work_cursor" => $cursor,
@@ -557,6 +557,14 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         $provider = BibliographicProviderEntityIdentity::author(
             "open_library",
             "/authors/OL1A"
+        );
+        (new WpdbBibliographicProviderIdentityRepository(
+            $this->database,
+            $this->tableNames
+        ))->claimAuthor(
+            "open_library",
+            "/authors/OL1A",
+            new AuthorId("rest-author-works")
         );
 
         $canonicalResponse = $this->dispatchAsActor(
