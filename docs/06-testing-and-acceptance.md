@@ -3806,3 +3806,39 @@ Status: **GO / CLOSED** after the clean full Core gate, normal-runtime schema
 and zero-count verification, and independent NO BLOCKER re-review. Product
 remains `v2.001`; schema remains `1024`; Biblio Core is `2.17.0`; Biblio UI
 remains `0.17.0`.
+
+## 114. AUTHOR-MAT-01D generic materialization Author integration
+
+AUTHOR-MAT-01D is accepted only when:
+
+- every newly/replayed generic external candidate carries only trusted typed
+  provider Author evidence from its actor-scoped snapshot; public contributor
+  presentation remains unchanged and clients compose no identity;
+- Open Library aligned Author keys route to the existing strong path, while
+  Open Library and Google Books valid name-only Authors route to the existing
+  provisional path without a Google Author claim;
+- source roles and original positive positions are preserved, malformed
+  optional entries create nothing and later valid positions are not renumbered;
+- Work-only, Work+Edition, existing Work and mapped Edition paths invoke one
+  shared materializer inside the existing complete transaction;
+- exact replay reuses Author, credit and edge; strong identity reuses across
+  Works; same-name independent credits remain independent; exact-credit
+  promotion is monotonic and later name-only replay cannot downgrade;
+- semantic identity/position conflicts retain truthful typed evidence without
+  overwrite, reordering, merge or orphan Author, while hard failure rolls back
+  Work/Edition and every related claim/evidence write;
+- all typed Author races trigger at most one retry of the complete generic
+  materialization, and a real two-process same-Author/two-Work race converges;
+- Open Library adds only `author_key` to its existing Search request, Google
+  request counts remain unchanged and no Author detail/Search enrichment call
+  exists;
+- existing local Author Search and selected Author-to-Works reads expose the
+  new canonical graph without any Search mutation or status expansion;
+- Add Book remains unwired, no runtime backfill or V1 source is used, schema
+  remains 1024, all quality gates pass and independent review finds no blocker.
+
+Final status and exact evidence are recorded in
+`docs/90-author-mat-01d-generic-materialization-author-integration.md`.
+
+Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1024`;
+Biblio Core is `2.18.0`; Biblio UI remains `0.17.0`.

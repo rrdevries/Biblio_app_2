@@ -17,6 +17,7 @@ final readonly class BibliographicDiscoveryCandidate
      * @param list<string> $contributors
      * @param list<string> $languages
      * @param list<string> $publishers
+     * @param list<BibliographicAuthorCredit> $authorCredits
      */
     private function __construct(
         private BibliographicCandidateType $type,
@@ -38,7 +39,8 @@ final readonly class BibliographicDiscoveryCandidate
         private ?string $publicationDate,
         private ?int $pageCount,
         private ?string $format,
-        private int $presentationOrder
+        private int $presentationOrder,
+        private array $authorCredits
     ) {
         self::text($title, 512, "title");
         self::optionalText($subtitle, 512, "subtitle");
@@ -46,6 +48,13 @@ final readonly class BibliographicDiscoveryCandidate
         self::list($contributors, 32, 255, "contributors");
         self::list($languages, 16, 16, "languages");
         self::list($publishers, 16, 255, "publishers");
+        self::assertAuthorCredits(
+            $authorCredits,
+            $contributors,
+            $providerKey,
+            $providerRecordId,
+            $providerWorkId
+        );
         self::optionalText($publicationDate, 64, "publication date");
         self::optionalText($format, 128, "format");
         if ($pageCount !== null && ($pageCount < 1 || $pageCount > 100000)) {
@@ -97,7 +106,7 @@ final readonly class BibliographicDiscoveryCandidate
             BibliographicCandidateType::LocalWork, $title, $workId, null,
             null, null, null, null, null, $query->type(),
             $query->normalizedValue(), null, null, $contributors, [], [],
-            null, null, null, $order
+            null, null, null, $order, []
         );
     }
 
@@ -115,7 +124,7 @@ final readonly class BibliographicDiscoveryCandidate
             BibliographicCandidateType::LocalEdition, $title, $workId, $editionId,
             null, null, null, null, null, $query->type(),
             $query->normalizedValue(), $isbn, null, $contributors, [], [],
-            null, null, null, $order
+            null, null, null, $order, []
         );
     }
 
@@ -123,6 +132,7 @@ final readonly class BibliographicDiscoveryCandidate
      * @param list<string> $contributors
      * @param list<string> $languages
      * @param list<string> $publishers
+     * @param list<BibliographicAuthorCredit> $authorCredits
      */
     public static function external(
         BibliographicCandidateType $type,
@@ -141,7 +151,8 @@ final readonly class BibliographicDiscoveryCandidate
         ?string $publicationDate,
         ?int $pageCount,
         ?string $format,
-        int $presentationOrder
+        int $presentationOrder,
+        array $authorCredits = []
     ): self {
         if ($type !== BibliographicCandidateType::ExternalWork
             && $type !== BibliographicCandidateType::ExternalEdition) {
@@ -152,7 +163,7 @@ final readonly class BibliographicDiscoveryCandidate
             $providerWorkId, $retrievedAt, $matchMethod, $query->type(),
             $query->normalizedValue(), $isbn, $subtitle, $contributors,
             $languages, $publishers, $publicationDate, $pageCount, $format,
-            $presentationOrder
+            $presentationOrder, $authorCredits
         );
     }
 
@@ -212,6 +223,8 @@ final readonly class BibliographicDiscoveryCandidate
     public function pageCount(): ?int { return $this->pageCount; }
     public function format(): ?string { return $this->format; }
     public function presentationOrder(): int { return $this->presentationOrder; }
+    /** @return list<BibliographicAuthorCredit> */
+    public function authorCredits(): array { return $this->authorCredits; }
 
     private static function assertProviderKey(string $value): void
     {
@@ -245,6 +258,62 @@ final readonly class BibliographicDiscoveryCandidate
                 throw new InvalidArgumentException("Invalid discovery {$field}.");
             }
             self::text($value, $maximumLength, $field);
+        }
+    }
+
+    /**
+     * @param array<mixed> $credits
+     * @param list<string> $contributors
+     */
+    private static function assertAuthorCredits(
+        array $credits,
+        array $contributors,
+        ?string $providerKey,
+        ?string $providerRecordId,
+        ?string $providerWorkId
+    ): void {
+        if (!array_is_list($credits) || count($credits) > 32) {
+            throw new InvalidArgumentException("Invalid discovery Author credits.");
+        }
+        if ($credits === []) { return; }
+
+        $names = [];
+        $previousPosition = 0;
+        foreach ($credits as $credit) {
+            if (!$credit instanceof BibliographicAuthorCredit) {
+                throw new InvalidArgumentException("Invalid discovery Author credit.");
+            }
+            $position = $credit->position()->value();
+            if ($position <= $previousPosition) {
+                throw new InvalidArgumentException(
+                    "Discovery Author credit order must follow source order."
+                );
+            }
+            $previousPosition = $position;
+            $names[] = $credit->observedDisplayName();
+            $expectedSourceRecord = match ($credit->sourceType()) {
+                \Biblio\Core\Application\Metadata\Author\AuthorCreditProviderSourceType::Work =>
+                    $providerWorkId,
+                \Biblio\Core\Application\Metadata\Author\AuthorCreditProviderSourceType::Edition =>
+                    $providerRecordId,
+            };
+            if ($expectedSourceRecord === null
+                || $credit->sourceRecordId() !== $expectedSourceRecord) {
+                throw new InvalidArgumentException(
+                    "Discovery Author credit source does not match candidate identity."
+                );
+            }
+            if ($credit->openLibraryAuthorId() !== null
+                && $providerKey !== "open_library") {
+                throw new InvalidArgumentException(
+                    "Open Library Author identity requires the Open Library provider."
+                );
+            }
+        }
+        if ($names !== $contributors) {
+            throw new InvalidArgumentException(
+                "Discovery Author credits must match contributor presentation."
+            );
         }
     }
 }

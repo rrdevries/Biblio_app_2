@@ -7,6 +7,11 @@ namespace Biblio\Core\Tests\Integration;
 use Biblio\Core\Application\Catalog\LocalEditionResolver;
 use Biblio\Core\Application\Identity\AuthenticatedUser;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicRecordIdGenerator;
+use Biblio\Core\Application\Metadata\Author\CanonicalAuthorMaterializer;
+use Biblio\Core\Application\Metadata\Author\AuthorContributorCreditRace;
+use Biblio\Core\Application\Metadata\Author\AuthorCreditProviderSourceType;
+use Biblio\Core\Application\Metadata\Author\OpenLibraryAuthorId;
+use Biblio\Core\Application\Metadata\Discovery\BibliographicAuthorCredit;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicCandidateType;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicDiscoveryCandidate;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicDiscoveryQuery;
@@ -31,13 +36,22 @@ use Biblio\Core\Application\Metadata\MetadataMatchMethod;
 use Biblio\Core\Application\Metadata\MetadataProvider;
 use Biblio\Core\Application\Metadata\MetadataRecordId;
 use Biblio\Core\Application\Metadata\ProviderLookupResult;
+use Biblio\Core\Application\Metadata\Search\BibliographicAuthorReference;
+use Biblio\Core\Application\Metadata\Search\BibliographicTextSearchQuery;
+use Biblio\Core\Catalog\Author;
+use Biblio\Core\Catalog\AuthorId;
+use Biblio\Core\Catalog\AuthorVersion;
 use Biblio\Core\Catalog\CanonicalIsbnIdentity;
+use Biblio\Core\Catalog\ContributorPosition;
+use Biblio\Core\Catalog\ContributorRole;
 use Biblio\Core\Catalog\EditionId;
 use Biblio\Core\Catalog\Edition;
 use Biblio\Core\Catalog\Isbn13;
 use Biblio\Core\Catalog\IsbnCanonicalizer;
 use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Catalog\Work;
+use Biblio\Core\Catalog\WorkContributor;
+use Biblio\Core\Catalog\WritableAuthorRepository;
 use Biblio\Core\Exception\ValidationException;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchema1023Migration;
@@ -49,15 +63,484 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbBibliographicDiscoveryS
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbBibliographicLocalDiscoveryRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbBibliographicMetadataRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbBibliographicProviderIdentityRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbBibliographicAuthorWorkSearchProvider;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbBibliographicSearchProvider;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbAuthorContributorCreditRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbAuthorRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbEditionIdentifierClaimRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbEditionRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbMetadataFieldReviewRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbTransactionManager;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbWorkRepository;
+use Biblio\Core\Infrastructure\Persistence\PersistenceException;
+use Biblio\Core\Infrastructure\WordPress\OpaqueCanonicalAuthorMaterializationIdGenerator;
 use DateTimeImmutable;
 
 final class Schema1023BibliographicDiscoveryTest extends PersistenceIntegrationTestCase
 {
+    public function testGenericStrongAuthorMaterializationIsIdempotentSharedAndSearchReadable(): void
+    {
+        $actor = new UserId("author-mat-strong-actor");
+        $clock = new Schema1023FixedClock();
+        $ids = new Schema1023SequenceIds();
+        $query = BibliographicDiscoveryQuery::text(
+            new BibliographicTextQuery("Octavia Butler Kindred")
+        );
+        $candidate = $this->authorCandidate(
+            $query,
+            "/works/OL100W",
+            "Kindred",
+            [
+                $this->strongAuthor("Octavia E. Butler", 1, "/works/OL100W", "OL100A"),
+                $this->strongAuthor(
+                    "Second Author",
+                    2,
+                    "/works/OL100W",
+                    "OL200A",
+                    ContributorRole::CoAuthor
+                ),
+            ]
+        );
+        $discoveryId = new MetadataLookupId("lookup-00000000000000000000000000000011");
+        $this->saveAuthorSnapshot($discoveryId, $actor, $query, $candidate, $clock);
+        $service = $this->genericMaterializer($actor, $clock, $ids);
+
+        $first = $service->materialize(
+            $discoveryId,
+            new MetadataCandidateId($candidate->id()),
+            BibliographicMaterializationIntent::WorkOnly
+        );
+        $second = $service->materialize(
+            $discoveryId,
+            new MetadataCandidateId($candidate->id()),
+            BibliographicMaterializationIntent::WorkOnly
+        );
+
+        self::assertSame($first->work()->id()->value(), $second->work()->id()->value());
+        self::assertSame(2, $this->countRows($this->tableNames->authors()));
+        self::assertSame(2, $this->countRows($this->tableNames->workContributors()));
+        self::assertSame(2, $this->countRows($this->tableNames->authorContributorCredits()));
+        self::assertSame(2, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->bibliographicProviderIdentities()}` "
+                . "WHERE source_entity_type='author' AND target_type='author'"
+        ));
+        self::assertSame([1, 2], array_map(
+            static fn (object $row): int => (int) $row->contributor_position,
+            $this->database->get_results(
+                "SELECT contributor_position FROM `{$this->tableNames->workContributors()}` "
+                    . "ORDER BY contributor_position"
+            )
+        ));
+        self::assertSame(["author", "co_author"], array_map(
+            static fn (object $row): string => (string) $row->contributor_role,
+            $this->database->get_results(
+                "SELECT contributor_role FROM `{$this->tableNames->workContributors()}` "
+                    . "ORDER BY contributor_position"
+            )
+        ));
+
+        $identities = new WpdbBibliographicProviderIdentityRepository(
+            $this->database,
+            $this->tableNames
+        );
+        $octaviaId = $identities->findAuthor("open_library", "/authors/OL100A")
+            ?? throw new \LogicException("Expected Open Library Author claim.");
+        $countsBeforeSearch = [
+            $this->countRows($this->tableNames->authors()),
+            $this->countRows($this->tableNames->workContributors()),
+            $this->countRows($this->tableNames->authorContributorCredits()),
+        ];
+        $authorSearch = (new WpdbBibliographicSearchProvider(
+            $this->database,
+            $this->tableNames
+        ))->searchAuthors(new BibliographicTextSearchQuery("Octavia Butler"));
+        self::assertSame($octaviaId->value(), $authorSearch->items()[0]
+            ->reference()->authorId()?->value());
+        $works = (new WpdbBibliographicAuthorWorkSearchProvider(
+            $this->database,
+            $this->tableNames
+        ))->searchWorksForAuthor(
+            BibliographicAuthorReference::canonical($octaviaId),
+            0,
+            10
+        );
+        self::assertSame($first->work()->id()->value(), $works->items()[0]
+            ->reference()->workId()?->value());
+        self::assertSame($countsBeforeSearch, [
+            $this->countRows($this->tableNames->authors()),
+            $this->countRows($this->tableNames->workContributors()),
+            $this->countRows($this->tableNames->authorContributorCredits()),
+        ]);
+
+        $queryTwo = BibliographicDiscoveryQuery::text(
+            new BibliographicTextQuery("Parable Octavia")
+        );
+        $candidateTwo = $this->authorCandidate(
+            $queryTwo,
+            "/works/OL101W",
+            "Parable of the Sower",
+            [$this->strongAuthor("Octavia Butler", 1, "/works/OL101W", "OL100A")]
+        );
+        $discoveryTwo = new MetadataLookupId("lookup-00000000000000000000000000000012");
+        $this->saveAuthorSnapshot($discoveryTwo, $actor, $queryTwo, $candidateTwo, $clock);
+        $service->materialize(
+            $discoveryTwo,
+            new MetadataCandidateId($candidateTwo->id()),
+            BibliographicMaterializationIntent::WorkOnly
+        );
+
+        self::assertSame(2, $this->countRows($this->tableNames->authors()));
+        self::assertSame(3, $this->countRows($this->tableNames->workContributors()));
+    }
+
+    public function testGoogleNameOnlyMaterializationStaysProvisionalAndSourceScoped(): void
+    {
+        $actor = new UserId("author-mat-google-actor");
+        $clock = new Schema1023FixedClock();
+        $ids = new Schema1023SequenceIds();
+        $query = BibliographicDiscoveryQuery::text(
+            new BibliographicTextQuery("Peter King first")
+        );
+        $candidate = $this->googleEditionAuthorCandidate(
+            $query,
+            "google-volume-one",
+            "First Work",
+            "Peter King"
+        );
+        $discoveryId = new MetadataLookupId("lookup-00000000000000000000000000000021");
+        $this->saveAuthorSnapshot($discoveryId, $actor, $query, $candidate, $clock);
+        $service = $this->genericMaterializer($actor, $clock, $ids);
+
+        $first = $service->materialize(
+            $discoveryId,
+            new MetadataCandidateId($candidate->id()),
+            BibliographicMaterializationIntent::WorkAndEdition
+        );
+        $replay = $service->materialize(
+            $discoveryId,
+            new MetadataCandidateId($candidate->id()),
+            BibliographicMaterializationIntent::WorkAndEdition
+        );
+        self::assertSame($first->work()->id()->value(), $replay->work()->id()->value());
+
+        $queryTwo = BibliographicDiscoveryQuery::text(
+            new BibliographicTextQuery("Peter King second")
+        );
+        $candidateTwo = $this->googleEditionAuthorCandidate(
+            $queryTwo,
+            "google-volume-two",
+            "Second Work",
+            "Peter King"
+        );
+        $discoveryTwo = new MetadataLookupId("lookup-00000000000000000000000000000022");
+        $this->saveAuthorSnapshot($discoveryTwo, $actor, $queryTwo, $candidateTwo, $clock);
+        $service->materialize(
+            $discoveryTwo,
+            new MetadataCandidateId($candidateTwo->id()),
+            BibliographicMaterializationIntent::WorkAndEdition
+        );
+
+        self::assertSame(2, $this->countRows($this->tableNames->authors()));
+        self::assertSame(2, $this->countRows($this->tableNames->workContributors()));
+        self::assertSame(2, $this->countRows($this->tableNames->authorContributorCredits()));
+        self::assertSame(2, $this->countRows($this->tableNames->editions()));
+        self::assertSame(0, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->bibliographicProviderIdentities()}` "
+                . "WHERE source_entity_type='author' OR target_type='author'"
+        ));
+        self::assertSame(["provisional", "provisional"], array_map(
+            static fn (object $row): string => (string) $row->identity_status,
+            $this->database->get_results(
+                "SELECT identity_status FROM `{$this->tableNames->authors()}` "
+                    . "ORDER BY author_id"
+            )
+        ));
+    }
+
+    public function testExactCreditPromotesAndNameOnlyReplayNeverDowngrades(): void
+    {
+        $actor = new UserId("author-mat-promotion-actor");
+        $clock = new Schema1023FixedClock();
+        $ids = new Schema1023SequenceIds();
+        $service = $this->genericMaterializer($actor, $clock, $ids);
+
+        $query = BibliographicDiscoveryQuery::text(new BibliographicTextQuery("promotion one"));
+        $nameOnly = $this->authorCandidate(
+            $query,
+            "/works/OL300W",
+            "Promotion Work",
+            [$this->nameOnlyAuthor("Exact Credit", 1, "/works/OL300W")]
+        );
+        $lookup = new MetadataLookupId("lookup-00000000000000000000000000000031");
+        $this->saveAuthorSnapshot($lookup, $actor, $query, $nameOnly, $clock);
+        $service->materialize(
+            $lookup,
+            new MetadataCandidateId($nameOnly->id()),
+            BibliographicMaterializationIntent::WorkOnly
+        );
+        $originalAuthorId = (string) $this->database->get_var(
+            "SELECT author_id FROM `{$this->tableNames->authors()}`"
+        );
+
+        $queryStrong = BibliographicDiscoveryQuery::text(new BibliographicTextQuery("promotion two"));
+        $strong = $this->authorCandidate(
+            $queryStrong,
+            "/works/OL300W",
+            "Promotion Work",
+            [$this->strongAuthor("Exact Credit", 1, "/works/OL300W", "OL300A")]
+        );
+        $lookupStrong = new MetadataLookupId("lookup-00000000000000000000000000000032");
+        $this->saveAuthorSnapshot($lookupStrong, $actor, $queryStrong, $strong, $clock);
+        $service->materialize(
+            $lookupStrong,
+            new MetadataCandidateId($strong->id()),
+            BibliographicMaterializationIntent::WorkOnly
+        );
+
+        $queryReplay = BibliographicDiscoveryQuery::text(new BibliographicTextQuery("promotion three"));
+        $nameReplay = $this->authorCandidate(
+            $queryReplay,
+            "/works/OL300W",
+            "Promotion Work",
+            [$this->nameOnlyAuthor("Exact Credit", 1, "/works/OL300W")]
+        );
+        $lookupReplay = new MetadataLookupId("lookup-00000000000000000000000000000033");
+        $this->saveAuthorSnapshot($lookupReplay, $actor, $queryReplay, $nameReplay, $clock);
+        $service->materialize(
+            $lookupReplay,
+            new MetadataCandidateId($nameReplay->id()),
+            BibliographicMaterializationIntent::WorkOnly
+        );
+
+        $author = $this->database->get_row(
+            "SELECT author_id,identity_status FROM `{$this->tableNames->authors()}`"
+        );
+        self::assertSame($originalAuthorId, (string) $author->author_id);
+        self::assertSame("resolved", (string) $author->identity_status);
+        self::assertSame(1, $this->countRows($this->tableNames->authors()));
+        self::assertSame(1, $this->countRows($this->tableNames->workContributors()));
+        self::assertSame(1, $this->countRows($this->tableNames->authorContributorCredits()));
+    }
+
+    public function testPositionConflictKeepsTruthfulUnresolvedEvidenceWithoutPartialAuthorGraph(): void
+    {
+        $actor = new UserId("author-mat-conflict-actor");
+        $clock = new Schema1023FixedClock();
+        $ids = new Schema1023SequenceIds();
+        $service = $this->genericMaterializer($actor, $clock, $ids);
+
+        $query = BibliographicDiscoveryQuery::text(new BibliographicTextQuery("conflict work"));
+        $workCandidate = $this->authorCandidate(
+            $query,
+            "/works/OL400W",
+            "Conflict Work",
+            [$this->strongAuthor("First Author", 1, "/works/OL400W", "OL400A")]
+        );
+        $lookup = new MetadataLookupId("lookup-00000000000000000000000000000041");
+        $this->saveAuthorSnapshot($lookup, $actor, $query, $workCandidate, $clock);
+        $first = $service->materialize(
+            $lookup,
+            new MetadataCandidateId($workCandidate->id()),
+            BibliographicMaterializationIntent::WorkOnly
+        );
+
+        $editionQuery = BibliographicDiscoveryQuery::text(
+            new BibliographicTextQuery("conflict edition")
+        );
+        $credit = new BibliographicAuthorCredit(
+            "Other Author",
+            ContributorRole::Author,
+            new ContributorPosition(1),
+            AuthorCreditProviderSourceType::Edition,
+            "/books/OL400M"
+        );
+        $editionCandidate = BibliographicDiscoveryCandidate::external(
+            BibliographicCandidateType::ExternalEdition,
+            "open_library",
+            "/books/OL400M",
+            "/works/OL400W",
+            $clock->now(),
+            MetadataMatchMethod::TextSearch,
+            $editionQuery,
+            "Conflict Edition",
+            null,
+            null,
+            ["Other Author"],
+            [],
+            [],
+            null,
+            null,
+            null,
+            0,
+            [$credit]
+        );
+        $editionLookup = new MetadataLookupId("lookup-00000000000000000000000000000042");
+        $this->saveAuthorSnapshot(
+            $editionLookup,
+            $actor,
+            $editionQuery,
+            $editionCandidate,
+            $clock
+        );
+        $second = $service->materialize(
+            $editionLookup,
+            new MetadataCandidateId($editionCandidate->id()),
+            BibliographicMaterializationIntent::WorkAndEdition
+        );
+
+        self::assertSame($first->work()->id()->value(), $second->work()->id()->value());
+        self::assertSame(1, $this->countRows($this->tableNames->authors()));
+        self::assertSame(1, $this->countRows($this->tableNames->workContributors()));
+        self::assertSame(2, $this->countRows($this->tableNames->authorContributorCredits()));
+        self::assertSame(1, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->authorContributorCredits()}` "
+                . "WHERE materialization_status='unresolved' "
+                . "AND review_reason='structural_ambiguity'"
+        ));
+        self::assertSame(1, $this->countRows($this->tableNames->editions()));
+    }
+
+    public function testStrongClaimConflictKeepsExistingGraphsAndCreatesNoOrphan(): void
+    {
+        $actor = new UserId("author-mat-identity-conflict-actor");
+        $clock = new Schema1023FixedClock();
+        $service = $this->genericMaterializer(
+            $actor,
+            $clock,
+            new Schema1023SequenceIds()
+        );
+
+        $firstQuery = BibliographicDiscoveryQuery::text(
+            new BibliographicTextQuery("identity conflict first")
+        );
+        $first = $this->authorCandidate(
+            $firstQuery,
+            "/works/OL500W",
+            "First Identity Work",
+            [$this->nameOnlyAuthor("First Credit", 1, "/works/OL500W")]
+        );
+        $firstLookup = new MetadataLookupId("lookup-00000000000000000000000000000061");
+        $this->saveAuthorSnapshot($firstLookup, $actor, $firstQuery, $first, $clock);
+        $service->materialize(
+            $firstLookup,
+            new MetadataCandidateId($first->id()),
+            BibliographicMaterializationIntent::WorkOnly
+        );
+
+        $secondQuery = BibliographicDiscoveryQuery::text(
+            new BibliographicTextQuery("identity conflict second")
+        );
+        $second = $this->authorCandidate(
+            $secondQuery,
+            "/works/OL501W",
+            "Second Identity Work",
+            [$this->strongAuthor("Claimed Author", 1, "/works/OL501W", "OL501A")]
+        );
+        $secondLookup = new MetadataLookupId("lookup-00000000000000000000000000000062");
+        $this->saveAuthorSnapshot($secondLookup, $actor, $secondQuery, $second, $clock);
+        $service->materialize(
+            $secondLookup,
+            new MetadataCandidateId($second->id()),
+            BibliographicMaterializationIntent::WorkOnly
+        );
+
+        $conflictQuery = BibliographicDiscoveryQuery::text(
+            new BibliographicTextQuery("identity conflict proof")
+        );
+        $conflict = $this->authorCandidate(
+            $conflictQuery,
+            "/works/OL500W",
+            "First Identity Work",
+            [$this->strongAuthor("First Credit", 1, "/works/OL500W", "OL501A")]
+        );
+        $conflictLookup = new MetadataLookupId("lookup-00000000000000000000000000000063");
+        $this->saveAuthorSnapshot(
+            $conflictLookup,
+            $actor,
+            $conflictQuery,
+            $conflict,
+            $clock
+        );
+        $service->materialize(
+            $conflictLookup,
+            new MetadataCandidateId($conflict->id()),
+            BibliographicMaterializationIntent::WorkOnly
+        );
+
+        self::assertSame(2, $this->countRows($this->tableNames->works()));
+        self::assertSame(2, $this->countRows($this->tableNames->authors()));
+        self::assertSame(2, $this->countRows($this->tableNames->workContributors()));
+        self::assertSame(2, $this->countRows($this->tableNames->authorContributorCredits()));
+        self::assertSame(1, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->authorContributorCredits()}` "
+                . "WHERE review_reason='identity_conflict'"
+        ));
+        self::assertSame(1, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->bibliographicProviderIdentities()}` "
+                . "WHERE source_entity_type='author' AND provider_record_id='/authors/OL501A'"
+        ));
+    }
+
+    public function testHardAuthorFailureRollsBackAndTypedRaceRetriesWholeMaterialization(): void
+    {
+        $actor = new UserId("author-mat-atomicity-actor");
+        $clock = new Schema1023FixedClock();
+        $query = BibliographicDiscoveryQuery::text(new BibliographicTextQuery("atomicity work"));
+        $candidate = $this->authorCandidate(
+            $query,
+            "/works/OL600W",
+            "Atomicity Work",
+            [$this->nameOnlyAuthor("Atomic Author", 1, "/works/OL600W")]
+        );
+        $lookup = new MetadataLookupId("lookup-00000000000000000000000000000051");
+        $this->saveAuthorSnapshot($lookup, $actor, $query, $candidate, $clock);
+        $realAuthors = new WpdbAuthorRepository($this->database, $this->tableNames);
+        $failing = new Schema1023FailingAuthorRepository(
+            $realAuthors,
+            1,
+            new PersistenceException("Injected Author persistence failure.")
+        );
+        $service = $this->genericMaterializer(
+            $actor,
+            $clock,
+            new Schema1023SequenceIds(),
+            $failing
+        );
+
+        try {
+            $service->materialize(
+                $lookup,
+                new MetadataCandidateId($candidate->id()),
+                BibliographicMaterializationIntent::WorkOnly
+            );
+            self::fail("Expected hard Author persistence failure.");
+        } catch (PersistenceException $exception) {
+            self::assertSame("Injected Author persistence failure.", $exception->getMessage());
+        }
+        self::assertSame(0, $this->countRows($this->tableNames->works()));
+        self::assertSame(0, $this->countRows($this->tableNames->authors()));
+        self::assertSame(0, $this->countRows($this->tableNames->bibliographicProviderIdentities()));
+
+        $ids = new Schema1023SequenceIds();
+        $racing = new Schema1023FailingAuthorRepository(
+            $realAuthors,
+            1,
+            new AuthorContributorCreditRace()
+        );
+        $retryingService = $this->genericMaterializer($actor, $clock, $ids, $racing);
+        $result = $retryingService->materialize(
+            $lookup,
+            new MetadataCandidateId($candidate->id()),
+            BibliographicMaterializationIntent::WorkOnly
+        );
+
+        self::assertSame(2, $ids->workCalls());
+        self::assertSame("materialized-work-2", $result->work()->id()->value());
+        self::assertSame(1, $this->countRows($this->tableNames->works()));
+        self::assertSame(1, $this->countRows($this->tableNames->authors()));
+        self::assertSame(1, $this->countRows($this->tableNames->workContributors()));
+    }
+
     public function testTextDiscoveryRetainsBreadthAfterMaterializationAndWishlistAdd(): void
     {
         $actor = new UserId("breadth-actor");
@@ -142,6 +625,7 @@ final class Schema1023BibliographicDiscoveryTest extends PersistenceIntegrationT
             $works,
             $editions,
             new WpdbMetadataFieldReviewRepository($this->database, $this->tableNames),
+            $this->authorMaterializer($clock),
             new Schema1023Ids(),
             $clock,
             $transactions
@@ -432,6 +916,7 @@ final class Schema1023BibliographicDiscoveryTest extends PersistenceIntegrationT
             $works,
             $editions,
             $reviews,
+            $this->authorMaterializer($clock),
             new Schema1023Ids(),
             $clock,
             $transactions
@@ -588,6 +1073,7 @@ final class Schema1023BibliographicDiscoveryTest extends PersistenceIntegrationT
             $works,
             $editions,
             new WpdbMetadataFieldReviewRepository($this->database, $this->tableNames),
+            $this->authorMaterializer($clock),
             new Schema1023Ids(),
             $clock,
             new WpdbTransactionManager($this->database)
@@ -707,6 +1193,7 @@ final class Schema1023BibliographicDiscoveryTest extends PersistenceIntegrationT
                 $this->database,
                 $this->tableNames
             ),
+            $this->authorMaterializer($clock),
             new Schema1023Ids(),
             $clock,
             $transactions
@@ -901,6 +1388,7 @@ final class Schema1023BibliographicDiscoveryTest extends PersistenceIntegrationT
                     $this->database,
                     $this->tableNames
                 ),
+                $this->authorMaterializer($clock),
                 new Schema1023Ids(),
                 $clock,
                 $transactions
@@ -962,9 +1450,205 @@ final class Schema1023BibliographicDiscoveryTest extends PersistenceIntegrationT
         );
     }
 
+    /** @param list<BibliographicAuthorCredit> $credits */
+    private function authorCandidate(
+        BibliographicDiscoveryQuery $query,
+        string $workKey,
+        string $title,
+        array $credits
+    ): BibliographicDiscoveryCandidate {
+        return BibliographicDiscoveryCandidate::external(
+            BibliographicCandidateType::ExternalWork,
+            "open_library",
+            $workKey,
+            $workKey,
+            new DateTimeImmutable("2026-09-10T12:00:00+00:00"),
+            MetadataMatchMethod::TextSearch,
+            $query,
+            $title,
+            null,
+            null,
+            array_map(
+                static fn (BibliographicAuthorCredit $credit): string =>
+                    $credit->observedDisplayName(),
+                $credits
+            ),
+            [],
+            [],
+            null,
+            null,
+            null,
+            0,
+            $credits
+        );
+    }
+
+    private function googleEditionAuthorCandidate(
+        BibliographicDiscoveryQuery $query,
+        string $recordId,
+        string $title,
+        string $name
+    ): BibliographicDiscoveryCandidate {
+        $credit = new BibliographicAuthorCredit(
+            $name,
+            ContributorRole::Author,
+            new ContributorPosition(1),
+            AuthorCreditProviderSourceType::Edition,
+            $recordId
+        );
+        return BibliographicDiscoveryCandidate::external(
+            BibliographicCandidateType::ExternalEdition,
+            "google_books",
+            $recordId,
+            null,
+            new DateTimeImmutable("2026-09-10T12:00:00+00:00"),
+            MetadataMatchMethod::TextSearch,
+            $query,
+            $title,
+            null,
+            null,
+            [$name],
+            [],
+            [],
+            null,
+            null,
+            null,
+            0,
+            [$credit]
+        );
+    }
+
+    private function strongAuthor(
+        string $name,
+        int $position,
+        string $sourceRecordId,
+        string $authorId,
+        ContributorRole $role = ContributorRole::Author
+    ): BibliographicAuthorCredit {
+        return new BibliographicAuthorCredit(
+            $name,
+            $role,
+            new ContributorPosition($position),
+            AuthorCreditProviderSourceType::Work,
+            $sourceRecordId,
+            new OpenLibraryAuthorId($authorId)
+        );
+    }
+
+    private function nameOnlyAuthor(
+        string $name,
+        int $position,
+        string $sourceRecordId
+    ): BibliographicAuthorCredit {
+        return new BibliographicAuthorCredit(
+            $name,
+            ContributorRole::Author,
+            new ContributorPosition($position),
+            AuthorCreditProviderSourceType::Work,
+            $sourceRecordId
+        );
+    }
+
+    private function saveAuthorSnapshot(
+        MetadataLookupId $id,
+        UserId $actor,
+        BibliographicDiscoveryQuery $query,
+        BibliographicDiscoveryCandidate $candidate,
+        MetadataClock $clock
+    ): void {
+        (new WpdbBibliographicDiscoverySnapshotRepository(
+            $this->database,
+            $this->tableNames
+        ))->save(new BibliographicDiscoverySnapshot(
+            $id,
+            $actor,
+            $query,
+            $clock->now(),
+            new DateTimeImmutable("2026-09-10T12:30:00+00:00"),
+            [$candidate]
+        ));
+    }
+
+    private function genericMaterializer(
+        UserId $actor,
+        MetadataClock $clock,
+        BibliographicRecordIdGenerator $ids,
+        ?WritableAuthorRepository $authors = null
+    ): BibliographicMaterializationService {
+        $snapshots = new WpdbBibliographicDiscoverySnapshotRepository(
+            $this->database,
+            $this->tableNames
+        );
+        $identities = new WpdbBibliographicProviderIdentityRepository(
+            $this->database,
+            $this->tableNames
+        );
+        $works = new WpdbWorkRepository($this->database, $this->tableNames);
+        $editions = new WpdbEditionRepository($this->database, $this->tableNames);
+        $isbnClaims = new WpdbEditionIdentifierClaimRepository(
+            $this->database,
+            $this->tableNames
+        );
+        $authors ??= new WpdbAuthorRepository($this->database, $this->tableNames);
+        $authorMaterializer = new CanonicalAuthorMaterializer(
+            $authors,
+            $identities,
+            new WpdbAuthorContributorCreditRepository(
+                $this->database,
+                $this->tableNames
+            ),
+            new OpaqueCanonicalAuthorMaterializationIdGenerator(),
+            $clock
+        );
+        return new BibliographicMaterializationService(
+            new Schema1023Actor($actor),
+            new Schema1023AllowMaterialization(),
+            $snapshots,
+            $identities,
+            new LocalEditionResolver(
+                new IsbnCanonicalizer(),
+                $isbnClaims,
+                $editions,
+                new WpdbBibliographicMetadataRepository(
+                    $this->database,
+                    $this->tableNames
+                )
+            ),
+            $isbnClaims,
+            $works,
+            $editions,
+            new WpdbMetadataFieldReviewRepository(
+                $this->database,
+                $this->tableNames
+            ),
+            $authorMaterializer,
+            $ids,
+            $clock,
+            new WpdbTransactionManager($this->database)
+        );
+    }
+
     private function countRows(string $table): int
     {
         return (int) $this->database->get_var("SELECT COUNT(*) FROM `{$table}`");
+    }
+
+    private function authorMaterializer(
+        MetadataClock $clock
+    ): CanonicalAuthorMaterializer {
+        return new CanonicalAuthorMaterializer(
+            new WpdbAuthorRepository($this->database, $this->tableNames),
+            new WpdbBibliographicProviderIdentityRepository(
+                $this->database,
+                $this->tableNames
+            ),
+            new WpdbAuthorContributorCreditRepository(
+                $this->database,
+                $this->tableNames
+            ),
+            new OpaqueCanonicalAuthorMaterializationIdGenerator(),
+            $clock
+        );
     }
 
     private function migrateCurrentSchema(): void
@@ -1004,6 +1688,74 @@ final class Schema1023Ids implements BibliographicRecordIdGenerator
 {
     public function nextWorkId(): WorkId { return new WorkId("materialized-work"); }
     public function nextEditionId(): EditionId { return new EditionId("materialized-edition"); }
+}
+
+final class Schema1023SequenceIds implements BibliographicRecordIdGenerator
+{
+    private int $workCalls = 0;
+    private int $editionCalls = 0;
+
+    public function nextWorkId(): WorkId
+    {
+        return new WorkId("materialized-work-" . ++$this->workCalls);
+    }
+
+    public function nextEditionId(): EditionId
+    {
+        return new EditionId("materialized-edition-" . ++$this->editionCalls);
+    }
+
+    public function workCalls(): int { return $this->workCalls; }
+}
+
+final class Schema1023FailingAuthorRepository implements WritableAuthorRepository
+{
+    public function __construct(
+        private readonly WritableAuthorRepository $inner,
+        private int $failuresRemaining,
+        private readonly \Throwable $failure
+    ) {}
+
+    public function find(AuthorId $authorId): ?Author
+    {
+        return $this->inner->find($authorId);
+    }
+
+    public function findMany(array $authorIds): array
+    {
+        return $this->inner->findMany($authorIds);
+    }
+
+    public function contributorsForWorks(array $workIds): array
+    {
+        return $this->inner->contributorsForWorks($workIds);
+    }
+
+    public function workIdsForAuthors(array $authorIds): array
+    {
+        return $this->inner->workIdsForAuthors($authorIds);
+    }
+
+    public function add(Author $author): void
+    {
+        if ($this->failuresRemaining > 0) {
+            --$this->failuresRemaining;
+            throw $this->failure;
+        }
+        $this->inner->add($author);
+    }
+
+    public function replaceIfVersionMatches(
+        Author $replacement,
+        AuthorVersion $expectedVersion
+    ): bool {
+        return $this->inner->replaceIfVersionMatches($replacement, $expectedVersion);
+    }
+
+    public function addContributor(WorkContributor $contributor): void
+    {
+        $this->inner->addContributor($contributor);
+    }
 }
 
 final class Schema1023LookupIds implements MetadataLookupIdGenerator

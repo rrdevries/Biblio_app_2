@@ -1681,9 +1681,13 @@ WorkContributor edge inside a caller-owned transaction.
 Exact name-only replay reuses the Author already linked to that credit,
 including an Author already resolved through the strong path. Independent
 same-name credits remain independent and never trigger a global name lookup,
-promotion or merge. No production metadata flow calls this boundary yet: Add
-Book, generic bibliographic materialization, Search and UI retain their
-existing behavior until their separately accepted slices.
+promotion or merge. Generic bibliographic materialization now calls this
+boundary for typed provider Author evidence retained in its actor-scoped
+candidate snapshot. Strong Open Library Author keys use the resolved path;
+Open Library or Google Books name-only Authors use the provisional path.
+Search remains read-only and consumes the resulting Authors and ordered Work
+edges through its existing local providers. Add Book and UI remain unchanged
+until their separately accepted slices.
 
 Library-scoped detail may include:
 - In deze bibliotheek;

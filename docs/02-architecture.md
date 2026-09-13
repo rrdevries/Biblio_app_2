@@ -2090,3 +2090,36 @@ caller-owned transaction retry; unknown failures roll back the whole
 operation. The typed result also exposes Author identity status and evidence
 created/reused disposition. Schema remains 1024 and production consumers
 remain unwired.
+
+## 53. AUTHOR-MAT-01D generic materialization Author integration
+
+Generic discovery retains a private ordered `BibliographicAuthorCredit` list
+beside its existing contributor-name presentation. Each credit carries the
+closed Work role, original positive provider-array position, exact provider
+Work/Edition source record and an optional validated Open Library Author key.
+Snapshot JSON hashes and round-trips that typed evidence; existing snapshots
+without the additive field remain readable but do not acquire inferred Author
+identity from presentation strings.
+
+Open Library Work Search requests `author_key` in its existing request and
+pairs it only with the name at the same array offset. ISBN details preserve
+validated `{name,key}` Author objects. Google Books `authors[]` remains
+name-only. Invalid optional Author entries are skipped at their original slot,
+so later positions are neither renumbered nor alphabetized. Work-derived
+credits copied onto Edition candidates retain their Work source identity;
+Edition-specific contributor records are not promoted to Work Authors.
+
+`BibliographicMaterializationService` invokes the one existing
+`CanonicalAuthorMaterializer` after the final Work identity is known on every
+Work-only, Work+Edition and mapped-Edition path. The call remains inside the
+same caller-owned transaction as Work/Edition creation or reuse, ISBN/provider
+claims and metadata evidence. The four typed Author race signals join the
+existing one-full-operation retry boundary. Unknown persistence failure rolls
+back the complete materialization; semantic conflicts retain typed unresolved
+evidence without overwriting an edge, reassigning a claim or leaving an orphan
+Author.
+
+Production composition supplies the existing Author, provider-claim and credit
+repositories to this shared boundary. No HTTP client is injected into the
+materializer and no extra provider request, Search write, REST/UI change,
+Library/Item mutation or Add Book participant is added. Schema remains 1024.

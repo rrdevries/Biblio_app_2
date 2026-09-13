@@ -41,6 +41,7 @@ use Biblio\Core\Application\Library\GetAccessibleLibraryItemService;
 use Biblio\Core\Application\Library\LibraryAccessService;
 use Biblio\Core\Application\Library\LibraryContextQueryService;
 use Biblio\Core\Application\Metadata\{AddBookCommitService,AddBookMetadataLookupService,AddBookMetadataReviewPolicy,CandidateClassifier,FirstSufficientMetadataLookupService};
+use Biblio\Core\Application\Metadata\Author\CanonicalAuthorMaterializer;
 use Biblio\Core\Application\Metadata\Discovery\{BibliographicDiscoveryService,BibliographicMaterializationService,BibliographicTextDiscoveryProvider,DesignatedPersonalBibliographicAuthorization};
 use Biblio\Core\Application\Metadata\Search\{BibliographicAuthorWorkSearchProvider,BibliographicAuthorWorkSearchService,BibliographicEditionSearchService,BibliographicExternalEditionSearchProvider,BibliographicTextSearchService};
 use Biblio\Core\Application\Notes\CorrectPrivateNoteReadingRoundService;
@@ -126,6 +127,7 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbWorkRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbWishlistReadRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbWishlistRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbAuthorRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbAuthorContributorCreditRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbSeriesRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbBibliographicMetadataRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbBibliographicDiscoverySnapshotRepository;
@@ -150,6 +152,7 @@ use Biblio\Core\Infrastructure\WordPress\Lifecycle\CoreLifecycleCoordinator;
 use Biblio\Core\Infrastructure\WordPress\Lifecycle\LifecycleStateStore;
 use Biblio\Core\Infrastructure\WordPress\Lifecycle\WpTransientLifecycleStateStore;
 use Biblio\Core\Infrastructure\WordPress\Identity\WordPressAuthenticatedUser;
+use Biblio\Core\Infrastructure\WordPress\OpaqueCanonicalAuthorMaterializationIdGenerator;
 use Biblio\Core\Infrastructure\WordPress\Identity\WordPressPlatformUserDirectory;
 use Biblio\Core\Notes\StrictPrivateNoteContentPolicy;
 use wpdb;
@@ -221,6 +224,13 @@ final class ProductionComposition
             $tableNames
         );
         $metadataClock = new SystemMetadataClock();
+        $canonicalAuthorMaterializer = new CanonicalAuthorMaterializer(
+            $authorRepository,
+            $bibliographicProviderIdentities,
+            new WpdbAuthorContributorCreditRepository($database, $tableNames),
+            new OpaqueCanonicalAuthorMaterializationIdGenerator(),
+            $metadataClock
+        );
         $itemRepository = new WpdbItemRepository($database, $tableNames);
         $itemArchiveRepository = new WpdbItemArchiveRepository($database, $tableNames);
         $collectionRepository = new WpdbCollectionRepository($database, $tableNames);
@@ -851,6 +861,7 @@ final class ProductionComposition
             $workRepository,
             $editionRepository,
             $metadataFieldReviews,
+            $canonicalAuthorMaterializer,
             new OpaqueBibliographicRecordIdGenerator(),
             $metadataClock,
             $transactionManager

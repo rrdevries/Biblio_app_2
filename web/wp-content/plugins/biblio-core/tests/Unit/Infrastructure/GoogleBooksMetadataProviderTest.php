@@ -51,6 +51,14 @@ final class GoogleBooksMetadataProviderTest extends TestCase
         self::assertSame(1279, $candidate->pageCount());
         self::assertNull($candidate->format());
         self::assertNull($candidate->workLink());
+        self::assertSame([1, 2], array_map(
+            static fn ($credit): int => $credit->position()->value(),
+            $candidate->authorCredits()
+        ));
+        self::assertSame([null, null], array_map(
+            static fn ($credit): ?string => $credit->openLibraryAuthorId()?->value(),
+            $candidate->authorCredits()
+        ));
         self::assertSame(
             CandidateQuality::Sufficient,
             (new CandidateClassifier())->classify($candidate, $this->identity())
@@ -79,6 +87,7 @@ final class GoogleBooksMetadataProviderTest extends TestCase
         self::assertNull($candidate->publicationDate());
         self::assertNull($candidate->subtitle());
         self::assertNull($candidate->pageCount());
+        self::assertSame([], $candidate->authorCredits());
         self::assertSame(
             CandidateQuality::Incomplete,
             (new CandidateClassifier())->classify($candidate, $this->identity())

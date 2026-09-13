@@ -85,7 +85,8 @@ final readonly class BibliographicDiscoveryService
                     $candidate->publicationDate(),
                     $candidate->pageCount(),
                     $candidate->format(),
-                    $order
+                    $order,
+                    $candidate->authorCredits()
                 );
             }
             if ($candidates !== []) {

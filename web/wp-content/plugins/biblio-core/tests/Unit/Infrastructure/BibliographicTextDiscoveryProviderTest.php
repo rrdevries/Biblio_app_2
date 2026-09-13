@@ -33,6 +33,7 @@ final class BibliographicTextDiscoveryProviderTest extends TestCase
                     "key" => "/works/OL123W",
                     "title" => "The Dispossessed",
                     "author_name" => ["Ursula K. Le Guin"],
+                    "author_key" => ["OL123A"],
                 ]],
             ], JSON_THROW_ON_ERROR)),
             $this->response(json_encode([
@@ -79,11 +80,22 @@ final class BibliographicTextDiscoveryProviderTest extends TestCase
         );
         self::assertTrue($result->candidatesList()[2]->canAddEditionSpecific());
         self::assertNull($result->candidatesList()[2]->isbn());
+        self::assertSame("/authors/OL123A", $result->candidatesList()[0]
+            ->authorCredits()[0]->openLibraryAuthorId()?->value());
+        self::assertSame("/works/OL123W", $result->candidatesList()[1]
+            ->authorCredits()[0]->sourceRecordId());
+        self::assertSame(1, $result->candidatesList()[1]
+            ->authorCredits()[0]->position()->value());
         self::assertStringContainsString("q=The%20Dispossessed%20Le%20Guin", $http->requests()[0]->url());
+        self::assertStringContainsString(
+            "fields=key%2Ctitle%2Cauthor_name%2Cauthor_key",
+            $http->requests()[0]->url()
+        );
         self::assertSame(
             "https://openlibrary.org/works/OL123W/editions.json?limit=4",
             $http->requests()[1]->url()
         );
+        self::assertCount(2, $http->requests());
     }
 
     public function testGooglePreservesRankButDoesNotTurnItIntoIdentity(): void
@@ -119,7 +131,47 @@ final class BibliographicTextDiscoveryProviderTest extends TestCase
         self::assertFalse($result->candidatesList()[1]->canAddWorkOnly());
         self::assertFalse($result->candidatesList()[1]->canAddEditionSpecific());
         self::assertNull($result->candidatesList()[0]->providerWorkId());
+        self::assertNull($result->candidatesList()[0]
+            ->authorCredits()[0]->openLibraryAuthorId());
+        self::assertSame("volume-first", $result->candidatesList()[0]
+            ->authorCredits()[0]->sourceRecordId());
+        self::assertSame(1, $result->candidatesList()[0]
+            ->authorCredits()[0]->position()->value());
         self::assertStringContainsString("orderBy=relevance", $http->requests()[0]->url());
+        self::assertCount(1, $http->requests());
+    }
+
+    public function testMalformedOptionalAuthorEntriesAreSkippedWithoutRenumbering(): void
+    {
+        $http = new BibliographicQueueHttpClient([
+            $this->response(json_encode([
+                "numFound" => 1,
+                "docs" => [[
+                    "key" => "/works/OL321W",
+                    "title" => "Source-faithful order",
+                    "author_name" => [null, "Valid Author", "  "],
+                    "author_key" => ["OL999A", "not-an-author", "OL1000A"],
+                ]],
+            ], JSON_THROW_ON_ERROR)),
+            $this->response('{"entries":[]}'),
+        ]);
+        $text = new BibliographicTextQuery("source faithful order");
+        $provider = new OpenLibraryTextDiscoveryProvider(
+            $http,
+            new BibliographicFixedClock(),
+            new IsbnCanonicalizer(),
+            new OpenLibraryConfiguration("Biblio", "2.001", "metadata@example.test")
+        );
+
+        $result = $provider->search($text, BibliographicDiscoveryQuery::text($text));
+
+        self::assertSame(ProviderLookupStatus::Candidates, $result->status());
+        self::assertSame(["Valid Author"], $result->candidatesList()[0]->contributors());
+        self::assertSame(2, $result->candidatesList()[0]
+            ->authorCredits()[0]->position()->value());
+        self::assertNull($result->candidatesList()[0]
+            ->authorCredits()[0]->openLibraryAuthorId());
+        self::assertCount(2, $http->requests());
     }
 
     public function testMalformedResponseIsNotReportedAsNormalMiss(): void

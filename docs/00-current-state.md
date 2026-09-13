@@ -3187,3 +3187,30 @@ Search, REST and UI remain unwired. Product remains `v2.001`; schema remains
 `1024`; Biblio Core is `2.17.0`; Biblio UI remains `0.17.0`. No current or
 historical V1 data was used. Closure evidence:
 `docs/89-author-mat-01c-name-only-provisional-materialization.md`.
+
+### AUTHOR-MAT-01D — generic materialization Author integration
+
+Status: **GO / CLOSED**.
+
+The existing generic bibliographic materialization flow now retains typed
+provider Author credits in its private actor-scoped discovery snapshot and
+invokes the shared `CanonicalAuthorMaterializer` after the final canonical Work
+is known. Open Library Author keys use the resolved/claim path; valid Open
+Library or Google Books name-only credits use the provisional path. Provider
+array order becomes the stable positive source position, malformed optional
+entries are skipped without renumbering and Edition-specific contributor data
+is not copied into Work Authors.
+
+Author, claim, source credit/evidence and WorkContributor writes participate in
+the same transaction as Work/optional Edition, provider/ISBN claims and
+metadata evidence. The existing bounded retry now covers all typed Author
+races and reruns the complete generic operation. Hard failure rolls everything
+back; semantic identity/position conflicts retain truthful unresolved evidence
+without claim/edge reassignment or orphan Author.
+
+No provider fan-out, Author lookup, name-based reuse, Search write, REST/UI
+change, Add Book wiring, current-runtime backfill or V1 data use was added.
+Existing local Author Search and Author-to-Works reads see newly materialized
+graphs naturally. Product remains `v2.001`; schema remains `1024`; Biblio Core
+is `2.18.0`; Biblio UI remains `0.17.0`. Closure evidence:
+`docs/90-author-mat-01d-generic-materialization-author-integration.md`.
