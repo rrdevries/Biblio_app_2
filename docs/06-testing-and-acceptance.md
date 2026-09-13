@@ -3638,8 +3638,56 @@ SEARCH-UI-01A is accepted only when:
 - independent second review finds no remaining requirements, accessibility,
   identity, state, fixture-safety, compatibility or scope blocker.
 
-Status: **TECHNICAL GO / HUMAN VISUAL ACCEPTANCE PENDING** after the F1
-correction, complete UI/Core/browser gates and independent re-review.
+Status: **GO / CLOSED** after the F1/F2 correction, complete UI/Core/browser
+gates, independent re-review and Renée human visual acceptance.
 Product remains `v2.001`, schema remains `1023`, Biblio Core remains `2.14.0`
 and Biblio UI is `0.16.1`. No V1 data is used. Closure evidence is recorded in
 `docs/84-search-ui-01a-f1-lab-alignment.md`.
+
+## 110. SEARCH-UI-01B Author → Works → Editions drill-down
+
+SEARCH-UI-01B is accepted only when:
+
+- each Author in `Alles` and `Auteurs` exposes one keyboard-safe Works action
+  whose request authority is only the retained opaque `author_selector`;
+- selected-Author Works use the existing exact response projection, append by
+  only their own `next_cursor` and retain every returned `work_selector` for
+  the next explicit step;
+- every Work in `Alles`, `Boeken` and Author Works reaches one shared focused
+  Editions flow whose sole request authority is `work_selector`;
+- concrete Editions append by only their own cursor, retain ISBN-less results
+  and render nullable title/subtitle, contributors, languages, publishers,
+  publication date, ISBN, format and page count without placeholders or
+  Edition fields being copied into Work identity;
+- typed partial provider failure keeps usable Works/Editions visible, complete
+  zero-item failure has an in-context retry and invalid/stale selection asks
+  for a new search without provider, mapping or cryptographic detail;
+- request abort/revision prevents an earlier Author, Work or query response
+  from replacing the current Page state;
+- internal Back supports exactly `results → authorWorks → workEditions` and
+  `results → workEditions`, preserving loaded top-level lanes, active tab,
+  loaded Author Works, origin focus and best-effort scroll without a router or
+  browser-history hack;
+- a new search clears all drill-down selections/pages and executes the normal
+  top-level request with both cursors reset;
+- selectors are never parsed, reconstructed, rendered, copied into DOM
+  attributes or accessible names, and visible Author/Work/provider/result IDs
+  never become authority;
+- focused loading is inline, results own `aria-busy`, live announcements cover
+  loading/append/error, headings receive focus after final async rendering and
+  controls remain touch-safe at 1440, 900 and 390 px without overflow;
+- the closed 01A/F1/F2 App Shell, header, search field, tabs, main/rail ratio,
+  truthful scope and visual tokens remain the composition baseline;
+- there is no Wishlist, Add Book, Edition-selection, materialization, Item,
+  Library or other write, no backend/schema/provider change and no current or
+  historical V1 data use;
+- ISBN routing, URL/deep-link/browser-Back state, filters/sort, advanced search
+  and Series/Collections discovery remain deferred;
+- complete Biblio UI unit/smoke, guarded Chromium, relevant Core/REST,
+  JavaScript/PHP syntax, PHPStan, WordPress, manifest, whitespace,
+  cleanup/fingerprint and independent second-review gates pass.
+
+Status: **TECHNICAL GO — awaiting Renée human interaction/visual acceptance**.
+Product remains `v2.001`, schema remains `1023`, Biblio Core remains `2.14.0`
+and Biblio UI is `0.17.0`. Closure evidence is recorded in
+`docs/85-search-ui-01b-author-work-edition-drilldown.md`.

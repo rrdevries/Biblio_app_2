@@ -3075,3 +3075,34 @@ Schema stays `1023`; Biblio Core remains `2.14.0`; Biblio UI is `0.16.1` for
 the presentation correction. No V1 data was used.
 Detailed scope and evidence:
 `docs/84-search-ui-01a-f1-lab-alignment.md`.
+
+### SEARCH-UI-01B — Author → Works → Editions drill-down
+
+Status: **TECHNICAL GO — awaiting Renée human interaction/visual acceptance**.
+
+The canonical `/zoeken/` Page now adds progressive in-page drill-down from
+every top-level Author to pageable Works and from every top-level or selected-
+Author Work to pageable concrete Editions. The closed 01A/F1/F2 App Shell,
+header, search field, tabs, results composition and truthful scope rail remain
+the visual baseline; focused views replace only the result pane and the search
+field stays usable.
+
+The UI posts only server-issued opaque `author_selector` or `work_selector`
+plus the applicable opaque cursor. Selectors remain in memory, never enter the
+DOM/accessibility tree and are never parsed or reconstructed from visible IDs.
+Author Works and Editions append independently, retain useful local results on
+typed provider failure and reject stale/malformed selection safely. One shared
+abort/revision guard prevents obsolete Author, Work or query responses from
+winning. Internal Back restores the exact supported parent view, loaded state,
+active tab, originating action focus and best-effort scroll without a router.
+
+Edition rows show only available concrete title/subtitle, contributor,
+language, publisher, publication date, ISBN, format and page-count metadata;
+ISBN-less Editions remain visible. There is no Edition choice, Wishlist/Add
+Book action, materialization, Item/Library state or other mutation. ISBN search,
+URL/deep-link/browser-Back state, filters/sort, Series and Collections remain
+deferred.
+
+Schema stays `1023`; Biblio Core remains `2.14.0`; Biblio UI is `0.17.0`. No
+current or historical V1 data was used. Closure evidence:
+`docs/85-search-ui-01b-author-work-edition-drilldown.md`.
