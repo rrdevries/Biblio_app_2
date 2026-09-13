@@ -92,7 +92,8 @@ final readonly class WpdbBibliographicSearchProvider implements
                 . "SELECT 1 FROM `{$contributors}` wc_search "
                 . "INNER JOIN `{$authors}` a_search "
                 . "ON a_search.author_id=wc_search.author_id "
-                . "WHERE wc_search.work_id=w.work_id AND a_search.display_name LIKE %s))";
+                . "WHERE wc_search.work_id=w.work_id AND "
+                . $this->caseInsensitiveLike("a_search.display_name") . "))";
             array_push($parameters, $pattern, $pattern);
         }
         $offset = $cursor === null ? 0 : $cursor->presentationOrder() + 1;
@@ -153,10 +154,15 @@ final readonly class WpdbBibliographicSearchProvider implements
         $predicates = [];
         $parameters = [];
         foreach ($this->tokens($query) as $token) {
-            $predicates[] = "{$field} LIKE %s";
+            $predicates[] = $this->caseInsensitiveLike($field);
             $parameters[] = "%" . $this->database->esc_like($token) . "%";
         }
         return [$predicates, $parameters];
+    }
+
+    private function caseInsensitiveLike(string $field): string
+    {
+        return "LOWER({$field}) LIKE LOWER(%s)";
     }
 
     /**

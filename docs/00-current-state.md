@@ -3214,3 +3214,22 @@ Existing local Author Search and Author-to-Works reads see newly materialized
 graphs naturally. Product remains `v2.001`; schema remains `1024`; Biblio Core
 is `2.18.0`; Biblio UI remains `0.17.0`. Closure evidence:
 `docs/90-author-mat-01d-generic-materialization-author-integration.md`.
+
+### SEARCH-RUNTIME-01-F1 — case-insensitive local Author matching
+
+Status: **GO / CLOSED**.
+
+Local bibliographic Author matching now applies explicit case-insensitive SQL
+comparison to canonical `Author.display_name` for both top-level Author search
+and the linked-Author arm of Work search. This corrects the binary-collation
+runtime bug without rewriting canonical names or changing query tokenization,
+LIKE escaping, wildcards, ordering, pagination, deduplication, REST, UI or
+external providers. Work-title matching remains exactly on its existing
+`utf8mb4_unicode_520_ci` predicate.
+
+Current runtime read-only verification proves that `Stephen King`, `stephen
+king` and `STEPHEN KING` all return canonical Author
+`author-770605965f9c7985a2e26c35c684a3ef`, and lowercase `stephen king` returns
+linked Work `It`. No runtime row count changed. Product remains `v2.001`;
+schema remains `1024`; Biblio Core is `2.19.0`; Biblio UI remains `0.17.0`.
+Closure evidence: `docs/91-search-runtime-01-f1-case-insensitive-local-matching.md`.

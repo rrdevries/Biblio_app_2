@@ -3842,3 +3842,27 @@ Final status and exact evidence are recorded in
 
 Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1024`;
 Biblio Core is `2.18.0`; Biblio UI remains `0.17.0`.
+
+## 115. SEARCH-RUNTIME-01-F1 case-insensitive local Author matching
+
+SEARCH-RUNTIME-01-F1 is accepted only when:
+
+- one stored canonical `Stephen King` Author is returned once, unchanged and
+  as `local_canonical` for original, lowercase, uppercase and mixed-case text;
+- lowercase linked-Author Work search returns canonical Work `It`, while
+  genuinely different text does not match;
+- both Author predicates share one explicit case-insensitive prepared LIKE
+  comparison, while Work-title matching, whitespace tokenization, `esc_like`,
+  substring wildcards, AND/OR semantics, ordering and pagination remain intact;
+- literal `%` and `_` stay escaped, and absence of accent/punctuation folding
+  is covered by negative integration fixtures;
+- local-first service ordering and identity-only deduplication remain covered,
+  and search performs no materialization or persistence write;
+- no schema/collation migration, external-provider, REST, UI, ranking or dedup
+  change exists;
+- targeted regression, the one final Core gate, current-runtime read-only
+  verification, whitespace and independent review gates pass.
+
+Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1024`;
+Biblio Core is `2.19.0`; Biblio UI remains `0.17.0`. Exact evidence is recorded
+in `docs/91-search-runtime-01-f1-case-insensitive-local-matching.md`.
