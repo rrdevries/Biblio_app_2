@@ -3770,3 +3770,39 @@ Status: **GO / CLOSED** after the clean full Core gate, normal-runtime schema
 and zero-count verification, and independent NO BLOCKER re-review. Product
 remains `v2.001`; schema remains `1024`; Biblio Core is `2.16.0`; Biblio UI
 remains `0.17.0`.
+
+## 113. AUTHOR-MAT-01C name-only provisional Author materialization
+
+AUTHOR-MAT-01C is accepted only when:
+
+- typed provider-observed name-only input accepts only exact Work,
+  `author|co_author`, positive source position, valid observed name, validated
+  source identity and observation time, with no provider/canonical Author ID;
+- a valid new credit creates one provisional/observed Author, linked exact
+  credit, deterministic evidence and ordered WorkContributor edge;
+- exact whitespace-normalized source-credit replay reuses Author, credit and
+  edge, while evidence follows the existing observation-history contract;
+- independent same-name credits across Works, sources or positions never reuse
+  by name; case, accents and punctuation remain identity-significant;
+- exact replay reuses the linked Author even when already resolved and never
+  downgrades it, removes its claim or promotes on name evidence;
+- the name-only path performs no global/fuzzy name query, provider claim
+  operation or provider HTTP request;
+- occupied positions and incompatible edges fail closed with typed
+  `position_conflict`, retained unresolved evidence and no overwrite, shift,
+  merge or orphan provisional Author;
+- independent processes prove identical-credit convergence, independent-Work
+  same-name separation and deterministic same-position conflict with at most
+  one complete retry;
+- the strong Open Library path and its exact-credit promotion remain intact,
+  while Add Book, generic materialization, Search, REST and UI remain unwired;
+- schema remains 1024, no runtime/V1 data is used, targeted tests and the one
+  final full Core gate pass, and independent review reports no blocker.
+
+Final status and evidence are recorded in
+`docs/89-author-mat-01c-name-only-provisional-materialization.md`.
+
+Status: **GO / CLOSED** after the clean full Core gate, normal-runtime schema
+and zero-count verification, and independent NO BLOCKER re-review. Product
+remains `v2.001`; schema remains `1024`; Biblio Core is `2.17.0`; Biblio UI
+remains `0.17.0`.

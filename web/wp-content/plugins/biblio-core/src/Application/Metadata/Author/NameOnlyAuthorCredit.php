@@ -5,30 +5,22 @@ declare(strict_types=1);
 namespace Biblio\Core\Application\Metadata\Author;
 
 use Biblio\Core\Catalog\{ContributorPosition,ContributorRole,WorkId};
-use Biblio\Core\Exception\ValidationException;
 use DateTimeImmutable;
 
-final readonly class StrongOpenLibraryAuthorCredit implements AuthorMaterializationCredit
+final readonly class NameOnlyAuthorCredit implements AuthorMaterializationCredit
 {
     public function __construct(
         private WorkId $workId,
         private ContributorRole $role,
         private ContributorPosition $position,
         private string $observedDisplayName,
-        private OpenLibraryAuthorId $providerAuthorId,
+        private string $provider,
         private AuthorCreditProviderSourceType $sourceType,
         private string $sourceRecordId,
         private DateTimeImmutable $observedAt
     ) {
         AuthorContributorCreditKey::normalizeObservedName($observedDisplayName);
-        $pattern = $sourceType === AuthorCreditProviderSourceType::Work
-            ? '#^/works/OL[0-9]+W$#D'
-            : '#^/books/OL[0-9]+M$#D';
-        if (preg_match($pattern, $sourceRecordId) !== 1) {
-            throw new ValidationException(
-                "Open Library contributor source record ID is invalid."
-            );
-        }
+        $this->sourceIdentity();
     }
 
     public function workId(): WorkId { return $this->workId; }
@@ -38,10 +30,7 @@ final readonly class StrongOpenLibraryAuthorCredit implements AuthorMaterializat
     {
         return $this->observedDisplayName;
     }
-    public function providerAuthorId(): OpenLibraryAuthorId
-    {
-        return $this->providerAuthorId;
-    }
+    public function provider(): string { return $this->provider; }
     public function sourceType(): AuthorCreditProviderSourceType
     {
         return $this->sourceType;
@@ -52,7 +41,7 @@ final readonly class StrongOpenLibraryAuthorCredit implements AuthorMaterializat
     public function sourceIdentity(): AuthorContributorCreditSourceIdentity
     {
         return AuthorContributorCreditSourceIdentity::provider(
-            OpenLibraryAuthorId::PROVIDER_KEY,
+            $this->provider,
             $this->sourceType->value,
             $this->sourceRecordId,
             $this->position->value()
@@ -64,10 +53,10 @@ final readonly class StrongOpenLibraryAuthorCredit implements AuthorMaterializat
     ): AuthorCreditEvidence {
         return AuthorCreditEvidence::provider(
             $creditId,
-            OpenLibraryAuthorId::PROVIDER_KEY,
+            $this->provider,
             $this->sourceType->value,
             $this->sourceRecordId,
-            $this->providerAuthorId->value(),
+            null,
             $this->observedDisplayName,
             $this->role,
             $this->position,

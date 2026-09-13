@@ -1671,13 +1671,19 @@ person identity. Evidence is preserved separately and repeated exact evidence
 updates its observation history rather than overwriting source truth.
 
 Schema `1024` provides this identity and persistence foundation. The shared
-AUTHOR-MAT-01B Core boundary can now materialize an already validated strong
-Open Library Author credit into a resolved Author, immutable claim, retained
-credit/evidence and ordered WorkContributor edge inside a caller-owned
-transaction. It never reuses by name, falls back to provisional name-only
-creation or contacts a provider. No production metadata flow calls this
-boundary yet: Add Book, generic bibliographic materialization, Search and UI
-retain their existing behavior until their separately accepted slices.
+Core boundary materializes either an already validated strong Open Library
+Author credit or a provider-observed name-only credit. Strong identity creates
+or reuses a resolved Author and immutable claim. Name-only creates a
+provisional Author and never creates or queries a provider Author claim. Both
+paths retain the exact source-scoped credit/evidence and ordered
+WorkContributor edge inside a caller-owned transaction.
+
+Exact name-only replay reuses the Author already linked to that credit,
+including an Author already resolved through the strong path. Independent
+same-name credits remain independent and never trigger a global name lookup,
+promotion or merge. No production metadata flow calls this boundary yet: Add
+Book, generic bibliographic materialization, Search and UI retain their
+existing behavior until their separately accepted slices.
 
 Library-scoped detail may include:
 - In deze bibliotheek;

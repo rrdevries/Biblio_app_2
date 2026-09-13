@@ -16,7 +16,8 @@ use Biblio\Core\Application\Metadata\Author\{
     AuthorContributorCreditVersion,
     AuthorCreditEvidence,
     AuthorCreditEvidenceSourceKind,
-    AuthorCreditReviewReason
+    AuthorCreditReviewReason,
+    AuthorMaterializationWriteDisposition
 };
 use Biblio\Core\Catalog\{AuthorId,ContributorPosition,ContributorRole,WorkId};
 use Biblio\Core\Exception\FailureReason;
@@ -126,7 +127,9 @@ final readonly class WpdbAuthorContributorCreditRepository implements
         throw new AuthorContributorCreditRace();
     }
 
-    public function observeEvidence(AuthorCreditEvidence $evidence): void
+    public function observeEvidence(
+        AuthorCreditEvidence $evidence
+    ): AuthorMaterializationWriteDisposition
     {
         $table = $this->tables->authorCreditEvidence();
         $previous = $this->database->suppress_errors(true);
@@ -158,7 +161,7 @@ final readonly class WpdbAuthorContributorCreditRepository implements
             $this->database->suppress_errors($previous);
         }
         if ($inserted === 1) {
-            return;
+            return AuthorMaterializationWriteDisposition::Created;
         }
         $writeError = $this->database->last_error;
         if (WpdbErrorTranslator::conflict($writeError) === null) {
@@ -199,6 +202,7 @@ final readonly class WpdbAuthorContributorCreditRepository implements
                 $this->database->last_error
             );
         }
+        return AuthorMaterializationWriteDisposition::Reused;
     }
 
     public function setReviewReasonIfVersionMatches(

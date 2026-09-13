@@ -13,6 +13,7 @@ use Biblio\Core\Application\Metadata\Author\{
     AuthorContributorPositionRace,
     CanonicalAuthorMaterializationIdGenerator,
     CanonicalAuthorMaterializer,
+    NameOnlyAuthorCredit,
     OpenLibraryAuthorId,
     StrongOpenLibraryAuthorCredit
 };
@@ -55,13 +56,13 @@ function runCanonicalAuthorMaterializationWorker(int $argumentCount, array $argu
     $baseCredits = new WpdbAuthorContributorCreditRepository($database, $tables);
     $barrier = new OneShotAuthorMaterializationBarrier($barrierDirectory, $token);
 
-    $authors = $mode === "edge"
+    $authors = in_array($mode, ["edge", "name_edge"], true)
         ? new BarrierAuthorRepository($baseAuthors, $barrier)
         : $baseAuthors;
     $claims = $mode === "provider"
         ? new BarrierAuthorProviderRepository($baseClaims, $barrier)
         : $baseClaims;
-    $credits = $mode === "credit"
+    $credits = in_array($mode, ["credit", "name_credit"], true)
         ? new BarrierAuthorCreditRepository($baseCredits, $barrier)
         : $baseCredits;
     $service = new CanonicalAuthorMaterializer(
@@ -71,25 +72,37 @@ function runCanonicalAuthorMaterializationWorker(int $argumentCount, array $argu
         new FixedWorkerAuthorIds($token),
         new FixedWorkerAuthorClock()
     );
-    $input = new StrongOpenLibraryAuthorCredit(
-        new WorkId($workId),
-        ContributorRole::Author,
-        new ContributorPosition((int) $position),
-        $name,
-        new OpenLibraryAuthorId($providerAuthorId),
-        AuthorCreditProviderSourceType::Work,
-        $sourceWorkId,
-        new \DateTimeImmutable("2026-09-13T11:00:00+00:00")
-    );
+    $input = str_starts_with($mode, "name_")
+        ? new NameOnlyAuthorCredit(
+            new WorkId($workId),
+            ContributorRole::Author,
+            new ContributorPosition((int) $position),
+            $name,
+            "google_books",
+            AuthorCreditProviderSourceType::Work,
+            $sourceWorkId,
+            new \DateTimeImmutable("2026-09-13T11:00:00+00:00")
+        )
+        : new StrongOpenLibraryAuthorCredit(
+            new WorkId($workId),
+            ContributorRole::Author,
+            new ContributorPosition((int) $position),
+            $name,
+            new OpenLibraryAuthorId($providerAuthorId),
+            AuthorCreditProviderSourceType::Work,
+            $sourceWorkId,
+            new \DateTimeImmutable("2026-09-13T11:00:00+00:00")
+        );
     $transactions = new WpdbTransactionManager($database);
     $races = 0;
 
     try {
         for ($attempt = 0; $attempt < 2; ++$attempt) {
             try {
-                $result = $transactions->run(
-                    fn () => $service->materializeStrongOpenLibraryAuthor($input)
-                );
+                $result = $transactions->run(fn () => $input instanceof
+                    NameOnlyAuthorCredit
+                    ? $service->materializeNameOnlyAuthor($input)
+                    : $service->materializeStrongOpenLibraryAuthor($input));
                 fwrite(STDOUT, json_encode([
                     "status" => $result->status()->value,
                     "author_id" => $result->authorId()?->value(),
@@ -169,9 +182,9 @@ final readonly class BarrierAuthorCreditRepository implements AuthorContributorC
     {
         return $this->inner->create($credit);
     }
-    public function observeEvidence(\Biblio\Core\Application\Metadata\Author\AuthorCreditEvidence $evidence): void
+    public function observeEvidence(\Biblio\Core\Application\Metadata\Author\AuthorCreditEvidence $evidence): \Biblio\Core\Application\Metadata\Author\AuthorMaterializationWriteDisposition
     {
-        $this->inner->observeEvidence($evidence);
+        return $this->inner->observeEvidence($evidence);
     }
     public function setReviewReasonIfVersionMatches(
         AuthorContributorCreditId $creditId,
@@ -205,14 +218,15 @@ final readonly class BarrierAuthorRepository implements WritableAuthorRepository
     }
     public function addContributor(WorkContributor $contributor): void
     {
-        $this->barrier->wait();
         $this->inner->addContributor($contributor);
     }
     public function find(AuthorId $authorId): ?Author { return $this->inner->find($authorId); }
     public function findMany(array $authorIds): array { return $this->inner->findMany($authorIds); }
     public function contributorsForWorks(array $workIds): array
     {
-        return $this->inner->contributorsForWorks($workIds);
+        $result = $this->inner->contributorsForWorks($workIds);
+        $this->barrier->wait();
+        return $result;
     }
     public function workIdsForAuthors(array $authorIds): array
     {

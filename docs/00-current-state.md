@@ -3161,3 +3161,29 @@ separate. Product remains `v2.001`; schema remains `1024`; Biblio Core is
 `2.16.0`; Biblio UI remains `0.17.0`. No current or historical V1 data was
 used. Closure evidence:
 `docs/88-author-mat-01b-strong-open-library-author-materialization.md`.
+
+### AUTHOR-MAT-01C — name-only provisional Author materialization
+
+Status: **GO / CLOSED**.
+
+The shared `CanonicalAuthorMaterializer` now also accepts one typed
+provider-observed name-only credit with exact Work, `author|co_author`, positive
+source position, valid observed name and stable source provenance. A new exact
+credit creates one provisional/observed Author, retained credit/evidence and
+ordered WorkContributor edge inside the caller-owned transaction. No provider
+Author claim or network lookup participates.
+
+Exact credit replay reuses its linked Author whether provisional or already
+resolved. Independent same-name credits remain separate: no global/fuzzy name
+lookup, promotion, merge or possible-duplicate inference exists. Occupied
+positions and incompatible edges fail closed with retained unresolved evidence
+and no orphan Author. Real process concurrency proves identical-credit
+convergence, independent-Work separation and deterministic same-position
+conflict with one complete retry.
+
+Strong Open Library materialization remains compatible, including its existing
+exact-credit promotion. Add Book, generic bibliographic materialization,
+Search, REST and UI remain unwired. Product remains `v2.001`; schema remains
+`1024`; Biblio Core is `2.17.0`; Biblio UI remains `0.17.0`. No current or
+historical V1 data was used. Closure evidence:
+`docs/89-author-mat-01c-name-only-provisional-materialization.md`.

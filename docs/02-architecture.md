@@ -2064,3 +2064,29 @@ without reassignment, merge, implicit reorder or partial edge mutation.
 The class is deliberately absent from production composition. No provider
 adapter, Add Book, `BibliographicMaterializationService`, Search, REST or UI
 path invokes it in 01B. Schema remains 1024.
+
+## 52. AUTHOR-MAT-01C name-only provisional Author materialization
+
+`NameOnlyAuthorCredit` is the typed provider-observation command for one exact
+Work contributor occurrence. It carries Work, `author|co_author`, positive
+source position, observed display name, validated provider/source-record
+provenance and observation time. It cannot carry a provider Author ID or a
+canonical Author ID. Both typed materialization commands implement the small
+internal `AuthorMaterializationCredit` contract so credit, evidence and
+WorkContributor rules remain shared without weakening the strong path.
+
+`CanonicalAuthorMaterializer::materializeNameOnlyAuthor()` derives the exact
+01A credit key and consults that credit only. Existing linked credit reuses its
+Author regardless of provisional/resolved state. A missing credit first checks
+the ordered edge constraints, then creates one provisional/observed Author,
+linked credit, evidence and edge. It never searches Authors by name, consults
+or writes provider Author claims, contacts a provider, promotes or merges.
+
+An occupied position or incompatible existing Author edge returns typed
+`position_conflict`. A new losing independent credit is stored unresolved with
+`structural_ambiguity` and evidence, without allocating an Author. Exact edge
+replay succeeds. Credit and edge uniqueness races escape for one complete
+caller-owned transaction retry; unknown failures roll back the whole
+operation. The typed result also exposes Author identity status and evidence
+created/reused disposition. Schema remains 1024 and production consumers
+remain unwired.
