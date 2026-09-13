@@ -7,6 +7,15 @@ namespace Biblio\Core\Application\Metadata\Discovery;
 use Biblio\Core\Application\Catalog\LocalEditionResolutionType;
 use Biblio\Core\Application\Catalog\LocalEditionResolver;
 use Biblio\Core\Application\Identity\AuthenticatedUser;
+use Biblio\Core\Application\Metadata\Author\AuthorContributorCreditRace;
+use Biblio\Core\Application\Metadata\Author\AuthorContributorPositionRace;
+use Biblio\Core\Application\Metadata\Author\AuthorIdentityPromotionRace;
+use Biblio\Core\Application\Metadata\Author\AuthorMaterializationStatus;
+use Biblio\Core\Application\Metadata\Author\AuthorProviderClaimRace;
+use Biblio\Core\Application\Metadata\Author\CanonicalAuthorMaterializationResult;
+use Biblio\Core\Application\Metadata\Author\CanonicalAuthorMaterializer;
+use Biblio\Core\Application\Metadata\Author\NameOnlyAuthorCredit;
+use Biblio\Core\Application\Metadata\Author\StrongOpenLibraryAuthorCredit;
 use Biblio\Core\Application\Metadata\MetadataCandidateId;
 use Biblio\Core\Application\Metadata\MetadataClock;
 use Biblio\Core\Application\Metadata\MetadataField;
@@ -39,6 +48,7 @@ final readonly class BibliographicMaterializationService
         private WritableWorkRepository $works,
         private WritableEditionRepository $editions,
         private MetadataFieldReviewRepository $reviews,
+        private CanonicalAuthorMaterializer $authorMaterializer,
         private BibliographicRecordIdGenerator $ids,
         private MetadataClock $clock,
         private TransactionManager $transactions
@@ -73,7 +83,14 @@ final readonly class BibliographicMaterializationService
                 fn (): BibliographicMaterializationResult =>
                     $this->materializeOnce($candidate, $intent)
             );
-        } catch (BibliographicProviderIdentityConflict|CanonicalIsbnAlreadyClaimed) {
+        } catch (
+            BibliographicProviderIdentityConflict
+            |CanonicalIsbnAlreadyClaimed
+            |AuthorProviderClaimRace
+            |AuthorContributorCreditRace
+            |AuthorContributorPositionRace
+            |AuthorIdentityPromotionRace
+        ) {
             return $this->transactions->run(
                 fn (): BibliographicMaterializationResult =>
                     $this->materializeOnce($candidate, $intent)
@@ -144,6 +161,7 @@ final readonly class BibliographicMaterializationService
                     $edition->workId()
                 );
                 $work = $this->requireWork($edition->workId());
+                $this->materializeAuthors($candidate, $work);
                 $this->recordEvidence($candidate, $work, $edition);
                 return new BibliographicMaterializationResult($work, $edition, true);
             }
@@ -192,6 +210,7 @@ final readonly class BibliographicMaterializationService
         );
 
         if ($intent === BibliographicMaterializationIntent::WorkOnly) {
+            $this->materializeAuthors($candidate, $work);
             $this->recordEvidence($candidate, $work, null);
             return new BibliographicMaterializationResult($work, null, $reused);
         }
@@ -211,8 +230,70 @@ final readonly class BibliographicMaterializationService
             }
         }
         $this->providerIdentities->claimEdition($provider, $recordId, $edition->id());
+        $this->materializeAuthors($candidate, $work);
         $this->recordEvidence($candidate, $work, $edition);
         return new BibliographicMaterializationResult($work, $edition, $reused);
+    }
+
+    private function materializeAuthors(
+        BibliographicDiscoveryCandidate $candidate,
+        Work $work
+    ): void {
+        $provider = $candidate->providerKey()
+            ?? throw new ValidationException("Author evidence lacks provider identity.");
+        $observedAt = $candidate->retrievedAt()
+            ?? throw new ValidationException("Author evidence lacks observation time.");
+
+        foreach ($candidate->authorCredits() as $credit) {
+            $openLibraryAuthorId = $credit->openLibraryAuthorId();
+            if ($openLibraryAuthorId !== null) {
+                if ($provider !== "open_library") {
+                    throw new ValidationException(
+                        "Strong Open Library Author identity has the wrong provider."
+                    );
+                }
+                $outcome = $this->authorMaterializer->materializeStrongOpenLibraryAuthor(
+                    new StrongOpenLibraryAuthorCredit(
+                        $work->id(),
+                        $credit->role(),
+                        $credit->position(),
+                        $credit->observedDisplayName(),
+                        $openLibraryAuthorId,
+                        $credit->sourceType(),
+                        $credit->sourceRecordId(),
+                        $observedAt
+                    )
+                );
+                $this->acceptAuthorOutcome($outcome);
+                continue;
+            }
+
+            $outcome = $this->authorMaterializer->materializeNameOnlyAuthor(
+                new NameOnlyAuthorCredit(
+                    $work->id(),
+                    $credit->role(),
+                    $credit->position(),
+                    $credit->observedDisplayName(),
+                    $provider,
+                    $credit->sourceType(),
+                    $credit->sourceRecordId(),
+                    $observedAt
+                )
+            );
+            $this->acceptAuthorOutcome($outcome);
+        }
+    }
+
+    private function acceptAuthorOutcome(
+        CanonicalAuthorMaterializationResult $outcome
+    ): void {
+        match ($outcome->status()) {
+            AuthorMaterializationStatus::Materialized => null,
+            // The shared materializer already retained truthful unresolved
+            // evidence and deliberately left the conflicting graph untouched.
+            AuthorMaterializationStatus::IdentityConflict,
+            AuthorMaterializationStatus::PositionConflict => null,
+        };
     }
 
     private function recordEvidence(

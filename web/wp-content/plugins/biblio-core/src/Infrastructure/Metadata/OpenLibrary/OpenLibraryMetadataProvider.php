@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Biblio\Core\Infrastructure\Metadata\OpenLibrary;
 
 use Biblio\Core\Application\Metadata\MetadataCandidate;
+use Biblio\Core\Application\Metadata\Discovery\BibliographicAuthorCredit;
+use Biblio\Core\Application\Metadata\Author\AuthorCreditProviderSourceType;
+use Biblio\Core\Application\Metadata\Author\OpenLibraryAuthorId;
 use Biblio\Core\Application\Metadata\MetadataClock;
 use Biblio\Core\Application\Metadata\MetadataMatchMethod;
 use Biblio\Core\Application\Metadata\MetadataProvider;
@@ -15,6 +18,8 @@ use Biblio\Core\Application\Metadata\ProviderHttpRequest;
 use Biblio\Core\Application\Metadata\ProviderHttpResultStatus;
 use Biblio\Core\Application\Metadata\ProviderLookupResult;
 use Biblio\Core\Catalog\CanonicalIsbnIdentity;
+use Biblio\Core\Catalog\ContributorPosition;
+use Biblio\Core\Catalog\ContributorRole;
 use Biblio\Core\Catalog\IsbnCanonicalizer;
 use InvalidArgumentException;
 use JsonException;
@@ -114,23 +119,31 @@ final readonly class OpenLibraryMetadataProvider implements MetadataProvider
                 );
             }
 
+            $recordId = $this->requiredRecordId($details);
+            $authorCredits = $this->authorCredits($details, $recordId);
+            $contributors = array_map(
+                static fn (BibliographicAuthorCredit $credit): string =>
+                    $credit->observedDisplayName(),
+                $authorCredits
+            );
             return ProviderLookupResult::candidates([
                 new MetadataCandidate(
                     self::PROVIDER_KEY,
-                    $this->requiredRecordId($details),
+                    $recordId,
                     $this->clock->now(),
                     MetadataMatchMethod::ExactIsbn,
                     $isbn,
                     $returnedIsbn,
                     $this->optionalString($details, "title", 512),
                     $this->optionalString($details, "subtitle", 512),
-                    $this->contributors($details),
+                    $contributors,
                     $this->languages($details),
                     $this->stringList($details, "publishers", 16, 255),
                     $this->optionalString($details, "publish_date", 64),
                     $this->optionalPositiveInteger($details, "number_of_pages"),
                     $this->optionalString($details, "physical_format", 128),
-                    $this->workLink($details)
+                    $this->workLink($details),
+                    $authorCredits
                 ),
             ]);
         } catch (JsonException|InvalidArgumentException) {
@@ -179,10 +192,54 @@ final readonly class OpenLibraryMetadataProvider implements MetadataProvider
         return $recordId;
     }
 
-    /** @return list<string> */
-    private function contributors(stdClass $details): array
+    /** @return list<BibliographicAuthorCredit> */
+    private function authorCredits(stdClass $details, string $recordId): array
     {
-        return $this->namedObjectList($details, "authors", "name", 32, 255);
+        if (!property_exists($details, "authors")
+            || !is_array($details->authors)
+            || !array_is_list($details->authors)) {
+            return [];
+        }
+        if (count($details->authors) > 32) {
+            throw new InvalidArgumentException("Provider Author list is outside bounds.");
+        }
+
+        $credits = [];
+        foreach ($details->authors as $offset => $entry) {
+            if (!$entry instanceof stdClass) { continue; }
+            $name = $this->softText($entry->name ?? null, 255);
+            if ($name === null) { continue; }
+
+            $authorId = null;
+            if (property_exists($entry, "key") && is_string($entry->key)) {
+                try {
+                    $authorId = new OpenLibraryAuthorId(trim($entry->key));
+                } catch (InvalidArgumentException) {
+                    $authorId = null;
+                }
+            }
+            $credits[] = new BibliographicAuthorCredit(
+                $name,
+                ContributorRole::Author,
+                new ContributorPosition($offset + 1),
+                AuthorCreditProviderSourceType::Edition,
+                $recordId,
+                $authorId
+            );
+        }
+        return $credits;
+    }
+
+    private function softText(mixed $raw, int $maximumLength): ?string
+    {
+        if (!is_string($raw)) { return null; }
+        $value = trim($raw);
+        if ($value === "" || str_contains($value, "\0")
+            || !mb_check_encoding($value, "UTF-8")
+            || mb_strlen($value) > $maximumLength) {
+            return null;
+        }
+        return $value;
     }
 
     /** @return list<string> */

@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Biblio\Core\Infrastructure\Metadata\GoogleBooks;
 
 use Biblio\Core\Application\Metadata\Discovery\BibliographicCandidateType;
+use Biblio\Core\Application\Metadata\Discovery\BibliographicAuthorCredit;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicDiscoveryCandidate;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicDiscoveryQuery;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicProviderDiscoveryResult;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicTextDiscoveryProvider;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicTextQuery;
 use Biblio\Core\Application\Metadata\MetadataClock;
+use Biblio\Core\Application\Metadata\Author\AuthorCreditProviderSourceType;
 use Biblio\Core\Application\Metadata\MetadataMatchMethod;
 use Biblio\Core\Application\Metadata\ProviderFailureReason;
 use Biblio\Core\Application\Metadata\ProviderHttpClient;
@@ -18,6 +20,8 @@ use Biblio\Core\Application\Metadata\ProviderHttpRequest;
 use Biblio\Core\Application\Metadata\ProviderHttpResultStatus;
 use Biblio\Core\Application\Metadata\ProviderLookupStatus;
 use Biblio\Core\Catalog\CanonicalIsbnIdentity;
+use Biblio\Core\Catalog\ContributorPosition;
+use Biblio\Core\Catalog\ContributorRole;
 use Biblio\Core\Catalog\IsbnCanonicalizer;
 use InvalidArgumentException;
 use JsonException;
@@ -103,10 +107,17 @@ final readonly class GoogleBooksTextDiscoveryProvider implements
                 }
                 $publisher = $this->optionalString($volume->volumeInfo, "publisher", 255);
                 $language = $this->optionalString($volume->volumeInfo, "language", 16);
+                $recordId = $this->recordId($volume);
+                $authorCredits = $this->authorCredits($volume->volumeInfo, $recordId);
+                $contributors = array_map(
+                    static fn (BibliographicAuthorCredit $credit): string =>
+                        $credit->observedDisplayName(),
+                    $authorCredits
+                );
                 $candidates[] = BibliographicDiscoveryCandidate::external(
                     BibliographicCandidateType::ExternalEdition,
                     self::PROVIDER_KEY,
-                    $this->recordId($volume),
+                    $recordId,
                     null,
                     $this->clock->now(),
                     MetadataMatchMethod::TextSearch,
@@ -114,19 +125,59 @@ final readonly class GoogleBooksTextDiscoveryProvider implements
                     $this->requiredString($volume->volumeInfo, "title", 512),
                     $this->isbn($volume->volumeInfo),
                     $this->optionalString($volume->volumeInfo, "subtitle", 512),
-                    $this->strings($volume->volumeInfo, "authors", 32, 255),
+                    $contributors,
                     $language === null ? [] : [$language],
                     $publisher === null ? [] : [$publisher],
                     $this->optionalString($volume->volumeInfo, "publishedDate", 64),
                     $this->optionalInteger($volume->volumeInfo, "pageCount"),
                     null,
-                    $order
+                    $order,
+                    $authorCredits
                 );
             }
             return BibliographicProviderDiscoveryResult::candidates($candidates);
         } catch (JsonException|InvalidArgumentException) {
             return $this->failure(ProviderLookupStatus::InvalidResponse, ProviderFailureReason::Malformed);
         }
+    }
+
+    /** @return list<BibliographicAuthorCredit> */
+    private function authorCredits(stdClass $info, string $recordId): array
+    {
+        if (!property_exists($info, "authors")
+            || !is_array($info->authors)
+            || !array_is_list($info->authors)) {
+            return [];
+        }
+        if (count($info->authors) > 32) {
+            throw new InvalidArgumentException("Provider Author list outside bounds.");
+        }
+
+        $credits = [];
+        foreach ($info->authors as $offset => $raw) {
+            $name = $this->softText($raw, 255);
+            if ($name === null) { continue; }
+            $credits[] = new BibliographicAuthorCredit(
+                $name,
+                ContributorRole::Author,
+                new ContributorPosition($offset + 1),
+                AuthorCreditProviderSourceType::Edition,
+                $recordId
+            );
+        }
+        return $credits;
+    }
+
+    private function softText(mixed $raw, int $maximumLength): ?string
+    {
+        if (!is_string($raw)) { return null; }
+        $value = trim($raw);
+        if ($value === "" || str_contains($value, "\0")
+            || !mb_check_encoding($value, "UTF-8")
+            || mb_strlen($value, "UTF-8") > $maximumLength) {
+            return null;
+        }
+        return $value;
     }
 
     private function isbn(stdClass $info): ?CanonicalIsbnIdentity
@@ -180,26 +231,6 @@ final readonly class GoogleBooksTextDiscoveryProvider implements
             throw new InvalidArgumentException("Provider text outside bounds.");
         }
         return $value;
-    }
-
-    /** @return list<string> */
-    private function strings(stdClass $object, string $field, int $maxValues, int $maxLength): array
-    {
-        if (!property_exists($object, $field) || $object->{$field} === null) { return []; }
-        if (!is_array($object->{$field}) || count($object->{$field}) > $maxValues) {
-            throw new InvalidArgumentException("Provider list outside bounds.");
-        }
-        $values = [];
-        foreach ($object->{$field} as $raw) {
-            if (!is_string($raw)) { throw new InvalidArgumentException("Invalid provider list."); }
-            $value = trim($raw);
-            if ($value === "" || !mb_check_encoding($value, "UTF-8")
-                || mb_strlen($value, "UTF-8") > $maxLength) {
-                throw new InvalidArgumentException("Provider list value outside bounds.");
-            }
-            if (!in_array($value, $values, true)) { $values[] = $value; }
-        }
-        return $values;
     }
 
     private function optionalInteger(stdClass $object, string $field): ?int

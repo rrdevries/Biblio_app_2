@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Biblio\Core\Infrastructure\Metadata\GoogleBooks;
 
 use Biblio\Core\Application\Metadata\MetadataCandidate;
+use Biblio\Core\Application\Metadata\Discovery\BibliographicAuthorCredit;
+use Biblio\Core\Application\Metadata\Author\AuthorCreditProviderSourceType;
 use Biblio\Core\Application\Metadata\MetadataClock;
 use Biblio\Core\Application\Metadata\MetadataMatchMethod;
 use Biblio\Core\Application\Metadata\MetadataProvider;
@@ -14,6 +16,8 @@ use Biblio\Core\Application\Metadata\ProviderHttpRequest;
 use Biblio\Core\Application\Metadata\ProviderHttpResultStatus;
 use Biblio\Core\Application\Metadata\ProviderLookupResult;
 use Biblio\Core\Catalog\CanonicalIsbnIdentity;
+use Biblio\Core\Catalog\ContributorPosition;
+use Biblio\Core\Catalog\ContributorRole;
 use Biblio\Core\Catalog\IsbnCanonicalizer;
 use InvalidArgumentException;
 use JsonException;
@@ -116,22 +120,30 @@ final readonly class GoogleBooksMetadataProvider implements MetadataProvider
 
                 $publisher = $this->optionalString($volume->volumeInfo, "publisher", 255);
                 $language = $this->optionalString($volume->volumeInfo, "language", 16);
+                $recordId = $this->requiredRecordId($volume);
+                $authorCredits = $this->authorCredits($volume->volumeInfo, $recordId);
+                $contributors = array_map(
+                    static fn (BibliographicAuthorCredit $credit): string =>
+                        $credit->observedDisplayName(),
+                    $authorCredits
+                );
                 $candidates[] = new MetadataCandidate(
                     self::PROVIDER_KEY,
-                    $this->requiredRecordId($volume),
+                    $recordId,
                     $this->clock->now(),
                     MetadataMatchMethod::ExactIsbn,
                     $isbn,
                     $returnedIsbn,
                     $this->optionalString($volume->volumeInfo, "title", 512),
                     $this->optionalString($volume->volumeInfo, "subtitle", 512),
-                    $this->stringList($volume->volumeInfo, "authors", 32, 255),
+                    $contributors,
                     $language === null ? [] : [$language],
                     $publisher === null ? [] : [$publisher],
                     $this->optionalString($volume->volumeInfo, "publishedDate", 64),
                     $this->optionalPositiveInteger($volume->volumeInfo, "pageCount"),
                     null,
-                    null
+                    null,
+                    $authorCredits
                 );
             }
 
@@ -141,6 +153,45 @@ final readonly class GoogleBooksMetadataProvider implements MetadataProvider
         } catch (JsonException|InvalidArgumentException) {
             return ProviderLookupResult::invalidResponse(ProviderFailureReason::Malformed);
         }
+    }
+
+    /** @return list<BibliographicAuthorCredit> */
+    private function authorCredits(stdClass $info, string $recordId): array
+    {
+        if (!property_exists($info, "authors")
+            || !is_array($info->authors)
+            || !array_is_list($info->authors)) {
+            return [];
+        }
+        if (count($info->authors) > 32) {
+            throw new InvalidArgumentException("Provider Author list is outside bounds.");
+        }
+
+        $credits = [];
+        foreach ($info->authors as $offset => $raw) {
+            $name = $this->softText($raw, 255);
+            if ($name === null) { continue; }
+            $credits[] = new BibliographicAuthorCredit(
+                $name,
+                ContributorRole::Author,
+                new ContributorPosition($offset + 1),
+                AuthorCreditProviderSourceType::Edition,
+                $recordId
+            );
+        }
+        return $credits;
+    }
+
+    private function softText(mixed $raw, int $maximumLength): ?string
+    {
+        if (!is_string($raw)) { return null; }
+        $value = trim($raw);
+        if ($value === "" || str_contains($value, "\0")
+            || !mb_check_encoding($value, "UTF-8")
+            || mb_strlen($value) > $maximumLength) {
+            return null;
+        }
+        return $value;
     }
 
     private function returnedIsbn(
@@ -218,41 +269,6 @@ final readonly class GoogleBooksMetadataProvider implements MetadataProvider
         }
 
         return $value;
-    }
-
-    /** @return list<string> */
-    private function stringList(
-        stdClass $object,
-        string $field,
-        int $maximumValues,
-        int $maximumLength
-    ): array {
-        if (!property_exists($object, $field) || $object->{$field} === null) {
-            return [];
-        }
-        if (!is_array($object->{$field}) || count($object->{$field}) > $maximumValues) {
-            throw new InvalidArgumentException("Provider list is outside bounds.");
-        }
-
-        $values = [];
-        foreach ($object->{$field} as $rawValue) {
-            if (!is_string($rawValue)) {
-                throw new InvalidArgumentException("Provider list value has an invalid type.");
-            }
-            $value = trim($rawValue);
-            if (
-                $value === ""
-                || !mb_check_encoding($value, "UTF-8")
-                || mb_strlen($value) > $maximumLength
-            ) {
-                throw new InvalidArgumentException("Provider list value is outside bounds.");
-            }
-            if (!in_array($value, $values, true)) {
-                $values[] = $value;
-            }
-        }
-
-        return $values;
     }
 
     private function requiredNonNegativeInteger(stdClass $object, string $field): int

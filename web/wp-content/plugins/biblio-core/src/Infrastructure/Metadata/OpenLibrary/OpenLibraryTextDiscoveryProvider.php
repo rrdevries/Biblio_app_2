@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace Biblio\Core\Infrastructure\Metadata\OpenLibrary;
 
 use Biblio\Core\Application\Metadata\Discovery\BibliographicCandidateType;
+use Biblio\Core\Application\Metadata\Discovery\BibliographicAuthorCredit;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicDiscoveryCandidate;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicDiscoveryQuery;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicProviderDiscoveryResult;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicTextDiscoveryProvider;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicTextQuery;
 use Biblio\Core\Application\Metadata\MetadataClock;
+use Biblio\Core\Application\Metadata\Author\AuthorCreditProviderSourceType;
+use Biblio\Core\Application\Metadata\Author\OpenLibraryAuthorId;
 use Biblio\Core\Application\Metadata\MetadataMatchMethod;
 use Biblio\Core\Application\Metadata\ProviderFailureReason;
 use Biblio\Core\Application\Metadata\ProviderHttpClient;
@@ -18,6 +21,8 @@ use Biblio\Core\Application\Metadata\ProviderHttpRequest;
 use Biblio\Core\Application\Metadata\ProviderHttpResultStatus;
 use Biblio\Core\Application\Metadata\ProviderLookupStatus;
 use Biblio\Core\Catalog\CanonicalIsbnIdentity;
+use Biblio\Core\Catalog\ContributorPosition;
+use Biblio\Core\Catalog\ContributorRole;
 use Biblio\Core\Catalog\IsbnCanonicalizer;
 use InvalidArgumentException;
 use JsonException;
@@ -48,7 +53,7 @@ final readonly class OpenLibraryTextDiscoveryProvider implements
         $request = new ProviderHttpRequest(
             "https://openlibrary.org/search.json?" . http_build_query([
                 "q" => $query->value(),
-                "fields" => "key,title,author_name",
+                "fields" => "key,title,author_name,author_key",
                 "limit" => self::MAXIMUM_WORKS,
             ], "", "&", PHP_QUERY_RFC3986),
             [
@@ -82,7 +87,12 @@ final readonly class OpenLibraryTextDiscoveryProvider implements
                 if (!$document instanceof stdClass) { return $this->malformed(); }
                 $workKey = $this->workKey($this->requiredString($document, "key", 64));
                 $title = $this->requiredString($document, "title", 512);
-                $contributors = $this->strings($document, "author_name", 32, 255);
+                $authorCredits = $this->workAuthorCredits($document, $workKey);
+                $contributors = array_map(
+                    static fn (BibliographicAuthorCredit $credit): string =>
+                        $credit->observedDisplayName(),
+                    $authorCredits
+                );
                 $candidates[] = BibliographicDiscoveryCandidate::external(
                     BibliographicCandidateType::ExternalWork,
                     self::PROVIDER_KEY,
@@ -100,13 +110,15 @@ final readonly class OpenLibraryTextDiscoveryProvider implements
                     null,
                     null,
                     null,
-                    $order++
+                    $order++,
+                    $authorCredits
                 );
                 $editions = $this->editions(
                     $workKey,
                     $identity,
                     $contributors,
-                    $order
+                    $order,
+                    $authorCredits
                 );
                 if ($editions instanceof BibliographicProviderDiscoveryResult) {
                     return $editions;
@@ -125,13 +137,15 @@ final readonly class OpenLibraryTextDiscoveryProvider implements
 
     /**
      * @param list<string> $workContributors
+     * @param list<BibliographicAuthorCredit> $workAuthorCredits
      * @return list<BibliographicDiscoveryCandidate>|BibliographicProviderDiscoveryResult
      */
     private function editions(
         string $workKey,
         BibliographicDiscoveryQuery $query,
         array $workContributors,
-        int $startOrder
+        int $startOrder,
+        array $workAuthorCredits
     ): array|BibliographicProviderDiscoveryResult {
         $request = new ProviderHttpRequest(
             "https://openlibrary.org{$workKey}/editions.json?" . http_build_query([
@@ -181,13 +195,68 @@ final readonly class OpenLibraryTextDiscoveryProvider implements
                     $this->optionalString($entry, "publish_date", 64),
                     $this->optionalInteger($entry, "number_of_pages"),
                     $this->optionalString($entry, "physical_format", 128),
-                    $startOrder + $offset
+                    $startOrder + $offset,
+                    $workAuthorCredits
                 );
             }
             return $editions;
         } catch (JsonException|InvalidArgumentException) {
             return $this->malformed();
         }
+    }
+
+    /** @return list<BibliographicAuthorCredit> */
+    private function workAuthorCredits(stdClass $document, string $workKey): array
+    {
+        if (!property_exists($document, "author_name")
+            || !is_array($document->author_name)
+            || !array_is_list($document->author_name)) {
+            return [];
+        }
+        if (count($document->author_name) > 32) {
+            throw new InvalidArgumentException("Provider Author list outside bounds.");
+        }
+        $keys = property_exists($document, "author_key")
+            && is_array($document->author_key)
+            && array_is_list($document->author_key)
+            ? $document->author_key : [];
+
+        $credits = [];
+        foreach ($document->author_name as $offset => $rawName) {
+            $name = $this->softText($rawName, 255);
+            if ($name === null) { continue; }
+
+            $authorId = null;
+            $rawKey = $keys[$offset] ?? null;
+            if (is_string($rawKey)) {
+                try {
+                    $authorId = new OpenLibraryAuthorId(trim($rawKey));
+                } catch (InvalidArgumentException) {
+                    $authorId = null;
+                }
+            }
+            $credits[] = new BibliographicAuthorCredit(
+                $name,
+                ContributorRole::Author,
+                new ContributorPosition($offset + 1),
+                AuthorCreditProviderSourceType::Work,
+                $workKey,
+                $authorId
+            );
+        }
+        return $credits;
+    }
+
+    private function softText(mixed $raw, int $maximumLength): ?string
+    {
+        if (!is_string($raw)) { return null; }
+        $value = trim($raw);
+        if ($value === "" || str_contains($value, "\0")
+            || !mb_check_encoding($value, "UTF-8")
+            || mb_strlen($value, "UTF-8") > $maximumLength) {
+            return null;
+        }
+        return $value;
     }
 
     private function isbn(stdClass $entry): ?CanonicalIsbnIdentity

@@ -58,6 +58,14 @@ final class OpenLibraryMetadataProviderTest extends TestCase
         self::assertSame("Hardcover", $candidate->format());
         self::assertSame("/works/OL12345W", $candidate->workLink()?->providerWorkKey());
         self::assertSame(MetadataWorkRelation::ExplicitLink, $candidate->workLink()?->relation());
+        self::assertSame(["/authors/OL1A", "/authors/OL2A"], array_map(
+            static fn ($credit): ?string => $credit->openLibraryAuthorId()?->value(),
+            $candidate->authorCredits()
+        ));
+        self::assertSame([1, 2], array_map(
+            static fn ($credit): int => $credit->position()->value(),
+            $candidate->authorCredits()
+        ));
 
         $request = $http->request();
         self::assertSame(
@@ -125,6 +133,7 @@ final class OpenLibraryMetadataProviderTest extends TestCase
         self::assertNull($candidate->pageCount());
         self::assertNull($candidate->format());
         self::assertNull($candidate->workLink());
+        self::assertSame([], $candidate->authorCredits());
     }
 
     public function testIsbnMismatchIsRejected(): void

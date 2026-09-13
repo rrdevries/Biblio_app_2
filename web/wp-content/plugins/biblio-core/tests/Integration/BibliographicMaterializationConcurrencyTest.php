@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Biblio\Core\Tests\Integration;
 
 use Biblio\Core\Application\Metadata\Discovery\BibliographicCandidateType;
+use Biblio\Core\Application\Metadata\Discovery\BibliographicAuthorCredit;
+use Biblio\Core\Application\Metadata\Author\AuthorCreditProviderSourceType;
+use Biblio\Core\Application\Metadata\Author\OpenLibraryAuthorId;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicDiscoveryCandidate;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicDiscoveryQuery;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicDiscoverySnapshot;
@@ -13,6 +16,8 @@ use Biblio\Core\Application\Metadata\Discovery\BibliographicTextQuery;
 use Biblio\Core\Application\Metadata\MetadataLookupId;
 use Biblio\Core\Application\Metadata\MetadataMatchMethod;
 use Biblio\Core\Catalog\CanonicalIsbnIdentity;
+use Biblio\Core\Catalog\ContributorPosition;
+use Biblio\Core\Catalog\ContributorRole;
 use Biblio\Core\Catalog\Isbn13;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbBibliographicDiscoverySnapshotRepository;
@@ -118,6 +123,70 @@ final class BibliographicMaterializationConcurrencyTest extends PersistenceInteg
         self::assertSame(1, $this->tableCount($this->tableNames->works()));
         self::assertSame(0, $this->tableCount($this->tableNames->editions()));
         self::assertSame(0, $this->tableCount($this->tableNames->items()));
+    }
+
+    public function testSameStrongAuthorAcrossTwoWorkRacesRetriesCompleteOperations(): void
+    {
+        $user = $this->createUser("bibliographic-author-race");
+        $query = BibliographicDiscoveryQuery::text(
+            new BibliographicTextQuery("Concurrent strong Author")
+        );
+        $first = $this->strongWorkCandidate($query, "/works/OL901W", "First Work");
+        $second = $this->strongWorkCandidate($query, "/works/OL902W", "Second Work");
+        $discovery = new MetadataLookupId("lookup-99999999999999999999999999999999");
+        $this->saveSnapshot($discovery, $user, $query, [$first, $second]);
+
+        $results = $this->race(
+            $user,
+            $discovery,
+            [$first->id(), $second->id()],
+            BibliographicMaterializationIntent::WorkOnly
+        );
+
+        self::assertNotSame($results[0]["work_id"], $results[1]["work_id"]);
+        self::assertSame(2, $this->tableCount($this->tableNames->works()));
+        self::assertSame(1, $this->tableCount($this->tableNames->authors()));
+        self::assertSame(2, $this->tableCount($this->tableNames->workContributors()));
+        self::assertSame(2, $this->tableCount($this->tableNames->authorContributorCredits()));
+        self::assertSame(1, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->bibliographicProviderIdentities()}` "
+                . "WHERE source_entity_type='author' AND target_type='author'"
+        ));
+    }
+
+    private function strongWorkCandidate(
+        BibliographicDiscoveryQuery $query,
+        string $workKey,
+        string $title
+    ): BibliographicDiscoveryCandidate {
+        $credit = new BibliographicAuthorCredit(
+            "Concurrent Canonical Author",
+            ContributorRole::Author,
+            new ContributorPosition(1),
+            AuthorCreditProviderSourceType::Work,
+            $workKey,
+            new OpenLibraryAuthorId("OL900A")
+        );
+        return BibliographicDiscoveryCandidate::external(
+            BibliographicCandidateType::ExternalWork,
+            "open_library",
+            $workKey,
+            $workKey,
+            new DateTimeImmutable("2026-09-10T12:00:00+00:00"),
+            MetadataMatchMethod::TextSearch,
+            $query,
+            $title,
+            null,
+            null,
+            [$credit->observedDisplayName()],
+            [],
+            [],
+            null,
+            null,
+            null,
+            0,
+            [$credit]
+        );
     }
 
     private function editionCandidate(

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Application\Metadata;
 
+use Biblio\Core\Application\Metadata\Discovery\BibliographicAuthorCredit;
 use Biblio\Core\Catalog\CanonicalIsbnIdentity;
 use DateTimeImmutable;
 use InvalidArgumentException;
@@ -14,6 +15,7 @@ final readonly class MetadataCandidate
      * @param list<string> $contributors
      * @param list<string> $languages
      * @param list<string> $publishers
+     * @param list<BibliographicAuthorCredit> $authorCredits
      */
     public function __construct(
         private string $providerKey,
@@ -30,7 +32,8 @@ final readonly class MetadataCandidate
         private ?string $publicationDate,
         private ?int $pageCount,
         private ?string $format,
-        private ?MetadataWorkLink $workLink
+        private ?MetadataWorkLink $workLink,
+        private array $authorCredits = []
     ) {
         self::assertText($providerKey, 32, "provider key");
         self::assertText($providerRecordId, 64, "provider record ID");
@@ -39,6 +42,7 @@ final readonly class MetadataCandidate
         self::assertTextList($contributors, 32, 255, "contributors");
         self::assertTextList($languages, 16, 16, "languages");
         self::assertTextList($publishers, 16, 255, "publishers");
+        self::assertAuthorCredits($authorCredits);
         self::assertOptionalText($publicationDate, 64, "publication date");
         self::assertOptionalText($format, 128, "format");
 
@@ -69,6 +73,9 @@ final readonly class MetadataCandidate
     public function pageCount(): ?int { return $this->pageCount; }
     public function format(): ?string { return $this->format; }
     public function workLink(): ?MetadataWorkLink { return $this->workLink; }
+
+    /** @return list<BibliographicAuthorCredit> */
+    public function authorCredits(): array { return $this->authorCredits; }
 
     private static function assertText(string $value, int $maximum, string $field): void
     {
@@ -102,6 +109,19 @@ final readonly class MetadataCandidate
 
         foreach ($values as $value) {
             self::assertText($value, $maximumLength, $field);
+        }
+    }
+
+    /** @param array<mixed> $credits */
+    private static function assertAuthorCredits(array $credits): void
+    {
+        if (!array_is_list($credits) || count($credits) > 32) {
+            throw new InvalidArgumentException("Invalid metadata Author credits.");
+        }
+        foreach ($credits as $credit) {
+            if (!$credit instanceof BibliographicAuthorCredit) {
+                throw new InvalidArgumentException("Invalid metadata Author credit.");
+            }
         }
     }
 }

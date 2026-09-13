@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Biblio\Core\Infrastructure\Persistence\WordPress;
 
 use Biblio\Core\Application\Metadata\Discovery\BibliographicCandidateType;
+use Biblio\Core\Application\Metadata\Discovery\BibliographicAuthorCredit;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicDiscoveryCandidate;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicDiscoveryQuery;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicDiscoverySnapshot;
@@ -14,7 +15,11 @@ use Biblio\Core\Application\Metadata\Discovery\BibliographicTextQuery;
 use Biblio\Core\Application\Metadata\MetadataCandidateId;
 use Biblio\Core\Application\Metadata\MetadataLookupId;
 use Biblio\Core\Application\Metadata\MetadataMatchMethod;
+use Biblio\Core\Application\Metadata\Author\AuthorCreditProviderSourceType;
+use Biblio\Core\Application\Metadata\Author\OpenLibraryAuthorId;
 use Biblio\Core\Catalog\CanonicalIsbnIdentity;
+use Biblio\Core\Catalog\ContributorPosition;
+use Biblio\Core\Catalog\ContributorRole;
 use Biblio\Core\Catalog\Isbn10;
 use Biblio\Core\Catalog\Isbn13;
 use Biblio\Core\Exception\FailureReason;
@@ -132,6 +137,17 @@ final readonly class WpdbBibliographicDiscoverySnapshotRepository implements
                 "page_count" => $candidate->pageCount(),
                 "format" => $candidate->format(),
                 "presentation_order" => $candidate->presentationOrder(),
+                "author_credits" => array_map(
+                    static fn (BibliographicAuthorCredit $credit): array => [
+                        "observed_display_name" => $credit->observedDisplayName(),
+                        "role" => $credit->role()->value,
+                        "position" => $credit->position()->value(),
+                        "source_type" => $credit->sourceType()->value,
+                        "source_record_id" => $credit->sourceRecordId(),
+                        "open_library_author_id" => $credit->openLibraryAuthorId()?->value(),
+                    ],
+                    $candidate->authorCredits()
+                ),
             ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         } catch (JsonException $exception) {
             throw new PersistenceException(
@@ -173,8 +189,47 @@ final readonly class WpdbBibliographicDiscoverySnapshotRepository implements
             $this->nullableString($data, "publication_date"),
             $this->nullableInt($data, "page_count"),
             $this->nullableString($data, "format"),
-            $this->integer($data, "presentation_order")
+            $this->integer($data, "presentation_order"),
+            $this->authorCredits($data)
         );
+    }
+
+    /**
+     * Old unexpired snapshots contain no typed Author evidence and remain
+     * materializable without inventing identity from their name-only copy.
+     *
+     * @param array<string,mixed> $data
+     * @return list<BibliographicAuthorCredit>
+     */
+    private function authorCredits(array $data): array
+    {
+        if (!array_key_exists("author_credits", $data)) { return []; }
+        if (!is_array($data["author_credits"]) || !array_is_list($data["author_credits"])) {
+            throw new \UnexpectedValueException("Invalid Author credits field.");
+        }
+
+        $credits = [];
+        foreach ($data["author_credits"] as $raw) {
+            if (!is_array($raw)) {
+                throw new \UnexpectedValueException("Invalid Author credit field.");
+            }
+            $providerAuthorId = $this->nullableString(
+                $raw,
+                "open_library_author_id"
+            );
+            $credits[] = new BibliographicAuthorCredit(
+                $this->string($raw, "observed_display_name"),
+                ContributorRole::from($this->string($raw, "role")),
+                new ContributorPosition($this->integer($raw, "position")),
+                AuthorCreditProviderSourceType::from(
+                    $this->string($raw, "source_type")
+                ),
+                $this->string($raw, "source_record_id"),
+                $providerAuthorId === null
+                    ? null : new OpenLibraryAuthorId($providerAuthorId)
+            );
+        }
+        return $credits;
     }
 
     /** @param array<string,mixed> $data */
