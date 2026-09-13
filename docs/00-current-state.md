@@ -3030,9 +3030,19 @@ Biblio UI remains `0.15.1`. Detailed evidence:
 
 ### SEARCH-UI-01A — full-page bibliographic search
 
-Status: **TECHNICAL GO / HUMAN VISUAL ACCEPTANCE PENDING** after the
-SEARCH-UI-01A-F1 LAB-alignment correction, complete UI/Core/browser gates and
-independent re-review.
+Status: **GO / CLOSED** after the SEARCH-UI-01A-F1 LAB-alignment correction and
+SEARCH-UI-01A-F2 polish, complete UI/Core/browser gates, independent
+re-review, and Renée human visual acceptance.
+
+Canonical decision for `/zoeken/`:
+
+`/zoeken/ searches by default in the Biblio catalog and connected
+bibliographic sources.`
+
+`The current Library is not an implicit search scope.`
+
+`Library-local search is deferred as a future explicit alternative scope
+with its own contract.`
 
 The existing App Shell now has an additive full-page Search module at the
 ordinary `/zoeken/` Page through `[biblio_search_app]`. Its only functional
@@ -3041,7 +3051,9 @@ explicit form submits title/Author text to authenticated
 compact `Zoekresultaten` hierarchy and functional `Alles`, `Boeken` and
 `Auteurs` tabs without another search request. `Alles` is a bounded Books-first
 preview; specialised tabs retain all loaded results and expose only their own
-opaque-cursor continuation.
+opaque-cursor continuation. F2 also adds right-rail scope signaling
+(`Zoeken in` → `Biblio-catalogus` + `Inclusief aangesloten bibliografische
+bronnen`), refined search field proportioning and denser portrait Work cards.
 
 The strict UI decoder retains `author_selector` and `work_selector` only as
 opaque in-memory model state. No selector/result identity appears in DOM or
@@ -3052,12 +3064,12 @@ states remain local presentation behavior.
 
 The current Soft-Ivory/Ink App Shell stays canonical. The search content now
 uses the approved LAB composition: five-item portrait Book preview where width
-allows, compact editorial Author rows and a separate desktop right rail that
-contains only truthful search help and conditional partial-failure status. At
-tablet/mobile widths the rail moves below results. No total badges, Best Match,
-Series/Collections results, filters, sort or advanced-search controls are
-fabricated. ISBN, selected-entity drill-down, URL/history state, functional
-filters and consumer actions remain follow-up.
+allows, compact editorial Author rows and a separate desktop right rail that now
+also explicitly states scope and keeps only truthful help and conditional
+partial-failure status. At tablet/mobile widths the rail moves below results.
+No total badges, Best Match, Series/Collections results, filters, sort or
+advanced-search controls are fabricated. ISBN, selected-entity drill-down,
+URL/history state, functional filters and consumer actions remain follow-up.
 
 Schema stays `1023`; Biblio Core remains `2.14.0`; Biblio UI is `0.16.1` for
 the presentation correction. No V1 data was used.

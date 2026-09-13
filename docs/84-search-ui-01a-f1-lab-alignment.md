@@ -1,7 +1,21 @@
-# SEARCH-UI-01A-F1 — LAB alignment
+# SEARCH-UI-01A-F1/F2 — LAB alignment and visual polish
 
 Date: 2026-09-13
-Status: **TECHNICAL GO — awaiting Renée human visual acceptance**
+Status: **GO / CLOSED**
+
+## 1.5 SEARCH-UI-01A-F2 — human visual polish
+
+F2 is a visual/copy polish-only pass before final human acceptance:
+
+- explicit scope communication in right rail (`Zoeken in` + `Biblio-catalogus`
+  + `Inclusief aangesloten bibliografische bronnen`);
+- heavier but bounded search control as one unit;
+- richer portrait Books preview (preview tile size/spacing and no-cover framing);
+- right rail hierarchy: scope indicator, optional partial status, then `Zoektip`;
+- clearer author source copy (`Biblio-catalogus`, `Externe bron`).
+
+No backend behavior, backend-sourced sorting/filtering controls, fake scope
+controls or ISBN routing changes are introduced.
 
 ## 1. Human QA blocker recap
 
@@ -71,10 +85,10 @@ The LAB Best Match block is therefore intentionally absent.
 ## 10. Duplicate Author-name behavior
 
 Strong-identity-only deduplication remains authoritative, so equal display
-names are never merged in the browser. The existing typed `result_kind` is
-rendered only as provider-neutral secondary context (`In Biblio` or `Uit
-bibliografische bron`). Opaque selectors, provider IDs and technical identities
-remain hidden.
+names are never merged in the browser. The existing typed source context is
+rendered as provider-neutral secondary context (`Biblio-catalogus` or `Externe
+bron`). Opaque selectors, provider IDs and technical identities remain
+hidden.
 
 ## 11. Partial failure presentation
 
@@ -118,7 +132,7 @@ Wishlist/Add Book action, drill-down or write was introduced.
 - backend totals and numeric tab badges;
 - cross-entity Best Match;
 - Series and Collections top-level search/results;
-- filters, sort, `Zoeken in`, Library scope and advanced search;
+- filters, sort, Library scope and advanced search;
 - ISBN routing and URL/history state;
 - Author-to-Works and Work-to-Editions drill-down;
 - Wishlist, Add Book, materialization and other consumer actions.
@@ -172,4 +186,4 @@ Automated and technical visual checks cannot grant the final product decision.
 The desktop, tablet and mobile evidence remains for Renée to compare directly
 with the supplied LAB baseline.
 
-**TECHNICAL GO — awaiting Renée human visual acceptance**
+**HUMAN GO**

@@ -4,8 +4,10 @@ Date: 2026-09-13
 Status: **GO / CLOSED**
 
 Post-closure note: the human visual comparison against the approved LAB image
-was NO-GO. SEARCH-UI-01A-F1 corrects the composition without changing this
-slice's backend contract; see `docs/84-search-ui-01a-f1-lab-alignment.md`.
+was NO-GO for composition details. SEARCH-UI-01A-F1 corrected that composition, and
+SEARCH-UI-01A-F2 now applies the final visual/copy polish pass (scope block,
+search control weight, cover/work preview and right-rail hierarchy) without changing
+the backend contract; see `docs/84-search-ui-01a-f1-lab-alignment.md`.
 
 ## 1. Frontend audit
 
@@ -155,7 +157,7 @@ Targeted evidence before the final closure gate:
 - isolated Biblio UI PHP smoke: pass;
 - changed PHP syntax in DDEV: pass;
 - JavaScript and Playwright spec syntax: pass;
-- guarded authenticated SEARCH-UI-01A Playwright spec: `9/9` pass, including a
+- guarded authenticated SEARCH-UI-01A Playwright spec: `11/11` pass, including a
   genuinely pending request and zero-item continuation focus;
 - visual review at 1440, 900 and 390 px: clean, portrait covers and no overflow;
 - guarded cleanup and zero-residue verification: pass;
@@ -168,7 +170,7 @@ gaps. Those findings are corrected and their focused tests pass.
 Final closure evidence:
 
 - complete Biblio UI JavaScript: `262/262` pass;
-- complete guarded Chromium: `83/83` pass, including existing Add Book,
+- complete guarded Chromium: `85/85` pass, including existing Add Book,
   Wishlist, App Shell, catalog, Book Detail and personal-flow regressions;
 - guarded double cleanup, zero residue and identical non-fixture before/after
   fingerprint: pass;
@@ -192,11 +194,11 @@ source-neutral test fixtures and create no bibliographic domain records.
 - product: `v2.001`;
 - schema: `1023`, unchanged;
 - Biblio Core: `2.14.0`, unchanged;
-- Biblio UI: `0.16.0`, bumped for the production PHP/JavaScript/CSS module.
+- Biblio UI: `0.16.1`, bumped for the production PHP/JavaScript/CSS module.
 
 ## 16. Git
 
 The slice is closed by one local commit named
-`feat: add full-page bibliographic search`, with no push to `origin/main` and a
+`fix: polish bibliographic search presentation`, with no push to `origin/main` and a
 clean working tree. Branch/ahead state, exact commit and push status are reported
 from Git after the commit.

@@ -387,7 +387,7 @@ export function createBibliographicSearchApp({
     });
     const intro = el(documentImpl, "p", {
         className: "biblio-ui__search-intro",
-        textContent: "Vind auteurs en boeken in Biblio en in aangesloten bibliografische bronnen.",
+        textContent: "Vind auteurs en boeken in de Biblio-catalogus en in aangesloten bibliografische bronnen.",
     });
     header.append(eyebrow, title, intro);
 
@@ -571,8 +571,8 @@ export function createBibliographicSearchApp({
                 el(documentImpl, "p", {
                     className: "biblio-ui__author-result-context",
                     textContent: author.result_kind === "local_canonical"
-                        ? "In Biblio"
-                        : "Uit bibliografische bron",
+                        ? "Biblio-catalogus"
+                        : "Externe bron",
                 })
             );
             list.append(item);
@@ -592,6 +592,9 @@ export function createBibliographicSearchApp({
             className: `biblio-ui__work-results${preview ? " biblio-ui__work-results--preview" : " biblio-ui__work-results--full"}`,
         });
         const works = preview ? state.works.slice(0, ALL_WORK_PREVIEW_LIMIT) : state.works;
+        if (preview && works.length <= 2) {
+            list.className = `${list.className} biblio-ui__work-results--sparse`;
+        }
         works.forEach((work, index) => {
             const item = el(documentImpl, "li", {
                 className: "biblio-ui__work-result",
@@ -602,7 +605,7 @@ export function createBibliographicSearchApp({
                 },
             });
             const cover = el(documentImpl, "div", {
-                className: "biblio-ui__cover biblio-ui__search-cover biblio-ui__cover--placeholder",
+                className: "biblio-ui__cover biblio-ui__search-cover biblio-ui__cover--placeholder biblio-ui__search-cover--empty",
                 attrs: { "aria-hidden": "true" },
             });
             cover.append(el(documentImpl, "span", {
@@ -659,6 +662,28 @@ export function createBibliographicSearchApp({
         return card;
     }
 
+    function searchScopeCard() {
+        const card = el(documentImpl, "section", {
+            className: "biblio-ui__search-rail-card biblio-ui__search-scope",
+            attrs: { "aria-labelledby": "biblio-search-scope-title" },
+        });
+        card.append(
+            el(documentImpl, "p", {
+                className: "biblio-ui__search-rail-kicker",
+                textContent: "Zoeken in",
+            }),
+            el(documentImpl, "h2", {
+                textContent: "Biblio-catalogus",
+                attrs: { id: "biblio-search-scope-title" },
+            }),
+            el(documentImpl, "p", {
+                className: "biblio-ui__search-rail-note",
+                textContent: "Inclusief aangesloten bibliografische bronnen.",
+            })
+        );
+        return card;
+    }
+
     function partialStatusCard(hasResults) {
         const card = el(documentImpl, "section", {
             className: "biblio-ui__search-rail-card biblio-ui__search-partial",
@@ -691,8 +716,9 @@ export function createBibliographicSearchApp({
         const layout = el(documentImpl, "div", { className: "biblio-ui__search-layout" });
         const rail = el(documentImpl, "aside", {
             className: "biblio-ui__search-rail",
-            attrs: { "aria-label": "Zoekhulp en zoekstatus" },
+            attrs: { "aria-label": "Zoekscope, zoekstatus en zoektip" },
         });
+        rail.append(searchScopeCard());
         if (partial) rail.append(partialStatusCard(hasResults));
         rail.append(searchTipCard());
         layout.append(main, rail);
@@ -746,7 +772,7 @@ export function createBibliographicSearchApp({
         title.textContent = hasSubmittedQuery ? "Zoekresultaten" : "Zoeken";
         intro.textContent = hasSubmittedQuery
             ? `Resultaten voor “${submittedQuery}”`
-            : "Vind auteurs en boeken in Biblio en in aangesloten bibliografische bronnen.";
+            : "Vind auteurs en boeken in de Biblio-catalogus en in aangesloten bibliografische bronnen.";
         submit.disabled = phase === "loading";
         results.setAttribute("aria-busy", phase === "loading" ? "true" : "false");
         navigation.hidden = phase !== "results";
