@@ -68,6 +68,8 @@ final readonly class CoreTableNames
     private string $bibliographicDiscoverySnapshots;
     private string $bibliographicDiscoveryCandidates;
     private string $bibliographicProviderIdentities;
+    private string $authorContributorCredits;
+    private string $authorCreditEvidence;
 
     public function __construct(string $prefix)
     {
@@ -145,8 +147,12 @@ final readonly class CoreTableNames
             . "biblio_bibliographic_discovery_candidates";
         $this->bibliographicProviderIdentities = $prefix
             . "biblio_bibliographic_provider_identities";
+        $this->authorContributorCredits = $prefix
+            . "biblio_author_contributor_credits";
+        $this->authorCreditEvidence = $prefix
+            . "biblio_author_credit_evidence";
 
-        foreach ($this->schema1023() as $tableName) {
+        foreach ($this->schema1024() as $tableName) {
             $this->assertSafe($tableName);
         }
         $this->assertSafe($this->nextReadingInsertTrigger);
@@ -614,6 +620,16 @@ final readonly class CoreTableNames
         return $this->bibliographicProviderIdentities;
     }
 
+    public function authorContributorCredits(): string
+    {
+        return $this->authorContributorCredits;
+    }
+
+    public function authorCreditEvidence(): string
+    {
+        return $this->authorCreditEvidence;
+    }
+
     /** @return list<string> */
     public function schema1023Additions(): array
     {
@@ -628,6 +644,21 @@ final readonly class CoreTableNames
     public function schema1023(): array
     {
         return [...$this->schema1022(), ...$this->schema1023Additions()];
+    }
+
+    /** @return list<string> */
+    public function schema1024Additions(): array
+    {
+        return [
+            $this->authorContributorCredits,
+            $this->authorCreditEvidence,
+        ];
+    }
+
+    /** @return list<string> */
+    public function schema1024(): array
+    {
+        return [...$this->schema1023(), ...$this->schema1024Additions()];
     }
 
     private function assertSafe(string $tableName): void

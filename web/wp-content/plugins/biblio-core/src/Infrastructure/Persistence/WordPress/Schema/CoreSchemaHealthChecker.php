@@ -53,6 +53,7 @@ final readonly class CoreSchemaHealthChecker
             1021 => $this->inspectTables($this->tableNames->schema1021(), true, 1021),
             1022 => $this->inspectTables($this->tableNames->schema1022(), true, 1022),
             1023 => $this->inspectTables($this->tableNames->schema1023(), true, 1023),
+            1024 => $this->inspectTables($this->tableNames->schema1024(), true, 1024),
             default => throw new CoreSchemaMigrationException(
                 "No explicit Biblio Core schema-health contract exists for "
                 . "schema version {$expectedVersion}."
@@ -264,6 +265,51 @@ final readonly class CoreSchemaHealthChecker
             [$this->tableNames->metadataFieldEvidence()],
             true,
             1023
+        );
+    }
+
+    public function inspectExistingSchema1024Additions(): CoreSchemaHealth
+    {
+        return $this->inspectTables(
+            $this->tableNames->schema1024Additions(),
+            false,
+            1024
+        );
+    }
+
+    public function inspectSchema1023Authors(): CoreSchemaHealth
+    {
+        return $this->inspectTables(
+            [$this->tableNames->authors()],
+            true,
+            1023
+        );
+    }
+
+    public function inspectSchema1023ProviderIdentities(): CoreSchemaHealth
+    {
+        return $this->inspectTables(
+            [$this->tableNames->bibliographicProviderIdentities()],
+            true,
+            1023
+        );
+    }
+
+    public function inspectSchema1024Authors(): CoreSchemaHealth
+    {
+        return $this->inspectTables(
+            [$this->tableNames->authors()],
+            true,
+            1024
+        );
+    }
+
+    public function inspectSchema1024ProviderIdentities(): CoreSchemaHealth
+    {
+        return $this->inspectTables(
+            [$this->tableNames->bibliographicProviderIdentities()],
+            true,
+            1024
         );
     }
 
@@ -819,6 +865,19 @@ final readonly class CoreSchemaHealthChecker
                     "nullable" => "NO",
                     "collation" => "utf8mb4_bin",
                 ],
+                ...($schemaVersion >= 1024 ? [
+                    "identity_status" => $ascii("varchar(16)") + [
+                        "default" => "provisional",
+                    ],
+                    "display_name_status" => $ascii("varchar(32)") + [
+                        "default" => "observed",
+                    ],
+                    "author_version" => [
+                        "type" => "bigint(20) unsigned",
+                        "nullable" => "NO",
+                        "default" => "1",
+                    ],
+                ] : []),
             ],
             $this->tableNames->workContributors() => [
                 "work_id" => $id,
@@ -1085,6 +1144,72 @@ final readonly class CoreSchemaHealthChecker
                 "target_type" => $ascii("varchar(16)"),
                 "work_id" => $nullableId,
                 "edition_id" => $nullableId,
+                ...($schemaVersion >= 1024 ? [
+                    "author_id" => $nullableId,
+                ] : []),
+            ],
+            $this->tableNames->authorContributorCredits() => [
+                "credit_id" => $id,
+                "credit_key" => $ascii("char(64)"),
+                "work_id" => $id,
+                "contributor_role" => $ascii("varchar(32)"),
+                "contributor_position" => [
+                    "type" => "bigint(20) unsigned",
+                    "nullable" => "NO",
+                ],
+                "observed_display_name" => [
+                    "type" => "varchar(512)",
+                    "nullable" => "NO",
+                    "collation" => "utf8mb4_bin",
+                ],
+                "normalized_name_hash" => $ascii("char(64)"),
+                "author_id" => $nullableId,
+                "materialization_status" => $ascii("varchar(16)"),
+                "review_reason" => [
+                    "type" => "varchar(32)",
+                    "nullable" => "YES",
+                    "collation" => "ascii_bin",
+                ],
+                "created_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "updated_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "credit_version" => [
+                    "type" => "bigint(20) unsigned",
+                    "nullable" => "NO",
+                ],
+            ],
+            $this->tableNames->authorCreditEvidence() => [
+                "credit_id" => $id,
+                "evidence_id" => $ascii("char(64)"),
+                "source_kind" => $ascii("varchar(32)"),
+                "source_identity" => $ascii("char(64)"),
+                "provider_key" => [
+                    "type" => "varchar(64)",
+                    "nullable" => "YES",
+                    "collation" => "ascii_bin",
+                ],
+                "source_entity_type" => [
+                    "type" => "varchar(16)",
+                    "nullable" => "YES",
+                    "collation" => "ascii_bin",
+                ],
+                "source_record_id" => $nullableId,
+                "strong_provider_author_id" => $nullableId,
+                "observed_display_name" => [
+                    "type" => "varchar(512)",
+                    "nullable" => "NO",
+                    "collation" => "utf8mb4_bin",
+                ],
+                "contributor_role" => $ascii("varchar(32)"),
+                "source_position" => [
+                    "type" => "bigint(20) unsigned",
+                    "nullable" => "NO",
+                ],
+                "first_observed_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "last_observed_at" => ["type" => "datetime(6)", "nullable" => "NO"],
+                "observation_count" => [
+                    "type" => "bigint(20) unsigned",
+                    "nullable" => "NO",
+                ],
             ],
             $this->tableNames->locations() => [
                 "library_id" => $id,
@@ -1691,6 +1816,45 @@ final readonly class CoreSchemaHealthChecker
                     "unique" => false,
                     "columns" => ["edition_id", "provider_key", "provider_record_id"],
                 ],
+                ...($schemaVersion >= 1024 ? [
+                    "bibliographic_provider_identity_by_author" => [
+                        "unique" => false,
+                        "columns" => [
+                            "author_id",
+                            "provider_key",
+                            "provider_record_id",
+                        ],
+                    ],
+                ] : []),
+            ],
+            $this->tableNames->authorContributorCredits() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["credit_id"]],
+                "author_credit_key_unique" => [
+                    "unique" => true,
+                    "columns" => ["credit_key"],
+                ],
+                "author_credit_by_work_position" => [
+                    "unique" => false,
+                    "columns" => ["work_id", "contributor_position", "credit_id"],
+                ],
+                "author_credit_by_author" => [
+                    "unique" => false,
+                    "columns" => ["author_id", "credit_id"],
+                ],
+            ],
+            $this->tableNames->authorCreditEvidence() => [
+                "PRIMARY" => [
+                    "unique" => true,
+                    "columns" => ["credit_id", "evidence_id"],
+                ],
+                "author_credit_evidence_by_provider_author" => [
+                    "unique" => false,
+                    "columns" => [
+                        "provider_key",
+                        "strong_provider_author_id",
+                        "credit_id",
+                    ],
+                ],
             ],
             $this->tableNames->locations() => [
                 "PRIMARY" => [
@@ -2171,6 +2335,24 @@ final readonly class CoreSchemaHealthChecker
             $this->tableNames->bibliographicProviderIdentities() => [
                 $restrict(["work_id"], $this->tableNames->works(), ["work_id"]),
                 $restrict(["edition_id"], $this->tableNames->editions(), ["edition_id"]),
+                ...($schemaVersion >= 1024 ? [
+                    $restrict(
+                        ["author_id"],
+                        $this->tableNames->authors(),
+                        ["author_id"]
+                    ),
+                ] : []),
+            ],
+            $this->tableNames->authorContributorCredits() => [
+                $restrict(["work_id"], $this->tableNames->works(), ["work_id"]),
+                $restrict(["author_id"], $this->tableNames->authors(), ["author_id"]),
+            ],
+            $this->tableNames->authorCreditEvidence() => [
+                $restrict(
+                    ["credit_id"],
+                    $this->tableNames->authorContributorCredits(),
+                    ["credit_id"]
+                ),
             ],
             $this->tableNames->locations() => [
                 $restrict(["library_id"], $this->tableNames->libraries(), ["library_id"]),
@@ -2379,6 +2561,11 @@ final readonly class CoreSchemaHealthChecker
             ],
             $this->tableNames->authors() => [
                 "CHAR_LENGTH(TRIM(display_name)) > 0",
+                ...($schemaVersion >= 1024 ? [
+                    "identity_status IN ('provisional','resolved')",
+                    "display_name_status IN ('observed','librarian_confirmed')",
+                    "author_version >= 1",
+                ] : []),
             ],
             $this->tableNames->workContributors() => [
                 "contributor_role IN ('author', 'co_author')",
@@ -2522,9 +2709,40 @@ final readonly class CoreSchemaHealthChecker
             ],
             $this->tableNames->bibliographicProviderIdentities() => [
                 "provider_key REGEXP '^[a-z][a-z0-9_]{0,63}$'",
-                "source_entity_type IN ('work', 'edition')",
+                $schemaVersion >= 1024
+                    ? "source_entity_type IN ('author','work','edition')"
+                    : "source_entity_type IN ('work', 'edition')",
                 "CHAR_LENGTH(TRIM(provider_record_id)) > 0",
-                "target_type = 'work' AND work_id IS NOT NULL AND edition_id IS NULL OR target_type = 'edition' AND work_id IS NULL AND edition_id IS NOT NULL",
+                $schemaVersion >= 1024
+                    ? "target_type='work' AND work_id IS NOT NULL AND edition_id IS NULL AND author_id IS NULL OR target_type='edition' AND work_id IS NULL AND edition_id IS NOT NULL AND author_id IS NULL OR target_type='author' AND work_id IS NULL AND edition_id IS NULL AND author_id IS NOT NULL"
+                    : "target_type = 'work' AND work_id IS NOT NULL AND edition_id IS NULL OR target_type = 'edition' AND work_id IS NULL AND edition_id IS NOT NULL",
+                ...($schemaVersion >= 1024 ? [
+                    "source_entity_type='author' AND target_type='author' OR source_entity_type='work' AND target_type='work' OR source_entity_type='edition' AND target_type IN ('work','edition')",
+                ] : []),
+            ],
+            $this->tableNames->authorContributorCredits() => [
+                "CHAR_LENGTH(TRIM(credit_id)) > 0",
+                "credit_key REGEXP '^[0-9a-f]{64}$'",
+                "contributor_role IN ('author','co_author')",
+                "contributor_position >= 1",
+                "CHAR_LENGTH(TRIM(observed_display_name)) > 0",
+                "normalized_name_hash REGEXP '^[0-9a-f]{64}$'",
+                "materialization_status IN ('linked','unresolved')",
+                "review_reason IS NULL OR review_reason IN ('identity_conflict','ambiguous_match','structural_ambiguity','possible_duplicate')",
+                "materialization_status='linked' AND author_id IS NOT NULL OR materialization_status='unresolved' AND author_id IS NULL AND review_reason IS NOT NULL",
+                "updated_at >= created_at",
+                "credit_version >= 1",
+            ],
+            $this->tableNames->authorCreditEvidence() => [
+                "evidence_id REGEXP '^[0-9a-f]{64}$'",
+                "source_identity REGEXP '^[0-9a-f]{64}$'",
+                "source_kind IN ('provider','user_observation','migration')",
+                "source_kind='provider' AND provider_key IS NOT NULL AND provider_key REGEXP '^[a-z][a-z0-9_]{0,63}$' AND source_entity_type IN ('work','edition') AND source_record_id IS NOT NULL AND CHAR_LENGTH(TRIM(source_record_id)) > 0 AND (strong_provider_author_id IS NULL OR CHAR_LENGTH(TRIM(strong_provider_author_id)) > 0) OR source_kind IN ('user_observation','migration') AND provider_key IS NULL AND source_entity_type IS NULL AND source_record_id IS NOT NULL AND CHAR_LENGTH(TRIM(source_record_id)) > 0 AND strong_provider_author_id IS NULL",
+                "CHAR_LENGTH(TRIM(observed_display_name)) > 0",
+                "contributor_role IN ('author','co_author')",
+                "source_position >= 1",
+                "last_observed_at >= first_observed_at",
+                "observation_count >= 1",
             ],
             $this->tableNames->locations() => [
                 "CHAR_LENGTH(TRIM(display_name)) > 0",

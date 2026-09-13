@@ -10,9 +10,18 @@ final readonly class Author
 {
     public const MAX_NAME_LENGTH = 512;
 
+    private AuthorId $id;
+    private string $displayName;
+    private AuthorIdentityStatus $identityStatus;
+    private AuthorDisplayNameStatus $displayNameStatus;
+    private AuthorVersion $version;
+
     public function __construct(
-        private AuthorId $id,
-        private string $displayName
+        AuthorId $id,
+        string $displayName,
+        AuthorIdentityStatus $identityStatus = AuthorIdentityStatus::Provisional,
+        AuthorDisplayNameStatus $displayNameStatus = AuthorDisplayNameStatus::Observed,
+        ?AuthorVersion $version = null
     ) {
         $length = preg_match_all('/./us', $displayName);
 
@@ -27,8 +36,23 @@ final readonly class Author
                 "Author name must not exceed " . self::MAX_NAME_LENGTH . " characters."
             );
         }
+
+        $this->id = $id;
+        $this->displayName = $displayName;
+        $this->identityStatus = $identityStatus;
+        $this->displayNameStatus = $displayNameStatus;
+        $this->version = $version ?? AuthorVersion::initial();
     }
 
     public function id(): AuthorId { return $this->id; }
     public function displayName(): string { return $this->displayName; }
+    public function identityStatus(): AuthorIdentityStatus
+    {
+        return $this->identityStatus;
+    }
+    public function displayNameStatus(): AuthorDisplayNameStatus
+    {
+        return $this->displayNameStatus;
+    }
+    public function version(): AuthorVersion { return $this->version; }
 }

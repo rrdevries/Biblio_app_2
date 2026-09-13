@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Biblio\Core\Tests\Integration;
 
 use Biblio\Core\Application\Catalog\Read\BibliographicRelationshipQueryService;
-use Biblio\Core\Catalog\{Author,AuthorId,CatalogRecordAlreadyExists,ContributorPosition,ContributorRole,Series,SeriesId,SeriesPosition,Work,WorkContributor,WorkId,WorkSeriesMembership};
+use Biblio\Core\Catalog\{Author,AuthorDisplayNameStatus,AuthorId,AuthorIdentityStatus,AuthorVersion,CatalogRecordAlreadyExists,ContributorPosition,ContributorRole,Series,SeriesId,SeriesPosition,Work,WorkContributor,WorkId,WorkSeriesMembership};
 use Biblio\Core\Infrastructure\Persistence\PersistenceException;
 use Biblio\Core\Infrastructure\Persistence\WordPress\{WpdbAuthorRepository,WpdbSeriesRepository,WpdbWorkRepository};
 
@@ -15,9 +15,18 @@ final class AuthorSeriesPersistenceTest extends PersistenceIntegrationTestCase
     {
         $authors = new WpdbAuthorRepository($this->database, $this->tableNames);
         $series = new WpdbSeriesRepository($this->database, $this->tableNames);
-        $authors->save(new Author(new AuthorId("author-1"), "Ursula Le Guin"));
+        $authors->add(new Author(new AuthorId("author-1"), "Ursula Le Guin"));
         $series->save(new Series(new SeriesId("series-1"), "Earthsea"));
-        $authors->save(new Author(new AuthorId("author-1"), "Ursula K. Le Guin"));
+        self::assertTrue($authors->replaceIfVersionMatches(
+            new Author(
+                new AuthorId("author-1"),
+                "Ursula K. Le Guin",
+                AuthorIdentityStatus::Resolved,
+                AuthorDisplayNameStatus::LibrarianConfirmed,
+                new AuthorVersion(2)
+            ),
+            new AuthorVersion(1)
+        ));
         $series->save(new Series(new SeriesId("series-1"), "The Earthsea Cycle"));
 
         self::assertSame("Ursula K. Le Guin", $authors->find(new AuthorId("author-1"))?->displayName());
@@ -25,7 +34,7 @@ final class AuthorSeriesPersistenceTest extends PersistenceIntegrationTestCase
         self::assertNull($authors->find(new AuthorId("missing-author")));
         self::assertNull($series->find(new SeriesId("missing-series")));
 
-        $authors->save(new Author(new AuthorId("author-2"), "Ursula K. Le Guin"));
+        $authors->add(new Author(new AuthorId("author-2"), "Ursula K. Le Guin"));
         $series->save(new Series(new SeriesId("series-2"), "The Earthsea Cycle"));
         self::assertCount(2, $authors->findMany([
             new AuthorId("author-1"),
@@ -41,8 +50,8 @@ final class AuthorSeriesPersistenceTest extends PersistenceIntegrationTestCase
     {
         [$authors, $series] = $this->repositories();
         $this->seedWorks("work-1", "work-2");
-        $authors->save(new Author(new AuthorId("author-1"), "Primary"));
-        $authors->save(new Author(new AuthorId("author-2"), "Co-author"));
+        $authors->add(new Author(new AuthorId("author-1"), "Primary"));
+        $authors->add(new Author(new AuthorId("author-2"), "Co-author"));
         $series->save(new Series(new SeriesId("series-1"), "Saga"));
         $authors->addContributor(new WorkContributor(new WorkId("work-1"), new AuthorId("author-2"), ContributorRole::CoAuthor, new ContributorPosition(2)));
         $authors->addContributor(new WorkContributor(new WorkId("work-1"), new AuthorId("author-1"), ContributorRole::Author, new ContributorPosition(1)));
@@ -89,8 +98,8 @@ final class AuthorSeriesPersistenceTest extends PersistenceIntegrationTestCase
     {
         [$authors, $series] = $this->repositories();
         $this->seedWorks("work-1");
-        $authors->save(new Author(new AuthorId("author-1"), "Author"));
-        $authors->save(new Author(new AuthorId("author-2"), "Second author"));
+        $authors->add(new Author(new AuthorId("author-1"), "Author"));
+        $authors->add(new Author(new AuthorId("author-2"), "Second author"));
         $series->save(new Series(new SeriesId("series-1"), "Series"));
         $contributor = new WorkContributor(new WorkId("work-1"), new AuthorId("author-1"), ContributorRole::Author, new ContributorPosition(1));
         $membership = new WorkSeriesMembership(new WorkId("work-1"), new SeriesId("series-1"), SeriesPosition::unknown());

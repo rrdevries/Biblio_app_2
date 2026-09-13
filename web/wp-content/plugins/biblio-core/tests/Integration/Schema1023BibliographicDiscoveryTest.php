@@ -43,6 +43,7 @@ use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchema1023Migration;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaHealthChecker;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrationException;
+use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrationRegistry;
 use Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchemaMigrator;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbBibliographicDiscoverySnapshotRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbBibliographicLocalDiscoveryRepository;
@@ -299,6 +300,7 @@ final class Schema1023BibliographicDiscoveryTest extends PersistenceIntegrationT
             $this->tableNames
         ))->inspectForVersion(1023)->isHealthy());
         update_option(CoreSchemaMigrator::VERSION_OPTION, "1023", false);
+        $this->migrateCurrentSchema();
     }
 
     public function testUnknownPartialDiscoverySchemaFailsClosedBeforeMutation(): void
@@ -336,6 +338,7 @@ final class Schema1023BibliographicDiscoveryTest extends PersistenceIntegrationT
             }
             (new CoreSchema1023Migration($this->database, $this->tableNames))->migrate();
             update_option(CoreSchemaMigrator::VERSION_OPTION, "1023", false);
+            $this->migrateCurrentSchema();
         }
     }
 
@@ -962,6 +965,18 @@ final class Schema1023BibliographicDiscoveryTest extends PersistenceIntegrationT
     private function countRows(string $table): int
     {
         return (int) $this->database->get_var("SELECT COUNT(*) FROM `{$table}`");
+    }
+
+    private function migrateCurrentSchema(): void
+    {
+        (new CoreSchemaMigrator(
+            $this->database,
+            $this->tableNames,
+            CoreSchemaMigrationRegistry::production(
+                $this->database,
+                $this->tableNames
+            )->migrations()
+        ))->migrate();
     }
 }
 

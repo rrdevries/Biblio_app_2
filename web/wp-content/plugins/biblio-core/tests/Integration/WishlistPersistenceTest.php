@@ -240,7 +240,7 @@ final class WishlistPersistenceTest extends PersistenceIntegrationTestCase
         $works->add(new Work(new WorkId("work-2"), "Work Two"));
         $editions->add(new Edition(new EditionId("edition-1a"), new WorkId("work-1"), "Edition 1A"));
         $editions->add(new Edition(new EditionId("edition-1b"), new WorkId("work-1"), "Edition 1B"));
-        $authors->save(new Author(new AuthorId("author-1"), "Author One"));
+        $authors->add(new Author(new AuthorId("author-1"), "Author One"));
         $authors->addContributor(new WorkContributor(
             new WorkId("work-1"),
             new AuthorId("author-1"),
