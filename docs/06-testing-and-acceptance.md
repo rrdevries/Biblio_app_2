@@ -3687,7 +3687,8 @@ SEARCH-UI-01B is accepted only when:
   JavaScript/PHP syntax, PHPStan, WordPress, manifest, whitespace,
   cleanup/fingerprint and independent second-review gates pass.
 
-Status: **TECHNICAL GO — awaiting Renée human interaction/visual acceptance**.
+Status: **HUMAN GO / CLOSED** after Renée's final interaction and visual
+acceptance.
 Product remains `v2.001`, schema remains `1023`, Biblio Core remains `2.14.0`
 and Biblio UI is `0.17.0`. Closure evidence is recorded in
 `docs/85-search-ui-01b-author-work-edition-drilldown.md`.
@@ -3866,3 +3867,45 @@ SEARCH-RUNTIME-01-F1 is accepted only when:
 Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1024`;
 Biblio Core is `2.19.0`; Biblio UI remains `0.17.0`. Exact evidence is recorded
 in `docs/91-search-runtime-01-f1-case-insensitive-local-matching.md`.
+
+## 116. D-SEARCH-AUTH-01 Author search presentation and disambiguation
+
+D-SEARCH-AUTH-01 is accepted when the canonical decision proves that:
+
+- ordinary users see one Author search rather than local/provider products;
+- canonical exact, canonical broader, external exact and external broader
+  presentation tiers are deterministic, server-issued match/name-group fields
+  prevent frontend normalization heuristics and presentation grouping cannot
+  create identity evidence;
+- proven provider-to-canonical identity suppresses only the mapped duplicate,
+  while unmapped same-name identities remain independently selectable and
+  composite issuance/consumption revalidate the current exact mapping;
+- `Alles` and `Auteurs` have explicit visible limits and bounded progressive
+  disclosure without a total, infinite scroll or lost continuation, including
+  an Author-only source-progress cursor after a zero-visible filtered page and
+  a `1..10` provider limit that exactly fits mixed-page remaining capacity;
+- local Work context is batchable, representative title is used only for one
+  linked Work, multi-Work copy is explicitly catalog-scoped and external
+  context needs no extra provider request;
+- external Work count and alternate-name matching/display remain absent, while
+  an unambiguous birth year and representative Work title are nullable context;
+- ordinary Author rows and selected-Author context remove technical source
+  labels without losing the truthful overall scope rail or partial-failure
+  state;
+- accessible actions distinguish same-name Authors without exposing selectors
+  or provider IDs, indistinguishable rows also receive a visible possibility
+  ordinal, and narrow/200%-reflow priority remains name, one context line,
+  action;
+- provider failure never erases canonical results or produces a false complete
+  miss, and mapped zero-visible pages retain `candidates` attempt state plus
+  continuation;
+- implementation is split across ranking/cursor/mapping, local projection,
+  provider normalization and UI rather than one cross-layer slice, while the
+  strict REST delta and frontend decoder ship atomically; and
+- no schema, runtime data, code, V1 source or implementation change enters the
+  design slice.
+
+Status: **DESIGN GO / IMPLEMENTATION NOT STARTED**. Schema remains `1024`,
+Biblio Core remains `2.19.0` and Biblio UI remains `0.17.0`. Canonical decision
+is recorded in
+`docs/92-d-search-auth-01-author-search-presentation-disambiguation.md`.

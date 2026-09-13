@@ -1,7 +1,7 @@
 # SEARCH-UI-01B — Author → Works → Editions drill-down
 
 Date: 2026-09-13
-Status: **TECHNICAL GO — awaiting Renée human interaction/visual acceptance**
+Status: **HUMAN GO / CLOSED**
 
 Task severity: **High**. A read-only frontend/REST audit preceded coding. The
 implementation stayed with one primary owner and received a separate second
@@ -189,7 +189,6 @@ fixtures.
 
 ## 12. Human acceptance
 
-Automated checks and Codex visual inspection establish technical closure only.
-Renée retains final interaction and product/visual acceptance.
+Renée completed the final interaction and visual acceptance.
 
-**TECHNICAL GO — awaiting Renée human interaction/visual acceptance**
+**HUMAN GO / CLOSED**

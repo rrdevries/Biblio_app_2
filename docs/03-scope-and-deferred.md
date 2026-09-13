@@ -240,10 +240,12 @@ The following remains deferred independently of D-SCOPE-01:
 - e-books, audiobooks, digital files, licenses and other media;
 - generic `Andere fysieke bron` outside approved source types;
 - smart Hierna-lezen availability or automatic source preference;
-- selected-Author Works and selected-Work Editions interaction from the
-  SEARCH-UI-01A top-level full-page text results; ISBN routing, real totals,
+- D-SEARCH-AUTH-01 implementation of final Author ranking, mapped duplicate
+  suppression, local/external disambiguation context and bounded progressive
+  presentation; selected-Author Works and selected-Work Editions interaction is
+  already closed through SEARCH-UI-01B, while ISBN routing, real totals,
   cross-entity Best Match, Series/Collections results, functional filter/sort
-  controls, advanced search, URL/history state and consumer actions also remain
+  controls, advanced search, URL/history state and consumer actions remain
   follow-up work;
 - popularity/collaborative filtering and black-box ranking; shared search and
   MH-DISC-01/WISH-DISC-01 keep provider order presentation-only;

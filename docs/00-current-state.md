@@ -3078,7 +3078,7 @@ Detailed scope and evidence:
 
 ### SEARCH-UI-01B — Author → Works → Editions drill-down
 
-Status: **TECHNICAL GO — awaiting Renée human interaction/visual acceptance**.
+Status: **HUMAN GO / CLOSED**.
 
 The canonical `/zoeken/` Page now adds progressive in-page drill-down from
 every top-level Author to pageable Works and from every top-level or selected-
@@ -3233,3 +3233,33 @@ king` and `STEPHEN KING` all return canonical Author
 linked Work `It`. No runtime row count changed. Product remains `v2.001`;
 schema remains `1024`; Biblio Core is `2.19.0`; Biblio UI remains `0.17.0`.
 Closure evidence: `docs/91-search-runtime-01-f1-case-insensitive-local-matching.md`.
+
+### D-SEARCH-AUTH-01 — Author search presentation and disambiguation
+
+Status: **DESIGN GO / IMPLEMENTATION NOT STARTED**.
+
+The final ordinary-user Author-search model is one provider-independent
+experience. Canonical Authors precede external candidates; within each source
+tier, conservative Unicode-case/whitespace exact display-name matches precede
+broader matches. This ranking normalization is presentation only and never
+creates Author identity, mapping or merge evidence.
+
+The approved implementation must let proven provider-to-canonical mappings
+suppress the external duplicate in favor of the canonical Author. Unmapped
+same-name identities remain separate and each `Bekijk werken` action retains
+exactly one server-issued opaque `author_selector`. Under the approved future
+presentation, individual Author rows stop using technical source labels and
+use bounded Work/date context where reliable, while the existing right rail
+continues to explain the overall search scope.
+
+The approved presentation keeps Books first and previews at most three Authors
+in `Alles`. `Auteurs` must show canonical pages first and initially no more than
+five external candidates, including no more than three exact same-name
+external candidates. Additional Authors use explicit bounded `Meer auteurs`
+disclosure with no total or infinite scroll.
+
+Implementation is deliberately split into ranking/cursor/mapped dedup, local
+batch context, external same-request context and final UI presentation. Schema
+remains `1024`; Biblio Core remains `2.19.0`; Biblio UI remains `0.17.0`. No
+current or historical V1 data was used. Canonical decision:
+`docs/92-d-search-auth-01-author-search-presentation-disambiguation.md`.
