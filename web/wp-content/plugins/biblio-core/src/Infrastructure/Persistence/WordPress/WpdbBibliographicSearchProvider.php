@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Infrastructure\Persistence\WordPress;
 
+use Biblio\Core\Application\Metadata\Search\BibliographicAuthorNameNormalizer;
 use Biblio\Core\Application\Metadata\Search\BibliographicAuthorReference;
-use Biblio\Core\Application\Metadata\Search\BibliographicAuthorSearchPage;
 use Biblio\Core\Application\Metadata\Search\BibliographicAuthorSearchProvider;
 use Biblio\Core\Application\Metadata\Search\BibliographicAuthorSearchResult;
+use Biblio\Core\Application\Metadata\Search\BibliographicAuthorSearchSourcePage;
 use Biblio\Core\Application\Metadata\Search\BibliographicSearchCursor;
 use Biblio\Core\Application\Metadata\Search\BibliographicTextSearchQuery;
 use Biblio\Core\Application\Metadata\Search\BibliographicTextSearchService;
@@ -38,20 +39,29 @@ final readonly class WpdbBibliographicSearchProvider implements
 
     public function searchAuthors(
         BibliographicTextSearchQuery $query,
-        ?BibliographicSearchCursor $cursor = null
-    ): BibliographicAuthorSearchPage {
+        int $offset = 0,
+        int $limit = BibliographicTextSearchService::PAGE_SIZE
+    ): BibliographicAuthorSearchSourcePage {
+        $this->assertAuthorSourceWindow($offset, $limit);
         $authors = $this->tables->authors();
         [$predicates, $parameters] = $this->authorPredicates($query, "a.display_name");
-        $offset = $cursor === null ? 0 : $cursor->presentationOrder() + 1;
-        array_push($parameters, BibliographicTextSearchService::PAGE_SIZE + 1, $offset);
+        array_push(
+            $parameters,
+            BibliographicAuthorNameNormalizer::normalize($query->value()),
+            $limit + 1,
+            $offset
+        );
         $rows = $this->database->get_results($this->database->prepare(
             "SELECT a.author_id,a.display_name FROM `{$authors}` a WHERE "
                 . implode(" AND ", $predicates)
-                . " ORDER BY a.display_name ASC,a.author_id ASC LIMIT %d OFFSET %d",
+                . " ORDER BY CASE WHEN LOWER(TRIM(REGEXP_REPLACE(a.display_name,"
+                . "'[[:space:]]+',' ')))=LOWER(%s) THEN 0 ELSE 1 END,"
+                . "a.display_name ASC,a.author_id ASC "
+                . "LIMIT %d OFFSET %d",
             ...$parameters
         ));
-        $hasMore = count($rows) > BibliographicTextSearchService::PAGE_SIZE;
-        if ($hasMore) { $rows = array_slice($rows, 0, BibliographicTextSearchService::PAGE_SIZE); }
+        $hasMore = count($rows) > $limit;
+        if ($hasMore) { $rows = array_slice($rows, 0, $limit); }
 
         try {
             $items = array_map(
@@ -61,19 +71,26 @@ final readonly class WpdbBibliographicSearchProvider implements
                             new AuthorId((string) $row->author_id)
                         ),
                         (string) $row->display_name,
-                        $offset + $position
+                        $offset + $position,
+                        $query
                     ),
                 $rows,
                 array_keys($rows)
             );
-            $last = $items === [] ? null : $items[array_key_last($items)];
-            return new BibliographicAuthorSearchPage(
-                $query,
+            return new BibliographicAuthorSearchSourcePage(
                 $items,
-                $hasMore && $last !== null ? $last->cursor($query) : null
+                $hasMore ? $offset + count($items) : null
             );
         } catch (Throwable $exception) {
             throw $this->invalid("Stored bibliographic Author search data is invalid.", $exception);
+        }
+    }
+
+    private function assertAuthorSourceWindow(int $offset, int $limit): void
+    {
+        if ($offset < 0 || $offset > 1000000 || $limit < 1
+            || $limit > BibliographicTextSearchService::PAGE_SIZE) {
+            throw new \InvalidArgumentException("Invalid local Author search source window.");
         }
     }
 

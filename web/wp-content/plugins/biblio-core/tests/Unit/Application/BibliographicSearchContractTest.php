@@ -7,8 +7,11 @@ namespace Biblio\Core\Tests\Unit\Application;
 use Biblio\Core\Application\Metadata\Search\{
     BibliographicAuthorReference,
     BibliographicAuthorSearchPage,
+    BibliographicAuthorSearchCursor,
+    BibliographicAuthorSearchLane,
     BibliographicAuthorSearchProvider,
     BibliographicAuthorSearchResult,
+    BibliographicAuthorSearchSourcePage,
     BibliographicAuthorSelectorCodec,
     BibliographicProviderEntityIdentity,
     BibliographicSearchProviderAttempt,
@@ -48,7 +51,8 @@ final class BibliographicSearchContractTest extends TestCase
                 BibliographicProviderEntityIdentity::author("open_library", "/authors/OL1A")
             ),
             "Ursula K. Le Guin",
-            0
+            0,
+            $query
         );
         $work = new BibliographicWorkSearchResult(
             BibliographicWorkReference::canonical(new WorkId("work-dispossessed")),
@@ -63,7 +67,15 @@ final class BibliographicSearchContractTest extends TestCase
         );
         $result = new BibliographicTextSearchResult(
             $query,
-            new BibliographicAuthorSearchPage($query, [$author], $author->cursor($query)),
+            new BibliographicAuthorSearchPage(
+                $query,
+                [$author],
+                new BibliographicAuthorSearchCursor(
+                    $query,
+                    BibliographicAuthorSearchLane::External,
+                    1
+                )
+            ),
             new BibliographicWorkSearchPage($query, [$work], $work->cursor($query)),
             [new BibliographicSearchProviderAttempt(
                 "open_library",
@@ -158,7 +170,8 @@ final class BibliographicSearchContractTest extends TestCase
         $author = new BibliographicAuthorSearchResult(
             BibliographicAuthorReference::canonical(new AuthorId("author-butler")),
             "Octavia E. Butler",
-            0
+            0,
+            $query
         );
         $work = new BibliographicWorkSearchResult(
             BibliographicWorkReference::canonical(new WorkId("work-kindred")),
@@ -194,15 +207,21 @@ final class BibliographicSearchContractTest extends TestCase
         $author = new BibliographicAuthorSearchResult(
             BibliographicAuthorReference::canonical(new AuthorId("author-jemisin")),
             "N. K. Jemisin",
-            0
+            0,
+            $query
         );
         $codec = new BibliographicSearchCursorCodec(self::CURSOR_SECRET);
-        $encoded = $codec->encode($author->cursor($query));
+        $encoded = $codec->encode(new BibliographicAuthorSearchCursor(
+            $query,
+            BibliographicAuthorSearchLane::Local,
+            1
+        ));
         $decoded = $codec->decode($encoded);
 
         self::assertSame("N. K. Jemisin", $decoded->query()->value());
         self::assertSame(BibliographicSearchGroup::Authors, $decoded->group());
-        self::assertSame($author->reference()->resultId(), $decoded->resultId());
+        self::assertInstanceOf(BibliographicAuthorSearchCursor::class, $decoded);
+        self::assertSame(1, $decoded->nextOffset());
 
         $this->expectException(ValidationException::class);
         new BibliographicTextSearchRequest(
@@ -238,10 +257,15 @@ final class BibliographicSearchContractTest extends TestCase
         $author = new BibliographicAuthorSearchResult(
             BibliographicAuthorReference::canonical(new AuthorId("author-oeb")),
             "Octavia E. Butler",
-            0
+            0,
+            $query
         );
         $codec = new BibliographicSearchCursorCodec(self::CURSOR_SECRET);
-        $encoded = $codec->encode($author->cursor($query));
+        $encoded = $codec->encode(new BibliographicAuthorSearchCursor(
+            $query,
+            BibliographicAuthorSearchLane::Local,
+            1
+        ));
         $tampered = substr($encoded, 0, -1) . (str_ends_with($encoded, "A") ? "B" : "A");
 
         $this->expectException(ValidationException::class);
@@ -263,15 +287,24 @@ final class BibliographicSearchContractTest extends TestCase
     public static function invalidSignedCursorPayloads(): iterable
     {
         $valid = [
+            "v" => 2,
+            "q" => "Dune",
+            "group" => "authors",
+            "phase" => "local",
+            "source_offset" => 10,
+            "order_contract" => BibliographicAuthorSearchCursor::ORDER_CONTRACT,
+        ];
+        yield "unknown phase" => [[...$valid, "phase" => "provider_winner"]];
+        yield "zero local source offset" => [[...$valid, "source_offset" => 0]];
+        yield "unknown cursor field" => [[...$valid, "provider" => "open_library"]];
+        yield "legacy Author cursor" => [[
             "v" => 1,
             "q" => "Dune",
             "group" => "authors",
             "kind" => "local_canonical",
             "order" => 0,
             "result_id" => "search-author-" . str_repeat("a", 64),
-        ];
-        yield "unknown result discriminator" => [[...$valid, "kind" => "provider_winner"]];
-        yield "unknown cursor field" => [[...$valid, "provider" => "open_library"]];
+        ]];
     }
 
     /** @param array<string,mixed> $payload */
@@ -317,12 +350,14 @@ final class BibliographicSearchContractTest extends TestCase
                 BibliographicProviderEntityIdentity::author("open_library", "/authors/OL2A")
             ),
             "Ursula Le Guin",
-            0
+            0,
+            $query
         );
         $local = new BibliographicAuthorSearchResult(
             BibliographicAuthorReference::canonical(new AuthorId("author-local")),
             "Ursula K. Le Guin",
-            99
+            99,
+            $query
         );
 
         $this->expectException(ValidationException::class);
@@ -393,22 +428,25 @@ final class BibliographicSearchContractTest extends TestCase
             "open_library",
             "/authors/OL6A"
         );
+        $authorQuery = new BibliographicTextSearchQuery("Ursula Le Guin");
         $mappedAuthor = new BibliographicAuthorSearchResult(
             BibliographicAuthorReference::canonical(
                 new AuthorId("author-le-guin"),
                 $authorIdentity
             ),
             "Ursula K. Le Guin",
-            0
+            0,
+            $authorQuery
         );
         $externalAuthor = new BibliographicAuthorSearchResult(
             BibliographicAuthorReference::external($authorIdentity),
             "Ursula Le Guin",
-            0
+            0,
+            $authorQuery
         );
         $this->expectException(ValidationException::class);
         new BibliographicAuthorSearchPage(
-            new BibliographicTextSearchQuery("Ursula Le Guin"),
+            $authorQuery,
             [$mappedAuthor, $externalAuthor],
             null
         );
@@ -455,9 +493,10 @@ final class BibliographicSearchContractTest extends TestCase
             public function key(): string { return "author_only"; }
             public function searchAuthors(
                 BibliographicTextSearchQuery $query,
-                ?BibliographicSearchCursor $cursor = null
-            ): BibliographicAuthorSearchPage {
-                return new BibliographicAuthorSearchPage($query, [], null);
+                int $offset = 0,
+                int $limit = 10
+            ): BibliographicAuthorSearchSourcePage {
+                return new BibliographicAuthorSearchSourcePage([], null);
             }
         };
 

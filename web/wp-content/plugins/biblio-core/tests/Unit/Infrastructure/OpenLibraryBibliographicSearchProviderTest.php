@@ -73,17 +73,41 @@ final class OpenLibraryBibliographicSearchProviderTest extends TestCase
         $query = new BibliographicTextSearchQuery("author search");
 
         $first = $provider->searchAuthors($query);
-        $second = $provider->searchAuthors($query, $first->nextCursor());
+        $second = $provider->searchAuthors($query, $first->nextOffset() ?? 0);
 
         self::assertCount(10, $first->items());
         self::assertCount(2, $second->items());
-        self::assertNull($second->nextCursor());
+        self::assertNull($second->nextOffset());
         self::assertSame(
             "/authors/OL1A",
             $first->items()[0]->reference()->providerIdentity()?->providerRecordId()
         );
         self::assertStringContainsString("/search/authors.json?", $http->requests()[0]->url());
         self::assertStringContainsString("offset=10", $http->requests()[1]->url());
+    }
+
+    public function testAuthorSearchUsesRequestedBoundedCapacityAndSourceOffset(): void
+    {
+        $http = new SearchQueueHttpClient([$this->response([
+            "numFound" => 5,
+            "start" => 0,
+            "docs" => [
+                ["key" => "OL101A", "name" => "First Author"],
+                ["key" => "OL102A", "name" => "Second Author"],
+                ["key" => "OL103A", "name" => "Third Author"],
+            ],
+        ])]);
+
+        $page = $this->provider($http)->searchAuthors(
+            new BibliographicTextSearchQuery("author"),
+            0,
+            3
+        );
+
+        self::assertCount(3, $page->items());
+        self::assertSame(3, $page->nextOffset());
+        self::assertStringContainsString("limit=3", $http->requests()[0]->url());
+        self::assertStringContainsString("offset=0", $http->requests()[0]->url());
     }
 
     public function testWorkSearchUsesOneRequestAndNeverCallsEditions(): void
@@ -163,7 +187,7 @@ final class OpenLibraryBibliographicSearchProviderTest extends TestCase
         );
 
         self::assertSame([], $page->items());
-        self::assertNull($page->nextCursor());
+        self::assertNull($page->nextOffset());
     }
 
     public function testMalformedFixturesFailClosedForBothEntityGroups(): void

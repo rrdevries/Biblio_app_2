@@ -8,6 +8,7 @@ use Biblio\Core\Application\Metadata\ProviderFailureReason;
 use Biblio\Core\Application\Metadata\ProviderLookupStatus;
 use Biblio\Core\Application\Metadata\Search\{
     BibliographicAuthorReference,
+    BibliographicAuthorProviderIdentityLookup,
     BibliographicAuthorWorkMappingLookup,
     BibliographicAuthorWorkProviderPage,
     BibliographicAuthorWorkSearchContract,
@@ -133,6 +134,7 @@ final class BibliographicAuthorWorkSearchTest extends TestCase
             new ControllableAuthenticatedUser(),
             $local,
             $external,
+            new AuthorWorkMappingFake(),
             new AuthorWorkMappingFake()
         );
 
@@ -154,7 +156,9 @@ final class BibliographicAuthorWorkSearchTest extends TestCase
         ]);
         $external = new AuthorWorkFakeProvider("open_library", []);
 
-        $page = $this->service($local, $external)->search(
+        $mapping = new AuthorWorkMappingFake();
+        $mapping->authors["/authors/OL1A"] = new AuthorId("author-paged");
+        $page = $this->service($local, $external, $mapping)->search(
             new BibliographicAuthorWorkSearchRequest(
                 BibliographicAuthorReference::canonical(new AuthorId("author-local"))
             )
@@ -181,8 +185,10 @@ final class BibliographicAuthorWorkSearchTest extends TestCase
         $external = new AuthorWorkFakeProvider("open_library", [
             $this->externalWork("/works/OL11W", "External", 0),
         ]);
+        $mapping = new AuthorWorkMappingFake();
+        $mapping->authors["/authors/OL1A"] = new AuthorId("author-paged");
 
-        $page = $this->service($local, $external)->search(
+        $page = $this->service($local, $external, $mapping)->search(
             new BibliographicAuthorWorkSearchRequest($author)
         );
 
@@ -229,7 +235,9 @@ final class BibliographicAuthorWorkSearchTest extends TestCase
         $external = new AuthorWorkFakeProvider("open_library", [
             $this->externalWork("/works/OL200W", "External continuation", 0),
         ]);
-        $service = $this->service($local, $external);
+        $mapping = new AuthorWorkMappingFake();
+        $mapping->authors["/authors/OL20A"] = new AuthorId("author-handoff");
+        $service = $this->service($local, $external, $mapping);
 
         $first = $service->search(new BibliographicAuthorWorkSearchRequest($author));
         self::assertSame(BibliographicAuthorWorkSearchLane::External, $first->nextCursor()?->lane());
@@ -260,7 +268,9 @@ final class BibliographicAuthorWorkSearchTest extends TestCase
             BibliographicProviderEntityIdentity::author("open_library", "/authors/OL3A")
         );
 
-        $page = $this->service($local, $external)->search(
+        $mapping = new AuthorWorkMappingFake();
+        $mapping->authors["/authors/OL3A"] = new AuthorId("author-mapped");
+        $page = $this->service($local, $external, $mapping)->search(
             new BibliographicAuthorWorkSearchRequest($author)
         );
 
@@ -280,6 +290,7 @@ final class BibliographicAuthorWorkSearchTest extends TestCase
         ]);
         $mapping = new AuthorWorkMappingFake();
         $mapping->mapped["/works/OL4W"] = new WorkId("work-local");
+        $mapping->authors["/authors/OL4A"] = new AuthorId("author-dedup");
         $author = BibliographicAuthorReference::canonical(
             new AuthorId("author-dedup"),
             BibliographicProviderEntityIdentity::author("open_library", "/authors/OL4A")
@@ -309,6 +320,61 @@ final class BibliographicAuthorWorkSearchTest extends TestCase
                 BibliographicProviderEntityIdentity::author("another_provider", "author-1")
             )
         ));
+    }
+
+    public function testCompositeAuthorMappingIsRevalidatedAtUseTime(): void
+    {
+        $author = BibliographicAuthorReference::canonical(
+            new AuthorId("author-current"),
+            BibliographicProviderEntityIdentity::author(
+                "open_library",
+                "/authors/OL77A"
+            )
+        );
+        $mapping = new AuthorWorkMappingFake();
+        $mapping->authors["/authors/OL77A"] = new AuthorId("author-other");
+        $local = new AuthorWorkFakeProvider("local", [
+            $this->localWork("work-must-not-be-read", "Must not be read", 0),
+        ], 1);
+
+        $this->expectException(ValidationException::class);
+        try {
+            $this->service(
+                $local,
+                new AuthorWorkFakeProvider("open_library", []),
+                $mapping
+            )->search(new BibliographicAuthorWorkSearchRequest($author));
+        } finally {
+            self::assertSame(0, $local->calls);
+        }
+    }
+
+    public function testCompositeAuthorFailsClosedWhenASecondCurrentClaimAppears(): void
+    {
+        $author = BibliographicAuthorReference::canonical(
+            new AuthorId("author-ambiguous"),
+            BibliographicProviderEntityIdentity::author(
+                "open_library",
+                "/authors/OL88A"
+            )
+        );
+        $mapping = new AuthorWorkMappingFake();
+        $mapping->authors["/authors/OL88A"] = new AuthorId("author-ambiguous");
+        $mapping->authors["/authors/OL89A"] = new AuthorId("author-ambiguous");
+        $local = new AuthorWorkFakeProvider("local", [
+            $this->localWork("work-must-not-be-read", "Must not be read", 0),
+        ], 1);
+        $external = new AuthorWorkFakeProvider("open_library", []);
+
+        $this->expectException(ValidationException::class);
+        try {
+            $this->service($local, $external, $mapping)->search(
+                new BibliographicAuthorWorkSearchRequest($author)
+            );
+        } finally {
+            self::assertSame(0, $local->calls);
+            self::assertSame(0, $external->calls);
+        }
     }
 
     public function testMismatchedExternalWorkProviderFailsClosed(): void
@@ -342,6 +408,7 @@ final class BibliographicAuthorWorkSearchTest extends TestCase
             new ControllableAuthenticatedUser(new UserId("author-work-user")),
             $local,
             $external,
+            $mapping ?? new AuthorWorkMappingFake(),
             $mapping ?? new AuthorWorkMappingFake()
         );
     }
@@ -403,9 +470,12 @@ final class AuthorWorkFakeProvider implements BibliographicAuthorWorkSearchProvi
     }
 }
 
-final class AuthorWorkMappingFake implements BibliographicAuthorWorkMappingLookup
+final class AuthorWorkMappingFake implements
+    BibliographicAuthorWorkMappingLookup,
+    BibliographicAuthorProviderIdentityLookup
 {
     /** @var array<string,WorkId> */ public array $mapped = [];
+    /** @var array<string,AuthorId> */ public array $authors = [];
     /** @var list<string> */ public array $lastRecordIds = [];
 
     public function mappedWorksForAuthor(
@@ -415,5 +485,31 @@ final class AuthorWorkMappingFake implements BibliographicAuthorWorkMappingLooku
     ): array {
         $this->lastRecordIds = $providerWorkRecordIds;
         return array_intersect_key($this->mapped, array_fill_keys($providerWorkRecordIds, true));
+    }
+
+    public function mappedAuthors(string $providerKey, array $providerAuthorRecordIds): array
+    {
+        return array_intersect_key(
+            $this->authors,
+            array_fill_keys($providerAuthorRecordIds, true)
+        );
+    }
+
+    public function providerAuthorIdentities(string $providerKey, array $authorIds): array
+    {
+        $requested = array_fill_keys(array_map(
+            static fn (AuthorId $authorId): string => $authorId->value(),
+            $authorIds
+        ), true);
+        $result = [];
+        foreach ($this->authors as $recordId => $authorId) {
+            if (isset($requested[$authorId->value()])) {
+                $result[$authorId->value()][] = BibliographicProviderEntityIdentity::author(
+                    $providerKey,
+                    $recordId
+                );
+            }
+        }
+        return $result;
     }
 }

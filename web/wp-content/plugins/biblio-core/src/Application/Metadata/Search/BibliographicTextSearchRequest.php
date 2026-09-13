@@ -8,27 +8,35 @@ use Biblio\Core\Exception\ValidationException;
 
 final readonly class BibliographicTextSearchRequest
 {
+    private ?BibliographicAuthorSearchCursor $authorCursor;
+    private ?BibliographicSearchCursor $workCursor;
+
     public function __construct(
         private BibliographicTextSearchQuery $query,
-        private ?BibliographicSearchCursor $authorCursor = null,
-        private ?BibliographicSearchCursor $workCursor = null
+        BibliographicAuthorSearchCursor|BibliographicSearchCursor|null $authorCursor = null,
+        BibliographicAuthorSearchCursor|BibliographicSearchCursor|null $workCursor = null
     ) {
-        $this->assertCursor($authorCursor, BibliographicSearchGroup::Authors);
-        $this->assertCursor($workCursor, BibliographicSearchGroup::Works);
+        if ($authorCursor !== null && !$authorCursor instanceof BibliographicAuthorSearchCursor) {
+            throw new ValidationException("Bibliographic cursor has the wrong result group.");
+        }
+        if ($workCursor instanceof BibliographicAuthorSearchCursor
+            || ($workCursor !== null && $workCursor->group() !== BibliographicSearchGroup::Works)) {
+            throw new ValidationException("Bibliographic cursor has the wrong result group.");
+        }
+        $this->assertQuery($authorCursor);
+        $this->assertQuery($workCursor);
+        $this->authorCursor = $authorCursor;
+        $this->workCursor = $workCursor;
     }
 
     public function query(): BibliographicTextSearchQuery { return $this->query; }
-    public function authorCursor(): ?BibliographicSearchCursor { return $this->authorCursor; }
+    public function authorCursor(): ?BibliographicAuthorSearchCursor { return $this->authorCursor; }
     public function workCursor(): ?BibliographicSearchCursor { return $this->workCursor; }
 
-    private function assertCursor(
-        ?BibliographicSearchCursor $cursor,
-        BibliographicSearchGroup $group
+    private function assertQuery(
+        BibliographicAuthorSearchCursor|BibliographicSearchCursor|null $cursor
     ): void {
         if ($cursor === null) { return; }
-        if ($cursor->group() !== $group) {
-            throw new ValidationException("Bibliographic cursor has the wrong result group.");
-        }
         if ($cursor->query()->value() !== $this->query->value()) {
             throw new ValidationException("Bibliographic cursor does not match the query.");
         }

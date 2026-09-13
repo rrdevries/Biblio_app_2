@@ -10,9 +10,9 @@ use Biblio\Core\Application\Metadata\ProviderHttpRequest;
 use Biblio\Core\Application\Metadata\ProviderHttpResultStatus;
 use Biblio\Core\Application\Metadata\ProviderLookupStatus;
 use Biblio\Core\Application\Metadata\Search\BibliographicAuthorReference;
-use Biblio\Core\Application\Metadata\Search\BibliographicAuthorSearchPage;
 use Biblio\Core\Application\Metadata\Search\BibliographicAuthorSearchProvider;
 use Biblio\Core\Application\Metadata\Search\BibliographicAuthorSearchResult;
+use Biblio\Core\Application\Metadata\Search\BibliographicAuthorSearchSourcePage;
 use Biblio\Core\Application\Metadata\Search\BibliographicProviderEntityIdentity;
 use Biblio\Core\Application\Metadata\Search\BibliographicSearchCursor;
 use Biblio\Core\Application\Metadata\Search\BibliographicSearchProviderFailure;
@@ -44,17 +44,21 @@ final readonly class OpenLibraryBibliographicSearchProvider implements
 
     public function searchAuthors(
         BibliographicTextSearchQuery $query,
-        ?BibliographicSearchCursor $cursor = null
-    ): BibliographicAuthorSearchPage {
-        $offset = $this->offset($cursor);
+        int $offset = 0,
+        int $limit = BibliographicTextSearchService::PAGE_SIZE
+    ): BibliographicAuthorSearchSourcePage {
+        if ($offset < 0 || $offset > 1000000 || $limit < 1
+            || $limit > BibliographicTextSearchService::PAGE_SIZE) {
+            throw new InvalidArgumentException("Invalid Author provider search source window.");
+        }
         $payload = $this->request("https://openlibrary.org/search/authors.json?" . http_build_query([
             "q" => $query->value(),
-            "limit" => BibliographicTextSearchService::PAGE_SIZE,
+            "limit" => $limit,
             "offset" => $offset,
         ], "", "&", PHP_QUERY_RFC3986));
 
         try {
-            [$found, $documents] = $this->searchPayload($payload, $offset);
+            [$found, $documents] = $this->searchPayload($payload, $offset, $limit);
             $items = [];
             foreach ($documents as $position => $document) {
                 if (!$document instanceof stdClass) {
@@ -66,15 +70,14 @@ final readonly class OpenLibraryBibliographicSearchProvider implements
                         BibliographicProviderEntityIdentity::author(self::PROVIDER_KEY, $key)
                     ),
                     $this->requiredString($document, "name", 255),
-                    $offset + $position
+                    $offset + $position,
+                    $query
                 );
             }
-            $last = $items === [] ? null : $items[array_key_last($items)];
-            $hasMore = $last !== null && $found > $offset + count($documents);
-            return new BibliographicAuthorSearchPage(
-                $query,
+            $hasMore = $items !== [] && $found > $offset + count($documents);
+            return new BibliographicAuthorSearchSourcePage(
                 $items,
-                $hasMore ? $last->cursor($query) : null
+                $hasMore ? $offset + count($documents) : null
             );
         } catch (JsonException|InvalidArgumentException) {
             throw $this->malformed();
@@ -94,7 +97,11 @@ final readonly class OpenLibraryBibliographicSearchProvider implements
         ], "", "&", PHP_QUERY_RFC3986));
 
         try {
-            [$found, $documents] = $this->searchPayload($payload, $offset);
+            [$found, $documents] = $this->searchPayload(
+                $payload,
+                $offset,
+                BibliographicTextSearchService::PAGE_SIZE
+            );
             $items = [];
             foreach ($documents as $position => $document) {
                 if (!$document instanceof stdClass) {
@@ -167,12 +174,12 @@ final readonly class OpenLibraryBibliographicSearchProvider implements
     }
 
     /** @return array{int,list<mixed>} */
-    private function searchPayload(stdClass $payload, int $offset): array
+    private function searchPayload(stdClass $payload, int $offset, int $limit): array
     {
         $found = $this->nonNegativeInteger($payload, "numFound", "num_found");
         $start = $this->nonNegativeInteger($payload, "start");
         if ($start !== $offset || !isset($payload->docs) || !is_array($payload->docs)
-            || count($payload->docs) > BibliographicTextSearchService::PAGE_SIZE
+            || count($payload->docs) > $limit
             || ($found === 0 && $payload->docs !== [])
             || ($found > $offset && $payload->docs === [])) {
             throw new InvalidArgumentException("Invalid provider search page.");

@@ -18,7 +18,8 @@ final readonly class BibliographicTextSearchService
         private BibliographicWorkSearchProvider $localWorks,
         private BibliographicAuthorSearchProvider $externalAuthors,
         private BibliographicWorkSearchProvider $externalWorks,
-        private BibliographicProviderIdentityRepository $providerIdentities
+        private BibliographicProviderIdentityRepository $providerIdentities,
+        private BibliographicAuthorProviderIdentityLookup $authorProviderIdentities
     ) {
     }
 
@@ -43,24 +44,62 @@ final readonly class BibliographicTextSearchService
     private function authors(BibliographicTextSearchRequest $request): array
     {
         $cursor = $request->authorCursor();
-        $local = $cursor?->kind() === BibliographicSearchResultKind::ExternalCandidate
-            ? new BibliographicAuthorSearchPage($request->query(), [], null)
-            : $this->localAuthors->searchAuthors($request->query(), $cursor);
+        $query = $request->query();
+        $items = [];
 
-        [$external, $attempt] = $this->externalAuthors($request->query(), $cursor);
-        if ($local->nextCursor() !== null) {
-            return [$local, [$attempt]];
+        if ($cursor?->lane() !== BibliographicAuthorSearchLane::External) {
+            $offset = $cursor?->nextOffset() ?? 0;
+            $local = $this->localAuthors->searchAuthors($query, $offset, self::PAGE_SIZE);
+            $this->assertAuthorSourceProgress($local, $offset, self::PAGE_SIZE);
+            $items = $this->canonicalAuthorEvidence($local->items());
+            if ($local->nextOffset() !== null) {
+                return [new BibliographicAuthorSearchPage(
+                    $query,
+                    $items,
+                    new BibliographicAuthorSearchCursor(
+                        $query,
+                        BibliographicAuthorSearchLane::Local,
+                        $local->nextOffset()
+                    )
+                ), []];
+            }
         }
 
-        $items = $this->deduplicateAuthors([...$local->items(), ...$external->items()]);
-        usort($items, static fn ($left, $right): int => $left->sortKey() <=> $right->sortKey());
-        $hasMore = count($items) > self::PAGE_SIZE || $external->nextCursor() !== null;
-        $items = array_slice($items, 0, self::PAGE_SIZE);
-        $next = $hasMore && $items !== []
-            ? $items[array_key_last($items)]->cursor($request->query())
-            : null;
+        $remaining = self::PAGE_SIZE - count($items);
+        if ($remaining === 0) {
+            return [new BibliographicAuthorSearchPage(
+                $query,
+                $items,
+                new BibliographicAuthorSearchCursor(
+                    $query,
+                    BibliographicAuthorSearchLane::External,
+                    0
+                )
+            ), []];
+        }
 
-        return [new BibliographicAuthorSearchPage($request->query(), $items, $next), [$attempt]];
+        $externalOffset = $cursor?->lane() === BibliographicAuthorSearchLane::External
+            ? $cursor->nextOffset()
+            : 0;
+        [$external, $attempt] = $this->externalAuthors(
+            $query,
+            $externalOffset,
+            $remaining
+        );
+        $items = $this->deduplicateAuthors([
+            ...$items,
+            ...$this->unmappedExternalAuthors($external->items()),
+        ]);
+        usort($items, static fn ($left, $right): int => $left->sortKey() <=> $right->sortKey());
+        $next = $external->nextOffset() === null
+            ? null
+            : new BibliographicAuthorSearchCursor(
+                $query,
+                BibliographicAuthorSearchLane::External,
+                $external->nextOffset()
+            );
+
+        return [new BibliographicAuthorSearchPage($query, $items, $next), [$attempt]];
     }
 
     /**
@@ -107,23 +146,22 @@ final readonly class BibliographicTextSearchService
         return [new BibliographicWorkSearchPage($request->query(), $items, $next), [$attempt]];
     }
 
-    /** @return array{BibliographicAuthorSearchPage,BibliographicSearchProviderAttempt} */
+    /** @return array{BibliographicAuthorSearchSourcePage,BibliographicSearchProviderAttempt} */
     private function externalAuthors(
         BibliographicTextSearchQuery $query,
-        ?BibliographicSearchCursor $cursor
+        int $offset,
+        int $limit
     ): array {
-        $cursor = $cursor?->kind() === BibliographicSearchResultKind::ExternalCandidate
-            ? $cursor
-            : null;
         try {
-            $page = $this->externalAuthors->searchAuthors($query, $cursor);
+            $page = $this->externalAuthors->searchAuthors($query, $offset, $limit);
+            $this->assertAuthorSourceProgress($page, $offset, $limit);
             return [$page, new BibliographicSearchProviderAttempt(
                 $this->externalAuthors->key(),
                 $page->items() === [] ? ProviderLookupStatus::Miss : ProviderLookupStatus::Candidates
             )];
         } catch (BibliographicSearchProviderFailure $failure) {
             return [
-                new BibliographicAuthorSearchPage($query, [], null),
+                new BibliographicAuthorSearchSourcePage([], null),
                 new BibliographicSearchProviderAttempt(
                     $this->externalAuthors->key(),
                     $failure->status(),
@@ -166,6 +204,78 @@ final readonly class BibliographicTextSearchService
     private function deduplicateAuthors(array $items): array
     {
         return $this->deduplicate($items);
+    }
+
+    /**
+     * @param list<BibliographicAuthorSearchResult> $items
+     * @return list<BibliographicAuthorSearchResult>
+     */
+    private function canonicalAuthorEvidence(array $items): array
+    {
+        $authorIds = [];
+        foreach ($items as $item) {
+            $authorId = $item->reference()->authorId();
+            if ($authorId !== null) { $authorIds[] = $authorId; }
+        }
+        if ($authorIds === []) { return $items; }
+        $claims = $this->authorProviderIdentities->providerAuthorIdentities(
+            $this->externalAuthors->key(),
+            $authorIds
+        );
+        return array_map(
+            static function (BibliographicAuthorSearchResult $item) use ($claims): BibliographicAuthorSearchResult {
+                $authorId = $item->reference()->authorId();
+                if ($authorId === null) { return $item; }
+                $identities = $claims[$authorId->value()] ?? [];
+                if (count($identities) !== 1) { return $item; }
+                return $item->withReference(
+                    BibliographicAuthorReference::canonical($authorId, $identities[0])
+                );
+            },
+            $items
+        );
+    }
+
+    /**
+     * @param list<BibliographicAuthorSearchResult> $items
+     * @return list<BibliographicAuthorSearchResult>
+     */
+    private function unmappedExternalAuthors(array $items): array
+    {
+        $recordIds = [];
+        foreach ($items as $item) {
+            $identity = $item->reference()->providerIdentity();
+            if ($identity !== null && $identity->providerKey() === $this->externalAuthors->key()) {
+                $recordIds[] = $identity->providerRecordId();
+            }
+        }
+        if ($recordIds === []) { return $items; }
+        $mapped = $this->authorProviderIdentities->mappedAuthors(
+            $this->externalAuthors->key(),
+            array_values(array_unique($recordIds))
+        );
+        return array_values(array_filter(
+            $items,
+            static function (BibliographicAuthorSearchResult $item) use ($mapped): bool {
+                $recordId = $item->reference()->providerIdentity()?->providerRecordId();
+                return $recordId === null || !isset($mapped[$recordId]);
+            }
+        ));
+    }
+
+    private function assertAuthorSourceProgress(
+        BibliographicAuthorSearchSourcePage $page,
+        int $offset,
+        int $limit
+    ): void {
+        if (count($page->items()) > $limit) {
+            throw new \LogicException("Bibliographic Author source exceeded requested capacity.");
+        }
+        $nextOffset = $page->nextOffset();
+        if ($nextOffset !== null
+            && ($page->items() === [] || $nextOffset !== $offset + count($page->items()))) {
+            throw new \LogicException("Bibliographic Author source did not advance exactly.");
+        }
     }
 
     /**

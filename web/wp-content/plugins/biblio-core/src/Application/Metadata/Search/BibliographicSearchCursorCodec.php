@@ -9,7 +9,8 @@ use Throwable;
 
 final readonly class BibliographicSearchCursorCodec
 {
-    private const int VERSION = 1;
+    private const int WORK_VERSION = 1;
+    private const int AUTHOR_VERSION = 2;
     private const int MAXIMUM_ENCODED_LENGTH = 2048;
 
     public function __construct(private string $secret)
@@ -21,16 +22,32 @@ final readonly class BibliographicSearchCursorCodec
         }
     }
 
-    public function encode(BibliographicSearchCursor $cursor): string
+    public function encode(
+        BibliographicAuthorSearchCursor|BibliographicSearchCursor $cursor
+    ): string
     {
-        $json = json_encode([
-            "v" => self::VERSION,
-            "q" => $cursor->query()->value(),
-            "group" => $cursor->group()->value,
-            "kind" => $cursor->kind()->value,
-            "order" => $cursor->presentationOrder(),
-            "result_id" => $cursor->resultId(),
-        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
+        $data = $cursor instanceof BibliographicAuthorSearchCursor
+            ? [
+                "v" => self::AUTHOR_VERSION,
+                "q" => $cursor->query()->value(),
+                "group" => BibliographicSearchGroup::Authors->value,
+                "phase" => $cursor->lane()->value,
+                "source_offset" => $cursor->nextOffset(),
+                "order_contract" => BibliographicAuthorSearchCursor::ORDER_CONTRACT,
+            ]
+            : [
+                "v" => self::WORK_VERSION,
+                "q" => $cursor->query()->value(),
+                "group" => $cursor->group()->value,
+                "kind" => $cursor->kind()->value,
+                "order" => $cursor->presentationOrder(),
+                "result_id" => $cursor->resultId(),
+            ];
+        if (!$cursor instanceof BibliographicAuthorSearchCursor
+            && $cursor->group() === BibliographicSearchGroup::Authors) {
+            throw new ValidationException("Legacy bibliographic Author cursors cannot be issued.");
+        }
+        $json = json_encode($data, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
 
         $payload = $this->base64UrlEncode($json);
         $signature = $this->base64UrlEncode(
@@ -40,7 +57,9 @@ final readonly class BibliographicSearchCursorCodec
         return $payload . "." . $signature;
     }
 
-    public function decode(string $encoded): BibliographicSearchCursor
+    public function decode(
+        string $encoded
+    ): BibliographicAuthorSearchCursor|BibliographicSearchCursor
     {
         try {
             if ($encoded === "" || strlen($encoded) > self::MAXIMUM_ENCODED_LENGTH) {
@@ -59,20 +78,37 @@ final readonly class BibliographicSearchCursorCodec
             }
             $json = $this->base64UrlDecode($payload);
             $payload = json_decode($json, true, 8, JSON_THROW_ON_ERROR);
-            if (!is_array($payload)
+            if (!is_array($payload) || !isset($payload["v"]) || !is_int($payload["v"])) {
+                throw new ValidationException("Invalid bibliographic search cursor.");
+            }
+            if ($payload["v"] === self::AUTHOR_VERSION) {
+                if (array_keys($payload) !== [
+                    "v", "q", "group", "phase", "source_offset", "order_contract",
+                ] || !is_string($payload["q"])
+                    || $payload["group"] !== BibliographicSearchGroup::Authors->value
+                    || !is_string($payload["phase"])
+                    || !is_int($payload["source_offset"])
+                    || $payload["order_contract"] !== BibliographicAuthorSearchCursor::ORDER_CONTRACT) {
+                    throw new ValidationException("Invalid bibliographic search cursor.");
+                }
+                return new BibliographicAuthorSearchCursor(
+                    new BibliographicTextSearchQuery($payload["q"]),
+                    BibliographicAuthorSearchLane::from($payload["phase"]),
+                    $payload["source_offset"]
+                );
+            }
+            if ($payload["v"] !== self::WORK_VERSION
                 || array_keys($payload) !== ["v", "q", "group", "kind", "order", "result_id"]
-                || $payload["v"] !== self::VERSION
                 || !is_string($payload["q"])
-                || !is_string($payload["group"])
+                || $payload["group"] !== BibliographicSearchGroup::Works->value
                 || !is_string($payload["kind"])
                 || !is_int($payload["order"])
                 || !is_string($payload["result_id"])) {
                 throw new ValidationException("Invalid bibliographic search cursor.");
             }
-
             return new BibliographicSearchCursor(
                 new BibliographicTextSearchQuery($payload["q"]),
-                BibliographicSearchGroup::from($payload["group"]),
+                BibliographicSearchGroup::Works,
                 BibliographicSearchResultKind::from($payload["kind"]),
                 $payload["order"],
                 $payload["result_id"]

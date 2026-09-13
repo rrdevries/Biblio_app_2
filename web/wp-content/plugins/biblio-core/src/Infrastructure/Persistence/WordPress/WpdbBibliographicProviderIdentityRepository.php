@@ -10,6 +10,7 @@ use Biblio\Core\Application\Metadata\Author\AuthorProviderClaimRace;
 use Biblio\Core\Application\Metadata\Author\AuthorProviderIdentityConflict;
 use Biblio\Core\Application\Metadata\Author\AuthorProviderIdentityRepository;
 use Biblio\Core\Application\Metadata\Search\BibliographicProviderEntityIdentity;
+use Biblio\Core\Application\Metadata\Search\BibliographicAuthorProviderIdentityLookup;
 use Biblio\Core\Application\Metadata\Search\BibliographicAuthorWorkMappingLookup;
 use Biblio\Core\Application\Metadata\Search\BibliographicWorkProviderIdentityLookup;
 use Biblio\Core\Catalog\AuthorId;
@@ -20,6 +21,7 @@ use wpdb;
 final readonly class WpdbBibliographicProviderIdentityRepository implements
     BibliographicProviderIdentityRepository,
     AuthorProviderIdentityRepository,
+    BibliographicAuthorProviderIdentityLookup,
     BibliographicAuthorWorkMappingLookup,
     BibliographicWorkProviderIdentityLookup
 {
@@ -57,6 +59,59 @@ final readonly class WpdbBibliographicProviderIdentityRepository implements
             $recordId
         ));
         return is_string($value) ? new AuthorId($value) : null;
+    }
+
+    public function mappedAuthors(string $providerKey, array $providerAuthorRecordIds): array
+    {
+        if ($providerAuthorRecordIds === []) { return []; }
+        $providerAuthorRecordIds = array_values(array_unique($providerAuthorRecordIds));
+        if (count($providerAuthorRecordIds) > 10) {
+            throw new \InvalidArgumentException("Author mapping batch exceeds search page size.");
+        }
+        $placeholders = implode(",", array_fill(0, count($providerAuthorRecordIds), "%s"));
+        $rows = $this->database->get_results($this->database->prepare(
+            "SELECT provider_record_id,author_id "
+                . "FROM `{$this->tables->bibliographicProviderIdentities()}` "
+                . "WHERE provider_key=%s AND source_entity_type='author' "
+                . "AND target_type='author' AND provider_record_id IN ({$placeholders})",
+            $providerKey,
+            ...$providerAuthorRecordIds
+        ));
+        $result = [];
+        foreach ($rows as $row) {
+            $result[(string) $row->provider_record_id] = new AuthorId((string) $row->author_id);
+        }
+        return $result;
+    }
+
+    public function providerAuthorIdentities(string $providerKey, array $authorIds): array
+    {
+        if ($authorIds === []) { return []; }
+        $values = array_values(array_unique(array_map(
+            static fn (AuthorId $authorId): string => $authorId->value(),
+            $authorIds
+        )));
+        if (count($values) > 10) {
+            throw new \InvalidArgumentException("Author claim batch exceeds search page size.");
+        }
+        $placeholders = implode(",", array_fill(0, count($values), "%s"));
+        $rows = $this->database->get_results($this->database->prepare(
+            "SELECT author_id,provider_record_id "
+                . "FROM `{$this->tables->bibliographicProviderIdentities()}` "
+                . "WHERE provider_key=%s AND source_entity_type='author' "
+                . "AND target_type='author' AND author_id IN ({$placeholders}) "
+                . "ORDER BY author_id,provider_record_id",
+            $providerKey,
+            ...$values
+        ));
+        $result = [];
+        foreach ($rows as $row) {
+            $result[(string) $row->author_id][] = BibliographicProviderEntityIdentity::author(
+                $providerKey,
+                (string) $row->provider_record_id
+            );
+        }
+        return $result;
     }
 
     public function providerWorkIdentities(WorkId $workId, string $providerKey): array
