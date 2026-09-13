@@ -249,10 +249,11 @@ The following remains deferred independently of D-SCOPE-01:
   MH-DISC-01/WISH-DISC-01 keep provider order presentation-only;
 - automatic central Work/Author/Series merge, broad bibliographic editing,
   record fusion, OCR/vision, community Metadata Graph and paid-feed expansion;
-- AUTHOR-MAT-01B through 01E: strong-provider and name-only Author
-  materialization, consumer cutover, promotion/reconciliation and governance;
-  schema-1024 claim/credit/evidence persistence is implemented in 01A but no
-  production flow creates Authors or WorkContributor edges from metadata yet;
+- AUTHOR-MAT-01C through 01E: name-only Author materialization, consumer
+  cutover and broader promotion/reconciliation/governance; 01B implements the
+  strong Open Library Core boundary over schema-1024 claims/credits/evidence,
+  but no production flow invokes it or creates Authors/WorkContributor edges
+  from metadata yet;
 - generic Relationship management UI;
 - public profiles and public/shared Hierna lezen;
 - advanced-search implementation unless measured need proves it necessary;

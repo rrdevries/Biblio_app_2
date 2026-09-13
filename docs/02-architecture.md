@@ -2036,3 +2036,31 @@ conservatively backfills existing Authors to `provisional`, `observed`, version
 `1` without merging names or fabricating claims. No materializer, provider
 adapter change, WorkContributor write, Add Book/Search/UI mutation or V1
 source logic is part of this architecture slice.
+
+## 51. AUTHOR-MAT-01B strong Open Library Author materialization
+
+`CanonicalAuthorMaterializer` is a provider-payload-free Core application
+boundary over typed `StrongOpenLibraryAuthorCredit`. `OpenLibraryAuthorId`
+normalizes `OL…A` to `/authors/OL…A` and rejects Work/Edition keys, URLs and
+arbitrary strings. The source side is independently typed as an Open Library
+Work or Edition record with exact provider record shape and source position.
+
+The boundary joins, but never opens, the caller-owned transaction. It derives
+the 01A credit key, resolves the immutable provider Author claim, inserts a
+resolved/observed Author only when needed, persists the linked or structurally
+unresolved credit and deterministic evidence, and creates/reuses the exact
+ordered WorkContributor edge. Existing claim and exact-credit paths never use
+display-name equality and never overwrite canonical display names. Exact
+credit proof may attach the previously absent claim and monotonically promote
+that same provisional Author using its versioned replacement contract.
+
+Expected unique races remain explicit
+`AuthorProviderClaimRace|AuthorContributorCreditRace|AuthorContributorPositionRace`
+or `AuthorIdentityPromotionRace`; the outer transaction owner rolls back and
+may retry the complete operation once. Semantic identity and structural
+position conflicts are typed result statuses so their evidence can commit
+without reassignment, merge, implicit reorder or partial edge mutation.
+
+The class is deliberately absent from production composition. No provider
+adapter, Add Book, `BibliographicMaterializationService`, Search, REST or UI
+path invokes it in 01B. Schema remains 1024.

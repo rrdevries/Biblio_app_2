@@ -3126,10 +3126,38 @@ retry identity while independent same-name observations remain independent.
 Separate deterministic evidence preserves source truth and repeated
 observation history.
 
-This slice adds persistence contracts only. It does not create Authors from
-metadata, write WorkContributor edges, call providers, alter Add Book or
-generic materialization, or add Search/UI writes. AUTHOR-MAT-01B through 01E
-remain separate consumer/materialization/governance slices. Product remains
+This slice added persistence contracts only. AUTHOR-MAT-01B subsequently added
+the still-unwired strong Open Library Core materialization boundary; it did not
+alter Add Book, generic materialization or Search/UI behavior. AUTHOR-MAT-01C
+through 01E remain separate consumer/materialization/governance slices.
+Product remains
 `v2.001`; schema is `1024`; Biblio Core is `2.15.0`; Biblio UI remains
 `0.17.0`. No current or historical V1 data was used. Closure evidence:
 `docs/87-author-mat-01a-author-identity-persistence-foundation.md`.
+
+### AUTHOR-MAT-01B — strong Open Library Author materialization
+
+Status: **GO / CLOSED**.
+
+Core now has one shared, typed `CanonicalAuthorMaterializer` for an already
+validated strong Open Library Author credit. It accepts only an exact Work,
+`author|co_author`, positive source position, observed display name, canonical
+`/authors/OL…A` identity and stable Open Library Work/Edition provenance. It
+does no lookup or provider HTTP request.
+
+The caller-owned transaction creates or reuses one resolved canonical Author,
+one immutable provider Author claim, one source-scoped contributor credit and
+evidence, and one ordered WorkContributor edge. Provider identity—not display
+name—controls reuse. Alternate observed names remain evidence; equal names on
+different provider IDs remain separate. Exact strong-credit proof may promote
+the linked provisional Author in place without changing its ID or display
+name. Claim and position conflicts fail closed with typed outcomes and retained
+evidence; expected claim/credit/position/promotion races escape for one complete
+outer-transaction retry.
+
+No Open Library adapter, Add Book, generic materialization, Search, REST, UI or
+runtime data is wired to this boundary. AUTHOR-MAT-01C through 01E remain
+separate. Product remains `v2.001`; schema remains `1024`; Biblio Core is
+`2.16.0`; Biblio UI remains `0.17.0`. No current or historical V1 data was
+used. Closure evidence:
+`docs/88-author-mat-01b-strong-open-library-author-materialization.md`.

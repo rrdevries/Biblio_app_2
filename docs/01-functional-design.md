@@ -1670,10 +1670,14 @@ identity; matching names across another source, Work or position never prove
 person identity. Evidence is preserved separately and repeated exact evidence
 updates its observation history rather than overwriting source truth.
 
-Schema `1024` implements only this identity and persistence foundation. No
-metadata flow creates Authors or WorkContributor edges yet, and Add Book,
-generic bibliographic materialization, Search and UI keep their existing
-behavior until a separately accepted materialization slice.
+Schema `1024` provides this identity and persistence foundation. The shared
+AUTHOR-MAT-01B Core boundary can now materialize an already validated strong
+Open Library Author credit into a resolved Author, immutable claim, retained
+credit/evidence and ordered WorkContributor edge inside a caller-owned
+transaction. It never reuses by name, falls back to provisional name-only
+creation or contacts a provider. No production metadata flow calls this
+boundary yet: Add Book, generic bibliographic materialization, Search and UI
+retain their existing behavior until their separately accepted slices.
 
 Library-scoped detail may include:
 - In deze bibliotheek;

@@ -201,6 +201,32 @@ final readonly class WpdbAuthorContributorCreditRepository implements
         }
     }
 
+    public function setReviewReasonIfVersionMatches(
+        AuthorContributorCreditId $creditId,
+        AuthorContributorCreditVersion $expectedVersion,
+        AuthorCreditReviewReason $reason,
+        DateTimeImmutable $updatedAt
+    ): bool {
+        $result = $this->database->query($this->database->prepare(
+            "UPDATE `{$this->tables->authorContributorCredits()}` SET "
+                . "review_reason=%s,updated_at=%s,credit_version=credit_version+1 "
+                . "WHERE credit_id=%s AND credit_version=%d "
+                . "AND (review_reason IS NULL OR review_reason=%s)",
+            $reason->value,
+            $this->formatDate($updatedAt),
+            $creditId->value(),
+            $expectedVersion->value(),
+            $reason->value
+        ));
+        if ($result === false) {
+            throw WpdbErrorTranslator::writeFailure(
+                "Could not flag Author contributor credit for review.",
+                $this->database->last_error
+            );
+        }
+        return $result === 1;
+    }
+
     public function evidenceForCredit(
         AuthorContributorCreditId $creditId
     ): array {

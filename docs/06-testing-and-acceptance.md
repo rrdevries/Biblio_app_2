@@ -3730,3 +3730,43 @@ Status: **GO / CLOSED** after the final full Core gate, normal-runtime schema
 and count verification, and independent NO BLOCKER re-review. Product remains
 `v2.001`; schema is `1024`; Biblio Core is `2.15.0`; Biblio UI remains
 `0.17.0`.
+
+## 112. AUTHOR-MAT-01B strong Open Library Author materialization
+
+AUTHOR-MAT-01B is accepted only when:
+
+- only canonical Open Library `/authors/OL…A` identities, exact Work,
+  `author|co_author`, positive source position, observed name and typed stable
+  provider source evidence can enter the strong boundary;
+- valid input creates a resolved/observed Author, immutable provider claim,
+  linked credit, deterministic evidence and ordered WorkContributor edge in
+  one caller-owned transaction;
+- exact replay reuses every identity/edge and increments exact evidence
+  observation history without duplicate rows;
+- provider identity alone controls Author reuse: equal names with different
+  provider IDs remain separate, while one provider ID with different observed
+  names reuses the Author and never overwrites its canonical display name;
+- exact strong-credit proof may promote only that linked provisional Author in
+  place, preserving ID, display name and edge;
+- incompatible provider claims and occupied Work positions fail closed with
+  typed outcomes, retained evidence and no reassignment, shift, merge or
+  name-only fallback;
+- real independent processes prove same-provider convergence, same-credit
+  convergence and one shared Author across two concurrent Works, with one
+  complete outer-transaction retry and no orphan writes;
+- unknown persistence failure rolls back Author, claim, credit, evidence and
+  edge together;
+- Add Book, generic bibliographic materialization, Search, REST, UI and Open
+  Library HTTP adapters remain behaviorally unchanged and do not call the new
+  service;
+- schema remains 1024, no runtime backfill or V1 data is used, targeted
+  regressions and the one final full Core gate pass, and independent review
+  reports no blocker.
+
+Final status and evidence are recorded in
+`docs/88-author-mat-01b-strong-open-library-author-materialization.md`.
+
+Status: **GO / CLOSED** after the clean full Core gate, normal-runtime schema
+and zero-count verification, and independent NO BLOCKER re-review. Product
+remains `v2.001`; schema remains `1024`; Biblio Core is `2.16.0`; Biblio UI
+remains `0.17.0`.
