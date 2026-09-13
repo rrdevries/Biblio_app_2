@@ -2005,3 +2005,34 @@ likewise not routed because the only accepted top-level transport is text-only
 and no existing small bridge provides the required concrete-Edition flow.
 These are explicit follow-ups, not client-side substitutions. Schema stays
 `1023`; Biblio Core and all backend contracts remain unchanged.
+
+## 50. AUTHOR-MAT-01A Author identity persistence foundation
+
+Schema `1024` extends `biblio_authors` with checked identity/display-name
+states and a positive optimistic version. `WritableAuthorRepository` separates
+insert from compare-and-swap replacement: replacement requires the expected
+version, advances by exactly one and rejects ordinary state demotion.
+
+`biblio_bibliographic_provider_identities` keeps its immutable provider key and
+adds one nullable Author target plus restrictive FK/index. Database checks
+allow exactly `author → author`, `work → work` and `edition → work|edition`;
+all other source/target shapes are invalid. Author claim persistence
+distinguishes idempotent replay, a retryable unique-insert race and a semantic
+claim conflict without reassignment.
+
+`biblio_author_contributor_credits` stores an opaque ID and a unique SHA-256
+key over the canonical NUL-delimited Work, role, positive position,
+whitespace-only normalized observed name and Core-derived source identity.
+Linked and unresolved shapes are checked, and Work/Author foreign keys are
+restrictive. `biblio_author_credit_evidence` has a deterministic composite key,
+closed provider/user-observation/migration shapes and atomically maintained
+first/last/count observation history. Repositories join a caller-owned
+transaction and do not open hidden transaction boundaries.
+
+The 1023→1024 migration accepts only the exact old, exact new or known
+step-local table shapes, rejects invalid legacy provider mappings before DDL,
+and advances the stored version only after the full health postcondition. It
+conservatively backfills existing Authors to `provisional`, `observed`, version
+`1` without merging names or fabricating claims. No materializer, provider
+adapter change, WorkContributor write, Add Book/Search/UI mutation or V1
+source logic is part of this architecture slice.

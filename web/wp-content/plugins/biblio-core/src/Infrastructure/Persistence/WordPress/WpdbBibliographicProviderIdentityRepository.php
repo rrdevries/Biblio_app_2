@@ -6,6 +6,9 @@ namespace Biblio\Core\Infrastructure\Persistence\WordPress;
 
 use Biblio\Core\Application\Metadata\Discovery\BibliographicProviderIdentityConflict;
 use Biblio\Core\Application\Metadata\Discovery\BibliographicProviderIdentityRepository;
+use Biblio\Core\Application\Metadata\Author\AuthorProviderClaimRace;
+use Biblio\Core\Application\Metadata\Author\AuthorProviderIdentityConflict;
+use Biblio\Core\Application\Metadata\Author\AuthorProviderIdentityRepository;
 use Biblio\Core\Application\Metadata\Search\BibliographicProviderEntityIdentity;
 use Biblio\Core\Application\Metadata\Search\BibliographicAuthorWorkMappingLookup;
 use Biblio\Core\Application\Metadata\Search\BibliographicWorkProviderIdentityLookup;
@@ -16,6 +19,7 @@ use wpdb;
 
 final readonly class WpdbBibliographicProviderIdentityRepository implements
     BibliographicProviderIdentityRepository,
+    AuthorProviderIdentityRepository,
     BibliographicAuthorWorkMappingLookup,
     BibliographicWorkProviderIdentityLookup
 {
@@ -41,6 +45,18 @@ final readonly class WpdbBibliographicProviderIdentityRepository implements
             $provider, $recordId
         ));
         return is_string($value) ? new EditionId($value) : null;
+    }
+
+    public function findAuthor(string $provider, string $recordId): ?AuthorId
+    {
+        $value = $this->database->get_var($this->database->prepare(
+            "SELECT author_id FROM `{$this->tables->bibliographicProviderIdentities()}` "
+                . "WHERE provider_key=%s AND source_entity_type='author' "
+                . "AND provider_record_id=%s AND target_type='author'",
+            $provider,
+            $recordId
+        ));
+        return is_string($value) ? new AuthorId($value) : null;
     }
 
     public function providerWorkIdentities(WorkId $workId, string $providerKey): array
@@ -92,12 +108,71 @@ final readonly class WpdbBibliographicProviderIdentityRepository implements
 
     public function claimWork(string $provider, string $sourceType, string $recordId, WorkId $workId): void
     {
-        $this->claim($provider, $sourceType, $recordId, "work", $workId->value(), null);
+        $this->claim(
+            $provider,
+            $sourceType,
+            $recordId,
+            "work",
+            $workId->value(),
+            null,
+            null
+        );
     }
 
     public function claimEdition(string $provider, string $recordId, EditionId $editionId): void
     {
-        $this->claim($provider, "edition", $recordId, "edition", null, $editionId->value());
+        $this->claim(
+            $provider,
+            "edition",
+            $recordId,
+            "edition",
+            null,
+            $editionId->value(),
+            null
+        );
+    }
+
+    public function claimAuthor(
+        string $provider,
+        string $recordId,
+        AuthorId $authorId
+    ): void {
+        $existing = $this->findAuthor($provider, $recordId);
+        if ($existing !== null) {
+            if ($existing->value() === $authorId->value()) {
+                return;
+            }
+            throw new AuthorProviderIdentityConflict();
+        }
+
+        $previous = $this->database->suppress_errors(true);
+        try {
+            $inserted = $this->database->insert(
+                $this->tables->bibliographicProviderIdentities(),
+                [
+                    "provider_key" => $provider,
+                    "source_entity_type" => "author",
+                    "provider_record_id" => $recordId,
+                    "target_type" => "author",
+                    "work_id" => null,
+                    "edition_id" => null,
+                    "author_id" => $authorId->value(),
+                ],
+                ["%s", "%s", "%s", "%s", "%s", "%s", "%s"]
+            );
+        } finally {
+            $this->database->suppress_errors($previous);
+        }
+        if ($inserted === 1) {
+            return;
+        }
+        if (WpdbErrorTranslator::conflict($this->database->last_error) !== null) {
+            throw new AuthorProviderClaimRace();
+        }
+        throw WpdbErrorTranslator::writeFailure(
+            "Could not persist provider Author identity.",
+            $this->database->last_error
+        );
     }
 
     private function claim(
@@ -106,7 +181,8 @@ final readonly class WpdbBibliographicProviderIdentityRepository implements
         string $recordId,
         string $targetType,
         ?string $workId,
-        ?string $editionId
+        ?string $editionId,
+        ?string $authorId
     ): void {
         $previous = $this->database->suppress_errors(true);
         try {
@@ -119,20 +195,39 @@ final readonly class WpdbBibliographicProviderIdentityRepository implements
                     "target_type" => $targetType,
                     "work_id" => $workId,
                     "edition_id" => $editionId,
+                    "author_id" => $authorId,
                 ],
-                ["%s", "%s", "%s", "%s", "%s", "%s"]
+                ["%s", "%s", "%s", "%s", "%s", "%s", "%s"]
             );
         } finally {
             $this->database->suppress_errors($previous);
         }
         if ($inserted === 1) { return; }
         $writeError = $this->database->last_error;
-        $existing = $targetType === "work"
-            ? $this->findWork($provider, $sourceType, $recordId)?->value()
-            : $this->findEdition($provider, $recordId)?->value();
-        $expected = $targetType === "work" ? $workId : $editionId;
+        $existing = match ($targetType) {
+            "work" => $this->findWork(
+                $provider,
+                $sourceType,
+                $recordId
+            )?->value(),
+            "edition" => $this->findEdition($provider, $recordId)?->value(),
+            "author" => $this->findAuthor($provider, $recordId)?->value(),
+            default => null,
+        };
+        $expected = match ($targetType) {
+            "work" => $workId,
+            "edition" => $editionId,
+            "author" => $authorId,
+            default => null,
+        };
         if ($existing === $expected) { return; }
         if (WpdbErrorTranslator::conflict($writeError) !== null) {
+            if ($targetType === "author") {
+                if ($existing === null) {
+                    throw new AuthorProviderClaimRace();
+                }
+                throw new AuthorProviderIdentityConflict();
+            }
             throw new BibliographicProviderIdentityConflict();
         }
         throw WpdbErrorTranslator::writeFailure(

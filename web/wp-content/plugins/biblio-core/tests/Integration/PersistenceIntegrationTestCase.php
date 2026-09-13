@@ -78,6 +78,9 @@ abstract class PersistenceIntegrationTestCase extends TestCase
             ->bibliographicDiscoverySnapshots();
         $bibliographicProviderIdentities = $this->tableNames
             ->bibliographicProviderIdentities();
+        $authorContributorCredits = $this->tableNames
+            ->authorContributorCredits();
+        $authorCreditEvidence = $this->tableNames->authorCreditEvidence();
         $metadataUserObservations = $this->tableNames->metadataUserObservations();
         $migrationMappings = $this->tableNames->migrationTargetMappings();
         $migrationQuarantine = $this->tableNames->migrationQuarantine();
@@ -199,6 +202,12 @@ abstract class PersistenceIntegrationTestCase extends TestCase
         if ($this->tableExists($bibliographicProviderIdentities)) {
             $this->database->query("DELETE FROM `{$bibliographicProviderIdentities}`");
         }
+        if ($this->tableExists($authorCreditEvidence)) {
+            $this->database->query("DELETE FROM `{$authorCreditEvidence}`");
+        }
+        if ($this->tableExists($authorContributorCredits)) {
+            $this->database->query("DELETE FROM `{$authorContributorCredits}`");
+        }
         if ($this->tableExists($identifierClaims)) {
             $this->database->query("DELETE FROM `{$identifierClaims}`");
         }
@@ -234,6 +243,46 @@ abstract class PersistenceIntegrationTestCase extends TestCase
 
     protected function setHistoricalSchemaVersion(int $version): void
     {
+        if ($version < 1024) {
+            foreach (
+                array_reverse($this->tableNames->schema1024Additions())
+                as $table
+            ) {
+                $this->database->query("DROP TABLE IF EXISTS `{$table}`");
+            }
+
+            $providerIdentities = $this->tableNames
+                ->bibliographicProviderIdentities();
+            if (
+                $this->tableExists($providerIdentities)
+                && $this->columnExists($providerIdentities, "author_id")
+            ) {
+                $this->database->query("DROP TABLE `{$providerIdentities}`");
+                if ($version === 1023) {
+                    (new \Biblio\Core\Infrastructure\Persistence\WordPress\Schema\CoreSchema1023Migration(
+                        $this->database,
+                        $this->tableNames
+                    ))->migrate();
+                }
+            }
+
+            $authors = $this->tableNames->authors();
+            if (
+                $this->tableExists($authors)
+                && $this->columnExists($authors, "identity_status")
+            ) {
+                $this->database->query(
+                    "ALTER TABLE `{$authors}` "
+                        . "DROP CONSTRAINT authors_identity_status_valid,"
+                        . "DROP CONSTRAINT authors_display_name_status_valid,"
+                        . "DROP CONSTRAINT authors_version_positive,"
+                        . "DROP COLUMN author_version,"
+                        . "DROP COLUMN display_name_status,"
+                        . "DROP COLUMN identity_status"
+                );
+            }
+        }
+
         if ($version < 1023) {
             foreach (array_reverse($this->tableNames->schema1023Additions()) as $table) {
                 $this->database->query("DROP TABLE IF EXISTS `{$table}`");
@@ -288,6 +337,18 @@ abstract class PersistenceIntegrationTestCase extends TestCase
             . "WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s",
             DB_NAME,
             $tableName
+        )) === 1;
+    }
+
+    private function columnExists(string $tableName, string $columnName): bool
+    {
+        return (int) $this->database->get_var($this->database->prepare(
+            "SELECT COUNT(*) FROM information_schema.COLUMNS "
+                . "WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s "
+                . "AND COLUMN_NAME = %s",
+            DB_NAME,
+            $tableName,
+            $columnName
         )) === 1;
     }
 }

@@ -3106,3 +3106,30 @@ deferred.
 Schema stays `1023`; Biblio Core remains `2.14.0`; Biblio UI is `0.17.0`. No
 current or historical V1 data was used. Closure evidence:
 `docs/85-search-ui-01b-author-work-edition-drilldown.md`.
+
+### AUTHOR-MAT-01A — Author identity and persistence foundation
+
+Status: **GO / CLOSED**.
+
+Schema `1024` gives every canonical Author the conservative identity state
+`provisional|resolved`, the display-name state
+`observed|librarian_confirmed` and positive optimistic `author_version`.
+Existing Authors retain their ID and display name and migrate to
+`provisional`, `observed`, version `1`; names remain deliberately non-unique.
+
+The generic provider-identity table now admits exactly the closed matrix
+`author → author`, `work → work`, and `edition → work|edition`. Author claims
+are immutable, unique and idempotent; a conflicting canonical target fails
+closed. New contributor-credit storage gives one exact source-scoped
+Work/role/position/whitespace-normalized-name observation a deterministic
+retry identity while independent same-name observations remain independent.
+Separate deterministic evidence preserves source truth and repeated
+observation history.
+
+This slice adds persistence contracts only. It does not create Authors from
+metadata, write WorkContributor edges, call providers, alter Add Book or
+generic materialization, or add Search/UI writes. AUTHOR-MAT-01B through 01E
+remain separate consumer/materialization/governance slices. Product remains
+`v2.001`; schema is `1024`; Biblio Core is `2.15.0`; Biblio UI remains
+`0.17.0`. No current or historical V1 data was used. Closure evidence:
+`docs/87-author-mat-01a-author-identity-persistence-foundation.md`.

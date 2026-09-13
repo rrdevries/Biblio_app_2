@@ -6,6 +6,10 @@ namespace Biblio\Core\Catalog;
 
 interface WritableAuthorRepository extends AuthorRepository
 {
-    public function save(Author $author): void;
+    public function add(Author $author): void;
+    public function replaceIfVersionMatches(
+        Author $replacement,
+        AuthorVersion $expectedVersion
+    ): bool;
     public function addContributor(WorkContributor $contributor): void;
 }

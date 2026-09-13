@@ -1653,6 +1653,28 @@ Only Auteur/Co-auteur gets Author detail in the first dedicated module version.
 
 Other contributor roles remain structured metadata.
 
+## Canonical Author identity foundation
+
+An Author is platform-shared bibliographic data: it has no user or Library
+owner. Its stable `AuthorId` is identity; `display_name` is presentation data
+and stays non-unique. Identity is either `provisional` or `resolved`, while a
+display name is either `observed` or `librarian_confirmed`. Ordinary identity
+changes are monotonic and version-checked; resolving an Author does not confirm
+its display name.
+
+A strong provider Author identifier may have one immutable canonical Author
+claim. A contributor credit is a separate source-scoped occurrence on one Work
+with an explicit `author|co_author` role and positive source position. Exact
+whitespace-normalized replay of the same source credit reuses its credit
+identity; matching names across another source, Work or position never prove
+person identity. Evidence is preserved separately and repeated exact evidence
+updates its observation history rather than overwriting source truth.
+
+Schema `1024` implements only this identity and persistence foundation. No
+metadata flow creates Authors or WorkContributor edges yet, and Add Book,
+generic bibliographic materialization, Search and UI keep their existing
+behavior until a separately accepted materialization slice.
+
 Library-scoped detail may include:
 - In deze bibliotheek;
 - Gewenste aanwinsten if authorized;

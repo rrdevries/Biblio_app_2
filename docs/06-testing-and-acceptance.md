@@ -3691,3 +3691,42 @@ Status: **TECHNICAL GO — awaiting Renée human interaction/visual acceptance**
 Product remains `v2.001`, schema remains `1023`, Biblio Core remains `2.14.0`
 and Biblio UI is `0.17.0`. Closure evidence is recorded in
 `docs/85-search-ui-01b-author-work-edition-drilldown.md`.
+
+## 111. AUTHOR-MAT-01A Author identity persistence foundation
+
+AUTHOR-MAT-01A is accepted only when:
+
+- schema 1024 upgrades an empty or populated exact 1023 shape, preserves
+  Author IDs/names, WorkContributor edges and existing Work/Edition claims,
+  and backfills every existing Author to `provisional`, `observed`, version
+  `1` without name merge or fabricated provider authority;
+- Author persistence supports provisional and resolved rows plus exact
+  compare-and-swap version replacement, with no resolved-state or
+  Librarian-confirmed-name demotion;
+- display names have no unique or normalized-name identity constraint;
+- the database and repository admit only `author → author`, `work → work` and
+  `edition → work|edition`, keep one immutable provider Author claim, reuse an
+  exact claim and fail closed on another canonical target;
+- one exact source/Work/role/position/whitespace-normalized-name credit has one
+  deterministic identity, while case, accent, punctuation, Work, position and
+  source differences remain identity-significant as designed;
+- credit/evidence shapes and restrictive foreign keys are healthy, exact
+  evidence replay increments observation history, and neither record deletion
+  cascades into canonical Author/Work deletion;
+- real independent-database-connection tests prove convergent same-claim and
+  same-credit races, conflicting Author-claim rejection and independent
+  same-name credits;
+- Add Book, generic bibliographic materialization, WorkContributor behavior and
+  Search read contracts remain unchanged; no production materializer, provider
+  network call, UI or V1 source behavior is introduced;
+- targeted migration/domain/repository/concurrency/regression tests, the one
+  final full Core gate, runtime migration/idempotency/count checks, manifest,
+  whitespace and independent review gates pass.
+
+Final status and exact evidence are recorded in
+`docs/87-author-mat-01a-author-identity-persistence-foundation.md`.
+
+Status: **GO / CLOSED** after the final full Core gate, normal-runtime schema
+and count verification, and independent NO BLOCKER re-review. Product remains
+`v2.001`; schema is `1024`; Biblio Core is `2.15.0`; Biblio UI remains
+`0.17.0`.
