@@ -4,17 +4,24 @@ import test from "node:test";
 
 import { BiblioApiError } from "../../assets/js/api.js";
 import {
+    applyBibliographicDrilldownPage,
     applyBibliographicSearchPage,
+    bibliographicDrilldownErrorMessage,
     bibliographicSearchErrorMessage,
+    initialBibliographicDrilldownPage,
     initialBibliographicSearchState,
     normalizeBibliographicSearchQuery,
+    readBibliographicAuthorWorks,
     readBibliographicSearch,
+    readBibliographicWorkEditions,
 } from "../../assets/js/bibliographic-search.js";
 
 const AUTHOR_ID = `search-author-${"a".repeat(64)}`;
 const AUTHOR_ID_2 = `search-author-${"b".repeat(64)}`;
 const WORK_ID = `search-work-${"c".repeat(64)}`;
 const WORK_ID_2 = `search-work-${"d".repeat(64)}`;
+const EDITION_ID = `search-edition-${"e".repeat(64)}`;
+const EDITION_ID_2 = `search-edition-${"f".repeat(64)}`;
 
 function attempt(overrides = {}) {
     return {
@@ -45,6 +52,49 @@ function work(overrides = {}) {
         title: "The Dispossessed",
         authors: [{ author_id: "author-1", display_name: "Ursula K. Le Guin" }],
         series: [{ series_id: "series-1", display_name: "Hainish Cycle", position: "5" }],
+        ...overrides,
+    };
+}
+
+function authorWork(overrides = {}) {
+    return {
+        ...work(),
+        provider_identity: null,
+        ...overrides,
+    };
+}
+
+function edition(overrides = {}) {
+    return {
+        result_id: EDITION_ID,
+        result_kind: "local_canonical",
+        edition_id: "edition-1",
+        provider_identity: null,
+        provider_work_identity: null,
+        parent_work_result_id: WORK_ID,
+        title: "The Dispossessed",
+        subtitle: "An Ambiguous Utopia",
+        contributors: ["Ursula K. Le Guin"],
+        languages: ["eng"],
+        publishers: ["Harper & Row"],
+        publication_date: "1974",
+        isbn_10: "0061054887",
+        isbn_13: "9780061054884",
+        format: "Paperback",
+        page_count: 387,
+        presentation_order: 0,
+        requires_materialization: false,
+        can_add_work_only: true,
+        can_add_edition_specific: true,
+        ...overrides,
+    };
+}
+
+function drilldownResponse(items, overrides = {}) {
+    return {
+        items,
+        next_cursor: "drilldown-cursor",
+        provider_attempts: [attempt()],
         ...overrides,
     };
 }
@@ -198,6 +248,93 @@ test("continuations fail closed when group or normalized query changes", () => {
     ));
 });
 
+test("selected Author Works decoder preserves only the opaque Work selector authority", () => {
+    const decoded = readBibliographicAuthorWorks(drilldownResponse([
+        authorWork(),
+        authorWork({
+            result_id: WORK_ID_2,
+            result_kind: "external_candidate",
+            work_id: null,
+            work_selector: "external-work-selector",
+            provider_identity: { provider_key: "open_library", record_id: "/works/OL2W" },
+        }),
+    ]));
+
+    assert.equal(decoded.items[1].work_selector, "external-work-selector");
+    assert.equal(decoded.items[1].provider_identity.record_id, "/works/OL2W");
+    assert.ok(Object.isFrozen(decoded.items));
+    assert.throws(() => readBibliographicAuthorWorks(drilldownResponse([
+        authorWork({ work_selector: null }),
+    ])));
+    assert.throws(() => readBibliographicAuthorWorks(drilldownResponse([
+        authorWork({ provider_identity: { provider_key: "other", record_id: "work" } }),
+    ])));
+});
+
+test("selected Work Editions decoder accepts ISBN-less and nullable concrete Editions", () => {
+    const decoded = readBibliographicWorkEditions(drilldownResponse([
+        edition(),
+        edition({
+            result_id: EDITION_ID_2,
+            result_kind: "external_candidate",
+            edition_id: null,
+            provider_identity: { provider_key: "open_library", record_id: "/books/OL2M" },
+            provider_work_identity: { provider_key: "open_library", record_id: "/works/OL2W" },
+            subtitle: null,
+            contributors: [],
+            languages: [],
+            publishers: [],
+            publication_date: null,
+            isbn_10: null,
+            isbn_13: null,
+            format: null,
+            page_count: null,
+            requires_materialization: true,
+            can_add_work_only: true,
+        }),
+    ]));
+
+    assert.equal(decoded.items[1].isbn_13, null);
+    assert.equal(decoded.items[1].page_count, null);
+    assert.ok(Object.isFrozen(decoded.items[1].languages));
+});
+
+test("Edition decoder rejects malformed identity, ISBN, metadata and extra action fields", () => {
+    assert.throws(() => readBibliographicWorkEditions(drilldownResponse([
+        edition({ parent_work_result_id: WORK_ID_2, isbn_13: "9780061054885" }),
+    ])));
+    assert.throws(() => readBibliographicWorkEditions(drilldownResponse([
+        edition({ page_count: 0 }),
+    ])));
+    assert.throws(() => readBibliographicWorkEditions(drilldownResponse([
+        { ...edition(), wishlist_action: true },
+    ])));
+});
+
+test("drill-down pagination appends immutably and rejects duplicate result identities", () => {
+    const first = applyBibliographicDrilldownPage(
+        initialBibliographicDrilldownPage(),
+        readBibliographicAuthorWorks(drilldownResponse([authorWork()]))
+    );
+    const second = applyBibliographicDrilldownPage(
+        first,
+        readBibliographicAuthorWorks(drilldownResponse([
+            authorWork({ result_id: WORK_ID_2, work_id: "work-2" }),
+        ], { next_cursor: null })),
+        { append: true }
+    );
+
+    assert.equal(second.items.length, 2);
+    assert.strictEqual(second.items[0], first.items[0]);
+    assert.equal(second.cursor, null);
+    assert.ok(Object.isFrozen(second));
+    assert.throws(() => applyBibliographicDrilldownPage(
+        first,
+        readBibliographicAuthorWorks(drilldownResponse([authorWork()])),
+        { append: true }
+    ));
+});
+
 test("query normalization follows the text contract without inventing search semantics", () => {
     assert.equal(normalizeBibliographicSearchQuery("  Ursula   Le Guin  "), "Ursula Le Guin");
     assert.throws(() => normalizeBibliographicSearchQuery(" \n\t "), /Vul een titel/);
@@ -219,13 +356,28 @@ test("error copy distinguishes session, malformed and transport failure without 
     }
 });
 
-test("production module uses one read-only search route and exposes no selector copy", async () => {
+test("drill-down errors describe stale selectors safely without authority details", () => {
+    const stale = new BiblioApiError({
+        kind: "http",
+        code: "biblio_invalid_field_syntax",
+        status: 400,
+        message: "private mapping detail",
+    });
+    const message = bibliographicDrilldownErrorMessage(stale);
+
+    assert.match(message, /niet meer actueel.*Zoek opnieuw/);
+    assert.doesNotMatch(message, /selector|mapping|crypto|400|private/i);
+});
+
+test("production module uses only read-only discovery routes and exposes no selector copy", async () => {
     const source = await readFile(
         new URL("../../assets/js/bibliographic-search.js", import.meta.url),
         "utf8"
     );
 
     assert.match(source, /api\.post\("me\/bibliographic-searches"/);
+    assert.match(source, /api\.post\("me\/bibliographic-author-works"/);
+    assert.match(source, /api\.post\("me\/bibliographic-work-editions"/);
     assert.match(source, /author_cursor:/);
     assert.match(source, /work_cursor:/);
     assert.match(source, /Meer auteurs/);
@@ -246,11 +398,15 @@ test("production module uses one read-only search route and exposes no selector 
     assert.match(source, /rest_cookie_invalid_nonce/);
     assert.match(source, /data-search-result-group/);
     assert.match(source, /Zoeken op ISBN wordt in een volgende stap aangesloten/);
+    assert.match(source, /Bekijk werken/);
+    assert.match(source, /Bekijk uitgaven/);
+    assert.match(source, /author_selector:\s*selectedAuthor\.author_selector/);
+    assert.match(source, /work_selector:\s*selectedWork\.work_selector/);
     assert.doesNotMatch(source, /api\.(?:patch|delete)\(/);
     assert.doesNotMatch(source, /materializations|bibliographic-discoveries|openlibrary|google/i);
     assert.doesNotMatch(source, /textContent:\s*(?:author|work)\.(?:author_selector|work_selector|result_id)/);
     assert.doesNotMatch(source, /In Biblio|Uit bibliografische bron/);
-    assert.doesNotMatch(source, /Bekijk werken|Bekijk uitgaven|Series.*tab|Collections.*tab/i);
+    assert.doesNotMatch(source, /Series.*tab|Collections.*tab/i);
 });
 
 test("search CSS reuses tokens, portrait covers and responsive stacking", async () => {
@@ -263,6 +419,8 @@ test("search CSS reuses tokens, portrait covers and responsive stacking", async 
     assert.doesNotMatch(searchCss, /aspect-ratio:\s*1\s*\/\s*1/);
     assert.match(searchCss, /grid-template-columns: repeat\(5, minmax\(0, 1fr\)\)/);
     assert.match(searchCss, /biblio-ui__search-layout/);
+    assert.match(searchCss, /biblio-ui__edition-results/);
+    assert.match(searchCss, /biblio-ui__work-result--compact/);
     assert.match(searchCss, /@media \(max-width: 1199px\)/);
     assert.match(searchCss, /@media \(max-width: 767px\)/);
 }
