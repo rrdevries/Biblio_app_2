@@ -3380,3 +3380,25 @@ provider request, local/external projection, schema, materialization or V1-data
 behavior changed. Product remains `v2.001`; schema remains `1024`; Biblio Core
 is `2.23.0`; Biblio UI is `0.18.0`. Closure evidence:
 `docs/96-search-auth-ui-01-author-search-rest-ui-cutover.md`.
+
+### SEARCH-AUTH-UI-01-F1 — Responsive Search results layout
+
+Status: **TECHNICAL GO / HUMAN RESPONSIVE RECHECK PENDING**.
+
+Human QA exposed that the fixed five-column `Alles` Book preview could paint
+its intrinsic `10.75rem` portrait covers beyond shrunken grid tracks into the
+desktop gutter and right rail. The outer main/rail grid, bounded rail, gutter,
+`minmax(0, 1fr)` main plane and existing `1199px` stacking breakpoint were
+already correct.
+
+The preview now derives its column count from the available main-plane width
+with `auto-fit` and the existing cover width as the usable minimum. Five
+columns remain possible where they fit; 1440px uses four and wraps the fifth.
+No clipping, rail/card redesign or functionality change was introduced.
+Geometric browser assertions now prove that preview cards and their children
+stay inside the main plane and clear of the rail at 1800, 1440, 1200, 900, 390
+and 200% reflow.
+
+Product remains `v2.001`; schema remains `1024`; Biblio Core remains `2.23.0`;
+Biblio UI is `0.18.1` for the stylesheet cache-bust. Closure evidence:
+`docs/97-search-auth-ui-01-f1-responsive-search-layout.md`.

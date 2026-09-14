@@ -531,7 +531,11 @@ test("search CSS reuses tokens, portrait covers and responsive stacking", async 
     assert.match(searchCss, /var\(--biblio-font-serif\)/);
     assert.match(searchCss, /biblio-ui__search-cover/);
     assert.doesNotMatch(searchCss, /aspect-ratio:\s*1\s*\/\s*1/);
-    assert.match(searchCss, /grid-template-columns: repeat\(5, minmax\(0, 1fr\)\)/);
+    assert.match(
+        searchCss,
+        /grid-template-columns: repeat\(auto-fit, minmax\(min\(10\.75rem, 100%\), 1fr\)\)/
+    );
+    assert.doesNotMatch(searchCss, /biblio-ui__work-results--preview[^}]*overflow:\s*hidden/s);
     assert.match(searchCss, /biblio-ui__search-layout/);
     assert.match(searchCss, /biblio-ui__edition-results/);
     assert.match(searchCss, /biblio-ui__work-result--compact/);

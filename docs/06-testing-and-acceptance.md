@@ -4040,3 +4040,27 @@ Status: **TECHNICAL GO / HUMAN VISUAL-INTERACTION ACCEPTANCE PENDING**. Product
 remains `v2.001`; schema remains `1024`; Biblio Core is `2.23.0`; Biblio UI is
 `0.18.0`. Exact evidence is in
 `docs/96-search-auth-ui-01-author-search-rest-ui-cutover.md`.
+
+## 121. SEARCH-AUTH-UI-01-F1 Responsive Search results layout
+
+SEARCH-AUTH-UI-01-F1 is technically accepted only when:
+
+- the `Alles` Book preview selects columns from actual main-plane width and
+  five columns appear only when five portrait-card tracks fit;
+- every preview card and its immediate content remain within the main results
+  plane and clear of the visible gutter and separate right rail;
+- 1440 and 1200 retain separate main/rail columns, while the rail stacks at the
+  existing breakpoint without redesign;
+- 900, 390 and 200% reflow have no page-level or intrinsic card overflow and
+  preserve usable Search, tabs and result actions;
+- Books-first order, max-five preview, Authors, actions, rail copy, tabs,
+  drill-down/Back, accessibility and focus remain unchanged;
+- no `overflow: hidden` concealment, Core, REST, Search-state, ranking, schema,
+  runtime-data or V1-data change is introduced; and
+- targeted Search plus one complete UI gate, visual captures, manifest,
+  whitespace and the second review pass are green.
+
+Status: **TECHNICAL GO / HUMAN RESPONSIVE RECHECK PENDING**. Product remains
+`v2.001`; schema remains `1024`; Biblio Core remains `2.23.0`; Biblio UI is
+`0.18.1`. Exact evidence is in
+`docs/97-search-auth-ui-01-f1-responsive-search-layout.md`.

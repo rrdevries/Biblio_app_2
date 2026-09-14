@@ -120,6 +120,36 @@ async function capture(page, name) {
     await page.screenshot({ path: `${SHOTS}/${name}.png`, fullPage: true });
 }
 
+async function responsiveGeometry(page) {
+    return page.locator(".biblio-ui__search-layout").evaluate((layout) => {
+        const main = layout.querySelector(".biblio-ui__search-main").getBoundingClientRect();
+        const rail = layout.querySelector(".biblio-ui__search-rail").getBoundingClientRect();
+        const preview = layout.querySelector(".biblio-ui__work-results--preview").getBoundingClientRect();
+        const cards = [...layout.querySelectorAll(".biblio-ui__work-results--preview .biblio-ui__work-result")];
+        const cardRects = cards.map((card) => card.getBoundingClientRect());
+        const firstRowTop = cardRects[0].top;
+        const columns = cardRects.filter((rect) => Math.abs(rect.top - firstRowTop) < 1).length;
+        const contentStaysInsideCards = cards.every((card, index) => {
+            const cardRect = cardRects[index];
+            return [...card.children].every((child) => {
+                const childRect = child.getBoundingClientRect();
+                return childRect.left >= cardRect.left - 0.5 && childRect.right <= cardRect.right + 0.5;
+            });
+        });
+
+        return {
+            columns,
+            contentStaysInsideCards,
+            mainRight: main.right,
+            mainBottom: main.bottom,
+            maxCardRight: Math.max(...cardRects.map((rect) => rect.right)),
+            previewRight: preview.right,
+            railLeft: rail.left,
+            railTop: rail.top,
+        };
+    });
+}
+
 test("mounts as a full App Shell page with truthful idle search", async ({ page }) => {
     await open(page);
 
@@ -616,34 +646,53 @@ test("responsive visual contract stays calm and overflow-free", async ({ page })
     });
 
     for (const viewport of [
+        { name: null, width: 1800, height: 1000, columns: 5 },
         { name: "desktop-1440", width: 1440, height: 1000 },
+        { name: null, width: 1200, height: 1000 },
         { name: "tablet-900", width: 900, height: 1000 },
-        { name: "mobile-390", width: 390, height: 844 },
+        { name: "mobile-390", width: 390, height: 844, columns: 1 },
     ]) {
         await page.setViewportSize({ width: viewport.width, height: viewport.height });
         await open(page);
         await search(page);
         await expect(page.locator(".biblio-ui__work-result")).toHaveCount(5);
         await noHorizontalOverflow(page);
-        const placement = await page.locator(".biblio-ui__search-layout").evaluate((layout) => {
-            const main = layout.querySelector(".biblio-ui__search-main").getBoundingClientRect();
-            const rail = layout.querySelector(".biblio-ui__search-rail").getBoundingClientRect();
-            return { mainRight: main.right, mainBottom: main.bottom, railLeft: rail.left, railTop: rail.top };
-        });
-        if (viewport.width === 1440) {
-            expect(placement.railLeft).toBeGreaterThan(placement.mainRight);
-        } else {
-            expect(placement.railTop).toBeGreaterThanOrEqual(placement.mainBottom);
+        const geometry = await responsiveGeometry(page);
+        expect(geometry.previewRight).toBeLessThanOrEqual(geometry.mainRight + 0.5);
+        expect(geometry.maxCardRight).toBeLessThanOrEqual(geometry.mainRight + 0.5);
+        expect(geometry.contentStaysInsideCards).toBe(true);
+        if (viewport.columns) {
+            expect(geometry.columns).toBe(viewport.columns);
         }
-        await capture(page, viewport.name);
+        if (viewport.width >= 1200) {
+            expect(geometry.railLeft).toBeGreaterThan(geometry.mainRight);
+            expect(geometry.maxCardRight).toBeLessThan(geometry.railLeft);
+            if (viewport.width <= 1440) {
+                expect(geometry.columns).toBeLessThanOrEqual(4);
+            }
+        } else {
+            expect(geometry.railTop).toBeGreaterThanOrEqual(geometry.mainBottom);
+        }
+        if (viewport.name) {
+            await capture(page, viewport.name);
+        }
     }
 
-    await page.setViewportSize({ width: 768, height: 900 });
+    await page.setViewportSize({ width: 720, height: 900 });
     await open(page);
     await search(page);
     const cdp = await page.context().newCDPSession(page);
     await cdp.send("Emulation.setPageScaleFactor", { pageScaleFactor: 2 });
     await noHorizontalOverflow(page);
+    const zoomGeometry = await responsiveGeometry(page);
+    expect(zoomGeometry.columns).toBe(1);
+    expect(zoomGeometry.previewRight).toBeLessThanOrEqual(zoomGeometry.mainRight + 0.5);
+    expect(zoomGeometry.maxCardRight).toBeLessThanOrEqual(zoomGeometry.mainRight + 0.5);
+    expect(zoomGeometry.contentStaysInsideCards).toBe(true);
+    expect(zoomGeometry.railTop).toBeGreaterThanOrEqual(zoomGeometry.mainBottom);
+    await expect(page.getByRole("searchbox", { name: "Zoek op titel of auteur" })).toBeEditable();
+    await expect(page.getByRole("tab", { name: "Alles" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Bekijk uitgaven" }).first()).toBeVisible();
     await expect(page.getByRole("button", { name: /Bekijk werken van/ }).first()).toBeVisible();
     await capture(page, "zoom-200-percent");
     await cdp.detach();

@@ -2287,7 +2287,7 @@ body.admin-bar.biblio-app-shell-page {
 }
 
 [data-biblio-search-root] .biblio-ui__work-results--preview {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(10.75rem, 100%), 1fr));
 }
 
 [data-biblio-search-root] .biblio-ui__work-results--full {
