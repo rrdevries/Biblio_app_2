@@ -16,6 +16,10 @@ use Biblio\Core\Application\Metadata\Author\AuthorContributorPositionRace;
 use Biblio\Core\Application\Metadata\Author\AuthorIdentityPromotionRace;
 use Biblio\Core\Application\Metadata\Author\AuthorProviderClaimRace;
 use Biblio\Core\Application\Metadata\Author\CanonicalAuthorMaterializer;
+use Biblio\Core\Application\Metadata\Author\ManualAuthorAttempt;
+use Biblio\Core\Application\Metadata\Author\ManualAuthorAttemptPlan;
+use Biblio\Core\Catalog\ContributorPosition;
+use Biblio\Core\Catalog\ContributorRole;
 use Biblio\Core\Catalog\Edition;
 use Biblio\Core\Catalog\EditionId;
 use Biblio\Core\Catalog\EditionIsbnMetadata;
@@ -96,6 +100,9 @@ final readonly class AddBookCommitService
             throw new MetadataLookupSnapshotUnavailable();
         }
 
+        $itemId = $this->ids->nextItemId();
+        $newWorkId = $this->ids->nextWorkId();
+        $newEditionId = $this->ids->nextEditionId();
         $participant = new AddBookCommitEvidenceWriter(
             $this->reviews,
             $this->observations,
@@ -105,11 +112,11 @@ final readonly class AddBookCommitService
             $libraryId,
             $observations,
             $candidate,
-            $now
+            $now,
+            $this->manualAuthorAttemptPlan($request),
+            $newWorkId,
+            $newEditionId
         );
-        $itemId = $this->ids->nextItemId();
-        $newWorkId = $this->ids->nextWorkId();
-        $newEditionId = $this->ids->nextEditionId();
         $existingEdition = $selectedExistingEdition
             ?? ($local?->type() === LocalEditionResolutionType::LocalExact
                 ? $local->requireEdition()
@@ -281,5 +288,25 @@ final readonly class AddBookCommitService
     {
         return $this->works->find($edition->workId())
             ?? throw new PersistenceException("Committed Work is missing.");
+    }
+
+    private function manualAuthorAttemptPlan(
+        AddBookCommitRequest $request
+    ): ManualAuthorAttemptPlan {
+        if ($request->selection()->type() !== AddBookSelectionType::Manual) {
+            return new ManualAuthorAttemptPlan([]);
+        }
+
+        $authors = [];
+        foreach ($request->authors() as $offset => $author) {
+            $authors[] = new ManualAuthorAttempt(
+                $this->ids->nextManualAuthorObservationId(),
+                $author->displayName(),
+                ContributorRole::Author,
+                new ContributorPosition($offset + 1)
+            );
+        }
+
+        return new ManualAuthorAttemptPlan($authors);
     }
 }

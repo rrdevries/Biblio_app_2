@@ -8,11 +8,15 @@ use Biblio\Core\Application\Catalog\AddLibraryItemTransactionParticipant;
 use Biblio\Core\Application\Metadata\Author\AuthorMaterializationStatus;
 use Biblio\Core\Application\Metadata\Author\CanonicalAuthorMaterializationResult;
 use Biblio\Core\Application\Metadata\Author\CanonicalAuthorMaterializer;
+use Biblio\Core\Application\Metadata\Author\ManualAuthorAttemptPlan;
+use Biblio\Core\Application\Metadata\Author\ManualAuthorCredit;
 use Biblio\Core\Application\Metadata\Author\NameOnlyAuthorCredit;
 use Biblio\Core\Application\Metadata\Author\StrongOpenLibraryAuthorCredit;
 use Biblio\Core\Catalog\Edition;
+use Biblio\Core\Catalog\EditionId;
 use Biblio\Core\Catalog\Item;
 use Biblio\Core\Catalog\Work;
+use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Library\LibraryId;
 use DateTimeImmutable;
@@ -29,7 +33,10 @@ final readonly class AddBookCommitEvidenceWriter implements
         private LibraryId $libraryId,
         private AddBookObservedMetadata $observedMetadata,
         private ?MetadataCandidate $candidate,
-        private DateTimeImmutable $observedAt
+        private DateTimeImmutable $observedAt,
+        private ?ManualAuthorAttemptPlan $manualAuthorPlan = null,
+        private ?WorkId $intendedNewWorkId = null,
+        private ?EditionId $intendedNewEditionId = null
     ) {
     }
 
@@ -40,6 +47,7 @@ final readonly class AddBookCommitEvidenceWriter implements
         bool $existingEdition
     ): void {
         $this->materializeAuthors($work);
+        $this->materializeManualAuthors($work, $edition, $existingEdition);
 
         $recordId = MetadataRecordId::forEdition($edition->id());
         $evidenceOnlyRecordId = MetadataRecordId::forEditionEvidence(
@@ -155,6 +163,34 @@ final readonly class AddBookCommitEvidenceWriter implements
                 )
             );
             $this->acceptAuthorOutcome($outcome);
+        }
+    }
+
+    private function materializeManualAuthors(
+        Work $work,
+        Edition $edition,
+        bool $existingEdition
+    ): void {
+        if (
+            $existingEdition
+            || $this->manualAuthorPlan === null
+            || $this->intendedNewWorkId === null
+            || $this->intendedNewEditionId === null
+            || !$work->id()->equals($this->intendedNewWorkId)
+            || !$edition->id()->equals($this->intendedNewEditionId)
+        ) {
+            return;
+        }
+
+        foreach ($this->manualAuthorPlan->authors() as $attempt) {
+            $outcome = $this->authorMaterializer->materializeNameOnlyAuthor(
+                new ManualAuthorCredit($work->id(), $attempt, $this->observedAt)
+            );
+            if ($outcome->status() !== AuthorMaterializationStatus::Materialized) {
+                throw new \Biblio\Core\Exception\ValidationException(
+                    "Manual Author could not be materialized for the new Work."
+                );
+            }
         }
     }
 

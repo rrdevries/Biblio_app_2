@@ -2278,3 +2278,32 @@ display name, rendered human context and opaque selector into the existing
 Works drill-down, so no detail/enrichment request is introduced. Schema 1024,
 provider adapters, 01A ranking/cursor/mapping and 01B/01C projections remain
 unchanged.
+
+## 59. ADD-AUTH-01A typed manual Author transaction participant
+
+The strict Add Book REST request has one optional top-level `authors` list.
+Each exact row contains only a string `display_name`; Core normalizes Unicode
+whitespace, removes empty rows, validates the existing Author length bound and
+derives role `author` plus contiguous one-based position. Browser-supplied
+roles, positions, IDs, provider claims and selectors are unsupported.
+
+`AddBookCommitService` creates an immutable `ManualAuthorAttemptPlan` after
+request normalization and before the first transaction attempt. Its opaque
+user-observation IDs, normalized names, roles and positions survive the
+existing full Add Book retry. `ManualAuthorCredit` implements the shared
+name-only materialization contract and uses the schema-1024
+`user_observation` source/evidence shape; it adds no name lookup or parallel
+identity algorithm.
+
+The existing `AddBookCommitEvidenceWriter` receives the intended new Work and
+Edition IDs and compares both with the definitive participant values. Manual
+credits run only when both match and the Edition is new. Explicit existing
+Work/Edition, local-first convergence, provider candidate and ISBN-racewinner
+paths therefore cannot use manual input to correct shared Work metadata.
+Provider candidate credits retain their existing 01E behavior.
+
+Manual Authors, Work, Edition, ISBN claim, Item, classification, Edition
+observations and activity share the caller-owned Add Library Item transaction.
+A non-materialized valid manual credit is a hard failure; the four existing
+race signals escape for the one complete retry with the same plan. Schema
+remains 1024 and Search remains a read-only consumer of the resulting graph.

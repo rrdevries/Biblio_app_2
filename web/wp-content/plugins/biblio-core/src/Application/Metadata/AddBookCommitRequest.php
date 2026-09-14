@@ -11,13 +11,18 @@ use InvalidArgumentException;
 
 final readonly class AddBookCommitRequest
 {
+    /** @var list<ManualAuthorInput> */
+    private array $authors;
+
+    /** @param array<array-key, mixed> $authors */
     public function __construct(
         private ?string $identifier,
         private AddBookCommitSelection $selection,
         private AddBookObservedMetadata $observations,
         private LibraryCatalogContextInitialization $classification,
         private ?InventoryNumber $inventoryNumber = null,
-        private ?LocationId $locationId = null
+        private ?LocationId $locationId = null,
+        array $authors = []
     ) {
         if (
             $identifier !== null
@@ -44,6 +49,20 @@ final readonly class AddBookCommitRequest
                 "An observed ISBN must also be supplied as the identifier."
             );
         }
+        if (!array_is_list($authors) || count($authors) > 32) {
+            throw new InvalidArgumentException(
+                "Add Book Authors must be a list of at most 32 entries."
+            );
+        }
+        foreach ($authors as $author) {
+            if (!$author instanceof ManualAuthorInput) {
+                throw new InvalidArgumentException(
+                    "Add Book Authors contain an invalid entry."
+                );
+            }
+        }
+        /** @var list<ManualAuthorInput> $authors */
+        $this->authors = $authors;
     }
 
     public function identifier(): ?string { return $this->identifier; }
@@ -52,4 +71,6 @@ final readonly class AddBookCommitRequest
     public function classification(): LibraryCatalogContextInitialization { return $this->classification; }
     public function inventoryNumber(): ?InventoryNumber { return $this->inventoryNumber; }
     public function locationId(): ?LocationId { return $this->locationId; }
+    /** @return list<ManualAuthorInput> */
+    public function authors(): array { return $this->authors; }
 }

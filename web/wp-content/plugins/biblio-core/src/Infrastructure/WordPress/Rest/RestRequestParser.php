@@ -9,7 +9,7 @@ use Biblio\Core\Application\Catalog\Read\CatalogOverviewCursor;
 use Biblio\Core\Application\Catalog\Read\CatalogOverviewPageSize;
 use Biblio\Core\Application\Catalog\Query\CatalogQuery;
 use Biblio\Core\Application\Catalog\Classification\LibraryCatalogContextInitialization;
-use Biblio\Core\Application\Metadata\{AddBookCommitRequest,AddBookCommitSelection,AddBookObservedMetadata,MetadataCandidateId,MetadataFieldValue,MetadataLookupId,UserObservedMetadataField};
+use Biblio\Core\Application\Metadata\{AddBookCommitRequest,AddBookCommitSelection,AddBookObservedMetadata,ManualAuthorInput,MetadataCandidateId,MetadataFieldValue,MetadataLookupId,UserObservedMetadataField};
 use Biblio\Core\Application\Metadata\Discovery\BibliographicMaterializationIntent;
 use Biblio\Core\Application\Metadata\Search\{BibliographicAuthorWorkSearchRequest,BibliographicEditionSearchRequest,BibliographicTextSearchRequest};
 use Biblio\Core\Application\Reading\History\ReadingHistoryCursor;
@@ -718,10 +718,14 @@ final readonly class RestRequestParser
     /**
      * @param array<string, mixed> $body
      * @param list<string> $fields
+     * @param list<string> $optionalFields
      */
-    private function validateBodyFields(array $body, array $fields): void
-    {
-        if (array_diff(array_keys($body), $fields) !== []) {
+    private function validateBodyFields(
+        array $body,
+        array $fields,
+        array $optionalFields = []
+    ): void {
+        if (array_diff(array_keys($body), [...$fields, ...$optionalFields]) !== []) {
             throw RestRequestException::unknownFields();
         }
 
@@ -1033,7 +1037,8 @@ final readonly class RestRequestParser
         $body = $this->jsonObject($request, "selection");
         $this->validateBodyFields(
             $body,
-            ["identifier", "selection", "observed_fields", "classification", "item"]
+            ["identifier", "selection", "observed_fields", "classification", "item"],
+            ["authors"]
         );
 
         $identifier = $body["identifier"];
@@ -1133,7 +1138,8 @@ final readonly class RestRequestParser
                     $item,
                     "location_id",
                     static fn (string $value): LocationId => new LocationId($value)
-                )
+                ),
+                $this->manualAuthors($body["authors"] ?? [])
             );
         } catch (RestRequestException $exception) {
             throw $exception;
@@ -1214,6 +1220,46 @@ final readonly class RestRequestParser
             }
         }
         return new AddBookObservedMetadata($values);
+    }
+
+    /** @return list<ManualAuthorInput> */
+    private function manualAuthors(mixed $raw): array
+    {
+        if (!is_array($raw) || !array_is_list($raw)) {
+            throw RestRequestException::wrongType("authors", "an array");
+        }
+        if (count($raw) > 32) {
+            throw RestRequestException::invalid("authors");
+        }
+
+        $authors = [];
+        foreach ($raw as $entry) {
+            if (
+                !is_array($entry)
+                || array_is_list($entry)
+                || !$this->hasExactFields($entry, ["display_name"])
+            ) {
+                throw RestRequestException::invalid("authors");
+            }
+            if (!is_string($entry["display_name"])) {
+                throw RestRequestException::wrongType(
+                    "display_name",
+                    "a string"
+                );
+            }
+            try {
+                $author = ManualAuthorInput::fromDisplayName(
+                    $entry["display_name"]
+                );
+            } catch (Throwable) {
+                throw RestRequestException::invalid("authors");
+            }
+            if ($author !== null) {
+                $authors[] = $author;
+            }
+        }
+
+        return $authors;
     }
 
     private function validObservedValue(

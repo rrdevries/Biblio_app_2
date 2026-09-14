@@ -10,6 +10,8 @@ use Biblio\Core\Application\Metadata\Author\{
     AuthorCreditProviderSourceType,
     CanonicalAuthorMaterializationIdGenerator,
     CanonicalAuthorMaterializer,
+    ManualAuthorAttempt,
+    ManualAuthorAttemptPlan,
     OpenLibraryAuthorId
 };
 use Biblio\Core\Application\Metadata\Discovery\{
@@ -36,6 +38,7 @@ use Biblio\Core\Application\Metadata\{
     MetadataLookupId,
     MetadataLookupSnapshot,
     MetadataMatchMethod,
+    ManualAuthorInput,
     UserObservedMetadataField
 };
 use Biblio\Core\Catalog\{
@@ -286,6 +289,266 @@ final class AddBookAuthorMaterializationTest extends PersistenceIntegrationTestC
         self::assertSame(0, $this->tableCount($this->tableNames->workContributors()));
     }
 
+    public function testManualNewWorkMaterializesOrderedProvisionalAuthorsAndSearchReadsThem(): void
+    {
+        $beforeSearch = null;
+        $result = (new ProductionComposition($this->database))->application()
+            ->addBookCommit()->commit(
+                $this->libraryId,
+                new AddBookCommitRequest(
+                    null,
+                    AddBookCommitSelection::manual(),
+                    new AddBookObservedMetadata([
+                        UserObservedMetadataField::Title->value =>
+                            new MetadataFieldValue("Manual Author Work"),
+                        UserObservedMetadataField::Contributors->value =>
+                            new MetadataFieldValue(["Edition Translator"]),
+                    ]),
+                    $this->classification(),
+                    authors: [
+                        $this->manualAuthor("  Alpha\u{00A0}Author "),
+                        $this->manualAuthor("Béta Author Jr."),
+                        $this->manualAuthor("Gamma Author"),
+                    ]
+                )
+            );
+
+        self::assertSame(3, $this->tableCount($this->tableNames->authors()));
+        self::assertSame(3, $this->tableCount(
+            $this->tableNames->authorContributorCredits()
+        ));
+        self::assertSame(3, $this->tableCount(
+            $this->tableNames->authorCreditEvidence()
+        ));
+        self::assertSame(3, $this->tableCount(
+            $this->tableNames->workContributors()
+        ));
+        self::assertSame(0, $this->providerAuthorClaimCount());
+        self::assertSame(
+            ["Alpha Author", "Béta Author Jr.", "Gamma Author"],
+            $this->database->get_col(
+                "SELECT a.display_name FROM `{$this->tableNames->authors()}` a "
+                    . "INNER JOIN `{$this->tableNames->workContributors()}` wc "
+                    . "ON wc.author_id=a.author_id "
+                    . "ORDER BY wc.contributor_position"
+            )
+        );
+        self::assertSame(
+            ["author", "author", "author"],
+            $this->database->get_col(
+                "SELECT contributor_role FROM `{$this->tableNames->workContributors()}` "
+                    . "ORDER BY contributor_position"
+            )
+        );
+        self::assertSame([1, 2, 3], array_map(
+            "intval",
+            $this->database->get_col(
+                "SELECT contributor_position FROM `{$this->tableNames->workContributors()}` "
+                    . "ORDER BY contributor_position"
+            )
+        ));
+        self::assertSame(
+            ["user_observation", "user_observation", "user_observation"],
+            $this->database->get_col(
+                "SELECT source_kind FROM `{$this->tableNames->authorCreditEvidence()}` "
+                    . "ORDER BY evidence_id"
+            )
+        );
+        self::assertSame(1, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->metadataUserObservations()}` "
+                . "WHERE field_key='contributors'"
+        ));
+
+        $beforeSearch = $this->authorGraphCounts();
+        $authorPage = (new WpdbBibliographicSearchProvider(
+            $this->database,
+            $this->tableNames
+        ))->searchAuthors(new BibliographicTextSearchQuery("Alpha Author"));
+        self::assertCount(1, $authorPage->items());
+        $authorId = $authorPage->items()[0]->reference()->authorId();
+        self::assertNotNull($authorId);
+        $works = (new WpdbBibliographicAuthorWorkSearchProvider(
+            $this->database,
+            $this->tableNames
+        ))->searchWorksForAuthor(
+            BibliographicAuthorReference::canonical($authorId),
+            0,
+            10
+        );
+        self::assertCount(1, $works->items());
+        self::assertSame(
+            $result->work()->id()->value(),
+            $works->items()[0]->reference()->workId()?->value()
+        );
+        self::assertSame($beforeSearch, $this->authorGraphCounts());
+    }
+
+    public function testManualDuplicateNamesRemainIndependentWithinAndAcrossWorks(): void
+    {
+        $application = (new ProductionComposition($this->database))->application();
+        foreach (["First", "Second"] as $title) {
+            $application->addBookCommit()->commit(
+                $this->libraryId,
+                new AddBookCommitRequest(
+                    null,
+                    AddBookCommitSelection::manual(),
+                    new AddBookObservedMetadata([
+                        UserObservedMetadataField::Title->value =>
+                            new MetadataFieldValue("{$title} Work"),
+                    ]),
+                    $this->classification(),
+                    authors: $title === "First"
+                        ? [
+                            $this->manualAuthor("Alex Smith"),
+                            $this->manualAuthor("Alex Smith"),
+                        ]
+                        : [$this->manualAuthor("Alex Smith")]
+                )
+            );
+        }
+
+        self::assertSame(2, $this->tableCount($this->tableNames->works()));
+        self::assertSame(3, $this->tableCount($this->tableNames->authors()));
+        self::assertSame(3, $this->tableCount(
+            $this->tableNames->authorContributorCredits()
+        ));
+        self::assertSame(3, $this->tableCount(
+            $this->tableNames->workContributors()
+        ));
+        self::assertSame(
+            ["1", "1,2"],
+            $this->database->get_col(
+                "SELECT GROUP_CONCAT(contributor_position "
+                    . "ORDER BY contributor_position SEPARATOR ',') "
+                    . "FROM `{$this->tableNames->workContributors()}` "
+                    . "GROUP BY work_id ORDER BY COUNT(*),MIN(contributor_position)"
+            )
+        );
+    }
+
+    public function testManualAuthorsNeverMutateAnExplicitExistingWork(): void
+    {
+        $application = (new ProductionComposition($this->database))->application();
+        $first = $application->addBookCommit()->commit(
+            $this->libraryId,
+            new AddBookCommitRequest(
+                null,
+                AddBookCommitSelection::manual(),
+                new AddBookObservedMetadata([
+                    UserObservedMetadataField::Title->value =>
+                        new MetadataFieldValue("Existing Work First Edition"),
+                ]),
+                $this->classification(),
+                authors: [$this->manualAuthor("Author A")]
+            )
+        );
+        $before = $this->authorGraphCounts();
+
+        $second = $application->addBookCommit()->commit(
+            $this->libraryId,
+            new AddBookCommitRequest(
+                null,
+                AddBookCommitSelection::manual($first->work()->id()),
+                new AddBookObservedMetadata([
+                    UserObservedMetadataField::Title->value =>
+                        new MetadataFieldValue("Existing Work Second Edition"),
+                ]),
+                $this->classification(),
+                authors: [$this->manualAuthor("Author B")]
+            )
+        );
+
+        self::assertSame($first->work()->id()->value(), $second->work()->id()->value());
+        self::assertNotSame(
+            $first->edition()->id()->value(),
+            $second->edition()->id()->value()
+        );
+        self::assertSame($before, $this->authorGraphCounts());
+        self::assertSame(
+            ["Author A"],
+            $this->database->get_col(
+                "SELECT display_name FROM `{$this->tableNames->authors()}`"
+            )
+        );
+
+        $zeroAuthorWork = $application->addBookCommit()->commit(
+            $this->libraryId,
+            new AddBookCommitRequest(
+                null,
+                AddBookCommitSelection::manual(),
+                new AddBookObservedMetadata([
+                    UserObservedMetadataField::Title->value =>
+                        new MetadataFieldValue("Zero Author Work"),
+                ]),
+                $this->classification()
+            )
+        );
+        $beforeZero = $this->authorGraphCounts();
+        $application->addBookCommit()->commit(
+            $this->libraryId,
+            new AddBookCommitRequest(
+                null,
+                AddBookCommitSelection::manual($zeroAuthorWork->work()->id()),
+                new AddBookObservedMetadata([
+                    UserObservedMetadataField::Title->value =>
+                        new MetadataFieldValue("Zero Author Work Second Edition"),
+                ]),
+                $this->classification(),
+                authors: [$this->manualAuthor("Must Not Attach")]
+            )
+        );
+        self::assertSame($beforeZero, $this->authorGraphCounts());
+    }
+
+    public function testManualAuthorsNeverMutateLocalOrSelectedExistingEdition(): void
+    {
+        $application = (new ProductionComposition($this->database))->application();
+        $identity = $this->identity("9780306406157");
+        $first = $application->addBookCommit()->commit(
+            $this->libraryId,
+            new AddBookCommitRequest(
+                $identity->isbn13()->value(),
+                AddBookCommitSelection::manual(),
+                new AddBookObservedMetadata([
+                    UserObservedMetadataField::Title->value =>
+                        new MetadataFieldValue("Existing Edition"),
+                ]),
+                $this->classification(),
+                authors: [$this->manualAuthor("Author A")]
+            )
+        );
+        $before = $this->authorGraphCounts();
+
+        $local = $application->addBookCommit()->commit(
+            $this->libraryId,
+            new AddBookCommitRequest(
+                $identity->isbn13()->value(),
+                AddBookCommitSelection::manual(),
+                new AddBookObservedMetadata([
+                    UserObservedMetadataField::Title->value =>
+                        new MetadataFieldValue("Ignored title"),
+                ]),
+                $this->classification(),
+                authors: [$this->manualAuthor("Author B")]
+            )
+        );
+        $selected = $application->addBookCommit()->commit(
+            $this->libraryId,
+            new AddBookCommitRequest(
+                $identity->isbn13()->value(),
+                AddBookCommitSelection::existingEdition($first->edition()->id()),
+                new AddBookObservedMetadata([]),
+                $this->classification(),
+                authors: [$this->manualAuthor("Author C")]
+            )
+        );
+
+        self::assertTrue($local->existingEdition());
+        self::assertTrue($selected->existingEdition());
+        self::assertSame($before, $this->authorGraphCounts());
+        self::assertSame(3, $this->tableCount($this->tableNames->items()));
+    }
+
     public function testGenericMaterializationAndAddBookReuseExactAuthorCreditAndPreserveConflict(): void
     {
         $identity = $this->identity("9780441172719");
@@ -459,6 +722,78 @@ final class AddBookAuthorMaterializationTest extends PersistenceIntegrationTestC
         }
     }
 
+    public function testHardManualAuthorFailureRollsBackCompleteAddBookGraph(): void
+    {
+        $workId = new WorkId("work-manual-rollback");
+        $editionId = new \Biblio\Core\Catalog\EditionId(
+            "edition-manual-rollback"
+        );
+        $participant = new AddBookCommitEvidenceWriter(
+            new WpdbMetadataFieldReviewRepository($this->database, $this->tableNames),
+            new WpdbUserObservedMetadataEvidenceRepository($this->database, $this->tableNames),
+            new WpdbEditionMetadataProvenanceRepository($this->database, $this->tableNames),
+            new CanonicalAuthorMaterializer(
+                new RejectingAddBookAuthorRepository(),
+                new WpdbBibliographicProviderIdentityRepository(
+                    $this->database,
+                    $this->tableNames
+                ),
+                new WpdbAuthorContributorCreditRepository(
+                    $this->database,
+                    $this->tableNames
+                ),
+                new FixedAddBookAuthorIds(),
+                new FixedAddBookAuthorClock()
+            ),
+            new UserId((string) $this->wordpressUserId),
+            $this->libraryId,
+            new AddBookObservedMetadata([
+                UserObservedMetadataField::Contributors->value =>
+                    new MetadataFieldValue(["Edition Translator"]),
+            ]),
+            null,
+            new DateTimeImmutable("2026-09-14T08:05:00+00:00"),
+            new ManualAuthorAttemptPlan([new ManualAuthorAttempt(
+                "manual-observation-rollback",
+                "Rollback Manual Author",
+                ContributorRole::Author,
+                new ContributorPosition(1)
+            )]),
+            $workId,
+            $editionId
+        );
+
+        try {
+            (new ProductionComposition($this->database))->application()
+                ->libraryItemCreation()->addWithNewWorkAndEdition(
+                    $this->libraryId,
+                    new \Biblio\Core\Catalog\ItemId("item-manual-rollback"),
+                    $workId,
+                    "Manual Rollback Work",
+                    $editionId,
+                    $this->classification(),
+                    participant: $participant
+                );
+            self::fail("Hard manual Author persistence failure was swallowed.");
+        } catch (PersistenceException $exception) {
+            self::assertSame(FailureReason::PersistenceWriteFailed, $exception->reason());
+        }
+
+        foreach ([
+            $this->tableNames->works(),
+            $this->tableNames->editions(),
+            $this->tableNames->items(),
+            $this->tableNames->libraryCatalogContexts(),
+            $this->tableNames->metadataUserObservations(),
+            $this->tableNames->authors(),
+            $this->tableNames->authorContributorCredits(),
+            $this->tableNames->authorCreditEvidence(),
+            $this->tableNames->workContributors(),
+        ] as $table) {
+            self::assertSame(0, $this->tableCount($table), $table);
+        }
+    }
+
     /** @param list<BibliographicAuthorCredit> $credits */
     private function candidate(
         string $provider,
@@ -553,6 +888,29 @@ final class AddBookAuthorMaterializationTest extends PersistenceIntegrationTestC
     private function identity(string $isbn): CanonicalIsbnIdentity
     {
         return CanonicalIsbnIdentity::fromIsbn(new Isbn13($isbn));
+    }
+
+    private function manualAuthor(string $displayName): ManualAuthorInput
+    {
+        return ManualAuthorInput::fromDisplayName($displayName)
+            ?? throw new RuntimeException("Manual Author fixture is empty.");
+    }
+
+    /** @return array<string, int> */
+    private function authorGraphCounts(): array
+    {
+        return [
+            "authors" => $this->tableCount($this->tableNames->authors()),
+            "credits" => $this->tableCount(
+                $this->tableNames->authorContributorCredits()
+            ),
+            "evidence" => $this->tableCount(
+                $this->tableNames->authorCreditEvidence()
+            ),
+            "edges" => $this->tableCount(
+                $this->tableNames->workContributors()
+            ),
+        ];
     }
 
     private function tableCount(string $table): int

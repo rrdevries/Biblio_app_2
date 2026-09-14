@@ -13,4 +13,5 @@ interface AddBookRecordIdGenerator
     public function nextItemId(): ItemId;
     public function nextWorkId(): WorkId;
     public function nextEditionId(): EditionId;
+    public function nextManualAuthorObservationId(): string;
 }

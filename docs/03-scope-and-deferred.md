@@ -255,8 +255,9 @@ The following remains deferred independently of D-SCOPE-01:
   record fusion, OCR/vision, community Metadata Graph and paid-feed expansion;
 - later Author governance: broader promotion/reconciliation/governance remains
   deferred; 01D wires generic bibliographic materialization and 01E wires Add
-  Book to the shared strong/name-only boundary, while Search remains a
-  read-only consumer and no current runtime backfill occurs;
+  Book provider evidence to the shared strong/name-only boundary; ADD-AUTH-01A
+  adds typed manual name-only evidence for genuinely new Works, while its
+  repeatable UI, Search writes and current-runtime backfill remain deferred;
 - generic Relationship management UI;
 - public profiles and public/shared Hierna lezen;
 - advanced-search implementation unless measured need proves it necessary;

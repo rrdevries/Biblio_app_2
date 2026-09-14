@@ -1728,14 +1728,19 @@ boundary for typed provider Author evidence retained in its actor-scoped
 candidate snapshot. Strong Open Library Author keys use the resolved path;
 Open Library or Google Books name-only Authors use the provisional path.
 Search remains read-only and consumes the resulting Authors and ordered Work
-edges through its existing local providers. Add Book now retains the same
+edges through its existing local providers. Add Book retains the same
 typed provider Author credits in its private reviewed-candidate snapshot and
 invokes the shared boundary inside the existing Item-add transaction after the
 definitive Work is known. Strong Open Library identity and provider-observed
 name-only credits therefore behave identically across generic materialization
-and Add Book. Manual untyped contributor input and Add Book paths without
-candidate evidence still create no canonical Author; no UI or public REST
-contract exposes or composes Author identity.
+and Add Book. Manual Add Book additionally accepts an optional exact list of
+typed Author display-name observations. Core drops whitespace-only rows,
+derives contiguous one-based positions, assigns role `author` to every row and
+creates evidence-scoped provisional Authors only when the definitive Work and
+Edition are genuinely new. Existing Work/Edition, local-first and ISBN-race
+winner paths never receive this mutation. The separate untyped `contributors`
+field remains Edition evidence. No Author identity is exposed in the success
+response, and the repeatable UI remains a separate slice.
 
 Library-scoped detail may include:
 - In deze bibliotheek;

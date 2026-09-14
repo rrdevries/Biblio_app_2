@@ -4100,3 +4100,36 @@ Status: **TECHNICAL GO / HUMAN RESPONSIVE RECHECK PENDING**. Product remains
 `v2.001`; schema remains `1024`; Biblio Core remains `2.23.0`; Biblio UI is
 `0.18.1`. Exact evidence is in
 `docs/97-search-auth-ui-01-f1-responsive-search-layout.md`.
+
+## 123. ADD-AUTH-01A typed manual Author Core integration
+
+ADD-AUTH-01A is accepted only when:
+
+- omitted, empty and blank-only `authors` preserve the existing Add Book flow;
+- the strict REST list accepts only exact `{display_name:string}` rows, at
+  most 32 raw rows and at most 512 Unicode characters after the canonical
+  whitespace normalization;
+- valid punctuation, capitalization, suffixes and diacritics are preserved;
+- one or many manual rows create independent provisional/observed Authors,
+  user-observation credits/evidence and ordered WorkContributor edges, all
+  with role `author` and contiguous server-derived positions;
+- equal names within one Work and across independent Works are never merged by
+  name;
+- the immutable attempt plan and server-issued observation IDs are created
+  once before the first transaction attempt and reused by the complete retry;
+- exact replay of that plan reuses Author, credit, evidence identity and edge;
+- explicit existing Work with or without Authors, explicit existing Edition,
+  local-first reuse and an ISBN racewinner receive no manual Author mutation;
+- hard Author failure rolls back Work, Edition, Item, classification, evidence
+  and the complete Author graph;
+- `contributors` remains separate Edition evidence, provider-backed 01E
+  behavior remains unchanged and Search performs no write;
+- local Author Search finds a manually materialized Author and selected
+  Author-to-Works returns its exact Work;
+- the success response and authorization boundary remain unchanged; and
+- schema remains 1024, no V1/runtime backfill is used, targeted and full Core
+  gates pass, and the independent second review finds no blocker.
+
+Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1024`;
+Biblio Core is `2.25.0`; Biblio UI remains `0.18.1`. Exact evidence is in
+`docs/100-add-auth-01a-typed-manual-author-core-integration.md`.

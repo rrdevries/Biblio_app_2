@@ -254,7 +254,7 @@ final readonly class CanonicalAuthorMaterializer
      * signals deliberately escape so the caller can retry the complete operation.
      */
     public function materializeNameOnlyAuthor(
-        NameOnlyAuthorCredit $input
+        NameOnlyAuthorMaterializationCredit $input
     ): CanonicalAuthorMaterializationResult {
         $now = $this->clock->now();
         $key = AuthorContributorCreditKey::fromSource(

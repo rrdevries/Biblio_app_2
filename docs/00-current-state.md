@@ -3431,3 +3431,31 @@ and 200% reflow.
 Product remains `v2.001`; schema remains `1024`; Biblio Core remains `2.23.0`;
 Biblio UI is `0.18.1` for the stylesheet cache-bust. Closure evidence:
 `docs/97-search-auth-ui-01-f1-responsive-search-layout.md`.
+
+### ADD-AUTH-01A — Typed manual Author Core integration
+
+Status: **GO / CLOSED**.
+
+The Add Book request now accepts an optional exact `authors` array containing
+only `display_name`. Core applies the established Unicode whitespace
+normalization, ignores empty rows, enforces 32 rows and 512 characters, keeps
+punctuation/case/diacritics, assigns every row role `author` and derives
+contiguous positions from final input order.
+
+Before the first transaction attempt, `AddBookCommitService` allocates one
+immutable user-observation identity per valid row. The same attempt plan is
+held by the existing transaction participant and reused by the one complete
+operation retry. The shared name-only `CanonicalAuthorMaterializer` creates
+provisional Authors, credits/evidence and ordered WorkContributor edges only
+when the definitive Work and Edition equal the preallocated new identities.
+Existing Work, existing Edition, local-first and ISBN-racewinner paths never
+receive manual Author mutation.
+
+All writes share the existing Add Library Item transaction; hard Author
+failure rolls back the complete graph. Matching visible names remain
+independent because source identity is observation-scoped. `contributors`
+remains separate Edition evidence, provider-backed 01E behavior and Search
+production are unchanged, and the public success response exposes no Author
+state. Product remains `v2.001`; schema remains `1024`; Biblio Core is
+`2.25.0`; Biblio UI remains `0.18.1`. The repeatable UI remains ADD-AUTH-01B.
+Closure evidence: `docs/100-add-auth-01a-typed-manual-author-core-integration.md`.

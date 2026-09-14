@@ -1,6 +1,6 @@
 # D-ADD-AUTH-01 — Manual Add Book Author input
 
-Status: **DESIGN GO / IMPLEMENTATION NOT STARTED**
+Status: **DESIGN GO / BACKEND IMPLEMENTED THROUGH ADD-AUTH-01A; UI DEFERRED**
 
 Date: 2026-09-14
 
@@ -286,9 +286,11 @@ Backward compatibility is additive:
 - a missing `authors` member means an empty list;
 - an explicit empty list is also accepted;
 - existing `observed_fields.contributors` remains accepted and unchanged;
-- non-empty `authors` is accepted only with manual selection and no `work_id`;
-  candidate, existing-Edition and manual-existing-Work requests fail strict
-  validation if they try to send names; and
+- syntactically valid `authors` remains additive on every Add Book request,
+  but Core materializes it only for manual selection whose definitive Work and
+  Edition are both the preallocated new identities; existing Work, existing
+  Edition, local-first, candidate and ISBN-racewinner paths ignore it for
+  Author mutation; and
 - the success response remains exactly unchanged and exposes no Author IDs.
 
 Internally, one immutable `ManualAuthorCredit`-style value implements the
@@ -423,7 +425,7 @@ Use exactly two additive slices. The split is safe because requests without
 `authors` remain valid and the UI slice can land only after the backend
 contract is available.
 
-### ADD-AUTH-01A — typed manual Author Core/REST integration
+### ADD-AUTH-01A — typed manual Author Core/REST integration — implemented
 
 - Add the optional typed manual Author request list and strict parser rules.
 - Add user-observation manual credits over the existing shared 01C
@@ -436,7 +438,7 @@ contract is available.
 - Add unit, REST, transaction, rollback, idempotency, race-winner, Search and
   Author-to-Works integration coverage.
 
-### ADD-AUTH-01B — repeatable Author UI
+### ADD-AUTH-01B — repeatable Author UI — deferred
 
 - Add repeatable rows and retained wizard state only in manual-new-Work mode.
 - Add add/remove/up/down, duplicate warning, accessible validation/focus/live
@@ -458,7 +460,7 @@ No third schema, provider or correction slice is required for this feature.
 | C. Zero Authors | Missing, empty array or only blank rows commits the otherwise valid manual book and creates no Author state. |
 | D. Same name on different Works | Independent manual observations create independent Authors/credits; no name lookup or merge occurs. |
 | E. Exact replay | The same immutable attempt plan reuses the exact credit, Author and edge during the one full-operation retry, with no duplicate graph. |
-| F. Existing Work | Manual existing-Work/new-Edition UI sends no Authors; direct non-empty input is rejected and the Work Author graph is unchanged, including when it starts empty. |
+| F. Existing Work | Manual existing-Work/new-Edition UI sends no Authors; direct syntactically valid input is accepted for compatibility but ignored for Author mutation, and the Work Author graph is unchanged, including when it starts empty. |
 | G. Existing Edition | Item addition, local-first reuse and ISBN race-winner paths leave the Work Author graph unchanged. |
 | H. Other contributors | `contributors` remains separate Edition evidence and never creates an Author or changes typed Author rows. |
 | I. Search | Existing local Author Search finds the newly materialized manual Author without a Search write or new endpoint. |
@@ -473,5 +475,6 @@ the contributor distinction, public contract, transaction/retry behavior,
 accessible responsive interaction and the two implementation boundaries are
 all closed. Verdict: **DESIGN GO**.
 
-Schema remains `1024`; Biblio Core remains `2.24.0`; Biblio UI remains
-`0.18.1`. No Core/UI suites are required for this docs-only decision.
+Schema remains `1024`; ADD-AUTH-01A advances Biblio Core to `2.25.0`; Biblio UI
+remains `0.18.1`. The repeatable Author UI and its human acceptance remain
+ADD-AUTH-01B.
