@@ -7,7 +7,8 @@ namespace Biblio\Core\Application\Metadata\Author;
 use Biblio\Core\Catalog\{ContributorPosition,ContributorRole,WorkId};
 use DateTimeImmutable;
 
-final readonly class NameOnlyAuthorCredit implements AuthorMaterializationCredit
+final readonly class NameOnlyAuthorCredit implements
+    NameOnlyAuthorMaterializationCredit
 {
     public function __construct(
         private WorkId $workId,

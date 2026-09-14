@@ -19,6 +19,8 @@ use Biblio\Core\Application\Metadata\Author\{
     AuthorProviderIdentityRepository,
     CanonicalAuthorMaterializationIdGenerator,
     CanonicalAuthorMaterializer,
+    ManualAuthorAttempt,
+    ManualAuthorCredit,
     NameOnlyAuthorCredit,
     OpenLibraryAuthorId,
     StrongOpenLibraryAuthorCredit
@@ -125,6 +127,49 @@ final class CanonicalAuthorMaterializerTest extends PersistenceIntegrationTestCa
         self::assertSame(1, $this->rowCount($this->tableNames->authorCreditEvidence()));
         self::assertSame(2, (int) $this->database->get_var(
             "SELECT observation_count FROM `{$this->tableNames->authorCreditEvidence()}`"
+        ));
+    }
+
+    public function testManualObservationExactReplayReusesAuthorCreditAndEdge(): void
+    {
+        $this->seedWork("work-manual");
+        $service = $this->service(["author-manual"], ["credit-manual"]);
+        $attempt = new ManualAuthorAttempt(
+            "manual-observation-stable",
+            "Manual Author",
+            ContributorRole::Author,
+            new ContributorPosition(1)
+        );
+        $input = new ManualAuthorCredit(
+            new WorkId("work-manual"),
+            $attempt,
+            new DateTimeImmutable("2026-09-14T10:00:00+00:00")
+        );
+
+        $first = $this->transaction(
+            fn () => $service->materializeNameOnlyAuthor($input)
+        );
+        $replay = $this->transaction(
+            fn () => $service->materializeNameOnlyAuthor($input)
+        );
+
+        self::assertSame($first->authorId()?->value(), $replay->authorId()?->value());
+        self::assertSame($first->creditId()->value(), $replay->creditId()->value());
+        self::assertSame(1, $this->rowCount($this->tableNames->authors()));
+        self::assertSame(1, $this->rowCount(
+            $this->tableNames->authorContributorCredits()
+        ));
+        self::assertSame(1, $this->rowCount(
+            $this->tableNames->authorCreditEvidence()
+        ));
+        self::assertSame(1, $this->rowCount(
+            $this->tableNames->workContributors()
+        ));
+        self::assertSame(2, (int) $this->database->get_var(
+            "SELECT observation_count FROM `{$this->tableNames->authorCreditEvidence()}`"
+        ));
+        self::assertSame("user_observation", $this->database->get_var(
+            "SELECT source_kind FROM `{$this->tableNames->authorCreditEvidence()}`"
         ));
     }
 

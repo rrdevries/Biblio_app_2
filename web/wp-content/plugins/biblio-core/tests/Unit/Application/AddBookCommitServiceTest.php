@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Tests\Unit\Application;
 
-use Biblio\Core\Application\Catalog\AddLibraryItemCommitter;
+use Biblio\Core\Application\Catalog\{AddLibraryItemCommitter,AddLibraryItemTransactionParticipant};
 use Biblio\Core\Application\Catalog\Classification\LibraryCatalogContextInitialization;
 use Biblio\Core\Application\Catalog\LocalEditionResolver;
 use Biblio\Core\Application\Identity\AuthenticatedUser;
@@ -19,7 +19,7 @@ use Biblio\Core\Application\Metadata\Author\{
     CanonicalAuthorMaterializationIdGenerator,
     CanonicalAuthorMaterializer
 };
-use Biblio\Core\Application\Metadata\{AddBookCommitRequest,AddBookCommitSelection,AddBookCommitService,AddBookObservedMetadata,AddBookRecordIdGenerator,EditionMetadataProvenanceRepository,MetadataCandidate,MetadataCandidateId,MetadataClock,MetadataFieldReviewRepository,MetadataFieldValue,MetadataLookupId,MetadataLookupSnapshotRepository,MetadataLookupSnapshotUnavailable,MetadataMatchMethod,UserObservedMetadataEvidenceRepository,UserObservedMetadataField};
+use Biblio\Core\Application\Metadata\{AddBookCommitRequest,AddBookCommitSelection,AddBookCommitService,AddBookObservedMetadata,AddBookRecordIdGenerator,EditionMetadataProvenanceRepository,ManualAuthorInput,MetadataCandidate,MetadataCandidateId,MetadataClock,MetadataFieldReviewRepository,MetadataFieldValue,MetadataLookupId,MetadataLookupSnapshotRepository,MetadataLookupSnapshotUnavailable,MetadataMatchMethod,UserObservedMetadataEvidenceRepository,UserObservedMetadataField};
 use Biblio\Core\Authorization\LibraryAuthorizationPolicy;
 use Biblio\Core\Catalog\Classification\{LibraryBookTypeId,LibraryCatalogSelection};
 use Biblio\Core\Catalog\{BibliographicMetadataRepository,CanonicalIsbnIdentity,Edition,EditionId,EditionIdentifierClaimRepository,EditionIsbnMetadata,EditionRepository,Isbn13,IsbnCanonicalizer,Item,ItemId,Work,WorkId,WorkRepository,WritableAuthorRepository};
@@ -433,6 +433,166 @@ final class AddBookCommitServiceTest extends TestCase
         )->commit(new LibraryId("library-a"), $this->request(true));
     }
 
+    public function testManualAuthorRetryReusesOneAttemptPlanAndObservationIds(): void
+    {
+        $edition = new Edition(
+            new EditionId("edition-new"),
+            new WorkId("work-new"),
+            "Manual title"
+        );
+        $work = new Work($edition->workId(), "Manual title");
+        $participants = [];
+        $committer = $this->createMock(AddLibraryItemCommitter::class);
+        $committer->expects(self::exactly(2))
+            ->method("addWithNewWorkAndEdition")
+            ->willReturnCallback(static function (
+                LibraryId $libraryId,
+                ItemId $itemId,
+                WorkId $workId,
+                string $title,
+                EditionId $editionId,
+                ?LibraryCatalogContextInitialization $classification,
+                ?EditionIsbnMetadata $isbnMetadata,
+                mixed $inventoryNumber,
+                mixed $locationId,
+                ?AddLibraryItemTransactionParticipant $participant
+            ) use (&$participants, $edition): Item {
+                $participants[] = $participant;
+                if (count($participants) === 1) {
+                    throw new AuthorContributorCreditRace();
+                }
+                return Item::active($itemId, $libraryId, $edition->id());
+            });
+        $ids = $this->createMock(AddBookRecordIdGenerator::class);
+        $ids->method("nextItemId")->willReturn(new ItemId("item-new"));
+        $ids->method("nextWorkId")->willReturn(new WorkId("work-new"));
+        $ids->method("nextEditionId")->willReturn(new EditionId("edition-new"));
+        $ids->expects(self::exactly(2))
+            ->method("nextManualAuthorObservationId")
+            ->willReturnOnConsecutiveCalls(
+                "manual-observation-one",
+                "manual-observation-two"
+            );
+        $first = ManualAuthorInput::fromDisplayName("Alpha");
+        $second = ManualAuthorInput::fromDisplayName("Beta");
+        self::assertNotNull($first);
+        self::assertNotNull($second);
+
+        $result = $this->service(
+            LibraryMembership::owner(),
+            null,
+            $work,
+            null,
+            $committer,
+            $edition,
+            recordIds: $ids
+        )->commit(
+            new LibraryId("library-a"),
+            new AddBookCommitRequest(
+                null,
+                AddBookCommitSelection::manual(),
+                new AddBookObservedMetadata([
+                    UserObservedMetadataField::Title->value =>
+                        new MetadataFieldValue("Manual title"),
+                ]),
+                $this->classification(),
+                authors: [$first, $second]
+            )
+        );
+
+        self::assertSame($participants[0], $participants[1]);
+        self::assertSame("edition-new", $result->edition()->id()->value());
+    }
+
+    public function testIsbnRaceWinnerDoesNotReceiveManualAuthors(): void
+    {
+        $winnerWork = new Work(new WorkId("work-race-winner"), "Winner Work");
+        $winnerEdition = new Edition(
+            new EditionId("edition-race-winner"),
+            $winnerWork->id(),
+            "Winner Edition"
+        );
+        $authorRepository = $this->createMock(WritableAuthorRepository::class);
+        $authorRepository->expects(self::never())->method("add");
+        $authorRepository->expects(self::never())->method("addContributor");
+        $credits = $this->createMock(AuthorContributorCreditRepository::class);
+        $credits->expects(self::never())->method("findByKey");
+        $clock = $this->createStub(MetadataClock::class);
+        $clock->method("now")->willReturn(
+            new DateTimeImmutable("2026-09-14T10:10:00+00:00")
+        );
+        $materializer = new CanonicalAuthorMaterializer(
+            $authorRepository,
+            $this->createStub(AuthorProviderIdentityRepository::class),
+            $credits,
+            $this->createStub(CanonicalAuthorMaterializationIdGenerator::class),
+            $clock
+        );
+        $reviews = $this->createStub(MetadataFieldReviewRepository::class);
+        $reviews->method("findForUpdate")->willReturnCallback(
+            static fn ($recordId, $field, $at) =>
+                \Biblio\Core\Application\Metadata\MetadataFieldReview::empty(
+                    $recordId,
+                    $field,
+                    $at
+                )
+        );
+        $committer = $this->createMock(AddLibraryItemCommitter::class);
+        $committer->expects(self::once())
+            ->method("addWithNewWorkAndEdition")
+            ->willReturnCallback(static function (
+                LibraryId $libraryId,
+                ItemId $itemId,
+                WorkId $workId,
+                string $title,
+                EditionId $editionId,
+                ?LibraryCatalogContextInitialization $classification,
+                ?EditionIsbnMetadata $isbnMetadata,
+                mixed $inventoryNumber,
+                mixed $locationId,
+                ?AddLibraryItemTransactionParticipant $participant
+            ) use ($winnerWork, $winnerEdition): Item {
+                $item = Item::active($itemId, $libraryId, $winnerEdition->id());
+                $participant?->apply($winnerWork, $winnerEdition, $item, true);
+                return $item;
+            });
+        $author = ManualAuthorInput::fromDisplayName("Must Not Attach");
+        self::assertNotNull($author);
+        $ids = $this->createStub(AddBookRecordIdGenerator::class);
+        $ids->method("nextItemId")->willReturn(new ItemId("item-new"));
+        $ids->method("nextWorkId")->willReturn(new WorkId("work-new"));
+        $ids->method("nextEditionId")->willReturn(new EditionId("edition-new"));
+        $ids->method("nextManualAuthorObservationId")
+            ->willReturn("manual-observation-race-winner");
+
+        $result = $this->service(
+            LibraryMembership::owner(),
+            null,
+            $winnerWork,
+            null,
+            $committer,
+            $winnerEdition,
+            recordIds: $ids,
+            materializer: $materializer,
+            reviews: $reviews
+        )->commit(
+            new LibraryId("library-a"),
+            new AddBookCommitRequest(
+                null,
+                AddBookCommitSelection::manual(),
+                new AddBookObservedMetadata([
+                    UserObservedMetadataField::Title->value =>
+                        new MetadataFieldValue("Intended New Work"),
+                ]),
+                $this->classification(),
+                authors: [$author]
+            )
+        );
+
+        self::assertTrue($result->existingEdition());
+        self::assertSame("work-race-winner", $result->work()->id()->value());
+    }
+
     /** @return iterable<string, array{class-string<RuntimeException>}> */
     public static function authorRaceSignals(): iterable
     {
@@ -449,7 +609,10 @@ final class AddBookCommitServiceTest extends TestCase
         ?MetadataCandidate $snapshotCandidate,
         AddLibraryItemCommitter $committer,
         ?Edition $committedEdition = null,
-        array $legacyEditions = []
+        array $legacyEditions = [],
+        ?AddBookRecordIdGenerator $recordIds = null,
+        ?CanonicalAuthorMaterializer $materializer = null,
+        ?MetadataFieldReviewRepository $reviews = null
     ): AddBookCommitService {
         $actorId = new UserId("actor-a");
         $libraryId = new LibraryId("library-a");
@@ -490,7 +653,7 @@ final class AddBookCommitServiceTest extends TestCase
         $legacy->method("editionsForIsbns")->willReturn($legacyEditions);
         $snapshots = $this->createStub(MetadataLookupSnapshotRepository::class);
         $snapshots->method("candidateForCommit")->willReturn($snapshotCandidate);
-        $ids = $this->createStub(AddBookRecordIdGenerator::class);
+        $ids = $recordIds ?? $this->createStub(AddBookRecordIdGenerator::class);
         $ids->method("nextItemId")->willReturn(new ItemId("item-new"));
         $ids->method("nextWorkId")->willReturn(new WorkId("work-new"));
         $ids->method("nextEditionId")->willReturn(new EditionId("edition-new"));
@@ -520,10 +683,10 @@ final class AddBookCommitServiceTest extends TestCase
             $clock,
             $editions,
             $works,
-            $this->createStub(MetadataFieldReviewRepository::class),
+            $reviews ?? $this->createStub(MetadataFieldReviewRepository::class),
             $this->createStub(UserObservedMetadataEvidenceRepository::class),
             $this->createStub(EditionMetadataProvenanceRepository::class),
-            new CanonicalAuthorMaterializer(
+            $materializer ?? new CanonicalAuthorMaterializer(
                 $this->createStub(WritableAuthorRepository::class),
                 $this->createStub(AuthorProviderIdentityRepository::class),
                 $this->createStub(AuthorContributorCreditRepository::class),

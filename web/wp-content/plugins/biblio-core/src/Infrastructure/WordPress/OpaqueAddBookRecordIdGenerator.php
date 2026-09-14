@@ -26,4 +26,9 @@ final readonly class OpaqueAddBookRecordIdGenerator implements
     {
         return new EditionId("edition-" . bin2hex(random_bytes(16)));
     }
+
+    public function nextManualAuthorObservationId(): string
+    {
+        return "manual-author-observation-" . bin2hex(random_bytes(16));
+    }
 }

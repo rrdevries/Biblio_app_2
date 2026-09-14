@@ -1758,6 +1758,158 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         ));
     }
 
+    public function testAddBookAcceptsTypedManualAuthorsWithoutChangingResponse(): void
+    {
+        $this->seedLibrary(
+            "library-manual-authors",
+            "Manual Authors",
+            $this->actorId,
+            "owner"
+        );
+        $this->seedBookType("library-manual-authors", "book-manual-authors");
+        $response = $this->dispatchAsActor($this->addBookCommitRequest(
+            "library-manual-authors",
+            [
+                "identifier" => null,
+                "selection" => ["type" => "manual"],
+                "authors" => [
+                    ["display_name" => " George\u{00A0}C. Clark Jr. "],
+                    ["display_name" => "   "],
+                    ["display_name" => "J. Bíbb Cain"],
+                ],
+                "observed_fields" => [
+                    "title" => "Typed Manual Author Work",
+                ],
+                "classification" => [
+                    "book_type_id" => "book-manual-authors",
+                    "genre_ids" => [],
+                    "subject_ids" => [],
+                ],
+                "item" => [],
+            ]
+        ));
+        $data = $this->successData($response);
+
+        self::assertSame(201, $response->get_status());
+        self::assertSame([
+            "item_id",
+            "edition_id",
+            "work_id",
+            "edition_title",
+            "work_title_status",
+            "existing_edition",
+        ], array_keys($data));
+        self::assertSame(2, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->authors()}`"
+        ));
+        self::assertSame(
+            ["George C. Clark Jr.", "J. Bíbb Cain"],
+            $this->database->get_col(
+                "SELECT a.display_name FROM `{$this->tableNames->authors()}` a "
+                    . "INNER JOIN `{$this->tableNames->workContributors()}` wc "
+                    . "ON wc.author_id=a.author_id "
+                    . "ORDER BY wc.contributor_position"
+                )
+        );
+
+        $existingWork = $this->dispatchAsActor($this->addBookCommitRequest(
+            "library-manual-authors",
+            [
+                "identifier" => null,
+                "selection" => [
+                    "type" => "manual",
+                    "work_id" => $data["work_id"],
+                ],
+                "authors" => [["display_name" => "Must Not Attach"]],
+                "observed_fields" => [
+                    "title" => "Second Edition On Existing Work",
+                ],
+                "classification" => [
+                    "book_type_id" => "book-manual-authors",
+                    "genre_ids" => [],
+                    "subject_ids" => [],
+                ],
+                "item" => [],
+            ]
+        ));
+        self::assertSame(201, $existingWork->get_status());
+        self::assertSame(2, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->authors()}`"
+        ));
+    }
+
+    public function testAddBookRejectsMalformedManualAuthorContracts(): void
+    {
+        $this->seedLibrary(
+            "library-invalid-authors",
+            "Invalid Authors",
+            $this->actorId,
+            "owner"
+        );
+        $this->seedBookType("library-invalid-authors", "book-invalid-authors");
+        $base = [
+            "identifier" => null,
+            "selection" => ["type" => "manual"],
+            "observed_fields" => ["title" => "Invalid Author Work"],
+            "classification" => [
+                "book_type_id" => "book-invalid-authors",
+                "genre_ids" => [],
+                "subject_ids" => [],
+            ],
+            "item" => [],
+        ];
+        $invalidAuthors = [
+            ["display_name" => "not an array"],
+            [["display_name" => 42]],
+            [["display_name" => "Name", "role" => "author"]],
+            array_fill(0, 33, ["display_name" => "Name"]),
+            [["display_name" => str_repeat("é", 513)]],
+        ];
+        $invalidAuthors[0] = "not an array";
+
+        foreach ($invalidAuthors as $authors) {
+            $response = $this->dispatchAsActor($this->addBookCommitRequest(
+                "library-invalid-authors",
+                [...$base, "authors" => $authors]
+            ));
+            self::assertSame(400, $response->get_status());
+        }
+        self::assertSame(0, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->works()}`"
+        ));
+    }
+
+    public function testAddBookAcceptsExplicitEmptyManualAuthors(): void
+    {
+        $this->seedLibrary(
+            "library-empty-authors",
+            "Empty Authors",
+            $this->actorId,
+            "owner"
+        );
+        $this->seedBookType("library-empty-authors", "book-empty-authors");
+        $response = $this->dispatchAsActor($this->addBookCommitRequest(
+            "library-empty-authors",
+            [
+                "identifier" => null,
+                "selection" => ["type" => "manual"],
+                "authors" => [],
+                "observed_fields" => ["title" => "No Known Author"],
+                "classification" => [
+                    "book_type_id" => "book-empty-authors",
+                    "genre_ids" => [],
+                    "subject_ids" => [],
+                ],
+                "item" => [],
+            ]
+        ));
+
+        self::assertSame(201, $response->get_status());
+        self::assertSame(0, (int) $this->database->get_var(
+            "SELECT COUNT(*) FROM `{$this->tableNames->authors()}`"
+        ));
+    }
+
     public function testAmbiguousLocalEditionRequiresAndRevalidatesExplicitChoice(): void
     {
         $this->seedLibrary("library-ambiguous", "Ambiguous", $this->actorId, "owner");
