@@ -29,10 +29,12 @@ final readonly class CatalogItemDetailView
         private CatalogTextValue $publicationDate,
         private CatalogTextValue $series,
         private CatalogTextValue $form,
+        private CatalogTextValue $inventoryNumber,
         private CatalogTextValue $location,
         private CatalogTextValue $condition,
         private CatalogTextValue $acquisition,
         private CatalogTextValue $availability,
+        private ItemLocalDetailsView $itemLocalDetails,
         private ?LibraryCatalogClassification $classification,
         /** @var list<CatalogItemCollectionView> */
         private array $collections,
@@ -59,10 +61,12 @@ final readonly class CatalogItemDetailView
     public function publicationDate(): CatalogTextValue { return $this->publicationDate; }
     public function series(): CatalogTextValue { return $this->series; }
     public function form(): CatalogTextValue { return $this->form; }
+    public function inventoryNumber(): CatalogTextValue { return $this->inventoryNumber; }
     public function location(): CatalogTextValue { return $this->location; }
     public function condition(): CatalogTextValue { return $this->condition; }
     public function acquisition(): CatalogTextValue { return $this->acquisition; }
     public function availability(): CatalogTextValue { return $this->availability; }
+    public function itemLocalDetails(): ItemLocalDetailsView { return $this->itemLocalDetails; }
     public function classification(): ?LibraryCatalogClassification
     {
         return $this->classification;

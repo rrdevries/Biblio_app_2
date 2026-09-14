@@ -54,6 +54,7 @@ final readonly class CoreSchemaHealthChecker
             1022 => $this->inspectTables($this->tableNames->schema1022(), true, 1022),
             1023 => $this->inspectTables($this->tableNames->schema1023(), true, 1023),
             1024 => $this->inspectTables($this->tableNames->schema1024(), true, 1024),
+            1025 => $this->inspectTables($this->tableNames->schema1025(), true, 1025),
             default => throw new CoreSchemaMigrationException(
                 "No explicit Biblio Core schema-health contract exists for "
                 . "schema version {$expectedVersion}."
@@ -274,6 +275,15 @@ final readonly class CoreSchemaHealthChecker
             $this->tableNames->schema1024Additions(),
             false,
             1024
+        );
+    }
+
+    public function inspectExistingSchema1025Additions(): CoreSchemaHealth
+    {
+        return $this->inspectTables(
+            $this->tableNames->schema1025Additions(),
+            false,
+            1025
         );
     }
 
@@ -965,6 +975,28 @@ final readonly class CoreSchemaHealthChecker
                     "item_version" => ["type" => "bigint(20) unsigned", "nullable" => "NO"],
                 ] : []),
             ],
+            ...($schemaVersion >= 1025 ? [
+                $this->tableNames->itemLocalDetails() => [
+                    "library_id" => $id,
+                    "item_id" => $id,
+                    "condition_code" => ["type" => "varchar(16)", "nullable" => "YES", "collation" => "ascii_bin"],
+                    "acquisition_year" => ["type" => "smallint(5) unsigned", "nullable" => "YES"],
+                    "acquisition_month" => ["type" => "tinyint(3) unsigned", "nullable" => "YES"],
+                    "acquisition_day" => ["type" => "tinyint(3) unsigned", "nullable" => "YES"],
+                    "acquisition_method" => ["type" => "varchar(32)", "nullable" => "YES", "collation" => "ascii_bin"],
+                    "acquired_via" => ["type" => "varchar(512)", "nullable" => "YES", "collation" => "utf8mb4_bin"],
+                    "paid_amount" => ["type" => "decimal(19,4) unsigned", "nullable" => "YES"],
+                    "paid_currency" => ["type" => "char(3)", "nullable" => "YES", "collation" => "ascii_bin"],
+                    "signed" => ["type" => "tinyint(3) unsigned", "nullable" => "YES"],
+                    "signed_by" => ["type" => "varchar(512)", "nullable" => "YES", "collation" => "utf8mb4_bin"],
+                    "copy_limitation" => ["type" => "varchar(191)", "nullable" => "YES", "collation" => "utf8mb4_bin"],
+                    "dust_jacket" => ["type" => "varchar(16)", "nullable" => "YES", "collation" => "ascii_bin"],
+                    "inscription" => ["type" => "tinyint(3) unsigned", "nullable" => "YES"],
+                    "provenance" => ["type" => "varchar(1024)", "nullable" => "YES", "collation" => "utf8mb4_bin"],
+                    "completeness" => ["type" => "varchar(1024)", "nullable" => "YES", "collation" => "utf8mb4_bin"],
+                    "details_version" => ["type" => "bigint(20) unsigned", "nullable" => "NO"],
+                ],
+            ] : []),
             $this->tableNames->itemArchivePeriods() => [
                 "library_id" => $id,
                 "item_id" => $id,
@@ -1743,6 +1775,15 @@ final readonly class CoreSchemaHealthChecker
                     "columns" => ["library_id", "item_status", "location_id", "item_id"],
                 ],
             ] : []),
+            ...($schemaVersion >= 1025 ? [
+                $this->tableNames->itemLocalDetails() => [
+                    "PRIMARY" => ["unique" => true, "columns" => ["library_id", "item_id"]],
+                    "item_details_by_library_acquisition_method" => [
+                        "unique" => false,
+                        "columns" => ["library_id", "acquisition_method", "item_id"],
+                    ],
+                ],
+            ] : []),
             $this->tableNames->itemArchivePeriods() => [
                 "PRIMARY" => ["unique" => true, "columns" => ["library_id", "item_id", "archive_version"]],
                 "one_open_item_archive_period" => ["unique" => true, "columns" => ["library_id", "open_item_id"]],
@@ -2273,6 +2314,15 @@ final readonly class CoreSchemaHealthChecker
                     ),
                 ] : []),
             ],
+            ...($schemaVersion >= 1025 ? [
+                $this->tableNames->itemLocalDetails() => [
+                    $restrict(
+                        ["library_id", "item_id"],
+                        $this->tableNames->items(),
+                        ["library_id", "item_id"]
+                    ),
+                ],
+            ] : []),
             $this->tableNames->itemArchivePeriods() => [
                 $restrict(
                     ["library_id", "item_id"],
@@ -2600,6 +2650,21 @@ final readonly class CoreSchemaHealthChecker
                     : []),
                 ...($schemaVersion >= 1012 ? ["item_version >= 1"] : []),
             ],
+            ...($schemaVersion >= 1025 ? [
+                $this->tableNames->itemLocalDetails() => [
+                    "condition_code IS NULL OR condition_code IN ('nieuwstaat','zeer_goed','goed','redelijk','matig','slecht')",
+                    "acquisition_year IS NULL AND acquisition_month IS NULL AND acquisition_day IS NULL OR acquisition_year IS NOT NULL AND acquisition_year BETWEEN 1000 AND 9999 AND (acquisition_month IS NULL AND acquisition_day IS NULL OR acquisition_month IS NOT NULL AND acquisition_month BETWEEN 1 AND 12 AND (acquisition_day IS NULL OR acquisition_day IS NOT NULL AND acquisition_day BETWEEN 1 AND CASE WHEN acquisition_month = 2 THEN 28 + (acquisition_year MOD 400 = 0 OR acquisition_year MOD 4 = 0 AND acquisition_year MOD 100 <> 0) WHEN acquisition_month IN (4,6,9,11) THEN 30 ELSE 31 END))",
+                    "acquisition_method IS NULL OR acquisition_method IN ('zelf_aangeschaft','gekregen','anders')",
+                    "paid_amount IS NULL = (paid_currency IS NULL)",
+                    "paid_currency IS NULL OR paid_currency REGEXP '^[A-Z]{3}$'",
+                    "signed IS NULL OR signed IN (0,1)",
+                    "signed_by IS NULL OR signed IS NOT NULL AND signed = 1",
+                    "dust_jacket IS NULL OR dust_jacket IN ('present','missing','not_applicable')",
+                    "inscription IS NULL OR inscription IN (0,1)",
+                    "(acquired_via IS NULL OR CHAR_LENGTH(TRIM(acquired_via)) > 0 AND !(acquired_via REGEXP '[[:cntrl:]]')) AND (signed_by IS NULL OR CHAR_LENGTH(TRIM(signed_by)) > 0 AND !(signed_by REGEXP '[[:cntrl:]]')) AND (copy_limitation IS NULL OR CHAR_LENGTH(TRIM(copy_limitation)) > 0 AND !(copy_limitation REGEXP '[[:cntrl:]]')) AND (provenance IS NULL OR CHAR_LENGTH(TRIM(provenance)) > 0 AND !(provenance REGEXP '[[:cntrl:]]')) AND (completeness IS NULL OR CHAR_LENGTH(TRIM(completeness)) > 0 AND !(completeness REGEXP '[[:cntrl:]]'))",
+                    "details_version >= 1",
+                ],
+            ] : []),
             $this->tableNames->itemArchivePeriods() => [
                 "archive_version >= 2",
                 ...(!$archiveReasonSchema1020 ? [

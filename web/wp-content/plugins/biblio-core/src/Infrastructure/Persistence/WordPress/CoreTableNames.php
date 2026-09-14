@@ -16,6 +16,7 @@ final readonly class CoreTableNames
     private string $works;
     private string $editions;
     private string $items;
+    private string $itemLocalDetails;
     private string $externalLoans;
     private string $readingRounds;
     private string $privateNotes;
@@ -80,6 +81,7 @@ final readonly class CoreTableNames
         $this->works = $prefix . "biblio_works";
         $this->editions = $prefix . "biblio_editions";
         $this->items = $prefix . "biblio_items";
+        $this->itemLocalDetails = $prefix . "biblio_item_local_details";
         $this->externalLoans = $prefix . "biblio_external_loans";
         $this->readingRounds = $prefix . "biblio_reading_rounds";
         $this->privateNotes = $prefix . "biblio_private_notes";
@@ -152,7 +154,7 @@ final readonly class CoreTableNames
         $this->authorCreditEvidence = $prefix
             . "biblio_author_credit_evidence";
 
-        foreach ($this->schema1024() as $tableName) {
+        foreach ($this->schema1025() as $tableName) {
             $this->assertSafe($tableName);
         }
         $this->assertSafe($this->nextReadingInsertTrigger);
@@ -190,6 +192,11 @@ final readonly class CoreTableNames
     public function items(): string
     {
         return $this->items;
+    }
+
+    public function itemLocalDetails(): string
+    {
+        return $this->itemLocalDetails;
     }
 
     public function externalLoans(): string
@@ -659,6 +666,21 @@ final readonly class CoreTableNames
     public function schema1024(): array
     {
         return [...$this->schema1023(), ...$this->schema1024Additions()];
+    }
+
+    /** @return list<string> */
+    public function schema1025Additions(): array
+    {
+        return [$this->itemLocalDetails];
+    }
+
+    /** @return list<string> */
+    public function schema1025(): array
+    {
+        $tables = $this->schema1024();
+        $itemOffset = array_search($this->items, $tables, true);
+        array_splice($tables, (int) $itemOffset + 1, 0, [$this->itemLocalDetails]);
+        return $tables;
     }
 
     private function assertSafe(string $tableName): void

@@ -392,10 +392,14 @@ final readonly class RestResponseSerializer
             "publication_date" => $this->text($detail->publicationDate()),
             "series" => $this->text($detail->series()),
             "form" => $this->text($detail->form()),
+            "inventory_number" => $this->text($detail->inventoryNumber()),
             "location" => $this->text($detail->location()),
             "condition" => $this->text($detail->condition()),
             "acquisition" => $this->text($detail->acquisition()),
             "availability" => $this->text($detail->availability()),
+            "item_local_details" => $this->itemLocalDetails(
+                $detail->itemLocalDetails()
+            ),
             "classification" => $this->detailClassification(
                 $detail->classification()
             ),
@@ -416,6 +420,33 @@ final readonly class RestResponseSerializer
                 $detail->activeReadingRound()
             ),
             "capabilities" => $this->detailCapabilities($detail->capabilities()),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function itemLocalDetails(
+        \Biblio\Core\Application\Catalog\Read\ItemLocalDetailsView $details
+    ): array {
+        $state = $details->state();
+        $date = $state->inLibrarySince();
+        $amount = $state->paidAmount();
+        return [
+            "details_version" => $details->detailsVersion(),
+            "condition" => $state->condition()?->value,
+            "in_library_since" => $date?->toArray(),
+            "signed" => $state->signed(),
+            "signed_by" => $state->signedBy(),
+            "copy_limitation" => $state->copyLimitation(),
+            "dust_jacket" => $state->dustJacket()?->value,
+            "inscription" => $state->inscription(),
+            "provenance" => $state->provenance(),
+            "completeness" => $state->completeness(),
+            "acquisition_method" => $state->acquisitionMethod()?->value,
+            "acquired_via" => $state->acquiredVia(),
+            "paid_amount" => $amount === null ? null : [
+                "decimal" => $amount->decimal(),
+                "currency" => $amount->currency()->value(),
+            ],
         ];
     }
 

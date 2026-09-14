@@ -9,6 +9,7 @@ use Biblio\Core\Application\Catalog\Read\CatalogDataState;
 use Biblio\Core\Application\Catalog\Read\CatalogItemNotAvailable;
 use Biblio\Core\Application\Catalog\Read\CatalogOverviewPageSize;
 use Biblio\Core\Application\Catalog\Read\CatalogUiReadService;
+use Biblio\Core\Application\Catalog\Read\{LibraryItemLocalDetailsQueryService,LibraryItemLocationQueryService,LibraryItemMetadataQueryService};
 use Biblio\Core\Application\Catalog\Classification\Read\LibraryClassificationQueryService;
 use Biblio\Core\Application\Collections\Read\LibraryCollectionQueryService;
 use Biblio\Core\Application\Library\LibraryContextQueryService;
@@ -22,6 +23,7 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbCollectionRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryClassificationReadRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPublicationRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbOwnAssessmentReadRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\{WpdbItemLocalDetailsRepository,WpdbItemRepository,WpdbLocationRepository};
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Reading\PersonalWorkReadingStatus;
 use Biblio\Core\Tests\Support\ControllableAuthenticatedUser;
@@ -491,6 +493,75 @@ final class CatalogUiReadModelsTest extends PersistenceIntegrationTestCase
         }
     }
 
+    public function testItemLocalDetailsReadIsAuthorizedArchivedCapableAndNonEnumerating(): void
+    {
+        $actor = new UserId("513");
+        $other = new UserId("514");
+        $library = new LibraryId("details-read-library");
+        $foreignLibrary = new LibraryId("details-read-foreign");
+        $this->seedLibrary($library->value(), "Details", $actor, "direct");
+        $this->seedLibrary($foreignLibrary->value(), "Foreign", $other, "direct");
+        $this->seedItem("details-read-item", $library->value(), "details-read-work", "Details");
+        $this->seedItem(
+            "details-read-foreign-item",
+            $foreignLibrary->value(),
+            "details-read-foreign-work",
+            "Foreign"
+        );
+        self::assertSame(1, $this->database->insert(
+            $this->tableNames->itemLocalDetails(),
+            [
+                "library_id" => $library->value(),
+                "item_id" => "details-read-item",
+                "condition_code" => "goed",
+                "provenance" => "Herkomst A",
+                "details_version" => 4,
+            ]
+        ));
+        self::assertSame(1, $this->database->update(
+            $this->tableNames->items(),
+            ["item_status" => "archived", "item_version" => 2],
+            ["library_id" => $library->value(), "item_id" => "details-read-item"]
+        ));
+
+        $service = $this->detailsService($actor);
+        $details = $service->details($library, new ItemId("details-read-item"));
+        self::assertSame(4, $details->detailsVersion());
+        self::assertSame("goed", $details->state()->condition()?->value);
+        self::assertSame("Herkomst A", $details->state()->provenance());
+        self::assertSame(
+            4,
+            $service->detailsForItems(
+                $library,
+                [new ItemId("details-read-item")]
+            )["details-read-item"]->detailsVersion()
+        );
+
+        foreach (["details-read-foreign-item", "details-read-missing"] as $itemId) {
+            try {
+                $service->details($library, new ItemId($itemId));
+                self::fail("Foreign or missing Item-local details were exposed.");
+            } catch (CatalogItemNotAvailable $exception) {
+                self::assertSame(
+                    "Catalog Item is not available in this Library context.",
+                    $exception->getMessage()
+                );
+            }
+        }
+
+        foreach (["details-read-item", "details-read-missing"] as $itemId) {
+            try {
+                $this->detailsService($other)->details($library, new ItemId($itemId));
+                self::fail("Unauthorized Item-local details were exposed.");
+            } catch (AuthorizationException $exception) {
+                self::assertSame(
+                    "Library context is not available to the authenticated user.",
+                    $exception->getMessage()
+                );
+            }
+        }
+    }
+
     public function testOverviewPlanUsesBoundedLibraryIndex(): void
     {
         $items = $this->tableNames->items();
@@ -551,7 +622,34 @@ final class CatalogUiReadModelsTest extends PersistenceIntegrationTestCase
                     $this->database,
                     $this->tableNames
                 )
+            ),
+            new LibraryItemMetadataQueryService(
+                $contexts,
+                new WpdbItemRepository($this->database, $this->tableNames)
+            ),
+            new LibraryItemLocationQueryService(
+                $contexts,
+                new WpdbLocationRepository($this->database, $this->tableNames)
+            ),
+            new LibraryItemLocalDetailsQueryService(
+                $contexts,
+                new WpdbItemRepository($this->database, $this->tableNames),
+                new WpdbItemLocalDetailsRepository($this->database, $this->tableNames)
             )
+        );
+    }
+
+    private function detailsService(UserId $actor): LibraryItemLocalDetailsQueryService
+    {
+        $contexts = new LibraryContextQueryService(
+            new ControllableAuthenticatedUser($actor),
+            new WpdbActorLibraryContextRepository($this->database, $this->tableNames),
+            new LibraryAuthorizationPolicy()
+        );
+        return new LibraryItemLocalDetailsQueryService(
+            $contexts,
+            new WpdbItemRepository($this->database, $this->tableNames),
+            new WpdbItemLocalDetailsRepository($this->database, $this->tableNames)
         );
     }
 

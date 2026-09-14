@@ -24,7 +24,10 @@ final readonly class CatalogUiReadService
         private LibraryClassificationQueryService $classifications,
         private LibraryCollectionQueryService $collections,
         private GetLibraryPublicAssessmentsService $publicAssessments,
-        private GetOwnAssessmentsForWorkService $ownAssessments
+        private GetOwnAssessmentsForWorkService $ownAssessments,
+        private LibraryItemMetadataQueryService $itemMetadata,
+        private LibraryItemLocationQueryService $itemLocations,
+        private LibraryItemLocalDetailsQueryService $itemLocalDetails
     ) {
     }
 
@@ -99,6 +102,19 @@ final readonly class CatalogUiReadService
             $libraryId,
             $record->workId()
         );
+        $inventoryNumber = $this->itemMetadata->inventoryNumbers(
+            $libraryId,
+            [$record->itemId()]
+        )[$record->itemId()->value()] ?? null;
+        $location = $this->itemLocations->locationsForItems(
+            $libraryId,
+            [$record->itemId()]
+        )[$record->itemId()->value()] ?? null;
+        $localDetails = $this->itemLocalDetails->details(
+            $libraryId,
+            $record->itemId()
+        );
+        $state = $localDetails->state();
 
         $unknown = CatalogTextValue::unknown();
 
@@ -116,10 +132,18 @@ final readonly class CatalogUiReadService
             $unknown,
             $unknown,
             CatalogTextValue::known("physical_book"),
+            $inventoryNumber === null
+                ? $unknown
+                : CatalogTextValue::known($inventoryNumber->value()),
+            $location === null
+                ? $unknown
+                : CatalogTextValue::known($location->displayName()),
+            $state->condition() === null
+                ? $unknown
+                : CatalogTextValue::known($state->condition()->label()),
+            $this->acquisitionSummary($state),
             $unknown,
-            $unknown,
-            $unknown,
-            $unknown,
+            $localDetails,
             $classification,
             $collections,
             $assessments,
@@ -136,6 +160,31 @@ final readonly class CatalogUiReadService
             $record->activeReadingRound(),
             $this->capabilities($record, $library)
         );
+    }
+
+    private function acquisitionSummary(
+        \Biblio\Core\Catalog\ItemLocalDetailsState $state
+    ): CatalogTextValue {
+        $date = $state->inLibrarySince();
+        if ($date !== null) {
+            $value = sprintf("%04d", $date->year());
+            if ($date->month() !== null) {
+                $value .= sprintf("-%02d", $date->month());
+            }
+            if ($date->day() !== null) {
+                $value .= sprintf("-%02d", $date->day());
+            }
+            return CatalogTextValue::known($value);
+        }
+        $method = $state->acquisitionMethod();
+        if ($method !== null) {
+            return CatalogTextValue::known(match ($method) {
+                \Biblio\Core\Catalog\AcquisitionMethod::Purchased => "Zelf aangeschaft",
+                \Biblio\Core\Catalog\AcquisitionMethod::Received => "Gekregen",
+                \Biblio\Core\Catalog\AcquisitionMethod::Other => "Anders",
+            });
+        }
+        return CatalogTextValue::unknown();
     }
 
     private function card(

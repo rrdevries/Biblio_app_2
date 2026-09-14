@@ -19,6 +19,7 @@ use Biblio\Core\Application\Catalog\Read\BibliographicRelationshipQueryService;
 use Biblio\Core\Application\Catalog\Read\BibliographicMetadataQueryService;
 use Biblio\Core\Application\Catalog\Read\LibraryItemMetadataQueryService;
 use Biblio\Core\Application\Catalog\Read\LibraryItemLocationQueryService;
+use Biblio\Core\Application\Catalog\Read\LibraryItemLocalDetailsQueryService;
 use Biblio\Core\Application\Catalog\Read\LibraryItemArchiveQueryService;
 use Biblio\Core\Application\Catalog\Classification\ClassificationTermActivity;
 use Biblio\Core\Application\Catalog\Classification\CreateLibraryCatalogContextService;
@@ -95,6 +96,7 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryWorkRepresentati
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbClassificationSeedEvolutionFactory;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbExternalLoanRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbItemRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbItemLocalDetailsRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbItemArchiveRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbEditionMetadataProvenanceRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbMetadataFieldReviewRepository;
@@ -232,6 +234,10 @@ final class ProductionComposition
             $metadataClock
         );
         $itemRepository = new WpdbItemRepository($database, $tableNames);
+        $itemLocalDetailsRepository = new WpdbItemLocalDetailsRepository(
+            $database,
+            $tableNames
+        );
         $itemArchiveRepository = new WpdbItemArchiveRepository($database, $tableNames);
         $collectionRepository = new WpdbCollectionRepository($database, $tableNames);
         $locationRepository = new WpdbLocationRepository($database, $tableNames);
@@ -405,22 +411,6 @@ final class ProductionComposition
             $libraryContexts,
             new WpdbOwnAssessmentReadRepository($database, $tableNames)
         );
-        $catalogUiReads = new CatalogUiReadService(
-            $authenticatedUser,
-            $libraryContexts,
-            new WpdbCatalogUiReadRepository($database, $tableNames),
-            $libraryClassifications,
-            $libraryCollections,
-            $libraryPublicAssessments,
-            $ownAssessments
-        );
-        $bibliographicRelationships = new BibliographicRelationshipQueryService(
-            $authorRepository,
-            $seriesRepository
-        );
-        $bibliographicMetadata = new BibliographicMetadataQueryService(
-            $bibliographicMetadataRepository
-        );
         $libraryItemMetadata = new LibraryItemMetadataQueryService(
             $libraryContexts,
             $itemRepository
@@ -428,6 +418,30 @@ final class ProductionComposition
         $libraryItemLocations = new LibraryItemLocationQueryService(
             $libraryContexts,
             $locationRepository
+        );
+        $libraryItemLocalDetails = new LibraryItemLocalDetailsQueryService(
+            $libraryContexts,
+            $itemRepository,
+            $itemLocalDetailsRepository
+        );
+        $catalogUiReads = new CatalogUiReadService(
+            $authenticatedUser,
+            $libraryContexts,
+            new WpdbCatalogUiReadRepository($database, $tableNames),
+            $libraryClassifications,
+            $libraryCollections,
+            $libraryPublicAssessments,
+            $ownAssessments,
+            $libraryItemMetadata,
+            $libraryItemLocations,
+            $libraryItemLocalDetails
+        );
+        $bibliographicRelationships = new BibliographicRelationshipQueryService(
+            $authorRepository,
+            $seriesRepository
+        );
+        $bibliographicMetadata = new BibliographicMetadataQueryService(
+            $bibliographicMetadataRepository
         );
         $libraryItemArchives = new LibraryItemArchiveQueryService(
             $libraryContexts,
@@ -909,6 +923,7 @@ final class ProductionComposition
             $bibliographicMetadata,
             $libraryItemMetadata,
             $libraryItemLocations,
+            $libraryItemLocalDetails,
             $libraryItemArchives,
             $libraryCollections,
             $libraryClassifications,

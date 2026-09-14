@@ -195,10 +195,26 @@ function detail(selectedLibrary, itemId, overrides = {}) {
         publication_date: unknown,
         series: unknown,
         form: { state: "known", value: "physical_book" },
+        inventory_number: unknown,
         location: unknown,
         condition: unknown,
         acquisition: unknown,
         availability: unknown,
+        item_local_details: {
+            details_version: null,
+            condition: null,
+            in_library_since: null,
+            signed: null,
+            signed_by: null,
+            copy_limitation: null,
+            dust_jacket: null,
+            inscription: null,
+            provenance: null,
+            completeness: null,
+            acquisition_method: null,
+            acquired_via: null,
+            paid_amount: null,
+        },
         classification: {
             book_types: [],
             genres: [],
@@ -1075,6 +1091,95 @@ test("Item detail strictly validates active ReadingRound and end capability", as
             }],
         }),
         expectedState: "detail",
+    }, {
+        name: "valid populated Item-local details",
+        payload: detail(selected, "item-1", {
+            item_local_details: {
+                details_version: 2,
+                condition: "goed",
+                in_library_since: { year: 1987, month: 4, day: null },
+                signed: true,
+                signed_by: "Auteur A",
+                copy_limitation: "17/250",
+                dust_jacket: "not_applicable",
+                inscription: false,
+                provenance: "Collectie B",
+                completeness: "Met losse kaart",
+                acquisition_method: "gekregen",
+                acquired_via: "Boekenmarkt",
+                paid_amount: { decimal: "12.34", currency: "NLG" },
+            },
+        }),
+        expectedState: "detail",
+    }, {
+        name: "Item-local details reject extra evidence",
+        payload: detail(selected, "item-1", {
+            item_local_details: {
+                ...detail(selected, "item-1").item_local_details,
+                source_id: "v1-42",
+            },
+        }),
+        expectedState: "request-error",
+    }, {
+        name: "Item-local details reject a signer without signed true",
+        payload: detail(selected, "item-1", {
+            item_local_details: {
+                ...detail(selected, "item-1").item_local_details,
+                details_version: 1,
+                signed: false,
+                signed_by: "Auteur A",
+            },
+        }),
+        expectedState: "request-error",
+    }, {
+        name: "absent Item-local details cannot carry values",
+        payload: detail(selected, "item-1", {
+            item_local_details: {
+                ...detail(selected, "item-1").item_local_details,
+                condition: "goed",
+            },
+        }),
+        expectedState: "request-error",
+    }, {
+        name: "Item-local details reject non-canonical amount",
+        payload: detail(selected, "item-1", {
+            item_local_details: {
+                ...detail(selected, "item-1").item_local_details,
+                details_version: 1,
+                paid_amount: { decimal: "12.3400", currency: "EUR" },
+            },
+        }),
+        expectedState: "request-error",
+    }, {
+        name: "Item-local details reject unsafe bounded text",
+        payload: detail(selected, "item-1", {
+            item_local_details: {
+                ...detail(selected, "item-1").item_local_details,
+                details_version: 1,
+                acquired_via: "winkel\nnaam",
+            },
+        }),
+        expectedState: "request-error",
+    }, {
+        name: "Item-local details reject coerced amount types",
+        payload: detail(selected, "item-1", {
+            item_local_details: {
+                ...detail(selected, "item-1").item_local_details,
+                details_version: 1,
+                paid_amount: { decimal: 12.34, currency: "EUR" },
+            },
+        }),
+        expectedState: "request-error",
+    }, {
+        name: "Item-local details reject unsupported currency codes",
+        payload: detail(selected, "item-1", {
+            item_local_details: {
+                ...detail(selected, "item-1").item_local_details,
+                details_version: 1,
+                paid_amount: { decimal: "12.34", currency: "ZZZ" },
+            },
+        }),
+        expectedState: "request-error",
     }, {
         name: "valid mixed assessments",
         payload: detail(selected, "item-1", {

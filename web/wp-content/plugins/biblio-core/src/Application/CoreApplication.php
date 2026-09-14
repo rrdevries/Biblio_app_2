@@ -17,6 +17,7 @@ use Biblio\Core\Application\Catalog\Read\BibliographicRelationshipQueryService;
 use Biblio\Core\Application\Catalog\Read\BibliographicMetadataQueryService;
 use Biblio\Core\Application\Catalog\Read\LibraryItemMetadataQueryService;
 use Biblio\Core\Application\Catalog\Read\LibraryItemLocationQueryService;
+use Biblio\Core\Application\Catalog\Read\LibraryItemLocalDetailsQueryService;
 use Biblio\Core\Application\Catalog\Read\LibraryItemArchiveQueryService;
 use Biblio\Core\Application\Catalog\Classification\CreateLibraryCatalogContextService;
 use Biblio\Core\Application\Catalog\Classification\ManageLibraryBookTypesService;
@@ -79,6 +80,7 @@ final readonly class CoreApplication
         private BibliographicMetadataQueryService $bibliographicMetadata,
         private LibraryItemMetadataQueryService $libraryItemMetadata,
         private LibraryItemLocationQueryService $libraryItemLocations,
+        private LibraryItemLocalDetailsQueryService $libraryItemLocalDetails,
         private LibraryItemArchiveQueryService $libraryItemArchives,
         private LibraryCollectionQueryService $libraryCollections,
         private LibraryClassificationQueryService $libraryClassifications,
@@ -230,6 +232,11 @@ final readonly class CoreApplication
     public function libraryItemLocations(): LibraryItemLocationQueryService
     {
         return $this->libraryItemLocations;
+    }
+
+    public function libraryItemLocalDetails(): LibraryItemLocalDetailsQueryService
+    {
+        return $this->libraryItemLocalDetails;
     }
 
     public function libraryItemArchives(): LibraryItemArchiveQueryService

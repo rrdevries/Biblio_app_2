@@ -127,6 +127,35 @@ function readingDateLabel(value) {
     return `${value.day} ${months[value.month - 1]} ${value.year}`;
 }
 
+const CONDITION_LABELS = Object.freeze({
+    nieuwstaat: "Nieuwstaat",
+    zeer_goed: "Zeer goed",
+    goed: "Goed",
+    redelijk: "Redelijk",
+    matig: "Matig",
+    slecht: "Slecht",
+});
+const ACQUISITION_LABELS = Object.freeze({
+    zelf_aangeschaft: "Zelf aangeschaft",
+    gekregen: "Gekregen",
+    anders: "Anders",
+});
+const DUST_JACKET_LABELS = Object.freeze({
+    present: "Aanwezig",
+    missing: "Ontbreekt",
+    not_applicable: "Niet van toepassing",
+});
+
+function booleanLabel(value, positive = "Ja", negative = "Nee") {
+    return value === true ? positive : value === false ? negative : null;
+}
+
+function paidAmountLabel(value) {
+    return value === null
+        ? null
+        : `${value.currency} ${value.decimal.replace(".", ",")}`;
+}
+
 function shouldHandleNavigation(event) {
     return !event?.defaultPrevented
         && (event?.button === undefined || event.button === 0)
@@ -584,9 +613,30 @@ function renderDetail(documentImpl, model, actions) {
     ]);
     const itemDetails = metadataSection(documentImpl, "exemplaar", "Exemplaar", [
         ["Bibliotheek", detail.library.name],
+        ["Inventarisnummer", knownText(detail.inventory_number)],
         ["Locatie", knownText(detail.location)],
-        ["Conditie", knownText(detail.condition)],
-        ["Verwerving", knownText(detail.acquisition)],
+        ["Conditie", CONDITION_LABELS[detail.item_local_details.condition] ?? null],
+        ["In bibliotheek sinds", readingDateLabel(
+            detail.item_local_details.in_library_since
+        )],
+        ["Verkrijgingswijze", ACQUISITION_LABELS[
+            detail.item_local_details.acquisition_method
+        ] ?? null],
+        ["Verkregen via", detail.item_local_details.acquired_via],
+        ["Betaald bedrag", paidAmountLabel(detail.item_local_details.paid_amount)],
+        ["Gesigneerd", booleanLabel(detail.item_local_details.signed)],
+        ["Gesigneerd door", detail.item_local_details.signed_by],
+        ["Exemplaar / oplage", detail.item_local_details.copy_limitation],
+        ["Stofomslag", DUST_JACKET_LABELS[
+            detail.item_local_details.dust_jacket
+        ] ?? null],
+        ["Inscriptie / opdracht", booleanLabel(
+            detail.item_local_details.inscription,
+            "Aanwezig",
+            "Afwezig"
+        )],
+        ["Herkomst", detail.item_local_details.provenance],
+        ["Compleetheid / bijlagen", detail.item_local_details.completeness],
         ["Beschikbaarheid", knownText(detail.availability)],
     ]);
     const collections = collectionsSection(documentImpl, detail.collections);

@@ -80,6 +80,29 @@ const READING_STATUSES = new Set([
     "not_read", "reading", "read", "unknown",
 ]);
 const READING_ROUND_END_OUTCOMES = new Set(["completed", "stopped"]);
+const ITEM_CONDITIONS = new Set([
+    "nieuwstaat", "zeer_goed", "goed", "redelijk", "matig", "slecht",
+]);
+const ACQUISITION_METHODS = new Set([
+    "zelf_aangeschaft", "gekregen", "anders",
+]);
+const DUST_JACKET_STATES = new Set(["present", "missing", "not_applicable"]);
+// Mirrors Core's versioned 2026-09 active + historical ISO 4217 allowlist.
+const ISO_4217_CURRENCIES = new Set((
+    "AED AFN ALL AMD ANG AOA ARS AUD AWG AZN BAM BBD BDT BGN BHD BIF BMD "
+    + "BND BOB BOV BRL BSD BTN BWP BYN BZD CAD CDF CHE CHF CHW CLF CLP CNY "
+    + "COP COU CRC CUC CUP CVE CZK DJF DKK DOP DZD EGP ERN ETB EUR FJD FKP "
+    + "GBP GEL GHS GIP GMD GNF GTQ GYD HKD HNL HRK HTG HUF IDR ILS INR IQD "
+    + "IRR ISK JMD JOD JPY KES KGS KHR KMF KPW KRW KWD KYD KZT LAK LBP LKR "
+    + "LRD LSL LYD MAD MDL MGA MKD MMK MNT MOP MRU MUR MVR MWK MXN MXV MYR "
+    + "MZN NAD NGN NIO NOK NPR NZD OMR PAB PEN PGK PHP PKR PLN PYG QAR RON RSD "
+    + "RUB RWF SAR SBD SCR SDG SEK SGD SHP SLE SLL SOS SRD SSP STN SVC SYP SZL "
+    + "THB TJS TMT TND TOP TRY TTD TWD TZS UAH UGX USD USN UYI UYU UYW UZS VED "
+    + "VES VND VUV WST XAF XAG XAU XBA XBB XBC XBD XCD XDR XOF XPD XPF XPT "
+    + "XSU XTS XUA XXX YER ZAR ZMW ZWL ADP ATS BEF BGL BYB CYP DEM EEK ESP FIM "
+    + "FRF GRD IEP ITL LTL LUF LVL MTL NLG PTE ROL RUR SDD SIT SKK TRL VEB XEU "
+    + "YUM ZMK ZWD"
+).split(" "));
 
 function mountValue(mount, key) {
     const value = mount?.dataset?.[key];
@@ -266,6 +289,70 @@ function assertDetailCollections(collections) {
     }
 }
 
+function assertItemLocalDetails(details) {
+    const nullableText = (value, maximum) => value === null || (
+        typeof value === "string"
+        && [...value].length <= maximum
+        && /\S/u.test(value)
+        && !/\p{Cc}/u.test(value)
+    );
+    const nullableBoolean = (value) => value === null || typeof value === "boolean";
+    const amount = details?.paid_amount;
+
+    if (
+        !isRecord(details)
+        || !hasExactFields(details, [
+            "details_version", "condition", "in_library_since", "signed",
+            "signed_by", "copy_limitation", "dust_jacket", "inscription",
+            "provenance", "completeness", "acquisition_method",
+            "acquired_via", "paid_amount",
+        ])
+        || !(details.details_version === null || (
+            Number.isInteger(details.details_version) && details.details_version > 0
+        ))
+        || !(details.condition === null || ITEM_CONDITIONS.has(details.condition))
+        || !(details.in_library_since === null || isReadingDate(details.in_library_since))
+        || !nullableBoolean(details.signed)
+        || !nullableText(details.signed_by, 512)
+        || (details.signed_by !== null && details.signed !== true)
+        || !nullableText(details.copy_limitation, 191)
+        || !(details.dust_jacket === null || DUST_JACKET_STATES.has(details.dust_jacket))
+        || !nullableBoolean(details.inscription)
+        || !nullableText(details.provenance, 1024)
+        || !nullableText(details.completeness, 1024)
+        || !(details.acquisition_method === null
+            || ACQUISITION_METHODS.has(details.acquisition_method))
+        || !nullableText(details.acquired_via, 512)
+        || !(amount === null || (
+            isRecord(amount)
+            && hasExactFields(amount, ["decimal", "currency"])
+            && typeof amount.decimal === "string"
+            && typeof amount.currency === "string"
+            && /^(?:0|[1-9][0-9]{0,14})(?:\.[0-9]{0,3}[1-9])?$/u.test(amount.decimal)
+            && ISO_4217_CURRENCIES.has(amount.currency)
+        ))
+    ) {
+        throw new TypeError("The Biblio Item-local details contract is invalid.");
+    }
+
+    if (details.details_version === null && [
+        details.condition,
+        details.in_library_since,
+        details.signed,
+        details.signed_by,
+        details.copy_limitation,
+        details.dust_jacket,
+        details.inscription,
+        details.provenance,
+        details.completeness,
+        details.acquisition_method,
+        details.acquired_via,
+        details.paid_amount,
+    ].some((value) => value !== null)) {
+        throw new TypeError("The Biblio Item-local details contract is invalid.");
+    }
+}
+
 function isPublicAssessmentRating(value) {
     return typeof value === "number"
         && Number.isFinite(value)
@@ -414,6 +501,7 @@ function readDetail(payload, selectedLibraryId, requestedItemId) {
         "publication_date",
         "series",
         "form",
+        "inventory_number",
         "location",
         "condition",
         "acquisition",
@@ -436,6 +524,7 @@ function readDetail(payload, selectedLibraryId, requestedItemId) {
         || !isRecord(payload.classification)
         || !Array.isArray(payload.collections)
         || !isRecord(payload.assessments)
+        || !isRecord(payload.item_local_details)
         || typeof payload.item_status !== "string"
         || !isRecord(payload.capabilities)
         || typeof payload.capabilities.view_item !== "boolean"
@@ -449,6 +538,7 @@ function readDetail(payload, selectedLibraryId, requestedItemId) {
     assertDetailClassification(payload.classification);
     assertDetailCollections(payload.collections);
     assertDetailAssessments(payload.assessments);
+    assertItemLocalDetails(payload.item_local_details);
     assertReadingSummary(payload.reading);
     assertActiveReadingRound(payload.active_reading_round);
 
