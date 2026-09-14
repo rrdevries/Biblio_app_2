@@ -6,7 +6,7 @@ namespace Biblio\Core\Tests\Integration;
 
 use Biblio\Core\Application\Identity\PersonalMigrationTargetInvalid;
 use Biblio\Core\Application\Identity\PersonalMigrationTarget;
-use Biblio\Core\Application\Catalog\HistoricalItemArchiveRecorder;
+use Biblio\Core\Application\Catalog\{HistoricalItemArchiveRecorder,ItemLocalDetailsNotAvailable,ItemLocalDetailsRecorder};
 use Biblio\Core\Application\Assessments\HistoricalAssessmentRecorder;
 use Biblio\Core\Application\Migration\BeginMigrationRunService;
 use Biblio\Core\Application\Migration\CommitMigrationRecordService;
@@ -28,7 +28,7 @@ use Biblio\Core\Application\Migration\QuarantineReason;
 use Biblio\Core\Application\Reading\PersonalReadingTruthRecorder;
 use Biblio\Core\Application\Wishlist\WishlistRecorder;
 use Biblio\Core\Assessments\{AssessmentClock,RatingId,RatingIdGenerator,RatingNotAvailable,RatingValue,ReviewContent,ReviewId,ReviewIdGenerator,ReviewNotAvailable};
-use Biblio\Core\Catalog\{Edition,EditionId,Item,ItemArchiveReasonKind,ItemId,ItemStatus,PreservedHistoricalArchiveReason,Work,WorkId};
+use Biblio\Core\Catalog\{Edition,EditionId,Item,ItemArchiveReasonKind,ItemCondition,ItemId,ItemLocalDetailsStale,ItemLocalDetailsState,ItemStatus,PreservedHistoricalArchiveReason,Work,WorkId};
 use Biblio\Core\Exception\ConflictException;
 use Biblio\Core\Exception\ValidationException;
 use Biblio\Core\Identity\UserId;
@@ -38,6 +38,7 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbReviewRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbCollectionRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbEditionRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbItemArchiveRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbItemLocalDetailsRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbItemRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPersonalReadingTruthRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPersonalWorkReadingMutationLock;
@@ -903,6 +904,233 @@ final class MigrationFoundationTest extends PersistenceIntegrationTestCase
             MigrationDisposition::Quarantined,
             $malformedOutcome->disposition()
         );
+    }
+
+    public function testItemLocalDetailsRecorderJoinsMigFndReplayRollbackAndConflicts(): void
+    {
+        [$begin, $observe, $commit, , $target, $ledger] = $this->foundation(
+            "item-local-details-foundation"
+        );
+        $work = new Work(
+            new WorkId("migration-details-work"),
+            "Synthetic details Work"
+        );
+        $edition = new Edition(
+            new EditionId("migration-details-edition"),
+            $work->id(),
+            "Synthetic details Edition"
+        );
+        $item = Item::active(
+            new ItemId("migration-details-item"),
+            $target->libraryId(),
+            $edition->id()
+        );
+        $rollbackItem = Item::active(
+            new ItemId("migration-details-rollback-item"),
+            $target->libraryId(),
+            $edition->id()
+        );
+        $works = new WpdbWorkRepository($this->database, $this->tableNames);
+        $editions = new WpdbEditionRepository($this->database, $this->tableNames);
+        $items = new WpdbItemRepository($this->database, $this->tableNames);
+        $details = new WpdbItemLocalDetailsRepository(
+            $this->database,
+            $this->tableNames
+        );
+        $recorder = new ItemLocalDetailsRecorder($items, $details);
+        $works->add($work);
+        $editions->add($edition);
+        $state = new ItemLocalDetailsState(
+            condition: ItemCondition::Goed,
+            acquiredVia: "Synthetic typed context"
+        );
+        $run = $this->beginApply(
+            $begin,
+            $target,
+            "snapshot-item-local-details",
+            "a"
+        );
+        $observation = $this->observation(
+            $observe,
+            $run,
+            "item",
+            "copy/details-a"
+        );
+
+        $outcome = $commit->commit(
+            $run,
+            $observation,
+            function () use ($items, $recorder, $target, $item, $state): MigrationRecordOutcome {
+                $items->add($item);
+                $recorded = $recorder->recordForLibrary(
+                    $target->libraryId(),
+                    $item->id(),
+                    $state
+                );
+                self::assertSame(1, $recorded?->version()->value());
+
+                return MigrationRecordOutcome::mapped([
+                    new MigrationTargetMapping(
+                        "item",
+                        $item->id()->value(),
+                        MappingDisposition::Reused
+                    ),
+                ]);
+            }
+        );
+        self::assertSame(MigrationDisposition::Mapped, $outcome->disposition());
+        self::assertTrue($details->find(
+            $target->libraryId(),
+            $item->id()
+        )?->state()->equals($state));
+        self::assertCount(
+            1,
+            (new MigrationTraceabilityQuery($ledger))->targetsForSource(
+                $run,
+                "item",
+                "copy/details-a"
+            )
+        );
+
+        $retryWrites = 0;
+        try {
+            $commit->commit(
+                $run,
+                $observation,
+                static function () use (&$retryWrites): MigrationRecordOutcome {
+                    ++$retryWrites;
+                    return MigrationRecordOutcome::failed("unexpected_retry", false);
+                }
+            );
+            self::fail("A committed Item-local observation was processed twice.");
+        } catch (ValidationException) {
+            self::assertSame(0, $retryWrites);
+        }
+
+        $equalObservation = $this->observation(
+            $observe,
+            $run,
+            "item",
+            "copy/details-equal"
+        );
+        $commit->commit(
+            $run,
+            $equalObservation,
+            function () use ($recorder, $target, $item, $state): MigrationRecordOutcome {
+                $reused = $recorder->recordForLibrary(
+                    $target->libraryId(),
+                    $item->id(),
+                    $state
+                );
+                self::assertSame(1, $reused?->version()->value());
+                return MigrationRecordOutcome::mapped([
+                    new MigrationTargetMapping(
+                        "item",
+                        $item->id()->value(),
+                        MappingDisposition::Reused
+                    ),
+                ]);
+            }
+        );
+
+        $rollbackObservation = $this->observation(
+            $observe,
+            $run,
+            "item",
+            "copy/details-rollback"
+        );
+        try {
+            $commit->commit(
+                $run,
+                $rollbackObservation,
+                function () use ($items, $recorder, $target, $rollbackItem): MigrationRecordOutcome {
+                    $items->add($rollbackItem);
+                    $recorder->recordForLibrary(
+                        $target->libraryId(),
+                        $rollbackItem->id(),
+                        new ItemLocalDetailsState(condition: ItemCondition::Redelijk)
+                    );
+                    throw new RuntimeException("synthetic Item-local rollback");
+                }
+            );
+            self::fail("Synthetic Item-local rollback was hidden.");
+        } catch (RuntimeException $exception) {
+            self::assertSame(
+                "synthetic Item-local rollback",
+                $exception->getMessage()
+            );
+        }
+        self::assertNull($details->find(
+            $target->libraryId(),
+            $rollbackItem->id()
+        ));
+        self::assertNull($items->findInLibrary(
+            $rollbackItem->id(),
+            $target->libraryId()
+        ));
+        self::assertNull($this->database->get_var($this->database->prepare(
+            "SELECT disposition FROM `{$this->tableNames->migrationSourceObservations()}` "
+                . "WHERE observation_id=%s",
+            $rollbackObservation->id()
+        )));
+
+        $conflictObservation = $this->observation(
+            $observe,
+            $run,
+            "item",
+            "copy/details-conflict"
+        );
+        $conflict = $commit->commit(
+            $run,
+            $conflictObservation,
+            function () use ($recorder, $target, $item): MigrationRecordOutcome {
+                try {
+                    $recorder->recordForLibrary(
+                        $target->libraryId(),
+                        $item->id(),
+                        new ItemLocalDetailsState(condition: ItemCondition::Slecht)
+                    );
+                } catch (ItemLocalDetailsStale) {
+                    return MigrationRecordOutcome::quarantined(
+                        QuarantineReason::SourceIdentityConflict,
+                        "Synthetic Item-local state conflicts with the existing target."
+                    );
+                }
+                self::fail("Divergent Item-local migration state was overwritten.");
+            }
+        );
+        self::assertSame(MigrationDisposition::Quarantined, $conflict->disposition());
+        self::assertSame(
+            ItemCondition::Goed,
+            $details->find($target->libraryId(), $item->id())?->state()->condition()
+        );
+
+        $foreignObservation = $this->observation(
+            $observe,
+            $run,
+            "item",
+            "copy/details-foreign"
+        );
+        $foreign = $commit->commit(
+            $run,
+            $foreignObservation,
+            function () use ($recorder, $item): MigrationRecordOutcome {
+                try {
+                    $recorder->recordForLibrary(
+                        new LibraryId("another-library"),
+                        $item->id(),
+                        new ItemLocalDetailsState(condition: ItemCondition::Goed)
+                    );
+                } catch (ItemLocalDetailsNotAvailable) {
+                    return MigrationRecordOutcome::quarantined(
+                        QuarantineReason::StructuralAmbiguity,
+                        "Synthetic Item does not belong to the exact target Library."
+                    );
+                }
+                self::fail("Cross-Library Item-local migration write was accepted.");
+            }
+        );
+        self::assertSame(MigrationDisposition::Quarantined, $foreign->disposition());
     }
 
     public function testHistoricalAssessmentsUseMigFndWithoutPublicationOrInventedTime(): void

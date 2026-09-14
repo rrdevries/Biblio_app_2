@@ -4164,3 +4164,33 @@ Status: **TECHNICAL GO / HUMAN VISUAL-INTERACTION ACCEPTANCE PENDING**. Product
 remains `v2.001`; schema remains `1024`; Biblio Core remains `2.25.0`; Biblio
 UI is `0.19.0`. Exact evidence is in
 `docs/101-add-auth-01b-manual-author-ui.md`.
+
+## 125. ITEM-MIG-01A Item-local evidence persistence/read
+
+ITEM-MIG-01A is accepted only when:
+
+- all approved Condition, Acquisition B+ and collector/copy fields enforce the
+  exact enum, null, date-precision, text, amount/currency and signer rules;
+- schema 1025 binds one sparse row to the exact Item/Library through composite
+  restrictive identity and provides a Library/acquisition-method index;
+- absent state, exact round-trip, CAS updates, all-null tombstones and equal or
+  divergent concurrent creates/updates have deterministic behavior;
+- active and archived exact reads authorize actor plus Library Context through
+  `canViewCollection`, while missing, foreign and unauthorized targets are
+  non-enumerating and sibling/Work/Edition fallback is impossible;
+- Book Detail returns real inventory number, Location and the exact allowlisted
+  typed details object, and strict frontend decoding/display omits unknowns and
+  rejects malformed contracts without inference or edit controls;
+- Item archive/restore and Collection mutations retain and do not version or
+  mutate local details;
+- the source-neutral recorder joins the MIG-FND transaction so details,
+  outcome and Item mapping commit/rollback together, exact replay converges and
+  divergence conflicts without overwrite;
+- no V1 parser, mapping, source payload, backfill, generic Item EAV or new
+  product decision is introduced; and
+- focused tests, concurrency workers, full Core/UI gates, PHPStan, syntax,
+  manifest, whitespace and independent review are green.
+
+Status: **GO / CLOSED**. Product remains `v2.001`; schema is `1025`; Biblio
+Core is `2.27.0`; Biblio UI is `0.20.0`. Exact evidence is in
+`docs/104-item-mig-01a-item-local-evidence-persistence-read.md`.

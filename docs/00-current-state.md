@@ -3485,3 +3485,28 @@ Author Search. Product remains `v2.001`; schema remains `1024`; Biblio Core
 remains `2.25.0`; Biblio UI is `0.19.0`. Renée's visual/interaction acceptance
 remains explicitly open. Closure evidence:
 `docs/101-add-auth-01b-manual-author-ui.md`.
+
+### ITEM-MIG-01A — Item-local evidence persistence and read
+
+Status: **GO / CLOSED**.
+
+The accepted D-ITEM-MIG-01 target is now active product truth. One sparse,
+versioned, composite Item/Library-owned details aggregate persists the exact
+Condition, precision-preserving acquisition B+ fields and approved
+collector/copy facts. Null remains unknown; exact text, enum, date,
+amount/currency and signer invariants are enforced at domain and database
+boundaries.
+
+Authorized Core reads use explicit Library Context and `canViewCollection`,
+support retained archived facts and preserve non-enumeration. Book Detail now
+composes real inventory number, Location and the exact typed Item-local REST
+object; the strict UI renders only known fields in `Exemplaar` and adds no edit
+surface. The source-neutral recorder joins the MIG-FND transaction, uses CAS
+and exact replay convergence, and writes no V1-specific mapping or evidence
+into product state.
+
+Product remains `v2.001`; schema is `1025`; Biblio Core is `2.27.0`; Biblio UI
+is `0.20.0`. No current Item backfill or current V1 export was required. V1
+mapping/import, Item edit UI, Add Book acquisition input and archived Book
+Detail presentation remain separate. Closure evidence:
+`docs/104-item-mig-01a-item-local-evidence-persistence-read.md`.

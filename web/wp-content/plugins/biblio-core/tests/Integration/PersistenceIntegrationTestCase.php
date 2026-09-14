@@ -62,6 +62,7 @@ abstract class PersistenceIntegrationTestCase extends TestCase
         $nextReadingUndo = $this->tableNames->nextReadingUndo();
         $externalLoans = $this->tableNames->externalLoans();
         $items = $this->tableNames->items();
+        $itemLocalDetails = $this->tableNames->itemLocalDetails();
         $itemArchivePeriods = $this->tableNames->itemArchivePeriods();
         $collectionMemberships = $this->tableNames->collectionMemberships();
         $collections = $this->tableNames->collections();
@@ -174,6 +175,9 @@ abstract class PersistenceIntegrationTestCase extends TestCase
         if ($this->tableExists($metadataUserObservations)) {
             $this->database->query("DELETE FROM `{$metadataUserObservations}`");
         }
+        if ($this->tableExists($itemLocalDetails)) {
+            $this->database->query("DELETE FROM `{$itemLocalDetails}`");
+        }
         $this->database->query("DELETE FROM `{$items}`");
         if ($this->tableExists($metadataProvenance)) {
             $this->database->query("DELETE FROM `{$metadataProvenance}`");
@@ -243,6 +247,15 @@ abstract class PersistenceIntegrationTestCase extends TestCase
 
     protected function setHistoricalSchemaVersion(int $version): void
     {
+        if ($version < 1025) {
+            foreach (
+                array_reverse($this->tableNames->schema1025Additions())
+                as $table
+            ) {
+                $this->database->query("DROP TABLE IF EXISTS `{$table}`");
+            }
+        }
+
         if ($version < 1024) {
             foreach (
                 array_reverse($this->tableNames->schema1024Additions())

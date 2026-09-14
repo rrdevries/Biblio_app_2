@@ -3204,6 +3204,25 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             "work-source",
             "Zelfde Work"
         );
+        self::assertSame(1, $this->database->insert(
+            $this->tableNames->locations(),
+            [
+                "library_id" => "library-source-exact",
+                "location_id" => "location-source-a",
+                "display_name" => "Kast 7",
+            ]
+        ));
+        self::assertSame(1, $this->database->update(
+            $this->tableNames->items(),
+            [
+                "inventory_number" => "INV-SOURCE-A",
+                "location_id" => "location-source-a",
+            ],
+            [
+                "library_id" => "library-source-exact",
+                "item_id" => "item-source-a",
+            ]
+        ));
         $this->seedRound(
             "round-source-a",
             $this->actorId,
@@ -3257,10 +3276,12 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             "publication_date",
             "series",
             "form",
+            "inventory_number",
             "location",
             "condition",
             "acquisition",
             "availability",
+            "item_local_details",
             "classification",
             "collections",
             "assessments",
@@ -3269,6 +3290,111 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             "active_reading_round",
             "capabilities",
         ], array_keys($itemA));
+        self::assertSame([
+            "details_version",
+            "condition",
+            "in_library_since",
+            "signed",
+            "signed_by",
+            "copy_limitation",
+            "dust_jacket",
+            "inscription",
+            "provenance",
+            "completeness",
+            "acquisition_method",
+            "acquired_via",
+            "paid_amount",
+        ], array_keys($itemA["item_local_details"]));
+        self::assertSame(
+            array_fill_keys(array_keys($itemA["item_local_details"]), null),
+            $itemA["item_local_details"]
+        );
+        self::assertSame([
+            "state" => "known",
+            "value" => "INV-SOURCE-A",
+        ], $itemA["inventory_number"]);
+        self::assertSame([
+            "state" => "known",
+            "value" => "Kast 7",
+        ], $itemA["location"]);
+
+        self::assertSame(1, $this->database->insert(
+            $this->tableNames->itemLocalDetails(),
+            [
+                "library_id" => "library-source-exact",
+                "item_id" => "item-source-a",
+                "condition_code" => "zeer_goed",
+                "acquisition_year" => 1998,
+                "acquisition_month" => 7,
+                "acquisition_method" => "gekregen",
+                "acquired_via" => "Boekenmarkt",
+                "paid_amount" => "12.3400",
+                "paid_currency" => "NLG",
+                "signed" => 1,
+                "signed_by" => "Schrijver A",
+                "copy_limitation" => "17/250",
+                "dust_jacket" => "missing",
+                "inscription" => 0,
+                "provenance" => "Collectie B",
+                "completeness" => "Kaart ontbreekt",
+                "details_version" => 1,
+            ]
+        ));
+        $populated = $this->successData($this->dispatchAsActor($itemARequest));
+        self::assertSame([
+            "details_version" => 1,
+            "condition" => "zeer_goed",
+            "in_library_since" => ["year" => 1998, "month" => 7, "day" => null],
+            "signed" => true,
+            "signed_by" => "Schrijver A",
+            "copy_limitation" => "17/250",
+            "dust_jacket" => "missing",
+            "inscription" => false,
+            "provenance" => "Collectie B",
+            "completeness" => "Kaart ontbreekt",
+            "acquisition_method" => "gekregen",
+            "acquired_via" => "Boekenmarkt",
+            "paid_amount" => ["decimal" => "12.34", "currency" => "NLG"],
+        ], $populated["item_local_details"]);
+        self::assertStringNotContainsString(
+            "source_id",
+            (string) wp_json_encode($populated["item_local_details"])
+        );
+        self::assertStringNotContainsString(
+            "evidence",
+            (string) wp_json_encode($populated["item_local_details"])
+        );
+
+        self::assertSame(1, $this->database->update(
+            $this->tableNames->itemLocalDetails(),
+            [
+                "condition_code" => null,
+                "acquisition_year" => null,
+                "acquisition_month" => null,
+                "acquisition_method" => null,
+                "acquired_via" => null,
+                "paid_amount" => null,
+                "paid_currency" => null,
+                "signed" => null,
+                "signed_by" => null,
+                "copy_limitation" => null,
+                "dust_jacket" => null,
+                "inscription" => null,
+                "provenance" => null,
+                "completeness" => null,
+                "details_version" => 2,
+            ],
+            ["library_id" => "library-source-exact", "item_id" => "item-source-a"]
+        ));
+        $cleared = $this->successData($this->dispatchAsActor($itemARequest));
+        self::assertSame(2, $cleared["item_local_details"]["details_version"]);
+        self::assertSame(
+            array_fill_keys(
+                array_slice(array_keys($cleared["item_local_details"]), 1),
+                null
+            ),
+            array_slice($cleared["item_local_details"], 1, null, true)
+        );
         self::assertSame([
             "reading_round_id",
             "version",

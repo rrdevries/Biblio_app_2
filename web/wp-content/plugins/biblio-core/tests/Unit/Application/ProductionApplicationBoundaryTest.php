@@ -183,6 +183,7 @@ final class ProductionApplicationBoundaryTest extends TestCase
             "libraryItemArchiveManagement",
             "libraryItemArchives",
             "libraryItemCreation",
+            "libraryItemLocalDetails",
             "libraryItemLocations",
             "libraryItemMetadata",
             "libraryItemReading",

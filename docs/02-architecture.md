@@ -2330,3 +2330,27 @@ blocking length validation focuses and describes the exact row. Duplicate-name
 comparison is a non-blocking, exact normalized-value warning with no identity
 meaning. Product remains `v2.001`; schema remains `1024`; Biblio Core remains
 `2.25.0`; Biblio UI is `0.19.0`.
+
+## 61. ITEM-MIG-01A Item-local details aggregate
+
+Schema 1025 adds one sparse 1:1 Item-local details aggregate with composite
+primary/foreign identity `(library_id, item_id)`. Typed nullable columns encode
+only the approved Condition, partial acquisition date, acquisition method and
+context, exact historical amount/currency, signed/signer, limitation, jacket,
+inscription, provenance and completeness fields. Database checks mirror the
+domain's closed enums, partial-date dependencies/calendar validity, text
+bounds, signed/signer relationship, amount/currency pair and positive version.
+
+`ItemLocalDetailsRecorder` and `WritableItemLocalDetailsRepository` are shared,
+source-neutral, non-transaction-owning write boundaries. Inserts start at
+version 1; updates and all-null tombstones use compare-and-swap. Concurrent
+create losers converge only on exact state equality. MIG-FND remains the outer
+transaction owner and Item stays the sole migration target identity.
+
+`LibraryItemLocalDetailsQueryService` resolves actor plus explicit
+`LibraryContext`, authorizes `canViewCollection`, and performs exact
+Library-scoped active/archive-capable reads. Missing, foreign and unauthorized
+Items are non-enumerating. Book Detail composes real inventory number, Location
+and the exact allowlisted typed details object; frontend validation and
+presentation never infer state or expose migration evidence. Archive and
+Collection behavior remain independent of the details aggregate.
