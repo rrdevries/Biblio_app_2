@@ -72,6 +72,12 @@ const BIBLIO_E2E_NOTE_FOREIGN = "e2e-private-note-foreign";
 const BIBLIO_E2E_C7_PAGE_SLUG = "hierna-lezen";
 const BIBLIO_E2E_WISHLIST_PAGE_SLUG = "verlanglijst";
 const BIBLIO_E2E_SEARCH_PAGE_SLUG = "zoeken";
+const BIBLIO_E2E_ADD_AUTH_TITLE = "E2E ADD-AUTH-01B Core proof";
+const BIBLIO_E2E_ADD_AUTH_INVENTORY = "E2E-ADD-AUTH-01B";
+const BIBLIO_E2E_ADD_AUTH_NAMES = [
+    "E2E Auteur Alpha 01B",
+    "E2E Auteur Beta 01B",
+];
 const BIBLIO_E2E_C7_UNAVAILABLE_ITEM = "e2e-item-c7-unavailable";
 const BIBLIO_E2E_C7_LOAN = "e2e-external-loan-c7";
 const BIBLIO_E2E_C7_FOREIGN_LOAN = "e2e-external-loan-c7-foreign";
@@ -315,6 +321,69 @@ function biblioE2eDeleteIn(
     }
 }
 
+/**
+ * @return array{works: list<string>, editions: list<string>, items: list<string>, authors: list<string>, credits: list<string>}
+ */
+function biblioE2eAddAuthorUiGraph(wpdb $database): array
+{
+    $tables = new CoreTableNames($database->prefix);
+    $works = array_map("strval", $database->get_col($database->prepare(
+        "SELECT work_id FROM `{$tables->works()}` WHERE work_title=%s",
+        BIBLIO_E2E_ADD_AUTH_TITLE
+    )));
+    if (count($works) > 1) {
+        biblioE2eFail("more than one exact ADD-AUTH-01B proof Work exists.");
+    }
+    if ($works === []) {
+        return ["works" => [], "editions" => [], "items" => [], "authors" => [], "credits" => []];
+    }
+
+    $editions = array_map("strval", $database->get_col($database->prepare(
+        "SELECT edition_id FROM `{$tables->editions()}` WHERE work_id=%s",
+        $works[0]
+    )));
+    $item = $database->get_row($database->prepare(
+        "SELECT item_id, edition_id FROM `{$tables->items()}` WHERE library_id=%s AND inventory_number=%s",
+        BIBLIO_E2E_ACTOR_LIBRARY,
+        BIBLIO_E2E_ADD_AUTH_INVENTORY
+    ), ARRAY_A);
+    if (
+        count($editions) !== 1
+        || !is_array($item)
+        || (string) ($item["edition_id"] ?? "") !== $editions[0]
+    ) {
+        biblioE2eFail("the exact ADD-AUTH-01B proof graph is partial or ambiguous.");
+    }
+    $items = [(string) $item["item_id"]];
+
+    $authorRows = $database->get_results($database->prepare(
+        "SELECT wc.author_id, a.display_name FROM `{$tables->workContributors()}` wc "
+        . "INNER JOIN `{$tables->authors()}` a ON a.author_id=wc.author_id "
+        . "WHERE wc.work_id=%s ORDER BY wc.contributor_position",
+        $works[0]
+    ), ARRAY_A);
+    $authorNames = array_map(
+        static fn (array $row): string => (string) $row["display_name"],
+        $authorRows
+    );
+    if ($authorNames !== BIBLIO_E2E_ADD_AUTH_NAMES) {
+        biblioE2eFail("the exact ADD-AUTH-01B proof Authors are partial or ambiguous.");
+    }
+    $authors = array_map(
+        static fn (array $row): string => (string) $row["author_id"],
+        $authorRows
+    );
+    $credits = array_map("strval", $database->get_col($database->prepare(
+        "SELECT credit_id FROM `{$tables->authorContributorCredits()}` WHERE work_id=%s ORDER BY contributor_position",
+        $works[0]
+    )));
+    if (count($credits) !== count(BIBLIO_E2E_ADD_AUTH_NAMES)) {
+        biblioE2eFail("the exact ADD-AUTH-01B proof credits are partial or ambiguous.");
+    }
+
+    return compact("works", "editions", "items", "authors", "credits");
+}
+
 function biblioE2eCleanupCore(wpdb $database): void
 {
     $tables = new CoreTableNames($database->prefix);
@@ -323,6 +392,10 @@ function biblioE2eCleanupCore(wpdb $database): void
     $works = biblioE2eWorks();
     $editions = biblioE2eEditions();
     $items = biblioE2eItems();
+    $addAuthor = biblioE2eAddAuthorUiGraph($database);
+    $works = [...$works, ...$addAuthor["works"]];
+    $editions = [...$editions, ...$addAuthor["editions"]];
+    $items = [...$items, ...$addAuthor["items"]];
     $userIds = [];
     foreach (biblioE2eUsernames() as $username) {
         $user = get_user_by("login", $username);
@@ -336,6 +409,26 @@ function biblioE2eCleanupCore(wpdb $database): void
     }
 
     try {
+        if ($addAuthor["credits"] !== []) {
+            biblioE2eDeleteIn($database, $tables->authorCreditEvidence(), "credit_id", $addAuthor["credits"]);
+            biblioE2eDeleteIn($database, $tables->authorContributorCredits(), "credit_id", $addAuthor["credits"]);
+        }
+        if ($addAuthor["works"] !== []) {
+            biblioE2eDeleteIn($database, $tables->workContributors(), "work_id", $addAuthor["works"]);
+        }
+        if ($addAuthor["items"] !== []) {
+            biblioE2eDeleteIn($database, $tables->metadataUserObservations(), "item_id", $addAuthor["items"]);
+        }
+        if ($addAuthor["editions"] !== []) {
+            $metadataRecords = [];
+            foreach ($addAuthor["editions"] as $editionId) {
+                $metadataRecords[] = "edition:" . $editionId;
+                $metadataRecords[] = "edition-evidence:" . $editionId;
+            }
+            biblioE2eDeleteIn($database, $tables->metadataFieldEvidence(), "metadata_record_id", $metadataRecords);
+            biblioE2eDeleteIn($database, $tables->metadataFieldValues(), "metadata_record_id", $metadataRecords);
+            biblioE2eDeleteIn($database, $tables->metadataFieldStates(), "metadata_record_id", $metadataRecords);
+        }
         if ($userIds !== []) {
             biblioE2eDeleteIn($database, $tables->wishlistEntryHistory(), "user_id", $userIds);
             biblioE2eDeleteIn($database, $tables->wishlistEntries(), "user_id", $userIds);
@@ -382,6 +475,10 @@ function biblioE2eCleanupCore(wpdb $database): void
         biblioE2eDeleteIn($database, $tables->items(), "item_id", $items);
         biblioE2eDeleteIn($database, $tables->editions(), "edition_id", $editions);
         biblioE2eDeleteIn($database, $tables->works(), "work_id", $works);
+        if ($addAuthor["authors"] !== []) {
+            biblioE2eDeleteIn($database, $tables->bibliographicProviderIdentities(), "author_id", $addAuthor["authors"]);
+            biblioE2eDeleteIn($database, $tables->authors(), "author_id", $addAuthor["authors"]);
+        }
         biblioE2eDeleteIn($database, $tables->libraryBookTypes(), "library_id", $libraries);
         biblioE2eDeleteIn($database, $tables->libraryGenres(), "library_id", $libraries);
         biblioE2eDeleteIn($database, $tables->librarySubjects(), "library_id", $libraries);
@@ -1210,8 +1307,23 @@ function biblioE2eCounts(wpdb $database): array
             ...$fixtureUserIds
         ));
     };
+    $addAuthorNamesSql = implode(",", array_fill(0, count(BIBLIO_E2E_ADD_AUTH_NAMES), "%s"));
+    $addAuthorResidue = (int) $database->get_var($database->prepare(
+        "SELECT COUNT(*) FROM `{$tables->works()}` WHERE work_title=%s",
+        BIBLIO_E2E_ADD_AUTH_TITLE
+    ));
+    $addAuthorResidue += (int) $database->get_var($database->prepare(
+        "SELECT COUNT(*) FROM `{$tables->items()}` WHERE library_id=%s AND inventory_number=%s",
+        BIBLIO_E2E_ACTOR_LIBRARY,
+        BIBLIO_E2E_ADD_AUTH_INVENTORY
+    ));
+    $addAuthorResidue += (int) $database->get_var($database->prepare(
+        "SELECT COUNT(*) FROM `{$tables->authors()}` WHERE display_name IN ({$addAuthorNamesSql})",
+        ...BIBLIO_E2E_ADD_AUTH_NAMES
+    ));
 
     return [
+        "add_auth_ui_residue" => $addAuthorResidue,
         "libraries" => (int) $database->get_var($database->prepare(
             "SELECT COUNT(*) FROM `{$tables->libraries()}` WHERE library_id IN ({$librarySql})",
             ...$libraries

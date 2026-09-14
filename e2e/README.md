@@ -83,11 +83,20 @@ partial and full failure states, focus/live announcements and responsive
 layout without creating bibliographic domain data. Cleanup removes only a Page
 that carries the exact E2E marker.
 
+The ADD-AUTH-01B layer keeps its broad interaction matrix route-intercepted,
+then performs one real browser commit through the authenticated Add Book route.
+That proof uses only the reserved exact Work title
+`E2E ADD-AUTH-01B Core proof`, inventory number `E2E-ADD-AUTH-01B` and two
+fixed Author names. It proves the created Work and ordered Authors through the
+ordinary Search UI. Cleanup first requires one internally linked
+Work/Edition/Item graph, the exact ordered Author names and two credits; any
+partial or ambiguous collision stops rather than broadening deletion.
+
 Cleanup removes ReadingRounds by the exact allowlisted Work set, including
 source-free, ExternalLoan and legacy rows, then removes the three exact
 ExternalLoans, the Next Reading rows and the existing exact entity allowlists.
 It also removes the marked C7 Page. Counts report every relevant fixture entity
-separately.
+separately, including any residue carrying an ADD-AUTH-01B reserved marker.
 
 The copied Biblio1 source was inspected only to select these safe
 bibliographic titles for the original 1A cases:
