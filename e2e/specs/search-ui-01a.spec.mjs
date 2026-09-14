@@ -27,6 +27,17 @@ function author(index = 1, overrides = {}) {
             ? "Ursula K. Le Guin"
             : "Ursula Kroeber Le Guin met een uitzonderlijk lange auteursnaam",
         author_selector: `private-author-selector-${index}`,
+        match_quality: "broader",
+        name_group_id: `author-name-${index.toString(16).padStart(64, "0")}`,
+        disambiguation: index === 1 ? {
+            representative_work_title: "The Dispossessed",
+            linked_work_count: 1,
+            birth_year: null,
+        } : {
+            representative_work_title: "The Left Hand of Darkness",
+            linked_work_count: null,
+            birth_year: 1929,
+        },
         ...overrides,
     };
 }
@@ -353,6 +364,16 @@ test("renders Authors-only, Books-only, partial and full transport failure truth
                     failure_reason: "network",
                 })],
             }),
+            canonical_partial: response({
+                query: "Canoniek ondanks bronstoring",
+                works: [],
+                authorCursor: null,
+                workCursor: null,
+                authorAttempts: [attempt({
+                    status: "unavailable",
+                    failure_reason: "network",
+                })],
+            }),
         };
         await route.fulfill({ status: 200, json: variants[mode] });
     });
@@ -372,6 +393,12 @@ test("renders Authors-only, Books-only, partial and full transport failure truth
     await expect(page.locator(".biblio-ui__search-partial")).toContainText("Externe resultaten konden niet volledig worden geladen.");
     await expect(page.getByRole("heading", { name: "Boeken" })).toBeVisible();
     await expect(page.locator('[role="status"][aria-live="polite"]')).toContainText("Externe resultaten konden niet volledig worden geladen.");
+
+    mode = "canonical_partial";
+    await search(page, "Canoniek ondanks bronstoring");
+    await expect(page.getByRole("heading", { name: "Ursula K. Le Guin" })).toBeVisible();
+    await expect(page.getByText("Auteur van The Dispossessed")).toBeVisible();
+    await expect(page.locator(".biblio-ui__search-partial")).toContainText("Externe resultaten konden niet volledig worden geladen.");
 
     mode = "session";
     await search(page, "Sessie vernieuwen");
@@ -406,7 +433,7 @@ test("tabs use retained results, previews stay bounded and keyboard navigation s
     await search(page);
 
     await expect(page.locator(".biblio-ui__work-result")).toHaveCount(5);
-    await expect(page.locator(".biblio-ui__author-result")).toHaveCount(4);
+    await expect(page.locator(".biblio-ui__author-result")).toHaveCount(3);
     await expect(page.getByRole("button", { name: "Meer boeken" })).toHaveCount(0);
     await page.getByRole("button", { name: "Bekijk alle boeken" }).click();
     await expect(page.getByRole("tab", { name: "Boeken" })).toBeFocused();
@@ -419,7 +446,7 @@ test("tabs use retained results, previews stay bounded and keyboard navigation s
     await page.getByRole("tab", { name: "Auteurs" }).press("Home");
     await expect(page.getByRole("tab", { name: "Alles" })).toBeFocused();
     await expect(page.locator(".biblio-ui__work-result")).toHaveCount(5);
-    await expect(page.locator(".biblio-ui__author-result")).toHaveCount(4);
+    await expect(page.locator(".biblio-ui__author-result")).toHaveCount(3);
     expect(requests).toHaveLength(1);
 
     const tabs = page.getByRole("tab");
@@ -431,13 +458,125 @@ test("tabs use retained results, previews stay bounded and keyboard navigation s
     await expect(page.getByText("Beste match")).toHaveCount(0);
 });
 
-test("duplicate Author names stay separate with truthful source context", async ({ page }) => {
+test("Author disclosure reveals loaded candidates before one-page continuation", async ({ page }) => {
+    const requests = [];
+    const sameNameGroup = `author-name-${"8".repeat(64)}`;
+    const authors = [author(1, {
+        display_name: "Stephen King",
+        match_quality: "exact",
+        name_group_id: sameNameGroup,
+        disambiguation: {
+            representative_work_title: "It",
+            linked_work_count: 1,
+            birth_year: null,
+        },
+    }), ...Array.from({ length: 9 }, (_, offset) => author(offset + 2, {
+        display_name: offset < 4 ? "Stephen King" : `Stephen King ${offset + 2}`,
+        match_quality: offset < 4 ? "exact" : "broader",
+        name_group_id: offset < 4
+            ? sameNameGroup
+            : `author-name-${(offset + 20).toString(16).padStart(64, "0")}`,
+        disambiguation: {
+            representative_work_title: offset < 4 ? null : `Werk ${offset + 2}`,
+            linked_work_count: null,
+            birth_year: offset < 4 ? null : 1900 + offset,
+        },
+    }))];
+    await routeSearch(page, async (route, body) => {
+        requests.push(body);
+        await route.fulfill({ status: 200, json: body.author_cursor === null
+            ? response({
+                query: "Stephen King",
+                authors,
+                works: [],
+                authorCursor: "author-next",
+                workCursor: null,
+            })
+            : response({
+                query: "Stephen King",
+                authors: [],
+                works: [],
+                authorCursor: "author-after-empty",
+                workCursor: null,
+            }) });
+    });
+    await open(page);
+    await search(page, "Stephen King");
+    await page.getByRole("tab", { name: "Auteurs" }).click();
+
+    await expect(page.locator(".biblio-ui__author-result")).toHaveCount(4);
+    await page.getByRole("button", { name: "Meer auteurs" }).click();
+    await expect(page.locator(".biblio-ui__author-result")).toHaveCount(9);
+    expect(requests).toHaveLength(1);
+    await page.getByRole("button", { name: "Meer auteurs" }).click();
+    await expect(page.locator(".biblio-ui__author-result")).toHaveCount(10);
+    expect(requests).toHaveLength(1);
+
+    await page.getByRole("button", { name: "Meer auteurs" }).click();
+    await expect(page.getByRole("button", { name: "Meer auteurs" })).toBeFocused();
+    await expect(page.locator('[role="status"][aria-live="polite"]')).toHaveText(
+        "Nog geen nieuwe auteurs; er zijn meer resultaten beschikbaar."
+    );
+    expect(requests).toHaveLength(2);
+    expect(requests[1]).toEqual({
+        query: "Stephen King",
+        author_cursor: "author-next",
+        work_cursor: null,
+    });
+});
+
+test("external-only Authors are primary results without an Other Authors frame", async ({ page }) => {
+    await routeSearch(page, async (route) => {
+        await route.fulfill({ status: 200, json: response({
+            query: "Octavia Butler",
+            authors: [author(2, {
+                display_name: "Octavia Butler",
+                match_quality: "exact",
+                disambiguation: {
+                    representative_work_title: "Kindred",
+                    linked_work_count: null,
+                    birth_year: 1947,
+                },
+            })],
+            works: [],
+            authorCursor: null,
+            workCursor: null,
+        }) });
+    });
+    await open(page);
+    await search(page, "Octavia Butler");
+    await page.getByRole("tab", { name: "Auteurs" }).click();
+
+    await expect(page.getByText("Geboren 1947 · Auteur van Kindred")).toBeVisible();
+    await expect(page.getByText("Andere auteurs", { exact: true })).toHaveCount(0);
+});
+
+test("same-name Authors stay separate with human context and no source labels", async ({ page }) => {
+    const nameGroupId = `author-name-${"9".repeat(64)}`;
     await routeSearch(page, async (route) => {
         await route.fulfill({ status: 200, json: response({
             query: "Peter King",
             authors: [
-                author(1, { display_name: "Peter King" }),
-                author(2, { display_name: "Peter King" }),
+                author(1, {
+                    display_name: "Peter King",
+                    match_quality: "exact",
+                    name_group_id: nameGroupId,
+                    disambiguation: {
+                        representative_work_title: "Work Alpha",
+                        linked_work_count: 1,
+                        birth_year: null,
+                    },
+                }),
+                author(2, {
+                    display_name: "Peter King",
+                    match_quality: "exact",
+                    name_group_id: nameGroupId,
+                    disambiguation: {
+                        representative_work_title: "Work Beta",
+                        linked_work_count: null,
+                        birth_year: 1947,
+                    },
+                }),
             ],
             works: [],
             authorCursor: null,
@@ -448,9 +587,15 @@ test("duplicate Author names stay separate with truthful source context", async 
     await search(page, "Peter King");
 
     await expect(page.locator(".biblio-ui__author-result")).toHaveCount(2);
-    await expect(page.locator(".biblio-ui__author-result-context")).toHaveText(["Biblio-catalogus", "Externe bron"]);
-    await expect(page.getByText("In Biblio", { exact: true })).toHaveCount(0);
-    await expect(page.getByText("Uit bibliografische bron", { exact: true })).toHaveCount(0);
+    await expect(page.locator(".biblio-ui__author-result-context")).toHaveText([
+        "Auteur van Work Alpha",
+        "Geboren 1947 · Auteur van Work Beta",
+    ]);
+    await expect(page.locator(".biblio-ui__author-result", { hasText: "Biblio-catalogus" })).toHaveCount(0);
+    await expect(page.locator(".biblio-ui__author-result", { hasText: "Externe bron" })).toHaveCount(0);
+    await page.getByRole("tab", { name: "Auteurs" }).click();
+    await expect(page.getByText("Meer mogelijke auteurs met deze naam")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Bekijk werken van Peter King, auteur van Work Alpha" })).toBeVisible();
 });
 
 test("responsive visual contract stays calm and overflow-free", async ({ page }) => {
@@ -492,4 +637,14 @@ test("responsive visual contract stays calm and overflow-free", async ({ page })
         }
         await capture(page, viewport.name);
     }
+
+    await page.setViewportSize({ width: 768, height: 900 });
+    await open(page);
+    await search(page);
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send("Emulation.setPageScaleFactor", { pageScaleFactor: 2 });
+    await noHorizontalOverflow(page);
+    await expect(page.getByRole("button", { name: /Bekijk werken van/ }).first()).toBeVisible();
+    await capture(page, "zoom-200-percent");
+    await cdp.detach();
 });

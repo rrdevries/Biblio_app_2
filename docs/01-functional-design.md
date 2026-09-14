@@ -576,8 +576,22 @@ one unambiguous four-digit year from 1000 through the current calendar year;
 missing, malformed, uncertain, conflicting or impossible values become null
 without removing an otherwise valid Author. External linked Work count stays
 null. Context never enters matching, ranking, identity, mapped suppression,
-pagination or selector authority, and the public REST/UI shape remains
-unchanged pending SEARCH-AUTH-UI-01.
+pagination or selector authority.
+
+SEARCH-AUTH-UI-01 atomically exposes `match_quality`, `name_group_id` and the
+fixed nullable Author `disambiguation` object through the existing REST item
+and strict browser decoder. `Alles` keeps Books first and previews at most
+three Authors; `Auteurs` initially shows all returned canonical Authors plus at
+most five external candidates, with at most three exact candidates from one
+same-name group. `Meer auteurs` reveals up to five already loaded candidates
+before it uses the next opaque Author cursor once.
+
+Individual Author rows and the focused Author header now use available human
+Work/count/birth context instead of technical source labels. Same-name strong
+identities stay separate and actionable; indistinguishable visible rows get a
+deterministic neutral `Mogelijkheid n van m` fragment. The right rail remains
+the single search-scope explanation. No browser ranking, name deduplication,
+selector decoding, provider fan-out or Search materialization is added.
 
 D-AUTHOR-REF-01 adds the authority-bearing handoff for a selected Author.
 Every top-level Author result receives one opaque signed `author_selector`.
@@ -655,9 +669,9 @@ accessible tabs over the same retained Page state and never trigger a new
 search. `Alles` shows a bounded Books-first preview followed by compact Authors;
 `Bekijk alle boeken` and `Bekijk alle auteurs` select the corresponding tab.
 Only those specialised tabs expose their existing category-specific
-continuation. Equal Author names remain separate under strong-identity policy;
-the existing `result_kind` may be presented as provider-neutral `In Biblio` or
-`Uit bibliografische bron` context, but selectors and provider IDs remain
+continuation. Equal Author names remain separate under strong-identity policy.
+The later SEARCH-AUTH-UI-01 cutover supersedes F1's per-row source context with
+bounded human-readable disambiguation; selectors and provider IDs remain
 hidden.
 
 The results composition has a separate desktop right rail, moving below the

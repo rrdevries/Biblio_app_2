@@ -62,9 +62,12 @@ Each result group contains `items`, nullable `next_cursor` and typed
 
 Author items expose opaque `result_id`, provider-neutral `result_kind`,
 nullable canonical `author_id`, `display_name` and, after D-AUTHOR-REF-01, an
-opaque signed `author_selector`. The selector is the only authority-bearing
-handoff to the future Works-by-Author REST boundary; `result_id`, visible IDs
-and display data are not. Work items expose the unchanged result identity/kind
+opaque signed `author_selector`. SEARCH-AUTH-UI-01 later adds typed
+`match_quality`, opaque `name_group_id` and an exact `disambiguation` object
+with nullable `representative_work_title`, `linked_work_count` and
+`birth_year`. The selector is the only authority-bearing handoff to the
+Works-by-Author REST boundary; `result_id`, visible IDs, grouping and display
+data are not. Work items expose the unchanged result identity/kind
 pattern, nullable canonical `work_id`, Work title, ordered Authors and reliable
 Series context. Raw provider identity/payload, ISBN, publisher, publication
 date, language, binding, page count and every Library/private field stay
@@ -79,10 +82,12 @@ identity. Discovery reads no private Library data and needs no Library Context.
 
 ## 6. Pagination behavior
 
-The REST adapter passes the two existing cursor types unchanged into the typed
-request. Each signed cursor binds the normalized query, exact `authors|works`
-group, local/external lane, presentation order and stable result identity.
-Signatures derive from a domain-separated hash of WordPress `AUTH_SALT`.
+The REST adapter passes the two cursor types unchanged into the typed request.
+The Work cursor retains its original presentation-order/stable-result boundary.
+SEARCH-AUTH-01A later replaces only the Author payload with its signed v2
+source-progress cursor bound to normalized query, exact `authors` group,
+`local|external` phase, source offset and ordering-contract version. Signatures
+derive from a domain-separated hash of WordPress `AUTH_SALT`.
 
 An Author continuation can be supplied without a Work continuation and vice
 versa. The returned groups remain separate, so the consumer can append only

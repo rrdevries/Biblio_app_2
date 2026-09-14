@@ -7,6 +7,8 @@ import {
     applyBibliographicDrilldownPage,
     applyBibliographicSearchPage,
     bibliographicDrilldownErrorMessage,
+    bibliographicAuthorPresentation,
+    bibliographicAuthorPreview,
     bibliographicSearchErrorMessage,
     initialBibliographicDrilldownPage,
     initialBibliographicSearchState,
@@ -14,6 +16,8 @@ import {
     readBibliographicAuthorWorks,
     readBibliographicSearch,
     readBibliographicWorkEditions,
+    revealMoreBibliographicAuthors,
+    visibleBibliographicAuthors,
 } from "../../assets/js/bibliographic-search.js";
 
 const AUTHOR_ID = `search-author-${"a".repeat(64)}`;
@@ -39,6 +43,13 @@ function author(overrides = {}) {
         author_id: "author-1",
         display_name: "Ursula K. Le Guin",
         author_selector: "signed-author-selector",
+        match_quality: "broader",
+        name_group_id: `author-name-${"1".repeat(64)}`,
+        disambiguation: {
+            representative_work_title: "The Dispossessed",
+            linked_work_count: 1,
+            birth_year: null,
+        },
         ...overrides,
     };
 }
@@ -127,6 +138,9 @@ test("strict grouped decoder preserves opaque Author and Work selectors", () => 
     const decoded = readBibliographicSearch(response());
 
     assert.equal(decoded.authors.items[0].author_selector, "signed-author-selector");
+    assert.equal(decoded.authors.items[0].match_quality, "broader");
+    assert.equal(decoded.authors.items[0].disambiguation.linked_work_count, 1);
+    assert.ok(Object.isFrozen(decoded.authors.items[0].disambiguation));
     assert.equal(decoded.works.items[0].work_selector, "signed-work-selector");
     assert.equal(decoded.works.items[0].series[0].position, "5");
     assert.ok(Object.isFrozen(decoded));
@@ -151,6 +165,21 @@ test("decoder rejects extra, malformed, coerced and concrete Edition fields", ()
     assert.throws(() => readBibliographicSearch({ ...response(), total: 137 }));
     assert.throws(() => readBibliographicSearch(response({ query: "  Ursula Le Guin" })));
     assert.throws(() => readBibliographicSearch(response({ authors: [author({ author_selector: 42 })] })));
+    assert.throws(() => readBibliographicSearch(response({ authors: [author({ match_quality: "close" })] })));
+    assert.throws(() => readBibliographicSearch(response({ authors: [author({ name_group_id: "Ursula Le Guin" })] })));
+    assert.throws(() => readBibliographicSearch(response({ authors: [author({ disambiguation: null })] })));
+    assert.throws(() => readBibliographicSearch(response({ authors: [author({
+        disambiguation: { ...author().disambiguation, linked_work_count: "1" },
+    })] })));
+    assert.throws(() => readBibliographicSearch(response({ authors: [author({
+        disambiguation: { ...author().disambiguation, birth_year: 999 },
+    })] })));
+    assert.throws(() => readBibliographicSearch(response({ authors: [author({
+        disambiguation: { ...author().disambiguation, provider_top_work: "private" },
+    })] })));
+    const { match_quality: omittedMatchQuality, ...missingMatchQuality } = author();
+    assert.equal(omittedMatchQuality, "broader");
+    assert.throws(() => readBibliographicSearch(response({ authors: [missingMatchQuality] })));
     assert.throws(() => readBibliographicSearch(response({ works: [work({ work_selector: null })] })));
     assert.throws(() => readBibliographicSearch(response({ works: [work({ isbn: "9780441172719" })] })));
     assert.throws(() => readBibliographicSearch(response({ works: [work({ work_id: null })] })));
@@ -160,6 +189,90 @@ test("decoder rejects extra, malformed, coerced and concrete Edition fields", ()
     assert.throws(() => readBibliographicSearch(response({
         authorAttempts: [attempt({ status: "unavailable", failure_reason: null })],
     })));
+});
+
+test("Author presentation uses human context and deterministic visible possibilities", () => {
+    const group = `author-name-${"2".repeat(64)}`;
+    const presented = bibliographicAuthorPresentation([
+        author({ display_name: "Peter King", name_group_id: group }),
+        author({
+            result_id: AUTHOR_ID_2,
+            result_kind: "external_candidate",
+            author_id: null,
+            display_name: "Peter King",
+            author_selector: "second-author-selector",
+            match_quality: "exact",
+            name_group_id: group,
+            disambiguation: {
+                representative_work_title: null,
+                linked_work_count: null,
+                birth_year: null,
+            },
+        }),
+    ]);
+
+    assert.equal(presented[0].context, "Auteur van The Dispossessed");
+    assert.equal(presented[1].context, "");
+    assert.equal(presented[0].actionLabel, "Bekijk werken van Peter King, auteur van The Dispossessed");
+
+    const indistinguishable = bibliographicAuthorPresentation([
+        author({ display_name: "Peter King", name_group_id: group, disambiguation: {
+            representative_work_title: null,
+            linked_work_count: 0,
+            birth_year: null,
+        } }),
+        author({
+            result_id: AUTHOR_ID_2,
+            result_kind: "external_candidate",
+            author_id: null,
+            display_name: "Peter King",
+            author_selector: "second-author-selector",
+            match_quality: "exact",
+            name_group_id: group,
+            disambiguation: {
+                representative_work_title: null,
+                linked_work_count: null,
+                birth_year: null,
+            },
+        }),
+    ]);
+    assert.equal(indistinguishable[0].context, "Mogelijkheid 1 van 2");
+    assert.equal(indistinguishable[1].context, "Mogelijkheid 2 van 2");
+    assert.match(indistinguishable[1].actionLabel, /mogelijkheid 2 van 2$/);
+});
+
+test("Author preview and progressive disclosure preserve Core order without dropping loaded rows", () => {
+    const exactGroup = `author-name-${"3".repeat(64)}`;
+    const authors = Array.from({ length: 8 }, (_, index) => author({
+        result_id: `search-author-${(index + 10).toString(16).padStart(64, "0")}`,
+        result_kind: index === 0 ? "local_canonical" : "external_candidate",
+        author_id: index === 0 ? "author-local" : null,
+        display_name: index < 5 ? "Stephen King" : `Stephen King ${index}`,
+        author_selector: `selector-${index}`,
+        match_quality: index < 5 ? "exact" : "broader",
+        name_group_id: index < 5 ? exactGroup : `author-name-${(index + 20).toString(16).padStart(64, "0")}`,
+        disambiguation: index === 0 ? {
+            representative_work_title: "It",
+            linked_work_count: 1,
+            birth_year: null,
+        } : {
+            representative_work_title: null,
+            linked_work_count: null,
+            birth_year: null,
+        },
+    }));
+    const decoded = readBibliographicSearch(response({ authors, works: [], authorCursor: null }));
+    const state = applyBibliographicSearchPage(initialBibliographicSearchState(), decoded);
+
+    assert.deepEqual(bibliographicAuthorPreview(state.authors).map((item) => item.result_id), [
+        authors[0].result_id,
+        authors[1].result_id,
+    ]);
+    assert.equal(visibleBibliographicAuthors(state).length, 4);
+    assert.equal(state.authors.length, 8);
+    const revealed = revealMoreBibliographicAuthors(state);
+    assert.equal(visibleBibliographicAuthors(revealed).length, 8);
+    assert.equal(revealed.authors.length, 8);
 });
 
 test("new query replaces both groups and resets both cursors from the response", () => {
@@ -389,7 +502,8 @@ test("production module uses only read-only discovery routes and exposes no sele
     assert.match(source, /Bekijk alle/);
     assert.match(source, /Zoekscope/);
     assert.match(source, /Biblio-catalogus/);
-    assert.match(source, /Externe bron/);
+    assert.doesNotMatch(source, /textContent:\s*"Externe bron"/);
+    assert.doesNotMatch(source, /Aangesloten bibliografische bron/);
     assert.match(source, /Inclusief aangesloten bibliografische bronnen/);
     assert.match(source, /Externe resultaten konden niet volledig worden geladen/);
     assert.match(source, /type: "search"/);

@@ -27,6 +27,17 @@ function author(index = 1, overrides = {}) {
         author_id: index === 1 ? `author-${index}` : null,
         display_name: index === 1 ? "Stephen King" : `Stephen King ${index}`,
         author_selector: `private-author-selector-${index}`,
+        match_quality: index === 1 ? "exact" : "broader",
+        name_group_id: `author-name-${index.toString(16).padStart(64, "0")}`,
+        disambiguation: index === 1 ? {
+            representative_work_title: "It",
+            linked_work_count: 1,
+            birth_year: null,
+        } : {
+            representative_work_title: `King-werk ${index}`,
+            linked_work_count: null,
+            birth_year: 1947,
+        },
         ...overrides,
     };
 }
@@ -170,6 +181,9 @@ test("Author to pageable Works to pageable Editions restores both parent states"
 
     await page.getByRole("button", { name: "Bekijk werken van Stephen King" }).click();
     await expect(page.getByRole("heading", { level: 2, name: "Stephen King" })).toBeFocused();
+    await expect(page.locator(".biblio-ui__drilldown-context")).toHaveText("Auteur van It");
+    await expect(page.locator(".biblio-ui__drilldown-header")).not.toContainText("Biblio-catalogus");
+    await expect(page.locator(".biblio-ui__drilldown-header")).not.toContainText("Externe bron");
     await expect(page.getByRole("heading", { level: 2, name: "Werken" })).toBeVisible();
     await expect(page.getByText("It", { exact: true })).toBeVisible();
     expect(authorRequests[0]).toEqual({ author_selector: "private-author-selector-1", cursor: null });

@@ -4000,3 +4000,43 @@ SEARCH-AUTH-01C is accepted only when:
 Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1024`;
 Biblio Core is `2.22.0`; Biblio UI remains `0.17.0`. Exact evidence is in
 `docs/95-search-auth-01c-external-author-context.md`.
+
+## 120. SEARCH-AUTH-UI-01 Author search REST/UI cutover
+
+SEARCH-AUTH-UI-01 is technically accepted only when:
+
+- REST emits the original five Author fields plus only typed `match_quality`,
+  opaque `name_group_id` and the exact nullable three-key disambiguation object,
+  with no provider-specific or internal identity fields;
+- the frontend requires the complete expanded shape, rejects unknown/missing or
+  malformed enum/group/context/count/year values and never decodes/displays a
+  selector;
+- `Alles` keeps Books primary, shows at most three Authors in Core order and
+  excludes external broader noise when a canonical exact Author is present;
+- `Auteurs` initially shows all loaded canonical Authors plus at most five
+  external candidates and at most three exact same-name external candidates;
+- `Meer auteurs` reveals at most five loaded hidden rows before one cursor
+  request, retains loaded state, and a zero-visible page with continuation stays
+  actionable without an automatic request loop;
+- local sole/multiple/zero-Work and external title/birth/null context are
+  truthful, while source labels disappear from ordinary/focused Author UI and
+  the right-rail scope copy remains;
+- same-name identities remain separate, reliable context distinguishes actions
+  and otherwise deterministic visible `Mogelijkheid n van m` copy is used
+  without exposing technical IDs;
+- Author-to-Works still sends only `author_selector`, focused/back state retains
+  the human context, Work/Edition flows remain compatible and a new query resets
+  disclosure state;
+- canonical Authors survive provider failure, external-only results remain
+  normal results and incomplete provider search is not rendered as a definitive
+  Author miss;
+- responsive/focus/keyboard/live-region behavior passes at 1440, 900, 390 and
+  200% reflow; and
+- schema stays 1024, no provider/local projection/ranking/cursor/materialization
+  or V1-data change occurs, and focused plus broad gates and the second review
+  pass are green.
+
+Status: **TECHNICAL GO / HUMAN VISUAL-INTERACTION ACCEPTANCE PENDING**. Product
+remains `v2.001`; schema remains `1024`; Biblio Core is `2.23.0`; Biblio UI is
+`0.18.0`. Exact evidence is in
+`docs/96-search-auth-ui-01-author-search-rest-ui-cutover.md`.

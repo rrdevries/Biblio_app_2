@@ -2209,6 +2209,37 @@ fixes linked Work count to null and validates the shared bounds.
 The context travels on the existing typed Author result. It is absent from sort
 and source-order keys, provider/canonical identity, mapped suppression,
 name-group metadata, cursor state and selector encoding. Canonical results are
-never enriched from mapped provider context. REST still serializes the same
-five Author item keys and Biblio UI remains unchanged until
-SEARCH-AUTH-UI-01. No schema, persistence, cache or runtime-data change exists.
+never enriched from mapped provider context. REST kept the five Author item
+keys until the atomic SEARCH-AUTH-UI-01 cutover. No schema, persistence, cache
+or runtime-data change exists.
+
+## 57. SEARCH-AUTH-UI-01 atomic Author REST/UI presentation
+
+`BibliographicTextSearchContract` now serializes the existing typed Author
+result directly into the original five public keys plus `match_quality`,
+`name_group_id` and one exact three-key `disambiguation` object. It reads no raw
+provider payload and exposes no provider Author ID, mapping evidence, governance
+state, ranking integer or selector payload. The current v1 route is expanded
+additively and ships in the same commit as its strict consumer.
+
+`bibliographic-search.js` requires that exact complete shape, validates the
+two-value match enum, opaque name-group token, nullable bounded title,
+non-negative JSON-safe count and conservative year, and freezes the context.
+The selector remains an opaque in-memory action value. Presentation helpers
+filter only visible subsets over Core order; they do not sort, normalize names,
+deduplicate identities or decode cursor state.
+
+Page-local Author disclosure state is only a count into the already loaded
+external prefix. The initial bound is five external candidates and stops before
+a fourth exact member of one same-name group. Each explicit reveal advances by
+at most five loaded rows. Transport runs only when that loaded prefix is
+exhausted, consumes one returned opaque cursor page and never loops over a
+zero-visible page. Canonical results remain stored and visible independently.
+
+Human context and visible ambiguity ordinals are derived from the fixed typed
+fields over the current visible set. They never change `result_id`, selector,
+Core tier, provider order or identity. Selected-Author state carries only the
+display name, rendered human context and opaque selector into the existing
+Works drill-down, so no detail/enrichment request is introduced. Schema 1024,
+provider adapters, 01A ranking/cursor/mapping and 01B/01C projections remain
+unchanged.

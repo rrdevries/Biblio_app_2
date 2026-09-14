@@ -3236,7 +3236,7 @@ Closure evidence: `docs/91-search-runtime-01-f1-case-insensitive-local-matching.
 
 ### D-SEARCH-AUTH-01 — Author search presentation and disambiguation
 
-Status: **DESIGN GO / IMPLEMENTED THROUGH SEARCH-AUTH-01C**.
+Status: **DESIGN GO / IMPLEMENTED THROUGH SEARCH-AUTH-UI-01**.
 
 The final ordinary-user Author-search model is one provider-independent
 experience. Canonical Authors precede external candidates; within each source
@@ -3260,9 +3260,10 @@ disclosure with no total or infinite scroll.
 
 Implementation is deliberately split into ranking/cursor/mapped dedup, local
 batch context, external same-request context and final UI presentation. The
-first three slices are now closed; only the coordinated REST/UI presentation
-remains pending. Schema remains `1024`; Biblio Core is `2.22.0`; Biblio UI
-remains `0.17.0`. No current or
+four slices are now technically closed. The coordinated REST/UI presentation
+is implemented; only Renée's human visual/interaction acceptance remains
+pending. Schema remains `1024`; Biblio Core is `2.23.0`; Biblio UI is `0.18.0`.
+No current or
 historical V1 data was used. Canonical decision:
 `docs/92-d-search-auth-01-author-search-presentation-disambiguation.md`.
 
@@ -3344,3 +3345,38 @@ Biblio UI remains `0.17.0`. REST still exposes the five existing Author item
 keys and the frontend is unchanged. No runtime mutation, V1 source or extra
 provider call was used. Closure evidence:
 `docs/95-search-auth-01c-external-author-context.md`.
+
+### SEARCH-AUTH-UI-01 — Author search REST/UI cutover
+
+Status: **TECHNICAL GO / HUMAN VISUAL-INTERACTION ACCEPTANCE PENDING**.
+
+The public Author item now adds typed `match_quality`, opaque
+`name_group_id` and the fixed nullable `disambiguation` object to its existing
+five fields. The frontend decoder requires that complete exact allowlist in the
+same atomic cutover and rejects malformed match quality, grouping, context,
+counts and years without coercion. Provider payloads, IDs, ranking tiers and
+selector internals remain private.
+
+`Alles` keeps Books primary and previews at most three Authors using Core order,
+without external broader noise beside a canonical exact result. `Auteurs`
+shows all returned canonical Authors and initially at most five external
+candidates, including at most three exact same-name candidates. `Meer auteurs`
+reveals up to five already loaded hidden candidates before one opaque-cursor
+request; a mapped zero-visible page can retain the control and truthful live
+status without an automatic loop.
+
+Ordinary Author rows and the focused Author header no longer repeat
+`Biblio-catalogus`, `Externe bron` or a provider name. They instead show only
+available human context: sole canonical Work title, canonical multi-Work count,
+external birth year and/or representative Work. Same-name strong identities
+remain independent; indistinguishable visible rows receive deterministic
+`Mogelijkheid n van m` copy and distinct accessible action names. The right
+rail remains the single search-scope explanation.
+
+Author-to-Works still posts only the exact opaque `author_selector`. Selected
+context, loaded top-level state and disclosure state survive internal
+drill-down Back; a new query resets them. No ranking, mapped dedup, cursor,
+provider request, local/external projection, schema, materialization or V1-data
+behavior changed. Product remains `v2.001`; schema remains `1024`; Biblio Core
+is `2.23.0`; Biblio UI is `0.18.0`. Closure evidence:
+`docs/96-search-auth-ui-01-author-search-rest-ui-cutover.md`.

@@ -50,8 +50,9 @@ an Author-specific accessible name. It posts exactly:
 
 Continuation repeats only the same selector plus returned opaque cursor and
 appends `items`. Display name, canonical Author ID, result ID and provider data
-are never request authority. The focused Author view presents only selected
-Author identity, source context and compact Work rows with title, Authors,
+are never request authority. SEARCH-AUTH-UI-01 now preserves the selected
+Author's bounded human disambiguation context in that focused header instead of
+the former source label, followed by compact Work rows with title, Authors,
 reliable Series context and one real Editions action.
 
 Loading is inline. Normal empty, transport/session failure, typed complete

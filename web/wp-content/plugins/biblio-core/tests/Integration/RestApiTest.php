@@ -415,9 +415,31 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         self::assertSame("Ursula Le Guin", $data["query"]);
         self::assertSame("rest-search-author", $data["authors"]["items"][0]["author_id"]);
         self::assertSame(
-            ["result_id", "result_kind", "author_id", "display_name", "author_selector"],
+            [
+                "result_id",
+                "result_kind",
+                "author_id",
+                "display_name",
+                "author_selector",
+                "match_quality",
+                "name_group_id",
+                "disambiguation",
+            ],
             array_keys($data["authors"]["items"][0])
         );
+        self::assertSame("broader", $data["authors"]["items"][0]["match_quality"]);
+        self::assertMatchesRegularExpression(
+            '/^author-name-[0-9a-f]{64}$/D',
+            $data["authors"]["items"][0]["name_group_id"]
+        );
+        self::assertSame([
+            "representative_work_title" => "The Dispossessed",
+            "linked_work_count" => 1,
+            "birth_year" => null,
+        ], $data["authors"]["items"][0]["disambiguation"]);
+        foreach (["provider_record_id", "top_work", "work_count", "identity_status"] as $field) {
+            self::assertArrayNotHasKey($field, $data["authors"]["items"][0]);
+        }
         $salt = constant("AUTH_SALT");
         self::assertIsString($salt);
         $selectedAuthor = (new BibliographicAuthorSelectorCodec(
