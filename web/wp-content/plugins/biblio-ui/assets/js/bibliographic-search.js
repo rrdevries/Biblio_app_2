@@ -9,6 +9,14 @@ const AUTHOR_FIELDS = [
     "author_id",
     "display_name",
     "author_selector",
+    "match_quality",
+    "name_group_id",
+    "disambiguation",
+];
+const AUTHOR_DISAMBIGUATION_FIELDS = [
+    "representative_work_title",
+    "linked_work_count",
+    "birth_year",
 ];
 const WORK_FIELDS = [
     "result_id",
@@ -56,6 +64,7 @@ const WORK_AUTHOR_FIELDS = ["author_id", "display_name"];
 const SERIES_FIELDS = ["series_id", "display_name", "position"];
 const ATTEMPT_FIELDS = ["provider_key", "status", "failure_reason"];
 const RESULT_KINDS = new Set(["local_canonical", "external_candidate"]);
+const AUTHOR_MATCH_QUALITIES = new Set(["exact", "broader"]);
 const PROVIDER_STATUSES = new Set([
     "candidates",
     "miss",
@@ -84,7 +93,10 @@ const GROUPS = new Set(["authors", "works"]);
 const SEARCH_TABS = ["all", "books", "authors"];
 const SEARCH_VIEWS = new Set(["results", "authorWorks", "workEditions"]);
 const ALL_WORK_PREVIEW_LIMIT = 5;
-const ALL_AUTHOR_PREVIEW_LIMIT = 4;
+const ALL_AUTHOR_PREVIEW_LIMIT = 3;
+const INITIAL_EXTERNAL_AUTHOR_LIMIT = 5;
+const INITIAL_EXACT_NAME_GROUP_LIMIT = 3;
+const AUTHOR_DISCLOSURE_BATCH = 5;
 const MAX_QUERY_LENGTH = 100;
 
 function record(value) {
@@ -171,6 +183,27 @@ function readAttempt(value) {
     return Object.freeze({ ...value });
 }
 
+function readAuthorDisambiguation(value) {
+    const maximumYear = new Date().getUTCFullYear();
+    if (
+        !exact(value, AUTHOR_DISAMBIGUATION_FIELDS)
+        || !nullableText(value.representative_work_title, 512)
+        || !(value.linked_work_count === null || (
+            Number.isSafeInteger(value.linked_work_count)
+            && value.linked_work_count >= 0
+        ))
+        || !(value.birth_year === null || (
+            Number.isInteger(value.birth_year)
+            && value.birth_year >= 1000
+            && value.birth_year <= maximumYear
+        ))
+    ) {
+        throw new TypeError("The bibliographic Author disambiguation is invalid.");
+    }
+
+    return Object.freeze({ ...value });
+}
+
 function readAuthor(value) {
     if (
         !exact(value, AUTHOR_FIELDS)
@@ -179,13 +212,18 @@ function readAuthor(value) {
         || !nullableText(value.author_id, 191)
         || !text(value.display_name, 512)
         || !text(value.author_selector, 4096)
+        || !AUTHOR_MATCH_QUALITIES.has(value.match_quality)
+        || !/^author-name-[0-9a-f]{64}$/.test(value.name_group_id)
         || (value.result_kind === "local_canonical" && value.author_id === null)
         || (value.result_kind === "external_candidate" && value.author_id !== null)
     ) {
         throw new TypeError("The bibliographic Author result is invalid.");
     }
 
-    return Object.freeze({ ...value });
+    return Object.freeze({
+        ...value,
+        disambiguation: readAuthorDisambiguation(value.disambiguation),
+    });
 }
 
 function readWorkAuthor(value) {
@@ -422,6 +460,7 @@ function freezeState(state) {
         authors: Object.freeze([...state.authors]),
         authorCursor: state.authorCursor,
         authorAttempts: Object.freeze([...state.authorAttempts]),
+        authorExternalLimit: state.authorExternalLimit,
         works: Object.freeze([...state.works]),
         workCursor: state.workCursor,
         workAttempts: Object.freeze([...state.workAttempts]),
@@ -434,6 +473,7 @@ export function initialBibliographicSearchState() {
         authors: [],
         authorCursor: null,
         authorAttempts: [],
+        authorExternalLimit: 0,
         works: [],
         workCursor: null,
         workAttempts: [],
@@ -472,9 +512,137 @@ export function applyBibliographicSearchPage(state, response, group = "all") {
         authors: decoded.authors.items,
         authorCursor: decoded.authors.next_cursor,
         authorAttempts: decoded.authors.provider_attempts,
+        authorExternalLimit: initialExternalAuthorLimit(decoded.authors.items),
         works: decoded.works.items,
         workCursor: decoded.works.next_cursor,
         workAttempts: decoded.works.provider_attempts,
+    });
+}
+
+function externalAuthorCount(authors) {
+    return authors.filter((author) => author.result_kind === "external_candidate").length;
+}
+
+function initialExternalAuthorLimit(authors) {
+    const exactNameGroups = new Map();
+    let limit = 0;
+    for (const author of authors) {
+        if (author.result_kind !== "external_candidate") continue;
+        if (limit >= INITIAL_EXTERNAL_AUTHOR_LIMIT) break;
+        if (author.match_quality === "exact") {
+            const count = exactNameGroups.get(author.name_group_id) ?? 0;
+            if (count >= INITIAL_EXACT_NAME_GROUP_LIMIT) break;
+            exactNameGroups.set(author.name_group_id, count + 1);
+        }
+        limit += 1;
+    }
+    return limit;
+}
+
+export function visibleBibliographicAuthors(state) {
+    let externalSeen = 0;
+    return state.authors.filter((author) => {
+        if (author.result_kind === "local_canonical") return true;
+        externalSeen += 1;
+        return externalSeen <= state.authorExternalLimit;
+    });
+}
+
+export function hasHiddenBibliographicAuthors(state) {
+    return externalAuthorCount(state.authors) > state.authorExternalLimit;
+}
+
+export function revealMoreBibliographicAuthors(state) {
+    return freezeState({
+        ...state,
+        authorExternalLimit: Math.min(
+            externalAuthorCount(state.authors),
+            state.authorExternalLimit + AUTHOR_DISCLOSURE_BATCH
+        ),
+    });
+}
+
+export function bibliographicAuthorPreview(authors) {
+    const canonicalExact = authors.find((author) => (
+        author.result_kind === "local_canonical" && author.match_quality === "exact"
+    ));
+    const externalExactByGroup = new Map();
+    const preview = [];
+
+    for (const author of authors) {
+        if (preview.length >= ALL_AUTHOR_PREVIEW_LIMIT) break;
+        if (canonicalExact !== undefined
+            && author.result_kind === "external_candidate"
+            && author.match_quality === "broader") {
+            continue;
+        }
+        if (author.result_kind === "external_candidate" && author.match_quality === "exact") {
+            const count = externalExactByGroup.get(author.name_group_id) ?? 0;
+            const maximum = canonicalExact?.name_group_id === author.name_group_id ? 1 : 2;
+            if (count >= maximum) continue;
+            externalExactByGroup.set(author.name_group_id, count + 1);
+        }
+        preview.push(author);
+    }
+
+    return preview;
+}
+
+function authorContextFragments(author) {
+    const context = author.disambiguation;
+    if (author.result_kind === "local_canonical") {
+        if (context.linked_work_count === 1 && context.representative_work_title !== null) {
+            return [`Auteur van ${context.representative_work_title}`];
+        }
+        if (context.linked_work_count !== null && context.linked_work_count >= 2) {
+            return [`${context.linked_work_count} werken in de catalogus`];
+        }
+        return [];
+    }
+
+    return [
+        context.birth_year === null ? null : `Geboren ${context.birth_year}`,
+        context.representative_work_title === null
+            ? null
+            : `Auteur van ${context.representative_work_title}`,
+    ].filter((fragment) => fragment !== null);
+}
+
+function lowerInitial(value) {
+    return value === "" ? value : `${value[0].toLocaleLowerCase("nl")}${value.slice(1)}`;
+}
+
+export function bibliographicAuthorPresentation(authors) {
+    const groups = new Map();
+    authors.forEach((author, index) => {
+        const members = groups.get(author.name_group_id) ?? [];
+        members.push({ author, index, fragments: authorContextFragments(author) });
+        groups.set(author.name_group_id, members);
+    });
+
+    return authors.map((author, index) => {
+        const members = groups.get(author.name_group_id);
+        const member = members.find((candidate) => candidate.index === index);
+        const signature = member.fragments.join("\u0000");
+        const indistinguishable = members.length > 1
+            && members.filter((candidate) => candidate.fragments.join("\u0000") === signature).length > 1;
+        const ordinal = members.findIndex((candidate) => candidate.index === index) + 1;
+        const fragments = [...member.fragments];
+        if (indistinguishable) {
+            const possibility = `Mogelijkheid ${ordinal} van ${members.length}`;
+            if (fragments.length >= 2) fragments[fragments.length - 1] = possibility;
+            else fragments.push(possibility);
+        }
+        const context = fragments.join(" \u00b7 ");
+
+        return Object.freeze({
+            author,
+            sourceIndex: index,
+            context,
+            actionLabel: `Bekijk werken van ${author.display_name}${context === "" ? "" : `, ${lowerInitial(context)}`}`,
+            nameGroupSize: members.length,
+            ordinal,
+        });
     });
 }
 
@@ -725,8 +893,8 @@ export function createBibliographicSearchApp({
         return null;
     }
 
-    function appendPagination(section, group, cursor) {
-        if (cursor === null) return;
+    function appendPagination(section, group, available) {
+        if (!available) return;
         const labelText = group === "authors" ? "Meer auteurs" : "Meer boeken";
         const button = control(documentImpl, labelText, `more-${group}`);
         if (loadingGroup !== null) {
@@ -776,41 +944,109 @@ export function createBibliographicSearchApp({
         });
         sectionHeading(section, "Auteurs", "biblio-search-authors-title", preview ? "authors" : null);
         const list = el(documentImpl, "ul", { className: "biblio-ui__author-results" });
-        const authors = preview ? state.authors.slice(0, ALL_AUTHOR_PREVIEW_LIMIT) : state.authors;
-        authors.forEach((author, index) => {
+        const authors = preview
+            ? bibliographicAuthorPreview(state.authors)
+            : visibleBibliographicAuthors(state);
+        const presentation = bibliographicAuthorPresentation(authors);
+        const visibleGroups = new Map();
+        presentation.forEach((row) => {
+            const members = visibleGroups.get(row.author.name_group_id) ?? [];
+            members.push(row);
+            visibleGroups.set(row.author.name_group_id, members);
+        });
+        const labelledGroups = new Set();
+        let otherAuthorsLabelled = false;
+
+        presentation.forEach((row) => {
+            const author = row.author;
+            const index = state.authors.indexOf(author);
+            const group = visibleGroups.get(author.name_group_id);
+            const groupHasCanonical = group.some((candidate) => (
+                candidate.author.result_kind === "local_canonical"
+            ));
+            const groupHasExternal = group.some((candidate) => (
+                candidate.author.result_kind === "external_candidate"
+            ));
+            const groupLabelId = `biblio-author-group-${author.name_group_id.slice("author-name-".length)}`;
+
+            if (!preview && group.length > 1 && !labelledGroups.has(author.name_group_id)) {
+                const firstExternal = group.find((candidate) => (
+                    candidate.author.result_kind === "external_candidate"
+                ));
+                const labelHere = groupHasCanonical && groupHasExternal
+                    ? firstExternal.author === author
+                    : group[0].author === author;
+                if (labelHere) {
+                    const label = el(documentImpl, "li", {
+                        className: "biblio-ui__author-result-label",
+                        attrs: { role: "presentation" },
+                    });
+                    label.append(el(documentImpl, "h3", {
+                        textContent: groupHasCanonical && groupHasExternal
+                            ? "Meer mogelijke auteurs met deze naam"
+                            : "Mogelijke auteurs met deze naam",
+                        attrs: { id: groupLabelId },
+                    }));
+                    list.append(label);
+                    labelledGroups.add(author.name_group_id);
+                }
+            }
+            if (!preview
+                && !otherAuthorsLabelled
+                && author.result_kind === "external_candidate"
+                && author.match_quality === "broader"
+                && (presentation.some((candidate) => candidate.author.result_kind === "local_canonical")
+                    || presentation.some((candidate) => (
+                        candidate.author.result_kind === "external_candidate"
+                        && candidate.author.match_quality === "exact"
+                    )))) {
+                const label = el(documentImpl, "li", {
+                    className: "biblio-ui__author-result-label",
+                    attrs: { role: "presentation" },
+                });
+                label.append(el(documentImpl, "h3", { textContent: "Andere auteurs" }));
+                list.append(label);
+                otherAuthorsLabelled = true;
+            }
+
             const item = el(documentImpl, "li", {
                 className: "biblio-ui__author-result",
                 attrs: {
                     tabindex: "-1",
                     "data-search-result-group": "authors",
                     "data-search-result-index": String(index),
+                    ...(group.length > 1 && !preview ? { "aria-describedby": groupLabelId } : {}),
                 },
             });
             const identity = el(documentImpl, "div", {
                 className: "biblio-ui__author-result-identity",
             });
-            identity.append(
-                el(documentImpl, "h3", {
-                    className: "biblio-ui__author-result-name",
-                    textContent: author.display_name,
-                }),
-                el(documentImpl, "p", {
+            identity.append(el(documentImpl, "h3", {
+                className: "biblio-ui__author-result-name",
+                textContent: author.display_name,
+            }));
+            if (row.context !== "") {
+                identity.append(el(documentImpl, "p", {
                     className: "biblio-ui__author-result-context",
-                    textContent: author.result_kind === "local_canonical"
-                        ? "Biblio-catalogus"
-                        : "Externe bron",
-                })
-            );
+                    textContent: row.context,
+                }));
+            }
             const action = control(documentImpl, "Bekijk werken", "open-author-works", "quiet");
-            action.setAttribute("aria-label", `Bekijk werken van ${author.display_name}`);
+            action.setAttribute("aria-label", row.actionLabel);
             action.setAttribute("data-drilldown-group", "authors");
             action.setAttribute("data-drilldown-index", String(index));
-            action.addEventListener("click", () => { void openAuthorWorks(author, index); });
+            action.addEventListener("click", () => { void openAuthorWorks(row, index); });
             item.append(identity, action);
             list.append(item);
         });
         section.append(list);
-        if (!preview) appendPagination(section, "authors", state.authorCursor);
+        if (!preview) {
+            appendPagination(
+                section,
+                "authors",
+                hasHiddenBibliographicAuthors(state) || state.authorCursor !== null
+            );
+        }
         return section;
     }
 
@@ -835,7 +1071,7 @@ export function createBibliographicSearchApp({
             }));
         });
         section.append(list);
-        if (!preview) appendPagination(section, "works", state.workCursor);
+        if (!preview) appendPagination(section, "works", state.workCursor !== null);
         return section;
     }
 
@@ -1131,7 +1367,7 @@ export function createBibliographicSearchApp({
         const focused = focusedHeader({
             kicker: "Auteur",
             heading: selectedAuthor.display_name,
-            context: selectedAuthor.result_kind === "local_canonical" ? "Biblio-catalogus" : "Aangesloten bibliografische bron",
+            context: selectedAuthor.context,
             backLabel: "Terug naar zoekresultaten",
         });
         main.append(focused.headerNode);
@@ -1393,7 +1629,7 @@ export function createBibliographicSearchApp({
         } else if (hasAuthors) {
             groups.append(authorSection());
         } else {
-            groups.append(categoryEmpty("Auteurs", "Geen auteurs gevonden voor deze zoekopdracht."));
+            groups.append(authorCategoryEmpty());
         }
         main.append(groups);
         results.append(resultLayout(main, { partial: failed, hasResults: true }));
@@ -1408,6 +1644,18 @@ export function createBibliographicSearchApp({
             el(documentImpl, "p", { textContent: message })
         );
         return empty;
+    }
+
+    function authorCategoryEmpty() {
+        if (!attemptsFailed(state.authorAttempts)) {
+            return categoryEmpty("Auteurs", "Geen auteurs gevonden voor deze zoekopdracht.");
+        }
+        const incomplete = categoryEmpty(
+            "Auteurs konden niet volledig worden gezocht",
+            "Niet alle bronnen konden worden bereikt. Probeer het opnieuw."
+        );
+        incomplete.append(retryControl());
+        return incomplete;
     }
 
     async function submitQuery(rawQuery = input.value) {
@@ -1476,6 +1724,25 @@ export function createBibliographicSearchApp({
 
     async function loadMore(group) {
         if (!GROUPS.has(group) || loadingGroup !== null || phase !== "results") return;
+        const visibleAuthorIds = group === "authors"
+            ? new Set(visibleBibliographicAuthors(state).map((author) => author.result_id))
+            : null;
+        if (group === "authors" && hasHiddenBibliographicAuthors(state)) {
+            state = revealMoreBibliographicAuthors(state);
+            render();
+            const newlyVisible = visibleBibliographicAuthors(state).filter((author) => (
+                !visibleAuthorIds.has(author.result_id)
+            ));
+            announce(`${newlyVisible.length} ${newlyVisible.length === 1 ? "auteur" : "auteurs"} toegevoegd.`);
+            queueMicrotaskImpl(() => {
+                const first = newlyVisible[0];
+                const index = first === undefined ? -1 : state.authors.indexOf(first);
+                results.querySelector(
+                    `[data-search-result-group="authors"][data-search-result-index="${index}"]`
+                )?.focus();
+            });
+            return;
+        }
         const cursor = group === "authors" ? state.authorCursor : state.workCursor;
         if (cursor === null) return;
 
@@ -1496,22 +1763,38 @@ export function createBibliographicSearchApp({
             }, { signal: controller.signal });
             if (destroyed || requestRevision !== revision) return;
             state = applyBibliographicSearchPage(state, response, group);
+            if (group === "authors") state = revealMoreBibliographicAuthors(state);
             loadingGroup = null;
             render();
-            const added = (group === "authors" ? state.authors.length : state.works.length) - startIndex;
+            const newlyVisible = group === "authors"
+                ? visibleBibliographicAuthors(state).filter((author) => (
+                    !visibleAuthorIds.has(author.result_id)
+                ))
+                : [];
+            const added = group === "authors"
+                ? newlyVisible.length
+                : state.works.length - startIndex;
             const label = group === "authors" ? (added === 1 ? "auteur" : "auteurs") : (added === 1 ? "boek" : "boeken");
             const partial = attemptsFailed(group === "authors" ? state.authorAttempts : state.workAttempts)
                 ? " Externe resultaten konden niet volledig worden geladen."
                 : "";
-            announce(added === 0
-                ? `Geen nieuwe ${label} geladen.${partial}`
+            announce(added === 0 && group === "authors" && state.authorCursor !== null
+                ? `Nog geen nieuwe auteurs; er zijn meer resultaten beschikbaar.${partial}`
+                : added === 0
+                    ? `Geen nieuwe ${label} geladen.${partial}`
                 : `${added} ${label} toegevoegd.${partial}`);
             queueMicrotaskImpl(() => {
+                const firstAuthor = newlyVisible[0];
+                const targetIndex = group === "authors" && firstAuthor !== undefined
+                    ? state.authors.indexOf(firstAuthor)
+                    : startIndex;
                 const target = added > 0
                     ? results.querySelector(
-                        `[data-search-result-group="${group}"][data-search-result-index="${startIndex}"]`
+                        `[data-search-result-group="${group}"][data-search-result-index="${targetIndex}"]`
                     )
-                    : results.querySelector(`#biblio-search-${group}-title`);
+                    : group === "authors" && state.authorCursor !== null
+                        ? results.querySelector('[data-search-action="more-authors"]')
+                        : results.querySelector(`#biblio-search-${group}-title`);
                 target?.focus();
             });
         } catch (error) {
@@ -1565,8 +1848,9 @@ export function createBibliographicSearchApp({
         });
     }
 
-    async function openAuthorWorks(author, index) {
+    async function openAuthorWorks(presentation, index) {
         if (phase !== "results" || currentView !== "results") return;
+        const author = presentation.author;
         authorReturnContext = Object.freeze({
             view: "results",
             group: "authors",
@@ -1575,7 +1859,7 @@ export function createBibliographicSearchApp({
         });
         selectedAuthor = Object.freeze({
             display_name: author.display_name,
-            result_kind: author.result_kind,
+            context: presentation.context,
             author_selector: author.author_selector,
         });
         selectedWork = null;

@@ -64,6 +64,15 @@ final readonly class BibliographicTextSearchContract
                         "author_selector" => $this->authorSelectors->encode(
                             $author->reference()
                         ),
+                        "match_quality" => $author->matchQuality()->value,
+                        "name_group_id" => $author->nameGroupId(),
+                        "disambiguation" => [
+                            "representative_work_title" => $author->disambiguation()
+                                ->representativeWorkTitle(),
+                            "linked_work_count" => $author->disambiguation()
+                                ->linkedWorkCount(),
+                            "birth_year" => $author->disambiguation()->birthYear(),
+                        ],
                     ],
                     $result->authors()->items()
                 ),
