@@ -4194,3 +4194,37 @@ ITEM-MIG-01A is accepted only when:
 Status: **GO / CLOSED**. Product remains `v2.001`; schema is `1025`; Biblio
 Core is `2.27.0`; Biblio UI is `0.20.0`. Exact evidence is in
 `docs/104-item-mig-01a-item-local-evidence-persistence-read.md`.
+
+## 126. MIG-02-RUN-01 source profiler/dry-run shell
+
+MIG-02-RUN-01 is accepted only when:
+
+- identical bytes yield identical ordered file and aggregate SHA-256 values,
+  while a changed byte changes the package identity;
+- missing, unreadable, symlinked, unsafe or post-profile changed source input
+  fails closed without modifying source bytes;
+- source adapters validate an explicit supported version before target
+  validation or planning and enumerate stable typed source identity and
+  canonical payload hashes in deterministic order;
+- unknown categories, malformed records, unsupported source types, participant
+  errors and unmatched references remain explicit machine-readable findings;
+- exactly one participant can own a source type, and the same typed plan is
+  suitable for later apply through the existing MIG-FND transaction boundary;
+- dry-run requires an explicit valid user+Library pair, honors target
+  cleanliness, and never falls back to actor, admin, first user or names;
+- before/after counts prove profile and dry-run write no Core product or
+  migration table, while only the selected artifact directory changes;
+- canonical version-1 JSON contains source/build/target provenance, dirty Git
+  state, exact Git SHA when available and zero-write confirmation, and is
+  atomically accompanied by its own SHA-256;
+- the CLI reports mode and artifact paths and returns nonzero for fatal source,
+  version, target or schema failure;
+- production has no current V1 adapter, domain participant or apply command,
+  and tests contain only synthetic source data; and
+- schema remains 1025, the focused suites, one full Core gate, PHP syntax,
+  PHPStan, Composer/platform, WordPress smoke, manifest, whitespace and the
+  independent second review are green.
+
+Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1025`;
+Biblio Core is `2.28.0`; Biblio UI remains `0.20.0`. Exact evidence is in
+`docs/105-mig-02-run-01-source-profiler-dry-run-runner-shell.md`.

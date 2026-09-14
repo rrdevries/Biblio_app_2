@@ -3510,3 +3510,32 @@ is `0.20.0`. No current Item backfill or current V1 export was required. V1
 mapping/import, Item edit UI, Add Book acquisition input and archived Book
 Detail presentation remain separate. Closure evidence:
 `docs/104-item-mig-01a-item-local-evidence-persistence-read.md`.
+
+### MIG-02-RUN-01 — Source profiler and dry-run runner shell
+
+Status: **GO / CLOSED**.
+
+Biblio Core now has a source-neutral, zero-write migration runner shell. It
+fingerprints an explicit immutable filesystem package with ordered relative
+paths, exact byte sizes, per-file SHA-256 and one deterministic manifest
+digest. Symlinks, unreadable input, unsafe adapter reads and changed bytes fail
+closed. A version-bound source-adapter registry answers only which typed source
+facts exist; a separate participant registry owns future V2 meaning and rejects
+duplicate source-type ownership.
+
+`wp biblio migration profile` and `wp biblio migration dry-run` emit versioned,
+deterministic JSON plus SHA-256 to an explicit directory or ignored
+`.local/migration`. Dry-run requires explicit target user and Library IDs,
+reuses `PersonalMigrationTargetService`, honors `--require-empty`, exposes
+unknown/unsupported types, preservation/quarantine candidates, planning errors
+and unmatched references, and writes no product or MIG-FND table. The shared
+participant plan is also the future apply input, but no apply command is
+published while no approved production adapter/domain participant exists.
+
+Production intentionally registers zero V1 adapters and zero migration
+participants. Tests use only purpose-built synthetic packages. No current or
+historical V1 export, field mapping, taxonomy, provider/network request, domain
+migration, reconciliation expansion or schema change is included. Product
+remains `v2.001`; schema remains `1025`; Biblio Core is `2.28.0`; Biblio UI
+remains `0.20.0`. Closure evidence:
+`docs/105-mig-02-run-01-source-profiler-dry-run-runner-shell.md`.

@@ -2354,3 +2354,38 @@ Items are non-enumerating. Book Detail composes real inventory number, Location
 and the exact allowlisted typed details object; frontend validation and
 presentation never infer state or expose migration evidence. Archive and
 Collection behavior remain independent of the details aggregate.
+
+## 62. MIG-02-RUN-01 source profiling and planning boundary
+
+The migration runner separates three authorities. A filesystem source package
+owns immutable byte inventory and manifest identity. A version-bound
+`MigrationSourceAdapter` owns structural profiling and deterministic typed
+source enumeration only. A `MigrationParticipant` owns the future V2
+interpretation of exactly one source type. Duplicate adapter IDs, duplicate
+participant source types and duplicate logical source identities fail closed.
+
+Source records use the existing MIG-FND logical identity shape
+`source_family + source_type + source_id`. Their canonical JSON payload hash is
+deterministic and contains no run timestamp or random target identity. The
+runner sorts records by type, ID and payload hash before planning. Adapter file
+reads are restricted to the package manifest and reverify size and hash, so a
+profiled package cannot silently change between inventory and planning.
+
+Profile and dry-run share the same inspect/enumerate path. Dry-run then checks
+schema/runtime health, delegates the exact user+Library pair to
+`PersonalMigrationTargetService` and calls each participant's typed `plan()`.
+The resulting `PlannedMigrationRecord` is also the exact argument of the
+participant's future `apply()` method; a later apply orchestrator must invoke
+that inside `CommitMigrationRecordService`, which remains the sole transaction
+owner. RUN-01 adds neither a parallel mapping path nor a durable cursor;
+ledger-driven observation replay remains the resume foundation.
+
+Artifacts contain format version, canonical build provenance, exact Git SHA
+when available, dirty-worktree state, source manifest/adapter/version,
+category/type/finding counts and, for dry-run, explicit target validation plus
+plans/findings and zero-write confirmation. Atomic filesystem writing is
+restricted to a directory outside the source package and produces a companion
+SHA-256 file. No source payload is included by default. Production exposes
+only `biblio migration profile|dry-run`, with empty adapter and participant
+registries until separately approved current-source and domain slices exist;
+there is deliberately no apply command.

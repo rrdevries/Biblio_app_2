@@ -14,7 +14,7 @@ use Biblio\Core\Library\MembershipStatus;
 use Biblio\Core\Library\PersonalLibraryRepository;
 use Biblio\Core\Library\UseAccess;
 
-final readonly class PersonalMigrationTargetService
+final readonly class PersonalMigrationTargetService implements MigrationTargetValidator
 {
     public function __construct(
         private PlatformUserDirectory $users,

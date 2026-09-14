@@ -8,6 +8,7 @@ use Biblio\Core\Application\CoreApplication;
 use Biblio\Core\Exception\CoreFailure;
 use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Infrastructure\WordPress\Lifecycle\CoreLifecycleException;
+use Biblio\Core\Infrastructure\WordPress\Cli\MigrationCommand;
 use Biblio\Core\Infrastructure\WordPress\Cli\PersonalIdentityCommand;
 use Biblio\Core\Infrastructure\WordPress\ProductionComposition;
 use Biblio\Core\Infrastructure\WordPress\Rest\RestApi;
@@ -147,6 +148,14 @@ final class Plugin
             ["WP_CLI", "add_command"],
             "biblio identity",
             new PersonalIdentityCommand(fn () => $this->application())
+        );
+        call_user_func(
+            ["WP_CLI", "add_command"],
+            "biblio migration",
+            new MigrationCommand(
+                fn () => $this->application(),
+                $this->pluginFile
+            )
         );
     }
 
