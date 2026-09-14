@@ -56,8 +56,9 @@ artifact encoding. Ordering carries no domain ranking or product semantics.
 Each participant owns exactly one stable source type. Duplicate ownership fails
 closed. A supported record routes once; absent ownership remains an explicit
 unsupported type. A participant may plan mapped/transformed operations,
-preservation, quarantine, intentional reasoned omission or failure. RUN-01
-provides no domain participant.
+preservation, quarantine, intentional reasoned omission or failure. At RUN-01
+closure, production provided no domain participant; MIG-02-CAT-01 subsequently
+adds the approved catalog participants without changing this generic boundary.
 
 ## 7. Target validation
 

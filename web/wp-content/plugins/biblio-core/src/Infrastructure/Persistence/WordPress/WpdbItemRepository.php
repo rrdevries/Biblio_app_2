@@ -6,6 +6,7 @@ namespace Biblio\Core\Infrastructure\Persistence\WordPress;
 
 use Biblio\Core\Application\Metadata\AddBookExistingItem;
 use Biblio\Core\Application\Metadata\AddBookExistingItemRepository;
+use Biblio\Core\Application\Migration\Catalog\CatalogMigrationItemRepository;
 use Biblio\Core\Catalog\CatalogRecordAlreadyExists;
 use Biblio\Core\Catalog\EditionId;
 use Biblio\Core\Catalog\Item;
@@ -26,7 +27,8 @@ use wpdb;
 final readonly class WpdbItemRepository implements
     WritableItemRepository,
     LibraryItemMetadataRepository,
-    AddBookExistingItemRepository
+    AddBookExistingItemRepository,
+    CatalogMigrationItemRepository
 {
     public function __construct(
         private wpdb $database,
@@ -92,6 +94,32 @@ final readonly class WpdbItemRepository implements
             . "FROM `{$table}` WHERE item_id = %s AND library_id = %s",
             $itemId->value(),
             $libraryId->value()
+        ));
+
+        if ($row === null) {
+            return null;
+        }
+
+        try {
+            return $this->hydrate($row);
+        } catch (Throwable $exception) {
+            throw new PersistenceException(
+                "Stored Item data is invalid.",
+                0,
+                $exception,
+                FailureReason::PersistenceReadFailed
+            );
+        }
+    }
+
+    public function findForMigration(ItemId $itemId): ?Item
+    {
+        $table = $this->tableNames->items();
+        $row = $this->database->get_row($this->database->prepare(
+            "SELECT item_id, library_id, edition_id, item_status, "
+            . "inventory_number, location_id, item_version "
+            . "FROM `{$table}` WHERE item_id = %s",
+            $itemId->value()
         ));
 
         if ($row === null) {

@@ -12,6 +12,7 @@ use Biblio\Core\Application\Catalog\AddLibraryItemService;
 use Biblio\Core\Application\Catalog\Discovery\WorkDiscoveryService;
 use Biblio\Core\Application\Catalog\LocalEditionResolver;
 use Biblio\Core\Application\Catalog\ItemArchiveActivity;
+use Biblio\Core\Application\Catalog\ItemLocalDetailsRecorder;
 use Biblio\Core\Application\Catalog\ManageLibraryItemArchiveService;
 use Biblio\Core\Application\Catalog\Query\{CatalogQueryCursorCodec,CatalogQueryService};
 use Biblio\Core\Application\Catalog\Read\CatalogUiReadService;
@@ -45,6 +46,8 @@ use Biblio\Core\Application\Metadata\{AddBookCommitService,AddBookMetadataLookup
 use Biblio\Core\Application\Metadata\Author\CanonicalAuthorMaterializer;
 use Biblio\Core\Application\Metadata\Discovery\{BibliographicDiscoveryService,BibliographicMaterializationService,BibliographicTextDiscoveryProvider,DesignatedPersonalBibliographicAuthorization};
 use Biblio\Core\Application\Metadata\Search\{BibliographicAuthorWorkSearchProvider,BibliographicAuthorWorkSearchService,BibliographicEditionSearchService,BibliographicExternalEditionSearchProvider,BibliographicTextSearchService};
+use Biblio\Core\Application\Migration\Catalog\{CatalogEditionMigrationParticipant,CatalogItemMigrationParticipant,CatalogMigrationWriter,CatalogWorkMigrationParticipant};
+use Biblio\Core\Application\Migration\Runner\MigrationParticipantRegistry;
 use Biblio\Core\Application\Notes\CorrectPrivateNoteReadingRoundService;
 use Biblio\Core\Application\Notes\CreatePrivateNoteService;
 use Biblio\Core\Application\Notes\DeletePrivateNoteService;
@@ -104,6 +107,7 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbMetadataLookupSnapshotR
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbUserObservedMetadataEvidenceRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbCollectionRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLocationRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbMigrationLedgerRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryMembershipRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbActorLibraryContextRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbCatalogUiReadRepository;
@@ -155,6 +159,7 @@ use Biblio\Core\Infrastructure\WordPress\Lifecycle\LifecycleStateStore;
 use Biblio\Core\Infrastructure\WordPress\Lifecycle\WpTransientLifecycleStateStore;
 use Biblio\Core\Infrastructure\WordPress\Identity\WordPressAuthenticatedUser;
 use Biblio\Core\Infrastructure\WordPress\OpaqueCanonicalAuthorMaterializationIdGenerator;
+use Biblio\Core\Infrastructure\WordPress\Migration\OpaqueCatalogMigrationRecordIdGenerator;
 use Biblio\Core\Infrastructure\WordPress\Identity\WordPressPlatformUserDirectory;
 use Biblio\Core\Notes\StrictPrivateNoteContentPolicy;
 use wpdb;
@@ -469,6 +474,31 @@ final class ProductionComposition
             $selectionResolver,
             $libraryMutationLock
         );
+        $catalogMigrationWriter = new CatalogMigrationWriter(
+            new WpdbMigrationLedgerRepository($database, $tableNames),
+            new OpaqueCatalogMigrationRecordIdGenerator(),
+            $workRepository,
+            $editionRepository,
+            $itemRepository,
+            $localEditionResolver,
+            $editionIdentifierClaims,
+            $catalogContextRepository,
+            $contextInitializer,
+            $locationRepository,
+            $bookTypeRepository,
+            $genreRepository,
+            $subjectRepository,
+            $itemLocalDetailsRepository,
+            new ItemLocalDetailsRecorder(
+                $itemRepository,
+                $itemLocalDetailsRepository
+            )
+        );
+        $migrationParticipants = new MigrationParticipantRegistry([
+            new CatalogWorkMigrationParticipant($catalogMigrationWriter),
+            new CatalogEditionMigrationParticipant($catalogMigrationWriter),
+            new CatalogItemMigrationParticipant($catalogMigrationWriter),
+        ]);
         $libraryItemCreation = new AddLibraryItemService(
             $authenticatedUser,
             $libraryAccess,
@@ -998,7 +1028,8 @@ final class ProductionComposition
             $bibliographicAuthorWorkSearch,
             $bibliographicEditionSearch,
             $bibliographicDiscovery,
-            $bibliographicMaterialization
+            $bibliographicMaterialization,
+            $migrationParticipants
         );
         $this->lifecycle = new CoreLifecycleCoordinator(
             new CoreSchemaMigrator(

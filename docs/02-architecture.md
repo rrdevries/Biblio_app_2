@@ -2386,6 +2386,38 @@ category/type/finding counts and, for dry-run, explicit target validation plus
 plans/findings and zero-write confirmation. Atomic filesystem writing is
 restricted to a directory outside the source package and produces a companion
 SHA-256 file. No source payload is included by default. Production exposes
-only `biblio migration profile|dry-run`, with empty adapter and participant
-registries until separately approved current-source and domain slices exist;
-there is deliberately no apply command.
+only `biblio migration profile|dry-run`, with an empty current-source adapter
+registry. MIG-02-CAT-01 now registers the approved source-neutral catalog
+participants; there is deliberately no apply command.
+
+## 63. MIG-02-CAT-01 catalog migration boundary
+
+CAT keeps three logical source identities rather than treating one copy record
+as the Work and Edition source: `catalog_work`, `catalog_edition` and
+`catalog_item`. Each has a source-neutral typed V2 plan and its own committed
+MIG-FND mapping. `PlannedMigrationRecord` carries generic explicit dependency
+references and an internal `TypedMigrationPlan`; its artifact projection omits
+the typed payload. Source record, plan and observation canonical hashes must
+agree before apply.
+
+`CatalogMigrationWriter` is the one shared non-transaction-owning application
+boundary. It resolves prior mappings through the exact run target and source
+family, allocates opaque target IDs, and writes through the current Work,
+Edition, Item, canonical ISBN, LibraryCatalogContext and ItemLocalDetails
+ports. It neither authenticates a current actor nor starts/retries a
+transaction. A later apply orchestrator must invoke it only through
+`CommitMigrationRecordService`.
+
+Work has no title/name lookup. Edition uses the existing canonical ISBN
+resolver and claim repository; a winner below a different Work, ambiguity or
+claim conflict fails closed. Explicit no-ISBN is required when no canonical
+ISBN exists. Item reuse uses a migration-only unscoped identity lookup solely
+to detect foreign-Library mappings, after which every mutation remains exact
+Library-scoped. Approved Location and classification IDs are validated; no
+Location/term is created. Classification context, Item and optional typed local
+details join the observation transaction and emit truthful created/reused
+mapping edges for later reconciliation.
+
+Production registers CAT participants but no current V1 adapter and no apply
+command. The CAT dependency graph contains no provider, HTTP client or
+materializer. Schema remains 1025.

@@ -12,13 +12,16 @@ final readonly class PlannedMigrationRecord
     /**
      * @param list<array{operation:string,target_type?:string,target_id?:string}> $operations
      * @param list<string> $unmatchedReferences
+     * @param list<array{source_type:string,source_id:string}> $dependencies
      */
     public function __construct(
         private MigrationDisposition $disposition,
         private array $operations = [],
         private ?string $reasonCode = null,
         private array $unmatchedReferences = [],
-        private ?string $safeExplanation = null
+        private ?string $safeExplanation = null,
+        private array $dependencies = [],
+        private ?TypedMigrationPlan $typedPlan = null
     ) {
         if (
             $this->reasonCode !== null
@@ -71,6 +74,20 @@ final readonly class PlannedMigrationRecord
                 throw new ValidationException("Planned operation is invalid.");
             }
         }
+        foreach ($this->dependencies as $dependency) {
+            if (
+                preg_match(
+                    '/^[a-z0-9][a-z0-9._-]{0,63}$/',
+                    $dependency["source_type"]
+                ) !== 1
+                || trim($dependency["source_id"]) === ""
+                || mb_strlen($dependency["source_id"]) > 191
+            ) {
+                throw new ValidationException(
+                    "Planned migration dependency is invalid."
+                );
+            }
+        }
     }
 
     public function disposition(): MigrationDisposition { return $this->disposition; }
@@ -78,10 +95,13 @@ final readonly class PlannedMigrationRecord
     public function operations(): array { return $this->operations; }
     public function reasonCode(): ?string { return $this->reasonCode; }
     public function safeExplanation(): ?string { return $this->safeExplanation; }
+    /** @return list<array{source_type:string,source_id:string}> */
+    public function dependencies(): array { return $this->dependencies; }
+    public function typedPlan(): ?TypedMigrationPlan { return $this->typedPlan; }
     /** @return list<string> */
     public function unmatchedReferences(): array { return $this->unmatchedReferences; }
 
-    /** @return array{disposition:string,reason_code:?string,safe_explanation:?string,operations:list<array{operation:string,target_type?:string,target_id?:string}>,unmatched_references:list<string>} */
+    /** @return array<string, mixed> */
     public function toArray(): array
     {
         $operations = $this->operations;
@@ -89,6 +109,10 @@ final readonly class PlannedMigrationRecord
             DeterministicJson::encode($a) <=> DeterministicJson::encode($b));
         $references = $this->unmatchedReferences;
         sort($references, SORT_STRING);
+        $dependencies = $this->dependencies;
+        usort($dependencies, static fn (array $a, array $b): int =>
+            [$a["source_type"], $a["source_id"]]
+                <=> [$b["source_type"], $b["source_id"]]);
 
         return [
             "disposition" => $this->disposition->value,
@@ -96,6 +120,7 @@ final readonly class PlannedMigrationRecord
             "safe_explanation" => $this->safeExplanation,
             "operations" => $operations,
             "unmatched_references" => $references,
+            "dependencies" => $dependencies,
         ];
     }
 }

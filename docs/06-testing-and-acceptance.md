@@ -4219,8 +4219,8 @@ MIG-02-RUN-01 is accepted only when:
   atomically accompanied by its own SHA-256;
 - the CLI reports mode and artifact paths and returns nonzero for fatal source,
   version, target or schema failure;
-- production has no current V1 adapter, domain participant or apply command,
-  and tests contain only synthetic source data; and
+- at RUN-01 closure production had no current V1 adapter, domain participant or
+  apply command, and tests contained only synthetic source data; and
 - schema remains 1025, the focused suites, one full Core gate, PHP syntax,
   PHPStan, Composer/platform, WordPress smoke, manifest, whitespace and the
   independent second review are green.
@@ -4228,3 +4228,43 @@ MIG-02-RUN-01 is accepted only when:
 Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1025`;
 Biblio Core is `2.28.0`; Biblio UI remains `0.20.0`. Exact evidence is in
 `docs/105-mig-02-run-01-source-profiler-dry-run-runner-shell.md`.
+
+## 127. MIG-02-CAT-01 Work / Edition / Item migration participants
+
+MIG-02-CAT-01 is accepted only when:
+
+- three source-neutral typed plans own separate stable `catalog_work`,
+  `catalog_edition` and `catalog_item` logical source identities, with explicit
+  Work-to-Edition and Edition-to-Item dependency references;
+- title/name equality never identifies or merges Work, and exact committed
+  logical-source mapping or explicit approved target identity is required;
+- canonical ISBN convergence uses the current ISBN rules, resolver and unique
+  claim boundary, is allowed only below the exact mapped Work, and conflicts
+  fail closed without reassignment;
+- canonical ISBN, explicit no-ISBN and unknown ISBN remain distinct, and two
+  no-ISBN source Edition identities can create distinct Editions;
+- every Item remains one active physical copy in the exact target Library,
+  multiple Items may share an Edition, inventory uniqueness stays
+  Library-scoped and a foreign or archived mapped Item fails closed;
+- Location and classification accept only existing approved typed IDs in the
+  exact Library, create no terms or Locations, and never guess or fall back;
+- optional typed Item-local details use the existing recorder and remain
+  Item+Library scoped, with absence producing no invented state;
+- apply joins `CommitMigrationRecordService` as sole transaction owner, and an
+  injected late failure rolls back Item, classification, details, outcome and
+  mappings atomically;
+- committed replay converges without duplicates, while changed or divergent
+  replay fails closed and preserves truthful created/reused mappings;
+- dry-run exercises the production CAT registry with a synthetic typed adapter,
+  emits no typed payload/source data and changes no Core or MIG-FND table;
+- production still has no current V1 adapter or apply command, and CAT has no
+  provider/network dependency, V1 parser, Authors, Series, UI or schema change;
+  and
+- focused participant, ISBN/convergence, transaction, Library-isolation,
+  Item-local and runner-shell tests, one full Core gate, PHP syntax, PHPStan,
+  Composer/platform, WordPress smoke, manifest, whitespace and independent
+  second review are green.
+
+Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1025`;
+Biblio Core is `2.29.0`; Biblio UI remains `0.20.0`. Exact evidence is in
+`docs/106-mig-02-cat-01-work-edition-item-participant.md`.

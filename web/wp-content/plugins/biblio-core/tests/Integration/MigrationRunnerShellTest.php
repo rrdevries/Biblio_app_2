@@ -7,6 +7,7 @@ namespace Biblio\Core\Tests\Integration;
 use Biblio\Core\Application\CoreApplication;
 use Biblio\Core\Application\Migration\MigrationDisposition;
 use Biblio\Core\Application\Migration\MigrationRecordOutcome;
+use Biblio\Core\Application\Migration\Catalog\{CatalogEditionMigrationParticipant,CatalogEditionPlan,CatalogItemMigrationParticipant,CatalogItemPlan,CatalogWorkMigrationParticipant,CatalogWorkPlan};
 use Biblio\Core\Application\Migration\Runner\MigrationBuildProvenance;
 use Biblio\Core\Application\Migration\Runner\MigrationEnvironment;
 use Biblio\Core\Application\Migration\Runner\MigrationParticipant;
@@ -20,6 +21,8 @@ use Biblio\Core\Application\Migration\Runner\MigrationSourceProfile;
 use Biblio\Core\Application\Migration\Runner\MigrationSourceRecord;
 use Biblio\Core\Application\Migration\Runner\PlannedMigrationRecord;
 use Biblio\Core\Application\Migration\SourceObservation;
+use Biblio\Core\Catalog\Classification\{LibraryBookTypeId,LibraryCatalogSelection};
+use Biblio\Core\Catalog\EditionIsbnMetadata;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Migration\FilesystemMigrationSourcePackageFactory;
 use Biblio\Core\Infrastructure\WordPress\Cli\MigrationCommand;
@@ -88,6 +91,63 @@ final readonly class RunnerShellParticipant implements MigrationParticipant
     }
 }
 
+final readonly class RunnerShellCatalogAdapter implements MigrationSourceAdapter
+{
+    public function __construct(
+        private LibraryId $libraryId,
+        private LibraryBookTypeId $bookTypeId
+    ) {
+    }
+
+    public function adapterId(): string { return "synthetic-catalog"; }
+    public function sourceFamily(): string { return "synthetic"; }
+
+    public function profile(MigrationSourcePackage $package): MigrationSourceProfile
+    {
+        $payload = json_decode($package->read("source.json"), true, 16, JSON_THROW_ON_ERROR);
+        return new MigrationSourceProfile((string) ($payload["version"] ?? "unknown"), [
+            CatalogWorkMigrationParticipant::SOURCE_TYPE => 1,
+            CatalogEditionMigrationParticipant::SOURCE_TYPE => 1,
+            CatalogItemMigrationParticipant::SOURCE_TYPE => 1,
+        ]);
+    }
+
+    public function supportsVersion(string $sourceVersion): bool
+    {
+        return $sourceVersion === "catalog-test-1";
+    }
+
+    public function records(
+        MigrationSourcePackage $package,
+        MigrationSourceProfile $profile
+    ): iterable {
+        unset($package, $profile);
+        yield MigrationSourceRecord::typed(
+            CatalogWorkMigrationParticipant::SOURCE_TYPE,
+            "work/dry-run",
+            new CatalogWorkPlan("Dry-run Work")
+        );
+        yield MigrationSourceRecord::typed(
+            CatalogEditionMigrationParticipant::SOURCE_TYPE,
+            "edition/dry-run",
+            new CatalogEditionPlan(
+                "work/dry-run",
+                "Dry-run Edition",
+                EditionIsbnMetadata::withoutIsbn()
+            )
+        );
+        yield MigrationSourceRecord::typed(
+            CatalogItemMigrationParticipant::SOURCE_TYPE,
+            "copy/dry-run",
+            new CatalogItemPlan(
+                "edition/dry-run",
+                $this->libraryId,
+                new LibraryCatalogSelection($this->bookTypeId)
+            )
+        );
+    }
+}
+
 final readonly class RunnerShellEnvironment implements MigrationEnvironment
 {
     public function assertHealthy(): void
@@ -99,7 +159,7 @@ final readonly class RunnerShellEnvironment implements MigrationEnvironment
         return new MigrationBuildProvenance(
             "v2.001",
             1025,
-            "2.28.0",
+            "2.29.0",
             str_repeat("b", 40),
             false
         );
@@ -232,6 +292,79 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
                 self::assertStringContainsString("Migration", $exception->getMessage());
             }
         }
+    }
+
+    public function testCatalogParticipantCliDryRunIsTypedOrderedAndZeroWrite(): void
+    {
+        $userId = wp_create_user(
+            "runner-catalog-user",
+            "synthetic-test-password",
+            "runner-catalog@example.invalid"
+        );
+        self::assertIsInt($userId);
+        $this->createdUsers[] = $userId;
+        $application = (new ProductionComposition($this->database))->application();
+        $target = $application->personalMigrationTargets()->bootstrap(
+            new UserId((string) $userId)
+        );
+        $bookTypeId = $this->database->get_var($this->database->prepare(
+            "SELECT book_type_id FROM `{$this->tableNames->libraryBookTypes()}` WHERE library_id=%s AND term_status='active' ORDER BY book_type_id LIMIT 1",
+            $target->libraryId()->value()
+        ));
+        self::assertIsString($bookTypeId);
+        $adapter = new RunnerShellCatalogAdapter(
+            $target->libraryId(),
+            new LibraryBookTypeId($bookTypeId)
+        );
+        $source = $this->source("catalog-test-1");
+        $outputDirectory = $this->directory();
+        $output = new RecordingMigrationCommandOutput();
+        $command = new MigrationCommand(
+            static fn (): CoreApplication => $application,
+            dirname(__DIR__, 2) . "/biblio-core.php",
+            static fn (CoreApplication $core): MigrationRunner => new MigrationRunner(
+                new FilesystemMigrationSourcePackageFactory(),
+                new MigrationSourceAdapterRegistry([$adapter]),
+                $core->migrationParticipants(),
+                $core->personalMigrationTargets(),
+                new RunnerShellEnvironment()
+            ),
+            $output
+        );
+
+        $before = $this->allCoreTableCounts();
+        $command->dry_run([], [
+            "source-root" => $source,
+            "source-adapter" => "synthetic-catalog",
+            "target-user-id" => (string) $userId,
+            "target-library-id" => $target->libraryId()->value(),
+            "require-empty" => true,
+            "output-dir" => $outputDirectory,
+        ]);
+        self::assertSame($before, $this->allCoreTableCounts());
+
+        $commandOutput = json_decode($output->lines[0], true, 16, JSON_THROW_ON_ERROR);
+        $artifact = json_decode(
+            (string) file_get_contents($commandOutput["artifact_path"]),
+            true,
+            32,
+            JSON_THROW_ON_ERROR
+        );
+        self::assertTrue($artifact["zero_write_confirmed"]);
+        self::assertCount(3, $artifact["plan"]["records"]);
+        self::assertSame([], $artifact["plan"]["planning_errors"]);
+        self::assertSame(
+            [["source_id" => "work/dry-run", "source_type" => "catalog_work"]],
+            $artifact["plan"]["records"][0]["dependencies"]
+        );
+        self::assertSame(
+            [["source_id" => "edition/dry-run", "source_type" => "catalog_edition"]],
+            $artifact["plan"]["records"][1]["dependencies"]
+        );
+        self::assertStringNotContainsString(
+            "Dry-run Work",
+            (string) file_get_contents($commandOutput["artifact_path"])
+        );
     }
 
     private function command(

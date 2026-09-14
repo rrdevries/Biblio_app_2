@@ -97,9 +97,11 @@ final readonly class MigrationRunner
 
             try {
                 $plan = $participant->plan($record, $target);
-            } catch (Throwable) {
+            } catch (Throwable $exception) {
                 $planningErrors[] = [
-                    "reason_code" => "participant_planning_error",
+                    "reason_code" => $exception instanceof MigrationParticipantFailure
+                        ? $exception->reasonCode()
+                        : "participant_planning_error",
                     "source_type" => $record->sourceType(),
                     "source_id" => $record->sourceId(),
                 ];

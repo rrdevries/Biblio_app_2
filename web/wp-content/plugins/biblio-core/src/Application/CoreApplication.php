@@ -34,6 +34,7 @@ use Biblio\Core\Application\Library\LibraryContextQueryService;
 use Biblio\Core\Application\Metadata\{AddBookCommitService,AddBookMetadataLookupService};
 use Biblio\Core\Application\Metadata\Discovery\{BibliographicDiscoveryService,BibliographicMaterializationService};
 use Biblio\Core\Application\Metadata\Search\{BibliographicAuthorWorkSearchService,BibliographicEditionSearchService,BibliographicTextSearchService};
+use Biblio\Core\Application\Migration\Runner\MigrationParticipantRegistry;
 use Biblio\Core\Application\Notes\CorrectPrivateNoteReadingRoundService;
 use Biblio\Core\Application\Notes\CreatePrivateNoteService;
 use Biblio\Core\Application\Notes\DeletePrivateNoteService;
@@ -155,8 +156,14 @@ final readonly class CoreApplication
         private BibliographicAuthorWorkSearchService $bibliographicAuthorWorkSearch,
         private BibliographicEditionSearchService $bibliographicEditionSearch,
         private BibliographicDiscoveryService $bibliographicDiscovery,
-        private BibliographicMaterializationService $bibliographicMaterialization
+        private BibliographicMaterializationService $bibliographicMaterialization,
+        private MigrationParticipantRegistry $migrationParticipants
     ) {
+    }
+
+    public function migrationParticipants(): MigrationParticipantRegistry
+    {
+        return $this->migrationParticipants;
     }
 
     public function bibliographicDiscovery(): BibliographicDiscoveryService

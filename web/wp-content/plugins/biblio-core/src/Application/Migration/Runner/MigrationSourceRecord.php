@@ -18,7 +18,8 @@ final readonly class MigrationSourceRecord
         private string $sourceType,
         private string $sourceId,
         private array $payload,
-        private array $references = []
+        private array $references = [],
+        private ?TypedMigrationPlan $typedPlan = null
     ) {
         if (preg_match('/^[a-z0-9][a-z0-9._-]{0,63}$/', $this->sourceType) !== 1) {
             throw new ValidationException("Source type is invalid.");
@@ -36,6 +37,32 @@ final readonly class MigrationSourceRecord
             }
         }
         $this->payloadHash = DeterministicJson::hash($this->payload);
+
+        if (
+            $this->typedPlan !== null
+            && DeterministicJson::hash($this->typedPlan->canonicalPayload())
+                !== $this->payloadHash
+        ) {
+            throw new ValidationException(
+                "Typed migration plan does not match its canonical payload."
+            );
+        }
+    }
+
+    /** @param list<string> $references */
+    public static function typed(
+        string $sourceType,
+        string $sourceId,
+        TypedMigrationPlan $plan,
+        array $references = []
+    ): self {
+        return new self(
+            $sourceType,
+            $sourceId,
+            $plan->canonicalPayload(),
+            $references,
+            $plan
+        );
     }
 
     public function sourceType(): string { return $this->sourceType; }
@@ -43,6 +70,7 @@ final readonly class MigrationSourceRecord
     /** @return array<string, mixed> */
     public function payload(): array { return $this->payload; }
     public function payloadHash(): string { return $this->payloadHash; }
+    public function typedPlan(): ?TypedMigrationPlan { return $this->typedPlan; }
     /** @return list<string> */
     public function references(): array { return $this->references; }
 

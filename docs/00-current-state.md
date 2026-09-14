@@ -41,11 +41,12 @@ in schema `1021`; WISH-CORE-01 adds the source-neutral personal Wishlist Core
 target, persistence and MIG-FND participant in schema `1022`; WISH-API-01
 exposes that private contract through owner-only REST; WISH-UI-01 makes the
 basic personal list normally reachable through the shared App Shell.
-IDENTITY-01 remains the mandatory explicit personal target
-validator. The mapping design is still **MIGRATION DESIGN BLOCKED BY REMAINING
-DOMAIN TARGET GAPS**: Item local evidence still needs a bounded target, while
-open circulation still needs Renée's cutover decision.
-No V1 parser, source profiling, import,
+IDENTITY-01 remains the mandatory explicit personal target validator.
+ITEM-MIG-01A closed the Item-local target in schema `1025`; MIG-02-RUN-01 added
+the source-neutral profile/dry-run shell; and MIG-02-CAT-01 now provides typed
+Work/Edition/Item participants. Remaining domain participants and open
+circulation treatment still prevent a complete MIG-02 run.
+No current V1 parser/adapter, import,
 domain cleanup or production-data mutation is included. See
 `docs/60-mig-01-v1-mapping-and-reconciliation-design.md` and
 `docs/62-mig-fnd-01-migration-ledger-foundation.md` plus
@@ -3529,13 +3530,43 @@ deterministic JSON plus SHA-256 to an explicit directory or ignored
 reuses `PersonalMigrationTargetService`, honors `--require-empty`, exposes
 unknown/unsupported types, preservation/quarantine candidates, planning errors
 and unmatched references, and writes no product or MIG-FND table. The shared
-participant plan is also the future apply input, but no apply command is
-published while no approved production adapter/domain participant exists.
+participant plan is also the future apply input. No apply command is published;
+CAT now supplies the approved catalog participants while a current source
+adapter and the remaining mandatory participants are still absent.
 
-Production intentionally registers zero V1 adapters and zero migration
-participants. Tests use only purpose-built synthetic packages. No current or
+Production intentionally registers zero V1 adapters; MIG-02-CAT-01 now
+registers the three source-neutral catalog participants. Tests use only
+purpose-built synthetic packages. No current or
 historical V1 export, field mapping, taxonomy, provider/network request, domain
 migration, reconciliation expansion or schema change is included. Product
 remains `v2.001`; schema remains `1025`; Biblio Core is `2.28.0`; Biblio UI
 remains `0.20.0`. Closure evidence:
 `docs/105-mig-02-run-01-source-profiler-dry-run-runner-shell.md`.
+
+### MIG-02-CAT-01 — Work / Edition / Item migration participants
+
+Status: **GO / CLOSED**.
+
+Three source-neutral typed participants now own separate `catalog_work`,
+`catalog_edition` and `catalog_item` logical source identities. This preserves
+independent Work, Edition and copy ledger mappings while explicit plan
+dependencies establish Work→Edition→Item order. Plans contain reviewed V2
+target facts only; artifacts expose operations and dependency references, not
+the typed source payload.
+
+The shared non-transaction-owning writer reuses only exact prior mappings,
+explicit approved canonical targets or canonical ISBN identity. It never
+queries title/name similarity. Canonical ISBN may converge only to an Edition
+under the exact mapped Work; explicit no-ISBN Editions remain separate by
+source identity. Items remain active physical copies in the exact target
+Library, with approved inventory/Location, already-mapped classification and
+optional schema-1025 Item-local details in the MIG-FND transaction. Changed
+copy payloads, archived Items, foreign Library targets and divergent mappings
+fail closed.
+
+Production still has no current V1 adapter or apply command. Synthetic CLI
+coverage proves CAT dry-run is deterministic and zero-write. No Authors,
+Series, provider/network operation, source mapping, schema or UI is included.
+Product remains `v2.001`; schema remains `1025`; Biblio Core is `2.29.0` and
+Biblio UI remains `0.20.0`. Closure evidence:
+`docs/106-mig-02-cat-01-work-edition-item-participant.md`.
