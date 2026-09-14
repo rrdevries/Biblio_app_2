@@ -40,6 +40,14 @@ final class OpenLibraryBibliographicSearchProviderTest extends TestCase
             static fn ($item): string => $item->displayName(),
             $authors->items()
         ));
+        self::assertSame(
+            "Harry Potter and the Philosopher's Stone",
+            $authors->items()[0]->disambiguation()->representativeWorkTitle()
+        );
+        self::assertSame(1965, $authors->items()[0]->disambiguation()->birthYear());
+        self::assertNull($authors->items()[0]->disambiguation()->linkedWorkCount());
+        self::assertNull($authors->items()[1]->disambiguation()->representativeWorkTitle());
+        self::assertNull($authors->items()[1]->disambiguation()->birthYear());
         self::assertSame([
             "/works/OL82563W",
             "/works/OL17930368W",
@@ -106,8 +114,97 @@ final class OpenLibraryBibliographicSearchProviderTest extends TestCase
 
         self::assertCount(3, $page->items());
         self::assertSame(3, $page->nextOffset());
+        self::assertCount(1, $http->requests());
         self::assertStringContainsString("limit=3", $http->requests()[0]->url());
         self::assertStringContainsString("offset=0", $http->requests()[0]->url());
+        $parameters = [];
+        parse_str((string) parse_url($http->requests()[0]->url(), PHP_URL_QUERY), $parameters);
+        self::assertSame([
+            "q" => "author",
+            "fields" => "key,name,top_work,birth_date",
+            "limit" => "3",
+            "offset" => "0",
+        ], $parameters);
+        self::assertStringNotContainsString("/works", $http->requests()[0]->url());
+    }
+
+    /** @param array<string,mixed> $context */
+    #[DataProvider("authorContextValues")]
+    public function testAuthorOptionalContextIsNormalizedWithoutInvalidatingTheAuthor(
+        array $context,
+        ?string $expectedTitle,
+        ?int $expectedYear
+    ): void {
+        $http = new SearchQueueHttpClient([$this->response([
+            "numFound" => 1,
+            "start" => 0,
+            "docs" => [[
+                "key" => "OL19981A",
+                "name" => "Stephen King",
+                ...$context,
+            ]],
+        ])]);
+
+        $page = $this->provider($http)->searchAuthors(
+            new BibliographicTextSearchQuery("stephen king")
+        );
+
+        self::assertCount(1, $page->items());
+        self::assertSame($expectedTitle, $page->items()[0]->disambiguation()->representativeWorkTitle());
+        self::assertSame($expectedYear, $page->items()[0]->disambiguation()->birthYear());
+        self::assertNull($page->items()[0]->disambiguation()->linkedWorkCount());
+        self::assertCount(1, $http->requests());
+    }
+
+    /** @return iterable<string,array{array<string,mixed>,?string,?int}> */
+    public static function authorContextValues(): iterable
+    {
+        $currentYear = (int) gmdate("Y");
+
+        yield "plain year and trimmed Work" => [[
+            "top_work" => "  The Green Mile  ",
+            "birth_date" => "1947",
+        ], "The Green Mile", 1947];
+        yield "month first full date" => [[
+            "top_work" => "It",
+            "birth_date" => "September 21, 1947",
+        ], "It", 1947];
+        yield "day first full date" => [[
+            "birth_date" => "21 September 1947",
+        ], null, 1947];
+        yield "lower year boundary" => [[
+            "birth_date" => "1000",
+        ], null, 1000];
+        yield "current year boundary" => [[
+            "birth_date" => (string) $currentYear,
+        ], null, $currentYear];
+        yield "missing optional fields" => [[], null, null];
+        yield "empty Work and malformed date" => [[
+            "top_work" => " \t ",
+            "birth_date" => "not a date",
+        ], null, null];
+        yield "non-string optional values" => [[
+            "top_work" => ["It"],
+            "birth_date" => 1947,
+        ], null, null];
+        yield "overlong Work title" => [[
+            "top_work" => str_repeat("W", 513),
+        ], null, null];
+        yield "conflicting years" => [[
+            "birth_date" => "1947-1948",
+        ], null, null];
+        yield "impossible ancient year" => [[
+            "birth_date" => "0000",
+        ], null, null];
+        yield "impossible future year" => [[
+            "birth_date" => "9999",
+        ], null, null];
+        yield "uncertain year" => [[
+            "birth_date" => "circa 1947",
+        ], null, null];
+        yield "open range" => [[
+            "birth_date" => "1947-",
+        ], null, null];
     }
 
     public function testWorkSearchUsesOneRequestAndNeverCallsEditions(): void

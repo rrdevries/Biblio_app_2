@@ -9,6 +9,7 @@ use Biblio\Core\Application\Metadata\ProviderHttpClient;
 use Biblio\Core\Application\Metadata\ProviderHttpRequest;
 use Biblio\Core\Application\Metadata\ProviderHttpResultStatus;
 use Biblio\Core\Application\Metadata\ProviderLookupStatus;
+use Biblio\Core\Application\Metadata\Search\BibliographicAuthorDisambiguation;
 use Biblio\Core\Application\Metadata\Search\BibliographicAuthorReference;
 use Biblio\Core\Application\Metadata\Search\BibliographicAuthorSearchProvider;
 use Biblio\Core\Application\Metadata\Search\BibliographicAuthorSearchResult;
@@ -53,6 +54,7 @@ final readonly class OpenLibraryBibliographicSearchProvider implements
         }
         $payload = $this->request("https://openlibrary.org/search/authors.json?" . http_build_query([
             "q" => $query->value(),
+            "fields" => "key,name,top_work,birth_date",
             "limit" => $limit,
             "offset" => $offset,
         ], "", "&", PHP_QUERY_RFC3986));
@@ -71,7 +73,11 @@ final readonly class OpenLibraryBibliographicSearchProvider implements
                     ),
                     $this->requiredString($document, "name", 255),
                     $offset + $position,
-                    $query
+                    $query,
+                    BibliographicAuthorDisambiguation::external(
+                        $this->optionalString($document, "top_work", 512),
+                        $this->birthYear($document)
+                    )
                 );
             }
             $hasMore = $items !== [] && $found > $offset + count($documents);
@@ -274,6 +280,41 @@ final readonly class OpenLibraryBibliographicSearchProvider implements
             throw new InvalidArgumentException("Provider text outside bounds.");
         }
         return $value;
+    }
+
+    private function optionalString(stdClass $object, string $field, int $maximum): ?string
+    {
+        if (!property_exists($object, $field) || !is_string($object->{$field})) {
+            return null;
+        }
+        $value = trim($object->{$field});
+        if ($value === "" || !mb_check_encoding($value, "UTF-8")
+            || mb_strlen($value, "UTF-8") > $maximum) {
+            return null;
+        }
+        return $value;
+    }
+
+    private function birthYear(stdClass $document): ?int
+    {
+        $value = $this->optionalString($document, "birth_date", 255);
+        if ($value === null
+            || preg_match(
+                '/(?:\b(?:circa|ca|approx(?:imately)?|about|before|after|between|possibly|probably)\b|\bc\.|[?~])/iu',
+                $value
+            ) === 1
+            || preg_match('/^[0-9]{4}\s*[-–—]\s*$/u', $value) === 1) {
+            return null;
+        }
+        $matches = [];
+        if (preg_match_all('/(?<![0-9])([0-9]{4})(?![0-9])/u', $value, $matches) < 1) {
+            return null;
+        }
+        $years = array_values(array_unique(array_map("intval", $matches[1])));
+        if (count($years) !== 1 || $years[0] < 1000 || $years[0] > (int) gmdate("Y")) {
+            return null;
+        }
+        return $years[0];
     }
 
     /** @return list<string> */

@@ -2,7 +2,12 @@
   "numFound": 2,
   "start": 0,
   "docs": [
-    {"key": "OL23919A", "name": "J. K. Rowling"},
+    {
+      "key": "OL23919A",
+      "name": "J. K. Rowling",
+      "top_work": "Harry Potter and the Philosopher's Stone",
+      "birth_date": "31 July 1965"
+    },
     {"key": "OL123456A", "name": "Joanne Rowling"}
   ]
 }

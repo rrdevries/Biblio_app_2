@@ -108,9 +108,27 @@ final class BibliographicTextSearchServiceTest extends TestCase
             $this->localAuthor($query, "author-stephen", "Stephen King", 0),
         ], []);
         $external = new SearchFakeProvider([
-            $this->externalAuthor($query, "/authors/OL19981A", "Stephen King", 0),
-            $this->externalAuthor($query, "/authors/OL20000A", "Stephen King", 1),
-            $this->externalAuthor($query, "/authors/OL20001A", "STEPHEN KING", 2),
+            $this->externalAuthor(
+                $query,
+                "/authors/OL19981A",
+                "Stephen King",
+                0,
+                BibliographicAuthorDisambiguation::external("The Green Mile", 1947)
+            ),
+            $this->externalAuthor(
+                $query,
+                "/authors/OL20000A",
+                "Stephen King",
+                1,
+                BibliographicAuthorDisambiguation::external("Work A", 1947)
+            ),
+            $this->externalAuthor(
+                $query,
+                "/authors/OL20001A",
+                "STEPHEN KING",
+                2,
+                BibliographicAuthorDisambiguation::external("Work B", 1962)
+            ),
             $this->externalAuthor($query, "/authors/OL20002A", "Stephen King", 3),
         ], []);
         $identities = new SearchIdentityRepository();
@@ -144,6 +162,10 @@ final class BibliographicTextSearchServiceTest extends TestCase
         self::assertSame(1, $items[0]->disambiguation()->linkedWorkCount());
         self::assertSame("It", $items[0]->disambiguation()->representativeWorkTitle());
         self::assertNull($items[1]->disambiguation()->linkedWorkCount());
+        self::assertSame("Work A", $items[1]->disambiguation()->representativeWorkTitle());
+        self::assertSame(1947, $items[1]->disambiguation()->birthYear());
+        self::assertSame("Work B", $items[2]->disambiguation()->representativeWorkTitle());
+        self::assertSame(1962, $items[2]->disambiguation()->birthYear());
         self::assertSame(9, $external->authorLimit);
     }
 
@@ -539,7 +561,8 @@ final class BibliographicTextSearchServiceTest extends TestCase
         BibliographicTextSearchQuery $query,
         string $id,
         string $name,
-        int $order
+        int $order,
+        ?BibliographicAuthorDisambiguation $disambiguation = null
     ): BibliographicAuthorSearchResult {
         return new BibliographicAuthorSearchResult(
             BibliographicAuthorReference::external(
@@ -547,7 +570,8 @@ final class BibliographicTextSearchServiceTest extends TestCase
             ),
             $name,
             $order,
-            $query
+            $query,
+            $disambiguation
         );
     }
 
