@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Biblio\Core\Infrastructure\WordPress\Cli;
 
 use Biblio\Core\Application\CoreApplication;
-use Biblio\Core\Application\Migration\Runner\MigrationParticipantRegistry;
 use Biblio\Core\Application\Migration\Runner\MigrationRunner;
 use Biblio\Core\Application\Migration\Runner\MigrationRunnerFailure;
 use Biblio\Core\Application\Migration\Runner\MigrationSourceAdapterRegistry;
@@ -41,7 +40,7 @@ final class MigrationCommand
             ?? fn (CoreApplication $core): MigrationRunner => new MigrationRunner(
                 new FilesystemMigrationSourcePackageFactory(),
                 new MigrationSourceAdapterRegistry([]),
-                new MigrationParticipantRegistry([]),
+                $core->migrationParticipants(),
                 $core->personalMigrationTargets(),
                 new RuntimeMigrationEnvironment($this->pluginFile)
             );
