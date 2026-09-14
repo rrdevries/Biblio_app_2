@@ -2307,3 +2307,26 @@ observations and activity share the caller-owned Add Library Item transaction.
 A non-materialized valid manual credit is a hard failure; the four existing
 race signals escape for the one complete retry with the same plan. Schema
 remains 1024 and Search remains a read-only consumer of the resulting graph.
+
+## 60. ADD-AUTH-01B manual Author UI request adapter
+
+The Add Book browser state owns repeatable manual Author rows only while
+`selection.type=manual` has no selected `work_id`. Stable local row keys exist
+solely for render, focus and reorder continuity; they never cross the request
+boundary. The request builder normalizes Unicode whitespace for immediate
+feedback, removes blank rows, preserves visible order and emits only an exact
+top-level `authors: [{display_name}]` list. Core repeats validation and remains
+the sole source of roles, positions, identity, authorization and persistence.
+
+The state retains the hidden manual draft when a user temporarily selects an
+existing Work, but serialization omits `authors` for that path. Existing
+Edition and provider-candidate requests also omit the member. Read-only Work
+Authors come from the existing Work discovery projection; no new endpoint,
+lookup, identity matching or correction mutation is introduced.
+
+The component reuses the current Add Book form, action, focus and polite-status
+patterns. Add/remove/up/down rerenders first retain the other Edition draft;
+blocking length validation focuses and describes the exact row. Duplicate-name
+comparison is a non-blocking, exact normalized-value warning with no identity
+meaning. Product remains `v2.001`; schema remains `1024`; Biblio Core remains
+`2.25.0`; Biblio UI is `0.19.0`.

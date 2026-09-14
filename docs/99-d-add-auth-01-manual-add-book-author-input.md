@@ -1,6 +1,6 @@
 # D-ADD-AUTH-01 — Manual Add Book Author input
 
-Status: **DESIGN GO / BACKEND IMPLEMENTED THROUGH ADD-AUTH-01A; UI DEFERRED**
+Status: **DESIGN GO / IMPLEMENTED THROUGH ADD-AUTH-01B; HUMAN ACCEPTANCE PENDING**
 
 Date: 2026-09-14
 
@@ -438,7 +438,7 @@ contract is available.
 - Add unit, REST, transaction, rollback, idempotency, race-winner, Search and
   Author-to-Works integration coverage.
 
-### ADD-AUTH-01B — repeatable Author UI — deferred
+### ADD-AUTH-01B — repeatable Author UI — implemented
 
 - Add repeatable rows and retained wizard state only in manual-new-Work mode.
 - Add add/remove/up/down, duplicate warning, accessible validation/focus/live
@@ -453,7 +453,7 @@ No third schema, provider or correction slice is required for this feature.
 
 ## 19. Acceptance criteria
 
-| Case | Future acceptance evidence |
+| Case | Acceptance evidence |
 |---|---|
 | A. One manual Author | Manual new Work creates one provisional/observed Author, one user-observation credit/evidence and one `author` edge at position 1. |
 | B. Two manual Authors | Both names and their entered order survive; two independent provisional Authors and `author` edges occupy positions 1 and 2. |
@@ -475,6 +475,7 @@ the contributor distinction, public contract, transaction/retry behavior,
 accessible responsive interaction and the two implementation boundaries are
 all closed. Verdict: **DESIGN GO**.
 
-Schema remains `1024`; ADD-AUTH-01A advances Biblio Core to `2.25.0`; Biblio UI
-remains `0.18.1`. The repeatable Author UI and its human acceptance remain
-ADD-AUTH-01B.
+Schema remains `1024`; Biblio Core remains `2.25.0`; ADD-AUTH-01B advances
+Biblio UI to `0.19.0`. The repeatable Author UI is technically implemented;
+Renée's human visual/interaction acceptance remains pending. Exact closure
+evidence is in `docs/101-add-auth-01b-manual-author-ui.md`.

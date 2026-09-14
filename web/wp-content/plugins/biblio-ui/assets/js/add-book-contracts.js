@@ -31,6 +31,8 @@ const OBSERVED_FIELDS = new Set([
     "format",
     "page_count",
 ]);
+export const MANUAL_AUTHOR_LIMIT = 32;
+export const MANUAL_AUTHOR_NAME_LIMIT = 512;
 
 function record(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -405,6 +407,30 @@ export function observedFieldsFromForm(values) {
     return observed;
 }
 
+export function normalizeManualAuthorDisplayName(value) {
+    return typeof value === "string"
+        ? value.replace(/[\p{Z}\s]+/gu, " ").trim()
+        : "";
+}
+
+export function manualAuthorsFromRows(rows) {
+    if (!Array.isArray(rows) || rows.length > MANUAL_AUTHOR_LIMIT) {
+        throw new TypeError("The Add Book manual Author rows are invalid.");
+    }
+
+    return rows.reduce((authors, value) => {
+        const displayName = normalizeManualAuthorDisplayName(value);
+        if (displayName === "") {
+            return authors;
+        }
+        if ([...displayName].length > MANUAL_AUTHOR_NAME_LIMIT) {
+            throw new TypeError("The Add Book manual Author name is too long.");
+        }
+        authors.push({ display_name: displayName });
+        return authors;
+    }, []);
+}
+
 export function buildAddBookCommitBody(state) {
     if (!record(state) || !record(state.selection) || !record(state.classification)) {
         throw new TypeError("The Add Book commit state is invalid.");
@@ -416,7 +442,7 @@ export function buildAddBookCommitBody(state) {
         item.inventory_number = state.inventoryNumber.trim();
     }
 
-    return {
+    const body = {
         identifier: state.identifier,
         selection: { ...state.selection },
         observed_fields: observedFieldsFromForm(state.observedFields ?? {}),
@@ -427,4 +453,13 @@ export function buildAddBookCommitBody(state) {
         },
         item,
     };
+
+    if (
+        state.selection.type === "manual"
+        && !Object.hasOwn(state.selection, "work_id")
+    ) {
+        body.authors = manualAuthorsFromRows(state.authorRows ?? []);
+    }
+
+    return body;
 }

@@ -517,6 +517,53 @@ body.admin-bar.biblio-app-shell-page {
     font-size: 0.875rem;
 }
 
+[data-biblio-ui-root] .biblio-ui__author-group,
+[data-biblio-ui-root] .biblio-ui__selected-work-authors {
+    border: 0;
+    border-block: var(--biblio-boundary-width) solid var(--biblio-color-border);
+    display: grid;
+    gap: var(--biblio-space-4);
+    margin: 0;
+    min-inline-size: 0;
+    padding: var(--biblio-space-6) 0;
+}
+
+[data-biblio-ui-root] .biblio-ui__author-group legend,
+[data-biblio-ui-root] .biblio-ui__selected-work-authors h2 {
+    font-family: var(--biblio-font-serif);
+    font-size: 1.5rem;
+    font-weight: 500;
+    padding: 0;
+}
+
+[data-biblio-ui-root] .biblio-ui__author-rows {
+    display: grid;
+    gap: var(--biblio-space-4);
+}
+
+[data-biblio-ui-root] .biblio-ui__author-row {
+    border-block-end: var(--biblio-boundary-width) solid var(--biblio-color-border);
+    display: grid;
+    gap: var(--biblio-space-2);
+    min-inline-size: 0;
+    padding-block-end: var(--biblio-space-4);
+}
+
+[data-biblio-ui-root] .biblio-ui__author-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--biblio-space-2);
+}
+
+[data-biblio-ui-root] .biblio-ui__author-actions .biblio-ui__control {
+    min-inline-size: 7rem;
+}
+
+[data-biblio-ui-root] .biblio-ui__field-warning {
+    color: var(--biblio-color-text-secondary);
+    font-size: 0.875rem;
+}
+
 [data-biblio-ui-root] .biblio-ui__edition-grid,
 [data-biblio-ui-root] .biblio-ui__work-results {
     display: grid;
@@ -730,6 +777,11 @@ body.admin-bar.biblio-app-shell-page {
 
     [data-biblio-ui-root] .biblio-ui__add-book {
         gap: var(--biblio-space-6);
+    }
+
+    [data-biblio-ui-root] .biblio-ui__author-actions .biblio-ui__control {
+        flex: 1 1 8rem;
+        min-inline-size: 0;
     }
 
     [data-biblio-ui-root] :where(.biblio-ui__edition-card, .biblio-ui__work-result) {

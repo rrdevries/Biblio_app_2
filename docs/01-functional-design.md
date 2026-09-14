@@ -1738,9 +1738,12 @@ typed Author display-name observations. Core drops whitespace-only rows,
 derives contiguous one-based positions, assigns role `author` to every row and
 creates evidence-scoped provisional Authors only when the definitive Work and
 Edition are genuinely new. Existing Work/Edition, local-first and ISBN-race
-winner paths never receive this mutation. The separate untyped `contributors`
-field remains Edition evidence. No Author identity is exposed in the success
-response, and the repeatable UI remains a separate slice.
+winner paths never receive this mutation. The manual-new-Work UI exposes one
+optional repeatable ordered `Auteur(s)` group and sends only exact
+`display_name` rows. Existing Work context is read-only; existing Edition and
+provider-backed paths show no manual Author editor. The separate untyped
+`contributors` field remains Edition evidence and is presented as `Overige
+bijdragers`. No Author identity is exposed in the success response.
 
 Library-scoped detail may include:
 - In deze bibliotheek;

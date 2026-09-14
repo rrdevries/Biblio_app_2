@@ -1,6 +1,9 @@
 import {
     buildAddBookCommitBody,
+    MANUAL_AUTHOR_LIMIT,
+    MANUAL_AUTHOR_NAME_LIMIT,
     normalizeIsbn,
+    normalizeManualAuthorDisplayName,
     readAddBookCommit,
     readAddBookLookup,
     readAddBookWorkPage,
@@ -305,6 +308,38 @@ function initialDraft(identifier = "") {
     };
 }
 
+function editionDraftFromData(data) {
+    return {
+        isbn: String(data.get("isbn") ?? "").trim(),
+        title: String(data.get("title") ?? "").trim(),
+        subtitle: String(data.get("subtitle") ?? "").trim(),
+        contributors: csv(data.get("contributors")),
+        languages: csv(data.get("languages")),
+        publishers: csv(data.get("publishers")),
+        publication_date: String(data.get("publication_date") ?? "").trim(),
+        edition_statement: String(data.get("edition_statement") ?? "").trim(),
+        format: String(data.get("format") ?? "").trim(),
+        page_count: String(data.get("page_count") ?? "").trim(),
+    };
+}
+
+function duplicateAuthorKeys(rows) {
+    const keysByName = new Map();
+    for (const row of rows) {
+        const name = normalizeManualAuthorDisplayName(row.value);
+        if (name === "") {
+            continue;
+        }
+        const keys = keysByName.get(name) ?? [];
+        keys.push(row.key);
+        keysByName.set(name, keys);
+    }
+
+    return new Set([...keysByName.values()]
+        .filter((keys) => keys.length > 1)
+        .flat());
+}
+
 function candidateDraft(candidate) {
     return {
         isbn: candidate.identifier.isbn_13,
@@ -366,6 +401,12 @@ export function createAddBookWizard(root, {
     let revision = 0;
     let opener = null;
     let callbacks = null;
+
+    function newAuthorRow(value = "") {
+        const row = { key: `author-${state.nextAuthorRowId}`, value };
+        state.nextAuthorRowId += 1;
+        return row;
+    }
 
     function isCurrent(currentRevision, controller) {
         return revision === currentRevision
@@ -506,6 +547,10 @@ export function createAddBookWizard(root, {
             editionMode: null,
             observedFields: {},
             editionDraft: initialDraft(),
+            manualContextIdentifier: null,
+            authorRows: [],
+            authorErrors: new Set(),
+            nextAuthorRowId: 1,
             selectedWork: null,
             workSearch: { query: "", items: [], nextCursor: null, pending: false, error: false },
             classification: { bookTypeId: "", genreIds: [], subjectIds: [] },
@@ -644,13 +689,20 @@ export function createAddBookWizard(root, {
     }
 
     function startManual() {
+        const resumesDraft = state.editionMode === "manual"
+            && state.manualContextIdentifier === state.identifier;
         state.selection = { type: "manual" };
-        state.selectedEdition = null;
-        state.selectedCandidate = null;
-        state.selectedWork = null;
+        if (!resumesDraft) {
+            state.selectedEdition = null;
+            state.selectedCandidate = null;
+            state.selectedWork = null;
+            state.editionDraft = initialDraft(state.identifier ?? "");
+            state.authorRows = [newAuthorRow()];
+            state.authorErrors = new Set();
+        }
         state.editionMode = "manual";
+        state.manualContextIdentifier = state.identifier;
         state.summaryRequired = true;
-        state.editionDraft = initialDraft(state.identifier ?? "");
         state.observedFields = {};
         state.step = "edition-form";
         state.notice = "Voer de uitgavegegevens in.";
@@ -658,15 +710,29 @@ export function createAddBookWizard(root, {
     }
 
     function readEditionForm(data) {
-        const isbn = String(data.get("isbn") ?? "").trim();
-        const title = String(data.get("title") ?? "").trim();
-        const pageCountText = String(data.get("page_count") ?? "").trim();
+        const draft = editionDraftFromData(data);
+        const { isbn, title } = draft;
+        const pageCountText = draft.page_count;
         const pageCount = pageCountText === "" ? null : Number(pageCountText);
+        state.editionDraft = draft;
         if (title === "") {
             state.notice = "Vul de titel van deze uitgave in.";
             render({ focus: false });
             root.querySelector?.("#add-book-title")?.focus?.();
             return null;
+        }
+        if (state.editionMode === "manual" && state.selectedWork === null) {
+            const invalidRow = state.authorRows.find((row) => (
+                [...normalizeManualAuthorDisplayName(row.value)].length
+                    > MANUAL_AUTHOR_NAME_LIMIT
+            ));
+            if (invalidRow !== undefined) {
+                state.authorErrors = new Set([invalidRow.key]);
+                state.notice = "Controleer de ingevulde auteursnaam.";
+                render({ focus: false });
+                root.querySelector?.(`[data-author-key="${invalidRow.key}"] input`)?.focus?.();
+                return null;
+            }
         }
         if (isbn !== "") {
             const canonical = normalizeIsbn(isbn);
@@ -692,13 +758,13 @@ export function createAddBookWizard(root, {
         return {
             isbn: isbn === "" ? "" : state.identifier,
             title,
-            subtitle: String(data.get("subtitle") ?? "").trim(),
-            contributors: csv(data.get("contributors")),
-            languages: csv(data.get("languages")),
-            publishers: csv(data.get("publishers")),
-            publication_date: String(data.get("publication_date") ?? "").trim(),
-            edition_statement: String(data.get("edition_statement") ?? "").trim(),
-            format: String(data.get("format") ?? "").trim(),
+            subtitle: draft.subtitle,
+            contributors: draft.contributors,
+            languages: draft.languages,
+            publishers: draft.publishers,
+            publication_date: draft.publication_date,
+            edition_statement: draft.edition_statement,
+            format: draft.format,
             page_count: pageCount,
         };
     }
@@ -830,6 +896,7 @@ export function createAddBookWizard(root, {
                 identifier: state.identifier,
                 selection: state.selection,
                 observedFields: state.observedFields,
+                authorRows: state.authorRows.map((row) => row.value),
                 classification: state.classification,
                 inventoryNumber: state.inventoryNumber,
             });
@@ -882,6 +949,10 @@ export function createAddBookWizard(root, {
             editionMode: null,
             observedFields: {},
             editionDraft: initialDraft(),
+            manualContextIdentifier: null,
+            authorRows: [],
+            authorErrors: new Set(),
+            nextAuthorRowId: 1,
             selectedWork: null,
             workSearch: { query: "", items: [], nextCursor: null, pending: false, error: false },
             classification: { bookTypeId: "", genreIds: [], subjectIds: [] },
@@ -1172,6 +1243,233 @@ export function createAddBookWizard(root, {
         return view;
     }
 
+    function focusAuthorRow(rowKey) {
+        root.querySelector?.(`[data-author-key="${rowKey}"] input`)?.focus?.();
+    }
+
+    function retainRenderedEditionDraft() {
+        const form = root.querySelector?.(".biblio-ui__guided-form");
+        if (form !== null && form !== undefined) {
+            state.editionDraft = editionDraftFromData(new FormData(form));
+        }
+    }
+
+    function refreshAuthorRowMessages() {
+        const duplicateKeys = duplicateAuthorKeys(state.authorRows);
+        for (const row of state.authorRows) {
+            const rowNode = root.querySelector?.(`[data-author-key="${row.key}"]`);
+            const input = rowNode?.querySelector?.("input");
+            const warning = rowNode?.querySelector?.("[data-author-warning]");
+            const error = rowNode?.querySelector?.("[data-author-error]");
+            if (input === undefined || input === null) {
+                continue;
+            }
+
+            const describedBy = ["add-book-authors-help"];
+            if (duplicateKeys.has(row.key)) {
+                warning.hidden = false;
+                warning.textContent = "Deze naam staat meer dan één keer. Controleer of dat klopt.";
+                describedBy.push(warning.id);
+            } else {
+                warning.hidden = true;
+                warning.textContent = "";
+            }
+            if (state.authorErrors.has(row.key)) {
+                error.hidden = false;
+                error.textContent = "Vul een geldige auteursnaam van maximaal 512 tekens in.";
+                input.setAttribute("aria-invalid", "true");
+                describedBy.push(error.id);
+            } else {
+                error.hidden = true;
+                error.textContent = "";
+                input.removeAttribute("aria-invalid");
+            }
+            input.setAttribute("aria-describedby", describedBy.join(" "));
+        }
+    }
+
+    function renderAuthorEditor() {
+        const group = element(documentImpl, "fieldset", {
+            className: "biblio-ui__author-group",
+        });
+        group.append(
+            element(documentImpl, "legend", { text: "Auteur(s) (optioneel)" }),
+            element(documentImpl, "p", {
+                className: "biblio-ui__field-help",
+                text: "Voeg auteurs toe in de volgorde waarin ze bij dit werk horen.",
+                attributes: { id: "add-book-authors-help" },
+            })
+        );
+
+        const rows = element(documentImpl, "div", {
+            className: "biblio-ui__author-rows",
+        });
+        const duplicateKeys = duplicateAuthorKeys(state.authorRows);
+        state.authorRows.forEach((row, index) => {
+            const position = index + 1;
+            const rowNode = element(documentImpl, "div", {
+                className: "biblio-ui__author-row",
+                attributes: { "data-author-key": row.key },
+            });
+            const inputId = `add-book-${row.key}`;
+            const warningId = `${inputId}-duplicate`;
+            const errorId = `${inputId}-error`;
+            const describedBy = ["add-book-authors-help"];
+            if (duplicateKeys.has(row.key)) {
+                describedBy.push(warningId);
+            }
+            if (state.authorErrors.has(row.key)) {
+                describedBy.push(errorId);
+            }
+            const input = element(documentImpl, "input", {
+                attributes: {
+                    id: inputId,
+                    name: "authors",
+                    type: "text",
+                    value: row.value,
+                    autocomplete: "name",
+                    "aria-describedby": describedBy.join(" "),
+                },
+            });
+            if (state.authorErrors.has(row.key)) {
+                input.setAttribute("aria-invalid", "true");
+            }
+            input.addEventListener("input", () => {
+                row.value = input.value;
+                state.authorErrors.delete(row.key);
+                refreshAuthorRowMessages();
+            });
+
+            const fieldNode = element(documentImpl, "div", {
+                className: "biblio-ui__field biblio-ui__author-field",
+            });
+            fieldNode.append(
+                element(documentImpl, "label", {
+                    text: `Auteur ${position}`,
+                    attributes: { for: inputId },
+                }),
+                input,
+                element(documentImpl, "p", {
+                    className: "biblio-ui__field-warning",
+                    text: duplicateKeys.has(row.key)
+                        ? "Deze naam staat meer dan één keer. Controleer of dat klopt."
+                        : "",
+                    attributes: { id: warningId, "data-author-warning": "" },
+                }),
+                element(documentImpl, "p", {
+                    className: "biblio-ui__field-error",
+                    text: state.authorErrors.has(row.key)
+                        ? "Vul een geldige auteursnaam van maximaal 512 tekens in."
+                        : "",
+                    attributes: { id: errorId, "data-author-error": "" },
+                })
+            );
+            fieldNode.querySelector(`[data-author-warning]`).hidden = !duplicateKeys.has(row.key);
+            fieldNode.querySelector(`[data-author-error]`).hidden = !state.authorErrors.has(row.key);
+
+            const rowActions = element(documentImpl, "div", {
+                className: "biblio-ui__author-actions",
+            });
+            const move = (direction) => {
+                const from = state.authorRows.findIndex((candidate) => candidate.key === row.key);
+                const to = direction === "up" ? from - 1 : from + 1;
+                if (from < 0 || to < 0 || to >= state.authorRows.length) {
+                    return;
+                }
+                retainRenderedEditionDraft();
+                const [moved] = state.authorRows.splice(from, 1);
+                state.authorRows.splice(to, 0, moved);
+                state.notice = `Auteur verplaatst naar positie ${to + 1}.`;
+                render({ focus: false });
+                focusAuthorRow(row.key);
+            };
+            const up = button(documentImpl, "Omhoog", () => move("up"), "tertiary");
+            up.setAttribute("aria-label", `Verplaats auteur ${position} omhoog`);
+            up.setAttribute("data-author-action", "up");
+            up.disabled = index === 0;
+            const down = button(documentImpl, "Omlaag", () => move("down"), "tertiary");
+            down.setAttribute("aria-label", `Verplaats auteur ${position} omlaag`);
+            down.setAttribute("data-author-action", "down");
+            down.disabled = index === state.authorRows.length - 1;
+            const remove = button(documentImpl, "Verwijderen", () => {
+                retainRenderedEditionDraft();
+                const currentIndex = state.authorRows.findIndex((candidate) => candidate.key === row.key);
+                state.authorRows.splice(currentIndex, 1);
+                state.authorErrors.delete(row.key);
+                const nextRow = state.authorRows[currentIndex] ?? state.authorRows[currentIndex - 1] ?? null;
+                state.notice = `Auteur ${position} verwijderd.`;
+                render({ focus: false });
+                if (nextRow === null) {
+                    root.querySelector?.("[data-author-add]")?.focus?.();
+                } else {
+                    focusAuthorRow(nextRow.key);
+                }
+            }, "tertiary");
+            remove.setAttribute("aria-label", `Verwijder auteur ${position}`);
+            remove.setAttribute("data-author-action", "remove");
+            rowActions.append(up, down, remove);
+            rowNode.append(fieldNode, rowActions);
+            rows.append(rowNode);
+        });
+        group.append(rows);
+
+        const add = button(documentImpl, "Auteur toevoegen", () => {
+            if (state.authorRows.length >= MANUAL_AUTHOR_LIMIT) {
+                return;
+            }
+            retainRenderedEditionDraft();
+            const row = newAuthorRow();
+            state.authorRows.push(row);
+            state.notice = `Auteur ${state.authorRows.length} toegevoegd.`;
+            render({ focus: false });
+            focusAuthorRow(row.key);
+        });
+        add.setAttribute("data-author-add", "");
+        add.disabled = state.authorRows.length >= MANUAL_AUTHOR_LIMIT;
+        group.append(add);
+
+        return group;
+    }
+
+    function renderNewWorkAuthors() {
+        const section = element(documentImpl, "section", {
+            className: "biblio-ui__new-work-authors",
+            attributes: { "aria-labelledby": "add-book-new-work-authors-title" },
+        });
+        section.append(
+            element(documentImpl, "h2", {
+                text: "Over het werk",
+                attributes: { id: "add-book-new-work-authors-title" },
+            }),
+            renderAuthorEditor()
+        );
+        return section;
+    }
+
+    function renderExistingWorkAuthors() {
+        const section = element(documentImpl, "section", {
+            className: "biblio-ui__selected-work-authors",
+            attributes: { "aria-labelledby": "add-book-selected-work-authors-title" },
+        });
+        section.append(element(documentImpl, "h2", {
+            text: "Over het werk",
+            attributes: { id: "add-book-selected-work-authors-title" },
+        }));
+        if (state.selectedWork.authors.length > 0) {
+            section.append(element(documentImpl, "p", {
+                className: "biblio-ui__work-authors",
+                text: state.selectedWork.authors
+                    .map((author) => author.display_name)
+                    .join(", "),
+            }));
+        }
+        section.append(element(documentImpl, "p", {
+            className: "biblio-ui__field-help",
+            text: "Auteurs van dit werk worden hier niet aangepast.",
+        }));
+        return section;
+    }
+
     function renderEditionForm() {
         const draft = state.editionDraft;
         const view = page(documentImpl, "edition-form");
@@ -1194,8 +1492,20 @@ export function createAddBookWizard(root, {
                     : "Dit ISBN blijft gekoppeld aan de gecontroleerde uitgave.",
             }),
             field(documentImpl, { id: "add-book-title", name: "title", label: "Titel van deze uitgave", value: draft.title, required: true }),
-            field(documentImpl, { id: "subtitle", label: "Ondertitel (optioneel)", value: draft.subtitle }),
-            textAreaField(documentImpl, { id: "contributors", label: "Bijdragers (optioneel)", value: draft.contributors.join(", "), help: "Scheid namen met komma's." }),
+            field(documentImpl, { id: "subtitle", label: "Ondertitel (optioneel)", value: draft.subtitle })
+        );
+        if (state.editionMode === "manual") {
+            form.append(state.selectedWork === null
+                ? renderNewWorkAuthors()
+                : renderExistingWorkAuthors());
+        }
+        form.append(
+            textAreaField(documentImpl, {
+                id: "contributors",
+                label: "Overige bijdragers (optioneel)",
+                value: draft.contributors.join(", "),
+                help: "Bijvoorbeeld vertaler, illustrator, redacteur of samensteller.",
+            }),
             field(documentImpl, { id: "languages", label: "Taal/talen (optioneel)", value: draft.languages.join(", "), help: "Scheid meerdere talen met komma's." }),
             field(documentImpl, { id: "publishers", label: "Uitgever of imprint (optioneel)", value: draft.publishers.join(", "), help: "Scheid meerdere namen met komma's." }),
             field(documentImpl, { id: "publication_date", label: "Publicatiejaar of -datum (optioneel)", value: draft.publication_date }),
@@ -1245,6 +1555,7 @@ export function createAddBookWizard(root, {
             documentImpl,
             button(documentImpl, "Verder", () => form.requestSubmit?.(), "primary"),
             button(documentImpl, "Terug", () => {
+                state.editionDraft = editionDraftFromData(new FormData(form));
                 state.step = state.editionMode === "candidate-adjust"
                     ? "candidate"
                     : state.editionMode === "existing-correction" ? "existing" : "start";

@@ -4133,3 +4133,34 @@ ADD-AUTH-01A is accepted only when:
 Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1024`;
 Biblio Core is `2.25.0`; Biblio UI remains `0.18.1`. Exact evidence is in
 `docs/100-add-auth-01a-typed-manual-author-core-integration.md`.
+
+## 124. ADD-AUTH-01B manual Author Add Book UI
+
+ADD-AUTH-01B is technically accepted only when:
+
+- the editor appears only for manual new Work, begins with one blank row and
+  permits zero through 32 rows with keyboard-operable add/remove/up/down;
+- stable row order, values and surrounding Edition draft survive reorder,
+  remove, Back/Forward and a blocking validation retry;
+- duplicate normalized names warn without blocking or merging, and overlong
+  names receive row-bound `aria-invalid`, described error copy and focus;
+- the request contains only ordered exact `{display_name}` rows after blanks
+  are removed, while existing Work, existing Edition and provider paths omit
+  `authors` entirely;
+- selected existing Work Authors are read-only and unlinking restores the
+  hidden draft without mutating shared Work metadata;
+- `Overige bijdragers (optioneel)` stays a separate Edition observation;
+- 1440, 900, 390 and 200% reflow retain reachable 44px controls without
+  horizontal clipping or hidden functionality;
+- deterministic browser coverage proves the full interaction matrix and one
+  guarded non-intercepted browser commit proves ordered Author materialization
+  through ordinary local Author Search;
+- fixture cleanup is exact, collision-sensitive and leaves zero reserved
+  ADD-AUTH-01B residue; and
+- schema/Core/request authority remain unchanged, focused plus broad UI gates,
+  whitespace checks and the independent second review are green.
+
+Status: **TECHNICAL GO / HUMAN VISUAL-INTERACTION ACCEPTANCE PENDING**. Product
+remains `v2.001`; schema remains `1024`; Biblio Core remains `2.25.0`; Biblio
+UI is `0.19.0`. Exact evidence is in
+`docs/101-add-auth-01b-manual-author-ui.md`.

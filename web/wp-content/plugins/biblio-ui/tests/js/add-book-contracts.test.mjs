@@ -3,7 +3,9 @@ import test from "node:test";
 
 import {
     buildAddBookCommitBody,
+    manualAuthorsFromRows,
     normalizeIsbn,
+    normalizeManualAuthorDisplayName,
     readAddBookCommit,
     readAddBookLookup,
     readClassificationOptions,
@@ -188,4 +190,78 @@ test("commit body includes only supported Item and observed fields", () => {
         },
         item: { inventory_number: "INV-1" },
     });
+});
+
+test("manual Author rows normalize whitespace, exclude blanks and preserve order", () => {
+    assert.equal(
+        normalizeManualAuthorDisplayName("  George\u00a0 C.  Clark Jr. "),
+        "George C. Clark Jr."
+    );
+    assert.deepEqual(manualAuthorsFromRows([
+        "  George C. Clark Jr. ",
+        "   ",
+        "J. Bibb Cain",
+    ]), [
+        { display_name: "George C. Clark Jr." },
+        { display_name: "J. Bibb Cain" },
+    ]);
+});
+
+test("manual new Work commit serializes only ordered display names", () => {
+    const body = buildAddBookCommitBody({
+        identifier: null,
+        selection: { type: "manual" },
+        authorRows: ["George C. Clark Jr.", "", "J. Bibb Cain"],
+        observedFields: {
+            title: "Handmatige uitgave",
+            contributors: ["Vertaler Voorbeeld"],
+        },
+        classification: { bookTypeId: "book-1", genreIds: [], subjectIds: [] },
+        inventoryNumber: "",
+    });
+
+    assert.deepEqual(body.authors, [
+        { display_name: "George C. Clark Jr." },
+        { display_name: "J. Bibb Cain" },
+    ]);
+    assert.deepEqual(body.observed_fields.contributors, ["Vertaler Voorbeeld"]);
+    assert.deepEqual(Object.keys(body.authors[0]), ["display_name"]);
+});
+
+test("manual new Work commit sends an empty Author list for untouched convenience rows", () => {
+    const body = buildAddBookCommitBody({
+        identifier: null,
+        selection: { type: "manual" },
+        authorRows: [""],
+        observedFields: { title: "Zonder auteur" },
+        classification: { bookTypeId: "book-1", genreIds: [], subjectIds: [] },
+        inventoryNumber: "",
+    });
+
+    assert.deepEqual(body.authors, []);
+});
+
+test("existing Work, existing Edition and provider commits omit manual Authors", () => {
+    const common = {
+        identifier: null,
+        authorRows: ["Niet verzenden"],
+        observedFields: { title: "Uitgave" },
+        classification: { bookTypeId: "book-1", genreIds: [], subjectIds: [] },
+        inventoryNumber: "",
+    };
+
+    for (const selection of [
+        { type: "manual", work_id: "work-1" },
+        { type: "existing_edition", edition_id: "edition-1" },
+        { type: "candidate", lookup_id: "lookup-1", candidate_id: "candidate-1" },
+    ]) {
+        assert.equal(Object.hasOwn(buildAddBookCommitBody({ ...common, selection }), "authors"), false);
+    }
+});
+
+test("manual Author helper enforces the 32 row and 512 Unicode character bounds", () => {
+    assert.equal(manualAuthorsFromRows(Array.from({ length: 32 }, (_, index) => `Auteur ${index + 1}`)).length, 32);
+    assert.throws(() => manualAuthorsFromRows(Array.from({ length: 33 }, () => "Auteur")));
+    assert.equal(manualAuthorsFromRows(["😀".repeat(512)])[0].display_name.length, 1024);
+    assert.throws(() => manualAuthorsFromRows(["😀".repeat(513)]));
 });

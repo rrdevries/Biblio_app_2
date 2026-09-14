@@ -3459,3 +3459,29 @@ production are unchanged, and the public success response exposes no Author
 state. Product remains `v2.001`; schema remains `1024`; Biblio Core is
 `2.25.0`; Biblio UI remains `0.18.1`. The repeatable UI remains ADD-AUTH-01B.
 Closure evidence: `docs/100-add-auth-01a-typed-manual-author-core-integration.md`.
+
+### ADD-AUTH-01B — Manual Author Add Book UI
+
+Status: **TECHNICAL GO / HUMAN VISUAL-INTERACTION ACCEPTANCE PENDING**.
+
+Manual Add Book now shows one optional repeatable ordered `Auteur(s)` group
+only while a genuinely new Work is being composed. Rows have stable local
+keys, add/remove/up/down controls, exact duplicate warnings, row-specific
+validation and retained draft/order across wizard Back/Forward and validation
+retries. Blank rows are removed from the outgoing request; the frontend sends
+only ordered `{display_name}` rows and Core remains validation and identity
+authority.
+
+Selecting an existing Work removes the editor, keeps the unsubmitted draft for
+restoration and shows canonical Work Authors read-only with the clarification
+that they are not changed. Existing Edition and provider-backed paths expose
+no manual Author input and submit no `authors`. Edition-level contributors stay
+separate and are now presented as `Overige bijdragers (optioneel)`.
+
+The guarded Add Book browser suite proves keyboard/focus/live-region behavior,
+32-row and 512-character bounds, responsive/reflow behavior, path suppression,
+exact request order and one real UI-to-Core commit followed by ordinary local
+Author Search. Product remains `v2.001`; schema remains `1024`; Biblio Core
+remains `2.25.0`; Biblio UI is `0.19.0`. Renée's visual/interaction acceptance
+remains explicitly open. Closure evidence:
+`docs/101-add-auth-01b-manual-author-ui.md`.
