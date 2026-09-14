@@ -9,14 +9,26 @@ use Biblio\Core\Application\Catalog\Classification\LibraryCatalogContextInitiali
 use Biblio\Core\Application\Catalog\LocalEditionResolver;
 use Biblio\Core\Application\Identity\AuthenticatedUser;
 use Biblio\Core\Application\Library\{ActorLibraryContext,ActorLibraryContextRepository,LibraryContextQueryService};
+use Biblio\Core\Application\Metadata\Author\{
+    AuthorContributorCreditRace,
+    AuthorContributorCreditRepository,
+    AuthorContributorPositionRace,
+    AuthorIdentityPromotionRace,
+    AuthorProviderClaimRace,
+    AuthorProviderIdentityRepository,
+    CanonicalAuthorMaterializationIdGenerator,
+    CanonicalAuthorMaterializer
+};
 use Biblio\Core\Application\Metadata\{AddBookCommitRequest,AddBookCommitSelection,AddBookCommitService,AddBookObservedMetadata,AddBookRecordIdGenerator,EditionMetadataProvenanceRepository,MetadataCandidate,MetadataCandidateId,MetadataClock,MetadataFieldReviewRepository,MetadataFieldValue,MetadataLookupId,MetadataLookupSnapshotRepository,MetadataLookupSnapshotUnavailable,MetadataMatchMethod,UserObservedMetadataEvidenceRepository,UserObservedMetadataField};
 use Biblio\Core\Authorization\LibraryAuthorizationPolicy;
 use Biblio\Core\Catalog\Classification\{LibraryBookTypeId,LibraryCatalogSelection};
-use Biblio\Core\Catalog\{BibliographicMetadataRepository,CanonicalIsbnIdentity,Edition,EditionId,EditionIdentifierClaimRepository,EditionIsbnMetadata,EditionRepository,Isbn13,IsbnCanonicalizer,Item,ItemId,Work,WorkId,WorkRepository};
+use Biblio\Core\Catalog\{BibliographicMetadataRepository,CanonicalIsbnIdentity,Edition,EditionId,EditionIdentifierClaimRepository,EditionIsbnMetadata,EditionRepository,Isbn13,IsbnCanonicalizer,Item,ItemId,Work,WorkId,WorkRepository,WritableAuthorRepository};
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Library\{Library,LibraryId,LibraryMembership,LibraryMembershipAssignment};
 use DateTimeImmutable;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 
 final class AddBookCommitServiceTest extends TestCase
 {
@@ -349,6 +361,87 @@ final class AddBookCommitServiceTest extends TestCase
         self::assertSame("provisional", $result->work()->titleStatus()->value);
     }
 
+    /** @param class-string<RuntimeException> $raceClass */
+    #[DataProvider("authorRaceSignals")]
+    public function testAuthorRaceRetriesCompleteAddBookCommitOnce(
+        string $raceClass
+    ): void {
+        $identity = $this->identity();
+        $candidate = $this->candidate($identity);
+        $edition = new Edition(
+            new EditionId("edition-new"),
+            new WorkId("work-new"),
+            "Reviewed title",
+            $identity->metadata()
+        );
+        $work = new Work($edition->workId(), "Reviewed title");
+        $calls = [];
+        $committer = $this->createMock(AddLibraryItemCommitter::class);
+        $committer->expects(self::exactly(2))
+            ->method("addWithNewWorkAndEdition")
+            ->willReturnCallback(static function (
+                LibraryId $libraryId,
+                ItemId $itemId,
+                WorkId $workId,
+                string $title,
+                EditionId $editionId
+            ) use (&$calls, $raceClass, $edition): Item {
+                $calls[] = [
+                    $libraryId->value(),
+                    $itemId->value(),
+                    $workId->value(),
+                    $title,
+                    $editionId->value(),
+                ];
+                if (count($calls) === 1) {
+                    throw new $raceClass();
+                }
+                return Item::active(
+                    $itemId,
+                    $libraryId,
+                    $edition->id()
+                );
+            });
+
+        $result = $this->service(
+            LibraryMembership::owner(),
+            null,
+            $work,
+            $candidate,
+            $committer,
+            $edition
+        )->commit(new LibraryId("library-a"), $this->request(true));
+
+        self::assertSame($calls[0], $calls[1]);
+        self::assertSame("edition-new", $result->edition()->id()->value());
+    }
+
+    public function testPersistentAuthorRaceStopsAfterOneRetry(): void
+    {
+        $committer = $this->createMock(AddLibraryItemCommitter::class);
+        $committer->expects(self::exactly(2))
+            ->method("addWithNewWorkAndEdition")
+            ->willThrowException(new AuthorContributorCreditRace());
+
+        $this->expectException(AuthorContributorCreditRace::class);
+        $this->service(
+            LibraryMembership::owner(),
+            null,
+            new Work(new WorkId("work-new"), "Reviewed title"),
+            $this->candidate($this->identity()),
+            $committer
+        )->commit(new LibraryId("library-a"), $this->request(true));
+    }
+
+    /** @return iterable<string, array{class-string<RuntimeException>}> */
+    public static function authorRaceSignals(): iterable
+    {
+        yield "provider claim" => [AuthorProviderClaimRace::class];
+        yield "contributor credit" => [AuthorContributorCreditRace::class];
+        yield "contributor position" => [AuthorContributorPositionRace::class];
+        yield "identity promotion" => [AuthorIdentityPromotionRace::class];
+    }
+
     private function service(
         LibraryMembership $membership,
         ?Edition $localEdition,
@@ -429,7 +522,14 @@ final class AddBookCommitServiceTest extends TestCase
             $works,
             $this->createStub(MetadataFieldReviewRepository::class),
             $this->createStub(UserObservedMetadataEvidenceRepository::class),
-            $this->createStub(EditionMetadataProvenanceRepository::class)
+            $this->createStub(EditionMetadataProvenanceRepository::class),
+            new CanonicalAuthorMaterializer(
+                $this->createStub(WritableAuthorRepository::class),
+                $this->createStub(AuthorProviderIdentityRepository::class),
+                $this->createStub(AuthorContributorCreditRepository::class),
+                $this->createStub(CanonicalAuthorMaterializationIdGenerator::class),
+                $clock
+            )
         );
     }
 

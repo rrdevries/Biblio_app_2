@@ -833,7 +833,8 @@ final class ProductionComposition
             $workRepository,
             $metadataFieldReviews,
             $metadataObservations,
-            $editionMetadataProvenance
+            $editionMetadataProvenance,
+            $canonicalAuthorMaterializer
         );
         [$primaryTextProvider, $fallbackTextProvider] = $this->textMetadataProviders();
         $bibliographicDiscovery = new BibliographicDiscoveryService(

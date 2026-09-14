@@ -2124,7 +2124,42 @@ repositories to this shared boundary. No HTTP client is injected into the
 materializer and no extra provider request, Search write, REST/UI change,
 Library/Item mutation or Add Book participant is added. Schema remains 1024.
 
-## 54. SEARCH-AUTH-01A Author composition and source progress
+## 54. AUTHOR-MAT-01E Add Book Author integration
+
+The private actor-and-Library-bound Add Book candidate snapshot now retains
+the same ordered typed `BibliographicAuthorCredit` evidence already produced
+by Open Library and Google Books adapters. Older still-valid snapshots without
+that additive field decode to no credits and never reconstruct identity from
+their contributor display strings.
+
+`AddBookCommitEvidenceWriter`, already an
+`AddLibraryItemTransactionParticipant`, invokes the existing
+`CanonicalAuthorMaterializer` with the definitive participant-supplied Work.
+This call runs after Work/Edition/ISBN resolution and Item persistence but
+before the enclosing Add Library Item transaction commits. Author, provider
+claim, contributor credit/evidence and WorkContributor writes therefore share
+the same rollback boundary as Work, Edition, Item, classification, Add Book
+provider/user evidence and activity. Existing-Edition and canonical-ISBN race
+winner paths receive their actual canonical Work rather than a candidate ID.
+
+Strong Open Library Author keys use the 01B command; valid credits without a
+strong key, including every Google Books Author string, use the 01C command.
+Provider role and original positive source position are passed through
+unchanged. The stable source occurrence remains provider + Work/Edition source
+type + durable provider record ID + original slot. No HTTP client or name
+lookup enters the participant.
+
+All four typed Author uniqueness-race signals cause at most one retry of the
+complete Add Book Item operation with the same already validated candidate and
+preallocated Work/Edition/Item IDs. Semantic identity/position conflicts keep
+their shared evidence-preserving outcomes; unknown persistence failure rolls
+back the whole operation. Candidate absence is a successful no-op: explicit
+existing-Edition selection, manual new Work and manual existing Work still
+materialize no Authors because their current contracts carry no trustworthy
+typed Work-Author evidence. Schema remains 1024 and the public Add Book REST/UI
+contract is unchanged.
+
+## 55. SEARCH-AUTH-01A Author composition and source progress
 
 `BibliographicAuthorSearchResult` now owns a typed `exact|broader` match class
 and deterministic `author-name-<sha256>` presentation group. Both derive from
@@ -2165,7 +2200,7 @@ REST continues to serialize the same five Author item fields. `match_quality`
 and `name_group_id` stay internal until SEARCH-AUTH-UI-01. There is no schema,
 provider-enrichment, materialization, UI or V1-data change.
 
-## 55. SEARCH-AUTH-01B local Author disambiguation projection
+## 56. SEARCH-AUTH-01B local Author disambiguation projection
 
 `BibliographicAuthorSearchResult` now always owns one immutable
 `BibliographicAuthorDisambiguation`. External candidates start with the neutral
@@ -2190,7 +2225,7 @@ the internal object until SEARCH-AUTH-UI-01 ships its strict decoder atomically;
 Open Library normalization is implemented by SEARCH-AUTH-01C. Schema stays
 1024.
 
-## 56. SEARCH-AUTH-01C external Author disambiguation projection
+## 57. SEARCH-AUTH-01C external Author disambiguation projection
 
 `OpenLibraryBibliographicSearchProvider` requests exactly `key`, `name`,
 `top_work` and `birth_date` on its existing `/search/authors.json` request. It
@@ -2213,7 +2248,7 @@ never enriched from mapped provider context. REST kept the five Author item
 keys until the atomic SEARCH-AUTH-UI-01 cutover. No schema, persistence, cache
 or runtime-data change exists.
 
-## 57. SEARCH-AUTH-UI-01 atomic Author REST/UI presentation
+## 58. SEARCH-AUTH-UI-01 atomic Author REST/UI presentation
 
 `BibliographicTextSearchContract` now serializes the existing typed Author
 result directly into the original five public keys plus `match_quality`,

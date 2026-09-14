@@ -3844,7 +3844,43 @@ Final status and exact evidence are recorded in
 Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1024`;
 Biblio Core is `2.18.0`; Biblio UI remains `0.17.0`.
 
-## 115. SEARCH-RUNTIME-01-F1 case-insensitive local Author matching
+## 115. AUTHOR-MAT-01E Add Book Author integration
+
+AUTHOR-MAT-01E is accepted only when:
+
+- Add Book reviewed-candidate snapshots preserve typed provider Author credits
+  across lookup/review/commit and old snapshots without them remain readable
+  without reconstructing identity from contributor copy;
+- the existing Add Book transaction participant calls only the shared
+  `CanonicalAuthorMaterializer` after its definitive Work is known, including
+  existing Edition and ISBN race-winner paths;
+- strong Open Library credits create/reuse resolved Authors and claims, while
+  valid name-only Open Library/Google credits create/reuse provisional Authors
+  without a Google claim or any name-based lookup;
+- exact replay, existing Work/Edition reuse and generic-to-Add-Book reuse do
+  not duplicate or downgrade Authors, credits, evidence rows or ordered edges;
+- source roles and original positive positions are preserved, no positions are
+  shifted or renumbered, and semantic conflicts retain unresolved evidence
+  without overwriting the canonical graph;
+- hard Author persistence failure rolls back Work, Edition, Item and every
+  evidence/Author write; all four typed Author races retry the complete Add
+  Book operation at most once with the same preallocated IDs;
+- real separate-process Add Book operations sharing a strong Open Library
+  Author converge to one Author/claim without an orphan Item or graph;
+- missing candidate credits and the current manual untyped contributor field
+  remain non-blocking and create no fabricated Author;
+- local Author Search and selected Author-to-Works read the committed graph
+  without a Search write, provider fan-out or public Add Book REST/UI change;
+- schema remains 1024, no runtime backfill or V1 source is used, all quality
+  gates pass and an independent review finds no blocker.
+
+Final status and evidence are recorded in
+`docs/98-author-mat-01e-add-book-author-integration.md`.
+
+Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1024`;
+Biblio Core is `2.24.0`; Biblio UI remains `0.18.1`.
+
+## 116. SEARCH-RUNTIME-01-F1 case-insensitive local Author matching
 
 SEARCH-RUNTIME-01-F1 is accepted only when:
 
@@ -3868,7 +3904,7 @@ Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1024`;
 Biblio Core is `2.19.0`; Biblio UI remains `0.17.0`. Exact evidence is recorded
 in `docs/91-search-runtime-01-f1-case-insensitive-local-matching.md`.
 
-## 116. D-SEARCH-AUTH-01 Author search presentation and disambiguation
+## 117. D-SEARCH-AUTH-01 Author search presentation and disambiguation
 
 D-SEARCH-AUTH-01 is accepted when the canonical decision proves that:
 
@@ -3910,7 +3946,7 @@ Status: **DESIGN GO / IMPLEMENTED THROUGH SEARCH-AUTH-01C**. Schema remains
 is recorded in
 `docs/92-d-search-auth-01-author-search-presentation-disambiguation.md`.
 
-## 117. SEARCH-AUTH-01A Author ranking, mapped dedup and pagination
+## 118. SEARCH-AUTH-01A Author ranking, mapped dedup and pagination
 
 SEARCH-AUTH-01A is accepted only when:
 
@@ -3945,7 +3981,7 @@ Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1024`;
 Biblio Core is `2.20.0`; Biblio UI remains `0.17.0`. Exact evidence is in
 `docs/93-search-auth-01a-ranking-mapped-dedup-pagination.md`.
 
-## 118. SEARCH-AUTH-01B local Author disambiguation context
+## 119. SEARCH-AUTH-01B local Author disambiguation context
 
 SEARCH-AUTH-01B is accepted only when:
 
@@ -3972,7 +4008,7 @@ Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1024`;
 Biblio Core is `2.21.0`; Biblio UI remains `0.17.0`. Exact evidence is in
 `docs/94-search-auth-01b-local-author-disambiguation-context.md`.
 
-## 119. SEARCH-AUTH-01C external Author disambiguation context
+## 120. SEARCH-AUTH-01C external Author disambiguation context
 
 SEARCH-AUTH-01C is accepted only when:
 
@@ -4001,7 +4037,7 @@ Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1024`;
 Biblio Core is `2.22.0`; Biblio UI remains `0.17.0`. Exact evidence is in
 `docs/95-search-auth-01c-external-author-context.md`.
 
-## 120. SEARCH-AUTH-UI-01 Author search REST/UI cutover
+## 121. SEARCH-AUTH-UI-01 Author search REST/UI cutover
 
 SEARCH-AUTH-UI-01 is technically accepted only when:
 
@@ -4041,7 +4077,7 @@ remains `v2.001`; schema remains `1024`; Biblio Core is `2.23.0`; Biblio UI is
 `0.18.0`. Exact evidence is in
 `docs/96-search-auth-ui-01-author-search-rest-ui-cutover.md`.
 
-## 121. SEARCH-AUTH-UI-01-F1 Responsive Search results layout
+## 122. SEARCH-AUTH-UI-01-F1 Responsive Search results layout
 
 SEARCH-AUTH-UI-01-F1 is technically accepted only when:
 

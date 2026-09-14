@@ -3215,6 +3215,35 @@ graphs naturally. Product remains `v2.001`; schema remains `1024`; Biblio Core
 is `2.18.0`; Biblio UI remains `0.17.0`. Closure evidence:
 `docs/90-author-mat-01d-generic-materialization-author-integration.md`.
 
+### AUTHOR-MAT-01E — Add Book Author integration
+
+Status: **GO / CLOSED**.
+
+Add Book reviewed-candidate snapshots now retain the provider-normalized typed
+Author credits already present at lookup. The existing transaction participant
+invokes the shared `CanonicalAuthorMaterializer` only after the definitive
+canonical Work is known, including an existing Edition or ISBN race winner.
+Open Library Author keys take the resolved claim path; Open Library and Google
+Books name-only credits take the provisional path. Provider role and original
+position remain unchanged.
+
+Work, Edition, Item, Add Book evidence, Authors, Author claims, contributor
+credits/evidence and WorkContributor edges commit or roll back in the same Add
+Library Item transaction. The four typed Author races trigger at most one
+complete Item-add retry with the same candidate and preallocated IDs. Hard
+persistence failure rolls back the complete graph; semantic conflicts retain
+truthful unresolved evidence without reassignment, reorder or orphan Author.
+
+Manual contributor observations remain untyped Edition evidence, and explicit
+existing-Edition selection has no candidate evidence; those paths continue
+without canonical Author materialization. Older unexpired snapshots without
+typed credits remain readable and also create no inferred Author. No provider
+request, Author name lookup, Search write, REST/UI change, schema change,
+runtime backfill or V1 data use was added. Search finds the resulting Author
+and Work through its existing read-only providers. Product remains `v2.001`,
+schema remains `1024`, Biblio Core is `2.24.0` and Biblio UI remains `0.18.1`.
+Closure evidence: `docs/98-author-mat-01e-add-book-author-integration.md`.
+
 ### SEARCH-RUNTIME-01-F1 — case-insensitive local Author matching
 
 Status: **GO / CLOSED**.
