@@ -170,6 +170,29 @@ final class FirstSufficientMetadataLookupServiceTest extends TestCase
         self::assertSame(["open_library", "google_books"], $this->attemptProviders($result));
     }
 
+    public function testOpenLibraryTimeoutFallsBackToGoogleWithoutChangingTheFailure(): void
+    {
+        $openLibrary = $this->provider(
+            "open_library",
+            ProviderLookupResult::unavailable(ProviderFailureReason::Timeout)
+        );
+        $google = $this->provider(
+            "google_books",
+            ProviderLookupResult::candidates([$this->candidate("google_books", true)])
+        );
+
+        $result = $this->service($openLibrary, $google)->lookup($this->identity());
+
+        self::assertSame(MetadataLookupStatus::Candidates, $result->status());
+        self::assertSame(1, $openLibrary->callCount());
+        self::assertSame(1, $google->callCount());
+        self::assertSame(
+            ProviderFailureReason::Timeout,
+            $result->attempts()[0]->result()->failureReason()
+        );
+        self::assertSame(["google_books"], $this->candidateProviders($result));
+    }
+
     public function testMissOrInvalidFromBothProvidersIsNormalNoUsableCandidate(): void
     {
         $invalidOpenLibrary = ProviderLookupResult::candidates([

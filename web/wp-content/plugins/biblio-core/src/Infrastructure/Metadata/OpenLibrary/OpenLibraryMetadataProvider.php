@@ -57,7 +57,7 @@ final readonly class OpenLibraryMetadataProvider implements MetadataProvider
                 "Accept" => "application/json",
                 "User-Agent" => $this->configuration->userAgent(),
             ],
-            4.0,
+            OpenLibraryConfiguration::REQUEST_TIMEOUT_SECONDS,
             self::MAXIMUM_RESPONSE_BYTES
         );
         $httpResult = $this->http->get($request);

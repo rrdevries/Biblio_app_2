@@ -60,7 +60,7 @@ final readonly class OpenLibraryTextDiscoveryProvider implements
                 "Accept" => "application/json",
                 "User-Agent" => $this->configuration->userAgent(),
             ],
-            4.0,
+            OpenLibraryConfiguration::REQUEST_TIMEOUT_SECONDS,
             self::MAXIMUM_RESPONSE_BYTES
         );
         $result = $this->http->get($request);
@@ -155,7 +155,7 @@ final readonly class OpenLibraryTextDiscoveryProvider implements
                 "Accept" => "application/json",
                 "User-Agent" => $this->configuration->userAgent(),
             ],
-            4.0,
+            OpenLibraryConfiguration::REQUEST_TIMEOUT_SECONDS,
             self::MAXIMUM_RESPONSE_BYTES
         );
         $result = $this->http->get($request);

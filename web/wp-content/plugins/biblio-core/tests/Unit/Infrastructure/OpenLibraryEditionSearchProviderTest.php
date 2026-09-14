@@ -102,6 +102,7 @@ final class OpenLibraryEditionSearchProviderTest extends TestCase
             $http->requests()[1]->url()
         );
         foreach ($http->requests() as $request) {
+            self::assertSame(6.0, $request->timeoutSeconds());
             self::assertStringNotContainsString("/search", $request->url());
             self::assertStringNotContainsString("/books/", $request->url());
         }

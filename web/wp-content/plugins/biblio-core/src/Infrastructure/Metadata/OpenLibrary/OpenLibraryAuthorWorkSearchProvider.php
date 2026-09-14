@@ -113,7 +113,7 @@ final readonly class OpenLibraryAuthorWorkSearchProvider implements
         $result = $this->http->get(new ProviderHttpRequest(
             $url,
             ["Accept" => "application/json", "User-Agent" => $this->configuration->userAgent()],
-            4.0,
+            OpenLibraryConfiguration::REQUEST_TIMEOUT_SECONDS,
             self::MAXIMUM_RESPONSE_BYTES
         ));
         $failure = $this->failure(

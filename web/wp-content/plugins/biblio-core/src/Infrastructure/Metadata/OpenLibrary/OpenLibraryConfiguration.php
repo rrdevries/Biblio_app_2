@@ -8,6 +8,8 @@ use InvalidArgumentException;
 
 final readonly class OpenLibraryConfiguration
 {
+    public const float REQUEST_TIMEOUT_SECONDS = 6.0;
+
     public function __construct(
         private string $applicationName,
         private string $applicationVersion,

@@ -96,6 +96,10 @@ final class BibliographicTextDiscoveryProviderTest extends TestCase
             $http->requests()[1]->url()
         );
         self::assertCount(2, $http->requests());
+        self::assertSame([6.0, 6.0], array_map(
+            static fn (ProviderHttpRequest $request): float => $request->timeoutSeconds(),
+            $http->requests()
+        ));
     }
 
     public function testGooglePreservesRankButDoesNotTurnItIntoIdentity(): void
@@ -139,6 +143,7 @@ final class BibliographicTextDiscoveryProviderTest extends TestCase
             ->authorCredits()[0]->position()->value());
         self::assertStringContainsString("orderBy=relevance", $http->requests()[0]->url());
         self::assertCount(1, $http->requests());
+        self::assertSame(4.0, $http->requests()[0]->timeoutSeconds());
     }
 
     public function testMalformedOptionalAuthorEntriesAreSkippedWithoutRenumbering(): void
