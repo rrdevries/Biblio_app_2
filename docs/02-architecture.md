@@ -2187,4 +2187,28 @@ Context is applied after existing canonical provider-claim evidence and before
 external composition. It never participates in sort keys, identity keys,
 mapped suppression, cursors or selector authority. REST deliberately ignores
 the internal object until SEARCH-AUTH-UI-01 ships its strict decoder atomically;
-Open Library normalization remains SEARCH-AUTH-01C. Schema stays 1024.
+Open Library normalization is implemented by SEARCH-AUTH-01C. Schema stays
+1024.
+
+## 56. SEARCH-AUTH-01C external Author disambiguation projection
+
+`OpenLibraryBibliographicSearchProvider` requests exactly `key`, `name`,
+`top_work` and `birth_date` on its existing `/search/authors.json` request. It
+still performs one request per provider page and makes no Author-detail,
+Works-by-Author or Work-detail call. Mandatory strong Author key and name retain
+the existing page-level fail-closed policy.
+
+Optional context is normalized per field. A trimmed valid UTF-8 `top_work` of
+at most 512 characters becomes the existing provider-neutral representative
+Work title. A string `birth_date` yields a birth year only when it contains one
+unambiguous four-digit year within 1000 through the current calendar year;
+uncertainty markers, open ranges, conflicting years, malformed types and
+out-of-bound years become null. `BibliographicAuthorDisambiguation::external`
+fixes linked Work count to null and validates the shared bounds.
+
+The context travels on the existing typed Author result. It is absent from sort
+and source-order keys, provider/canonical identity, mapped suppression,
+name-group metadata, cursor state and selector encoding. Canonical results are
+never enriched from mapped provider context. REST still serializes the same
+five Author item keys and Biblio UI remains unchanged until
+SEARCH-AUTH-UI-01. No schema, persistence, cache or runtime-data change exists.

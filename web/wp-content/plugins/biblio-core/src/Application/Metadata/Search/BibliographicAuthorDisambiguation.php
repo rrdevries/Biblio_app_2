@@ -10,6 +10,7 @@ use Biblio\Core\Exception\ValidationException;
 final readonly class BibliographicAuthorDisambiguation
 {
     private const int MAX_JSON_SAFE_INTEGER = 9007199254740991;
+    private const int MINIMUM_BIRTH_YEAR = 1000;
 
     private function __construct(
         private ?string $representativeWorkTitle,
@@ -42,6 +43,23 @@ final readonly class BibliographicAuthorDisambiguation
         }
 
         return new self($representativeWorkTitle, $linkedWorkCount, null);
+    }
+
+    public static function external(?string $representativeWorkTitle, ?int $birthYear): self
+    {
+        if ($representativeWorkTitle !== null) {
+            BibliographicAuthorSearchResult::assertText(
+                $representativeWorkTitle,
+                Work::MAX_TITLE_LENGTH,
+                "representative Work title"
+            );
+        }
+        if ($birthYear !== null
+            && ($birthYear < self::MINIMUM_BIRTH_YEAR || $birthYear > (int) gmdate("Y"))) {
+            throw new ValidationException("Invalid Author birth year.");
+        }
+
+        return new self($representativeWorkTitle, null, $birthYear);
     }
 
     public function representativeWorkTitle(): ?string

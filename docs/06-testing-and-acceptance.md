@@ -3905,8 +3905,8 @@ D-SEARCH-AUTH-01 is accepted when the canonical decision proves that:
 - no schema, runtime data, code, V1 source or implementation change enters the
   design slice.
 
-Status: **DESIGN GO / IMPLEMENTED THROUGH SEARCH-AUTH-01A**. Schema remains
-`1024`, Biblio Core is `2.20.0` and Biblio UI remains `0.17.0`. Canonical decision
+Status: **DESIGN GO / IMPLEMENTED THROUGH SEARCH-AUTH-01C**. Schema remains
+`1024`, Biblio Core is `2.22.0` and Biblio UI remains `0.17.0`. Canonical decision
 is recorded in
 `docs/92-d-search-auth-01-author-search-presentation-disambiguation.md`.
 
@@ -3971,3 +3971,32 @@ SEARCH-AUTH-01B is accepted only when:
 Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1024`;
 Biblio Core is `2.21.0`; Biblio UI remains `0.17.0`. Exact evidence is in
 `docs/94-search-auth-01b-local-author-disambiguation-context.md`.
+
+## 119. SEARCH-AUTH-01C external Author disambiguation context
+
+SEARCH-AUTH-01C is accepted only when:
+
+- the existing Open Library Author Search request selects exactly `key`,
+  `name`, `top_work` and `birth_date` and still performs one request per page;
+- valid bounded `top_work` becomes only the provider-neutral representative
+  Work title, while missing, empty, non-string, malformed or overlong values
+  become null without invalidating an otherwise valid Author;
+- `birth_date` produces only one unambiguous four-digit year from 1000 through
+  the current calendar year, while missing, malformed, non-string, uncertain,
+  conflicting, open-range and impossible values become null;
+- external linked Work count remains null and provider `work_count`, alternate
+  names, death dates and all enrichment/detail calls remain absent;
+- context cannot affect exact/broader classification, ranking, strong identity,
+  name grouping, mapped suppression, source progress, pagination or selector
+  authority, and same-name external identities remain separate;
+- mapped external context is never merged into a canonical Author and all
+  local 01B zero/one/multiple/failure semantics remain unchanged;
+- REST keeps the exact five-key Author item allowlist, Biblio UI stays
+  unchanged, schema stays 1024 and no runtime/V1 data is used; and
+- focused provider/application regressions, syntax, PHPStan,
+  Composer/platform, WordPress smoke, manifest, whitespace, one final Core
+  gate and independent review pass.
+
+Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1024`;
+Biblio Core is `2.22.0`; Biblio UI remains `0.17.0`. Exact evidence is in
+`docs/95-search-auth-01c-external-author-context.md`.

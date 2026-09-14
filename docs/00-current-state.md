@@ -3236,7 +3236,7 @@ Closure evidence: `docs/91-search-runtime-01-f1-case-insensitive-local-matching.
 
 ### D-SEARCH-AUTH-01 — Author search presentation and disambiguation
 
-Status: **DESIGN GO / IMPLEMENTED THROUGH SEARCH-AUTH-01A**.
+Status: **DESIGN GO / IMPLEMENTED THROUGH SEARCH-AUTH-01C**.
 
 The final ordinary-user Author-search model is one provider-independent
 experience. Canonical Authors precede external candidates; within each source
@@ -3260,8 +3260,9 @@ disclosure with no total or infinite scroll.
 
 Implementation is deliberately split into ranking/cursor/mapped dedup, local
 batch context, external same-request context and final UI presentation. The
-first slice is now closed; the latter three remain pending. Schema remains
-`1024`; Biblio Core is `2.20.0`; Biblio UI remains `0.17.0`. No current or
+first three slices are now closed; only the coordinated REST/UI presentation
+remains pending. Schema remains `1024`; Biblio Core is `2.22.0`; Biblio UI
+remains `0.17.0`. No current or
 historical V1 data was used. Canonical decision:
 `docs/92-d-search-auth-01-author-search-presentation-disambiguation.md`.
 
@@ -3318,3 +3319,28 @@ Biblio UI remains `0.17.0`. No runtime mutation, backfill or V1 source was used.
 External context stays deferred to SEARCH-AUTH-01C; REST/UI cutover stays
 deferred to SEARCH-AUTH-UI-01. Closure evidence:
 `docs/94-search-auth-01b-local-author-disambiguation-context.md`.
+
+### SEARCH-AUTH-01C — external Author disambiguation context
+
+Status: **GO / CLOSED**.
+
+Open Library Author Search now requests only `key`, `name`, `top_work` and
+`birth_date` in its existing single request. Valid trimmed `top_work` becomes
+the internal provider-neutral representative Work title. Free-form
+`birth_date` contributes only one unambiguous four-digit year from 1000 through
+the current calendar year; malformed types, uncertainty, ranges, conflicting
+years and impossible years degrade that optional field to null without
+invalidating a strongly identified, validly named Author.
+
+Every external result keeps `linked_work_count = null`. Provider `work_count`,
+alternate names, death dates and detail endpoints are not used. Context is not
+part of matching, ranking, grouping, identity, mapped suppression, pagination,
+cursor state or selector authority. Mapped external rows remain suppressed and
+their context is never copied onto canonical Authors; local 01B context remains
+unchanged.
+
+Product remains `v2.001`; schema remains `1024`; Biblio Core is `2.22.0` and
+Biblio UI remains `0.17.0`. REST still exposes the five existing Author item
+keys and the frontend is unchanged. No runtime mutation, V1 source or extra
+provider call was used. Closure evidence:
+`docs/95-search-auth-01c-external-author-context.md`.

@@ -569,6 +569,16 @@ Work's canonical title; zero and multiple Works carry no representative title.
 External Authors retain unknown local count/title context. The read is one
 bounded batch independent of Library, Edition and Item state.
 
+SEARCH-AUTH-01C now adds only external presentation context from the same Open
+Library Author Search response. A valid bounded `top_work` becomes the
+provider-neutral representative Work title. A `birth_date` contributes only
+one unambiguous four-digit year from 1000 through the current calendar year;
+missing, malformed, uncertain, conflicting or impossible values become null
+without removing an otherwise valid Author. External linked Work count stays
+null. Context never enters matching, ranking, identity, mapped suppression,
+pagination or selector authority, and the public REST/UI shape remains
+unchanged pending SEARCH-AUTH-UI-01.
+
 D-AUTHOR-REF-01 adds the authority-bearing handoff for a selected Author.
 Every top-level Author result receives one opaque signed `author_selector`.
 It represents exactly one canonical Author, one Open Library Author, or a

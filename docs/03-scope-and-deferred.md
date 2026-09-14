@@ -240,9 +240,10 @@ The following remains deferred independently of D-SCOPE-01:
 - e-books, audiobooks, digital files, licenses and other media;
 - generic `Andere fysieke bron` outside approved source types;
 - smart Hierna-lezen availability or automatic source preference;
-- D-SEARCH-AUTH-01 local/external disambiguation context and bounded
-  progressive presentation after SEARCH-AUTH-01A closed final Author ranking,
-  mapped duplicate suppression and source-progress pagination; selected-Author
+- D-SEARCH-AUTH-01 REST/UI disambiguation cutover and bounded progressive
+  presentation after SEARCH-AUTH-01A closed final Author ranking, mapped
+  duplicate suppression and source-progress pagination, SEARCH-AUTH-01B closed
+  local context and SEARCH-AUTH-01C closed external context; selected-Author
   Works and selected-Work Editions interaction is
   already closed through SEARCH-UI-01B, while ISBN routing, real totals,
   cross-entity Best Match, Series/Collections results, functional filter/sort
