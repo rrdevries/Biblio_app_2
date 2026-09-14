@@ -53,6 +53,7 @@ final class OpenLibraryAuthorWorkSearchProviderTest extends TestCase
             "https://openlibrary.org/authors/OL1A/works.json?limit=2&offset=0",
             $http->requests()[0]->url()
         );
+        self::assertSame(6.0, $http->requests()[0]->timeoutSeconds());
         self::assertStringNotContainsString("/search", $http->requests()[0]->url());
         self::assertStringNotContainsString("editions", $http->requests()[0]->url());
         self::assertStringNotContainsString("/works/OL10W.json", $http->requests()[0]->url());

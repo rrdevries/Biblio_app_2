@@ -72,7 +72,7 @@ final class OpenLibraryMetadataProviderTest extends TestCase
             "https://openlibrary.org/api/books?bibkeys=ISBN%3A9780306406157&jscmd=details&format=json",
             $request->url()
         );
-        self::assertSame(4.0, $request->timeoutSeconds());
+        self::assertSame(6.0, $request->timeoutSeconds());
         self::assertSame(262144, $request->maximumResponseBytes());
         self::assertSame("application/json", $request->headers()["Accept"]);
         self::assertSame(

@@ -57,6 +57,10 @@ final class OpenLibraryBibliographicSearchProviderTest extends TestCase
             $works->items()
         ));
         self::assertSame([], $works->items()[0]->series());
+        self::assertSame([6.0, 6.0], array_map(
+            static fn (ProviderHttpRequest $request): float => $request->timeoutSeconds(),
+            $http->requests()
+        ));
     }
 
     public function testAuthorSearchUsesStrongIdentityAndIndependentOffsetPagination(): void
