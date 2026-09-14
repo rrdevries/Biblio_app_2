@@ -11,10 +11,19 @@ use Biblio\Core\Application\Catalog\LocalEditionResolutionType;
 use Biblio\Core\Application\Catalog\LocalEditionResolver;
 use Biblio\Core\Application\Identity\AuthenticatedUser;
 use Biblio\Core\Application\Library\LibraryContextQueryService;
+use Biblio\Core\Application\Metadata\Author\AuthorContributorCreditRace;
+use Biblio\Core\Application\Metadata\Author\AuthorContributorPositionRace;
+use Biblio\Core\Application\Metadata\Author\AuthorIdentityPromotionRace;
+use Biblio\Core\Application\Metadata\Author\AuthorProviderClaimRace;
+use Biblio\Core\Application\Metadata\Author\CanonicalAuthorMaterializer;
 use Biblio\Core\Catalog\Edition;
+use Biblio\Core\Catalog\EditionId;
 use Biblio\Core\Catalog\EditionIsbnMetadata;
 use Biblio\Core\Catalog\EditionRepository;
+use Biblio\Core\Catalog\Item;
+use Biblio\Core\Catalog\ItemId;
 use Biblio\Core\Catalog\Work;
+use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Catalog\WorkRepository;
 use Biblio\Core\Exception\AuthorizationException;
 use Biblio\Core\Exception\ValidationException;
@@ -35,7 +44,8 @@ final readonly class AddBookCommitService
         private WorkRepository $works,
         private MetadataFieldReviewRepository $reviews,
         private UserObservedMetadataEvidenceRepository $observations,
-        private EditionMetadataProvenanceRepository $provenance
+        private EditionMetadataProvenanceRepository $provenance,
+        private CanonicalAuthorMaterializer $authorMaterializer
     ) {
     }
 
@@ -90,6 +100,7 @@ final readonly class AddBookCommitService
             $this->reviews,
             $this->observations,
             $this->provenance,
+            $this->authorMaterializer,
             $actorId,
             $libraryId,
             $observations,
@@ -104,45 +115,34 @@ final readonly class AddBookCommitService
                 ? $local->requireEdition()
                 : null);
 
-        if ($existingEdition !== null) {
-            $item = $this->items->addForExistingEdition(
+        try {
+            $item = $this->commitItemOnce(
                 $libraryId,
-                $itemId,
-                $existingEdition->id(),
-                $request->classification(),
-                inventoryNumber: $request->inventoryNumber(),
-                locationId: $request->locationId(),
-                participant: $participant
-            );
-        } elseif ($request->selection()->workId() !== null) {
-            $title = $this->effectiveTitle($request, $candidate);
-            $item = $this->items->addWithNewEditionForExistingWork(
-                $libraryId,
-                $itemId,
-                $newEditionId,
-                $request->selection()->workId(),
-                $title,
-                $request->classification(),
-                isbnMetadata: $local?->identity()->metadata()
-                    ?? EditionIsbnMetadata::withoutIsbn(),
-                inventoryNumber: $request->inventoryNumber(),
-                locationId: $request->locationId(),
-                participant: $participant
-            );
-        } else {
-            $title = $this->effectiveTitle($request, $candidate);
-            $item = $this->items->addWithNewWorkAndEdition(
-                $libraryId,
+                $request,
+                $local,
+                $candidate,
+                $existingEdition,
                 $itemId,
                 $newWorkId,
-                $title,
                 $newEditionId,
-                $request->classification(),
-                isbnMetadata: $local?->identity()->metadata()
-                    ?? EditionIsbnMetadata::withoutIsbn(),
-                inventoryNumber: $request->inventoryNumber(),
-                locationId: $request->locationId(),
-                participant: $participant
+                $participant
+            );
+        } catch (
+            AuthorProviderClaimRace
+            |AuthorContributorCreditRace
+            |AuthorContributorPositionRace
+            |AuthorIdentityPromotionRace
+        ) {
+            $item = $this->commitItemOnce(
+                $libraryId,
+                $request,
+                $local,
+                $candidate,
+                $existingEdition,
+                $itemId,
+                $newWorkId,
+                $newEditionId,
+                $participant
             );
         }
 
@@ -156,6 +156,61 @@ final readonly class AddBookCommitService
             $edition,
             $item,
             $existingEdition !== null || $raceReusedEdition
+        );
+    }
+
+    private function commitItemOnce(
+        LibraryId $libraryId,
+        AddBookCommitRequest $request,
+        ?LocalEditionResolution $local,
+        ?MetadataCandidate $candidate,
+        ?Edition $existingEdition,
+        ItemId $itemId,
+        WorkId $newWorkId,
+        EditionId $newEditionId,
+        AddBookCommitEvidenceWriter $participant
+    ): Item {
+        if ($existingEdition !== null) {
+            return $this->items->addForExistingEdition(
+                $libraryId,
+                $itemId,
+                $existingEdition->id(),
+                $request->classification(),
+                inventoryNumber: $request->inventoryNumber(),
+                locationId: $request->locationId(),
+                participant: $participant
+            );
+        }
+
+        $title = $this->effectiveTitle($request, $candidate);
+        if ($request->selection()->workId() !== null) {
+            return $this->items->addWithNewEditionForExistingWork(
+                $libraryId,
+                $itemId,
+                $newEditionId,
+                $request->selection()->workId(),
+                $title,
+                $request->classification(),
+                isbnMetadata: $local?->identity()->metadata()
+                    ?? EditionIsbnMetadata::withoutIsbn(),
+                inventoryNumber: $request->inventoryNumber(),
+                locationId: $request->locationId(),
+                participant: $participant
+            );
+        }
+
+        return $this->items->addWithNewWorkAndEdition(
+            $libraryId,
+            $itemId,
+            $newWorkId,
+            $title,
+            $newEditionId,
+            $request->classification(),
+            isbnMetadata: $local?->identity()->metadata()
+                ?? EditionIsbnMetadata::withoutIsbn(),
+            inventoryNumber: $request->inventoryNumber(),
+            locationId: $request->locationId(),
+            participant: $participant
         );
     }
 

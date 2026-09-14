@@ -5,6 +5,11 @@ declare(strict_types=1);
 namespace Biblio\Core\Application\Metadata;
 
 use Biblio\Core\Application\Catalog\AddLibraryItemTransactionParticipant;
+use Biblio\Core\Application\Metadata\Author\AuthorMaterializationStatus;
+use Biblio\Core\Application\Metadata\Author\CanonicalAuthorMaterializationResult;
+use Biblio\Core\Application\Metadata\Author\CanonicalAuthorMaterializer;
+use Biblio\Core\Application\Metadata\Author\NameOnlyAuthorCredit;
+use Biblio\Core\Application\Metadata\Author\StrongOpenLibraryAuthorCredit;
 use Biblio\Core\Catalog\Edition;
 use Biblio\Core\Catalog\Item;
 use Biblio\Core\Catalog\Work;
@@ -19,6 +24,7 @@ final readonly class AddBookCommitEvidenceWriter implements
         private MetadataFieldReviewRepository $reviews,
         private UserObservedMetadataEvidenceRepository $observations,
         private EditionMetadataProvenanceRepository $provenance,
+        private CanonicalAuthorMaterializer $authorMaterializer,
         private UserId $actorId,
         private LibraryId $libraryId,
         private AddBookObservedMetadata $observedMetadata,
@@ -33,6 +39,8 @@ final readonly class AddBookCommitEvidenceWriter implements
         Item $item,
         bool $existingEdition
     ): void {
+        $this->materializeAuthors($work);
+
         $recordId = MetadataRecordId::forEdition($edition->id());
         $evidenceOnlyRecordId = MetadataRecordId::forEditionEvidence(
             $edition->id()
@@ -101,6 +109,65 @@ final readonly class AddBookCommitEvidenceWriter implements
                 $isCorrection
             );
         }
+    }
+
+    private function materializeAuthors(Work $work): void
+    {
+        if ($this->candidate === null) {
+            return;
+        }
+
+        foreach ($this->candidate->authorCredits() as $credit) {
+            $openLibraryAuthorId = $credit->openLibraryAuthorId();
+            if ($openLibraryAuthorId !== null) {
+                if ($this->candidate->providerKey() !== "open_library") {
+                    throw new \Biblio\Core\Exception\ValidationException(
+                        "Strong Open Library Author identity has the wrong provider."
+                    );
+                }
+                $outcome = $this->authorMaterializer
+                    ->materializeStrongOpenLibraryAuthor(
+                        new StrongOpenLibraryAuthorCredit(
+                            $work->id(),
+                            $credit->role(),
+                            $credit->position(),
+                            $credit->observedDisplayName(),
+                            $openLibraryAuthorId,
+                            $credit->sourceType(),
+                            $credit->sourceRecordId(),
+                            $this->candidate->retrievedAt()
+                        )
+                    );
+                $this->acceptAuthorOutcome($outcome);
+                continue;
+            }
+
+            $outcome = $this->authorMaterializer->materializeNameOnlyAuthor(
+                new NameOnlyAuthorCredit(
+                    $work->id(),
+                    $credit->role(),
+                    $credit->position(),
+                    $credit->observedDisplayName(),
+                    $this->candidate->providerKey(),
+                    $credit->sourceType(),
+                    $credit->sourceRecordId(),
+                    $this->candidate->retrievedAt()
+                )
+            );
+            $this->acceptAuthorOutcome($outcome);
+        }
+    }
+
+    private function acceptAuthorOutcome(
+        CanonicalAuthorMaterializationResult $outcome
+    ): void {
+        match ($outcome->status()) {
+            AuthorMaterializationStatus::Materialized => null,
+            // The shared materializer retained the unresolved evidence and
+            // deliberately left the conflicting canonical graph unchanged.
+            AuthorMaterializationStatus::IdentityConflict,
+            AuthorMaterializationStatus::PositionConflict => null,
+        };
     }
 
     private function recordObservation(

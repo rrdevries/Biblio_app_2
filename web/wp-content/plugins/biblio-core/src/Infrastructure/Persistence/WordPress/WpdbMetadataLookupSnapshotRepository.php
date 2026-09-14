@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Infrastructure\Persistence\WordPress;
 
+use Biblio\Core\Application\Metadata\Author\AuthorCreditProviderSourceType;
+use Biblio\Core\Application\Metadata\Author\OpenLibraryAuthorId;
+use Biblio\Core\Application\Metadata\Discovery\BibliographicAuthorCredit;
 use Biblio\Core\Application\Metadata\MetadataCandidate;
 use Biblio\Core\Application\Metadata\MetadataCandidateId;
 use Biblio\Core\Application\Metadata\MetadataLookupId;
@@ -12,6 +15,8 @@ use Biblio\Core\Application\Metadata\MetadataLookupSnapshotRepository;
 use Biblio\Core\Application\Metadata\MetadataMatchMethod;
 use Biblio\Core\Application\Metadata\MetadataWorkLink;
 use Biblio\Core\Catalog\CanonicalIsbnIdentity;
+use Biblio\Core\Catalog\ContributorPosition;
+use Biblio\Core\Catalog\ContributorRole;
 use Biblio\Core\Catalog\Isbn10;
 use Biblio\Core\Catalog\Isbn13;
 use Biblio\Core\Exception\FailureReason;
@@ -148,6 +153,17 @@ final readonly class WpdbMetadataLookupSnapshotRepository implements
                 "page_count" => $candidate->pageCount(),
                 "format" => $candidate->format(),
                 "provider_work_key" => $candidate->workLink()?->providerWorkKey(),
+                "author_credits" => array_map(
+                    static fn (BibliographicAuthorCredit $credit): array => [
+                        "observed_display_name" => $credit->observedDisplayName(),
+                        "role" => $credit->role()->value,
+                        "position" => $credit->position()->value(),
+                        "source_type" => $credit->sourceType()->value,
+                        "source_record_id" => $credit->sourceRecordId(),
+                        "open_library_author_id" => $credit->openLibraryAuthorId()?->value(),
+                    ],
+                    $candidate->authorCredits()
+                ),
             ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         } catch (JsonException $exception) {
             throw new PersistenceException(
@@ -195,8 +211,57 @@ final readonly class WpdbMetadataLookupSnapshotRepository implements
             $this->nullableString($data, "publication_date"),
             $this->nullableInt($data, "page_count"),
             $this->nullableString($data, "format"),
-            $workKey === null ? null : new MetadataWorkLink($workKey)
+            $workKey === null ? null : new MetadataWorkLink($workKey),
+            $this->authorCredits($data)
         );
+    }
+
+    /**
+     * Existing unexpired Add Book snapshots contain no typed Author evidence
+     * and remain committable without inferring identity from contributor copy.
+     *
+     * @param array<string, mixed> $data
+     * @return list<BibliographicAuthorCredit>
+     */
+    private function authorCredits(array $data): array
+    {
+        if (!array_key_exists("author_credits", $data)) {
+            return [];
+        }
+        if (
+            !is_array($data["author_credits"])
+            || !array_is_list($data["author_credits"])
+        ) {
+            throw new \UnexpectedValueException(
+                "Invalid metadata candidate Author credits field."
+            );
+        }
+
+        $credits = [];
+        foreach ($data["author_credits"] as $raw) {
+            if (!is_array($raw)) {
+                throw new \UnexpectedValueException(
+                    "Invalid metadata candidate Author credit."
+                );
+            }
+            $providerAuthorId = $this->nullableString(
+                $raw,
+                "open_library_author_id"
+            );
+            $credits[] = new BibliographicAuthorCredit(
+                $this->string($raw, "observed_display_name"),
+                ContributorRole::from($this->string($raw, "role")),
+                new ContributorPosition($this->integer($raw, "position")),
+                AuthorCreditProviderSourceType::from(
+                    $this->string($raw, "source_type")
+                ),
+                $this->string($raw, "source_record_id"),
+                $providerAuthorId === null
+                    ? null : new OpenLibraryAuthorId($providerAuthorId)
+            );
+        }
+
+        return $credits;
     }
 
     /** @param array<string, mixed> $data */
@@ -245,6 +310,17 @@ final readonly class WpdbMetadataLookupSnapshotRepository implements
         }
         if (!is_int($data[$key])) {
             throw new \UnexpectedValueException("Invalid candidate snapshot integer.");
+        }
+        return $data[$key];
+    }
+
+    /** @param array<string, mixed> $data */
+    private function integer(array $data, string $key): int
+    {
+        if (!isset($data[$key]) || !is_int($data[$key])) {
+            throw new \UnexpectedValueException(
+                "Invalid candidate snapshot integer field."
+            );
         }
         return $data[$key];
     }
