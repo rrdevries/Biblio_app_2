@@ -172,6 +172,10 @@ final readonly class BarrierAuthorCreditRepository implements AuthorContributorC
         private AuthorContributorCreditRepository $inner,
         private OneShotAuthorMaterializationBarrier $barrier
     ) {}
+    public function find(AuthorContributorCreditId $creditId): ?\Biblio\Core\Application\Metadata\Author\AuthorContributorCredit
+    {
+        return $this->inner->find($creditId);
+    }
     public function findByKey(\Biblio\Core\Application\Metadata\Author\AuthorContributorCreditKey $key): ?\Biblio\Core\Application\Metadata\Author\AuthorContributorCredit
     {
         $result = $this->inner->findByKey($key);

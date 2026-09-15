@@ -557,7 +557,7 @@ final readonly class WpdbMigrationLedgerRepository implements MigrationLedgerRep
         $observations = $this->tables->migrationSourceObservations();
         $mappings = $this->tables->migrationTargetMappings();
         $runs = $this->tables->migrationRuns();
-        $query = "SELECT o.run_id,o.source_family,o.source_type,o.source_id,"
+        $query = "SELECT o.run_id,o.observation_id,o.source_family,o.source_type,o.source_id,"
             . "o.source_snapshot,o.payload_hash,m.target_entity_type,m.target_entity_id,"
             . "m.mapping_disposition,m.reason_code "
             . "FROM " . $observations . " o INNER JOIN " . $mappings
@@ -581,6 +581,7 @@ final readonly class WpdbMigrationLedgerRepository implements MigrationLedgerRep
         return array_map(
             static fn (array $row): MigrationTraceEntry => new MigrationTraceEntry(
                 (string) $row["run_id"],
+                (string) $row["observation_id"],
                 (string) $row["source_family"],
                 (string) $row["source_type"],
                 (string) $row["source_id"],

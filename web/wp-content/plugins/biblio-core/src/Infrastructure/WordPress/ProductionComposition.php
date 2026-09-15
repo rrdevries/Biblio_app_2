@@ -46,6 +46,7 @@ use Biblio\Core\Application\Metadata\{AddBookCommitService,AddBookMetadataLookup
 use Biblio\Core\Application\Metadata\Author\CanonicalAuthorMaterializer;
 use Biblio\Core\Application\Metadata\Discovery\{BibliographicDiscoveryService,BibliographicMaterializationService,BibliographicTextDiscoveryProvider,DesignatedPersonalBibliographicAuthorization};
 use Biblio\Core\Application\Metadata\Search\{BibliographicAuthorWorkSearchProvider,BibliographicAuthorWorkSearchService,BibliographicEditionSearchService,BibliographicExternalEditionSearchProvider,BibliographicTextSearchService};
+use Biblio\Core\Application\Migration\Author\{AuthorMigrationWriter,CatalogAuthorMigrationParticipant,CatalogWorkContributorMigrationParticipant};
 use Biblio\Core\Application\Migration\Catalog\{CatalogEditionMigrationParticipant,CatalogItemMigrationParticipant,CatalogMigrationWriter,CatalogWorkMigrationParticipant};
 use Biblio\Core\Application\Migration\Runner\MigrationParticipantRegistry;
 use Biblio\Core\Application\Notes\CorrectPrivateNoteReadingRoundService;
@@ -231,11 +232,16 @@ final class ProductionComposition
             $tableNames
         );
         $metadataClock = new SystemMetadataClock();
+        $authorCredits = new WpdbAuthorContributorCreditRepository(
+            $database,
+            $tableNames
+        );
+        $authorIds = new OpaqueCanonicalAuthorMaterializationIdGenerator();
         $canonicalAuthorMaterializer = new CanonicalAuthorMaterializer(
             $authorRepository,
             $bibliographicProviderIdentities,
-            new WpdbAuthorContributorCreditRepository($database, $tableNames),
-            new OpaqueCanonicalAuthorMaterializationIdGenerator(),
+            $authorCredits,
+            $authorIds,
             $metadataClock
         );
         $itemRepository = new WpdbItemRepository($database, $tableNames);
@@ -474,8 +480,12 @@ final class ProductionComposition
             $selectionResolver,
             $libraryMutationLock
         );
+        $migrationLedger = new WpdbMigrationLedgerRepository(
+            $database,
+            $tableNames
+        );
         $catalogMigrationWriter = new CatalogMigrationWriter(
-            new WpdbMigrationLedgerRepository($database, $tableNames),
+            $migrationLedger,
             new OpaqueCatalogMigrationRecordIdGenerator(),
             $workRepository,
             $editionRepository,
@@ -494,8 +504,20 @@ final class ProductionComposition
                 $itemLocalDetailsRepository
             )
         );
+        $authorMigrationWriter = new AuthorMigrationWriter(
+            $migrationLedger,
+            $authorIds,
+            $authorRepository,
+            $workRepository,
+            $authorCredits,
+            $canonicalAuthorMaterializer
+        );
         $migrationParticipants = new MigrationParticipantRegistry([
+            new CatalogAuthorMigrationParticipant($authorMigrationWriter),
             new CatalogWorkMigrationParticipant($catalogMigrationWriter),
+            new CatalogWorkContributorMigrationParticipant(
+                $authorMigrationWriter
+            ),
             new CatalogEditionMigrationParticipant($catalogMigrationWriter),
             new CatalogItemMigrationParticipant($catalogMigrationWriter),
         ]);

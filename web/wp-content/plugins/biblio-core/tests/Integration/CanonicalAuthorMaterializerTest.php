@@ -1161,6 +1161,12 @@ final class StaleFirstAuthorCreditRead implements
     ) {
     }
 
+    public function find(
+        AuthorContributorCreditId $creditId
+    ): ?AuthorContributorCredit {
+        return $this->inner->find($creditId);
+    }
+
     public function findByKey(
         AuthorContributorCreditKey $key
     ): ?AuthorContributorCredit {

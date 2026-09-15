@@ -197,7 +197,7 @@ final class SyntheticMigrationEnvironment implements MigrationEnvironment
         return new MigrationBuildProvenance(
             "v2.001",
             1025,
-            "2.29.0",
+            "2.30.0",
             str_repeat("a", 40),
             false
         );
