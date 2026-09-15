@@ -3764,3 +3764,30 @@ new explicit transition decision; open V1 records are not artificially closed
 to fit the current schema. Product remains `v2.001`; schema remains `1026`;
 Biblio Core remains `2.34.0`; Biblio UI remains `0.20.0`. Contract and evidence:
 `docs/113-d-mig-loan-01-current-v1-circulation-cutover.md`.
+
+### MIG-02-CIRC-01 — Deferred circulation preservation participant
+
+Status: **GO / CLOSED**.
+
+The CURRENT adapter now binds each merged `v1.circulation_round` observation
+to one typed, source-faithful preservation plan. Coherent raw circulation is
+`preserved_deferred` with reason `circulation_product_target_deferred`; a
+material representation-state conflict is `quarantined` with the existing
+fixed `ambiguous_circulation_semantics` reason. Both outcomes have zero
+product operations and zero target mappings.
+
+Restricted MIG-FND evidence retains exact Book/Copy occurrences, raw type,
+explicit open/closed state, dates and precision, references, private
+counterparty/notes and complete source/run/hash provenance. Ordinary dry-run
+and reconciliation artifacts expose none of that private payload. Exact replay
+does not duplicate evidence and changed payload retains existing divergent
+observation behavior.
+
+The read-only CURRENT dry-run against unchanged SOURCE-01 manifest
+`35a18156490f103d4b6b610f524a1963e5be189d74c64637c49059396b1c7c67`
+plans exactly eight preservations and one quarantine, zero operations, zero
+planning errors and zero unmatched references. No source/apply/product write
+occurred. Product remains `v2.001`; schema remains `1026`; Biblio Core is
+`2.35.0`; Biblio UI remains `0.20.0`. Final-cutover policy and
+`MIG-LOAN-BACKFILL-01` remain deferred. Closure evidence:
+`docs/114-mig-02-circ-01-deferred-circulation-preservation.md`.

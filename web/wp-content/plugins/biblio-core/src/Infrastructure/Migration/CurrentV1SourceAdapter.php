@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Infrastructure\Migration;
 
+use Biblio\Core\Application\Migration\Circulation\CirculationPlan;
 use Biblio\Core\Application\Migration\MigrationEvidence;
 use Biblio\Core\Application\Migration\Runner\MigrationRunnerFailure;
 use Biblio\Core\Application\Migration\Runner\MigrationRunnerReason;
@@ -438,10 +439,10 @@ final readonly class CurrentV1SourceAdapter implements MigrationSourceAdapter
 
         $circulation = $this->circulationRows($books, $copies, $ignoredFindings);
         foreach ($circulation["rows"] as $id => $row) {
-            yield new MigrationSourceRecord(
+            yield MigrationSourceRecord::typed(
                 self::CIRCULATION_ROUND,
                 $id,
-                $row["payload"],
+                CirculationPlan::fromPayload($id, $row["payload"]),
                 array_keys($row["references"])
             );
         }

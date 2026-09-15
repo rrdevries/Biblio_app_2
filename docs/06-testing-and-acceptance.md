@@ -4535,3 +4535,36 @@ Status: **DESIGN GO — OPTION D: DEFERRED CIRCULATION PROMOTION**. Product
 remains `v2.001`; schema remains `1026`; Biblio Core remains `2.34.0`; Biblio
 UI remains `0.20.0`. Exact contract and evidence are in
 `docs/113-d-mig-loan-01-current-v1-circulation-cutover.md`.
+
+## 135. MIG-02-CIRC-01 deferred circulation preservation participant
+
+MIG-02-CIRC-01 is accepted only when:
+
+- the CURRENT adapter still emits exactly one `v1.circulation_round`
+  observation per stable ID with all Book/Copy occurrences and source payload
+  hash unchanged;
+- coherent `borrowed|lent_out` evidence plans and applies
+  `preserved_deferred` with explicit open/closed meaning, while contradictory
+  lifecycle evidence plans and applies `quarantined` without precedence;
+- restricted MIG-FND evidence retains stable ID, raw type/state, date values
+  and precision, Book/Copy references and representations, private
+  counterparty/notes and full observation/run/snapshot/hash provenance;
+- neither disposition produces a product operation, target mapping,
+  ExternalLoan/InternalLoan, Item state or identity;
+- dry-run remains zero-write and its artifact contains safe IDs, hashes,
+  dispositions, reasons and counts but no restricted payload/private sentinel;
+- exact replay creates no duplicate preservation/quarantine evidence and a
+  changed payload keeps existing divergent-observation semantics;
+- reconciliation treats both dispositions as explicit accounted outcomes and
+  reports zero failed, uncommitted, unexplained or broken circulation state;
+- the unchanged CURRENT SOURCE-01 manifest plans exactly nine circulation
+  observations as eight `preserved_deferred` plus one `quarantined`, with zero
+  operations, errors and unmatched references;
+- tests contain synthetic data only, the CURRENT source remains read-only,
+  schema stays 1026 and no loan product, REST/UI, provider, production apply,
+  final-cutover or backfill capability is introduced; and
+- focused/full gates plus independent second review pass.
+
+Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1026`;
+Biblio Core is `2.35.0`; Biblio UI remains `0.20.0`. Exact evidence is in
+`docs/114-mig-02-circ-01-deferred-circulation-preservation.md`.

@@ -48,6 +48,7 @@ use Biblio\Core\Application\Metadata\Discovery\{BibliographicDiscoveryService,Bi
 use Biblio\Core\Application\Metadata\Search\{BibliographicAuthorWorkSearchProvider,BibliographicAuthorWorkSearchService,BibliographicEditionSearchService,BibliographicExternalEditionSearchProvider,BibliographicTextSearchService};
 use Biblio\Core\Application\Migration\Author\{AuthorMigrationWriter,CatalogAuthorMigrationParticipant,CatalogWorkContributorMigrationParticipant};
 use Biblio\Core\Application\Migration\Catalog\{CatalogEditionMigrationParticipant,CatalogItemMigrationParticipant,CatalogMigrationWriter,CatalogWorkMigrationParticipant};
+use Biblio\Core\Application\Migration\Circulation\CirculationMigrationParticipant;
 use Biblio\Core\Application\Migration\Notes\{PrivateNoteMigrationParticipant,PrivateNoteMigrationWriter};
 use Biblio\Core\Application\Migration\Reading\{ReadingRoundMigrationParticipant,ReadingRoundMigrationWriter};
 use Biblio\Core\Application\Migration\Reconciliation\{
@@ -564,6 +565,7 @@ final class ProductionComposition
                 $privateNoteMigrationWriter,
                 $privateNoteContentPolicy
             ),
+            new CirculationMigrationParticipant(),
         ]);
         $migrationReconciliation = new MigrationReconciliationService(
             $migrationLedger,

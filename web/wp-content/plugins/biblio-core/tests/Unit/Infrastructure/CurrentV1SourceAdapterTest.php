@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Tests\Unit\Infrastructure;
 
+use Biblio\Core\Application\Migration\Circulation\CirculationPlan;
 use Biblio\Core\Application\Migration\Runner\MigrationRunnerFailure;
 use Biblio\Core\Application\Migration\Runner\MigrationRunnerReason;
 use Biblio\Core\Application\Migration\Runner\MigrationSourceInspection;
@@ -67,6 +68,11 @@ final class CurrentV1SourceAdapterTest extends TestCase
                     ->payload()["book_occurrences"]
             )
         );
+        $circulationPlan = $records[
+            CurrentV1SourceAdapter::CIRCULATION_ROUND . ":loan-1"
+        ]->typedPlan();
+        self::assertInstanceOf(CirculationPlan::class, $circulationPlan);
+        self::assertTrue($circulationPlan->hasMaterialLifecycleConflict());
 
         $payload = (new MigrationSourceInspection(
             $package,

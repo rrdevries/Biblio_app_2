@@ -2605,3 +2605,28 @@ the unchanged RUN-01 artifact/privacy boundary. Current source mappings are
 not yet reviewed, so SOURCE-01 invokes neither dry-run nor the internal apply
 coordinator. No public apply command exists. Isolated before/after table counts
 prove zero product and MIG-FND writes. Schema remains 1026; Core is 2.34.0.
+
+## 70. MIG-02-CIRC-01 disposition-only circulation boundary
+
+`CurrentV1SourceAdapter` preserves its one-observation-per-stable-ID contract
+and attaches a typed `CirculationPlan` whose canonical payload is the unchanged
+merged Book/Copy source representation. Adapter validation owns the reviewed
+source shape; `CirculationMigrationParticipant` owns only the approved Option D
+meaning.
+
+The participant produces no product operation, dependency or target mapping.
+Coherent evidence returns `MigrationRecordOutcome::preserved`; contradictory
+lifecycle evidence returns `MigrationRecordOutcome::quarantined` with no
+Book/Copy precedence. Both execute only through the existing
+`CommitMigrationRecordService` boundary. The original observation payload and
+the preservation/quarantine evidence remain bounded restricted MIG-FND JSON;
+source/run identity and replay remain relational.
+
+Reconciliation registers `v1.circulation_round` with an empty target-mapping
+contract. A preservation or quarantine is consequently an explicit complete
+source disposition, while any unexpected mapping would remain broken. Dry-run
+serialization includes only source identity/hash, disposition/reason and
+counts; typed/private payloads are not serialized.
+
+No ExternalLoan/InternalLoan, Item state, identity, schema, REST, UI, provider
+or public apply surface is added. Schema remains 1026; Core is 2.35.0.
