@@ -50,6 +50,11 @@ use Biblio\Core\Application\Migration\Author\{AuthorMigrationWriter,CatalogAutho
 use Biblio\Core\Application\Migration\Catalog\{CatalogEditionMigrationParticipant,CatalogItemMigrationParticipant,CatalogMigrationWriter,CatalogWorkMigrationParticipant};
 use Biblio\Core\Application\Migration\Notes\{PrivateNoteMigrationParticipant,PrivateNoteMigrationWriter};
 use Biblio\Core\Application\Migration\Reading\{ReadingRoundMigrationParticipant,ReadingRoundMigrationWriter};
+use Biblio\Core\Application\Migration\Reconciliation\{
+    CoreMigrationTargetInspector,
+    CurrentMigrationMappingContracts,
+    MigrationReconciliationService
+};
 use Biblio\Core\Application\Migration\Runner\MigrationParticipantRegistry;
 use Biblio\Core\Application\Notes\CorrectPrivateNoteReadingRoundService;
 use Biblio\Core\Application\Notes\CreatePrivateNoteService;
@@ -560,6 +565,22 @@ final class ProductionComposition
                 $privateNoteContentPolicy
             ),
         ]);
+        $migrationReconciliation = new MigrationReconciliationService(
+            $migrationLedger,
+            CurrentMigrationMappingContracts::create(),
+            new CoreMigrationTargetInspector(
+                $workRepository,
+                $editionRepository,
+                $itemRepository,
+                $editionIdentifierClaims,
+                $catalogContextRepository,
+                $itemLocalDetailsRepository,
+                $authorRepository,
+                $authorCredits,
+                $readingRoundRepository,
+                $privateNoteRepository
+            )
+        );
         $libraryItemCreation = new AddLibraryItemService(
             $authenticatedUser,
             $libraryAccess,
@@ -1080,7 +1101,8 @@ final class ProductionComposition
             $bibliographicEditionSearch,
             $bibliographicDiscovery,
             $bibliographicMaterialization,
-            $migrationParticipants
+            $migrationParticipants,
+            $migrationReconciliation
         );
         $this->lifecycle = new CoreLifecycleCoordinator(
             new CoreSchemaMigrator(

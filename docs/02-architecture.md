@@ -2507,3 +2507,38 @@ derived from migration time. Unknown time or a future distinct `noted_at`
 meaning cannot be represented by this participant without a separate product
 decision. Schema remains 1026; production still has no current V1 adapter or
 apply command and UI remains unchanged.
+
+## 67. MIG-02-RECON-01 reconciliation and restart boundary
+
+RECON-01 compares the immutable RUN-01 inspection with a privacy-safe typed
+MIG-FND snapshot. The query returns run, source identity/hash, disposition,
+reason and mapping state but never raw payload, quarantine, preservation or
+private Note evidence. `MigrationReconciliationService` owns accounting only;
+it cannot mutate or repair ledger or product state.
+
+Injected per-source contracts define required/optional target types and
+classify each mapping as entity or relation. The current target inspector uses
+existing repositories to verify Work, Edition, canonical ISBN claim, exact-
+Library Item/context/details, Author, contributor credit/edge, exact-user
+ReadingRound and exact-user Private Note.
+
+The internal `MigrationApplyRunner` reuses RUN-01 inspection/plans and MIG-FND
+begin/observe/commit/lifecycle services. Stable dependency ordering replaces a
+durable cursor: resume skips exact committed observations and only remaining or
+retryable observations pass the existing atomic boundary. Full reconciliation
+gates the existing completion transition. No new status, schema, reporting
+table, public apply/reconcile CLI or repair path is introduced.
+
+Artifact format 2 adds dry-run planning reconciliation and canonical internal
+apply-reconciliation evidence with source/build/target/run provenance,
+participant/disposition/reason totals, entity/relation counts and acceptance
+flags. Raw payloads and private content remain absent; the writer retains an
+atomic companion SHA-256 outside the source root.
+
+Adapter-owned category strategies bind category counts to source types or an
+explicit stable-reason non-observation count. Mapping rules also own per-target-
+type cardinality. The typed target inspector validates dependency graph edges,
+not just target existence, so reconciliation cannot accept an unrelated Work,
+Edition, Item, contributor, ReadingRound or Private Note that happens to exist.
+The repository-stored run owns reconciliation scope; observation-provenance or
+run/observation mapping-edge drift is counted as unclassified broken state.

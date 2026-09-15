@@ -20,6 +20,7 @@ interface MigrationLedgerRepository
         DateTimeImmutable $at
     ): void;
     public function reconciliation(string $runId): MigrationReconciliation;
+    public function snapshot(string $runId): MigrationLedgerSnapshot;
 
     /** @return list<MigrationTargetMapping> */
     public function priorTargets(

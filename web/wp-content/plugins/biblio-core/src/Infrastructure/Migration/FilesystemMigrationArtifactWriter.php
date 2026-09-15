@@ -52,7 +52,7 @@ final readonly class FilesystemMigrationArtifactWriter
         }
 
         $suffix = substr($artifact->sourceDigest(), 0, 20);
-        if ($artifact->kind() === "dry-run") {
+        if (in_array($artifact->kind(), ["dry-run", "apply-reconciliation"], true)) {
             $target = $artifact->payload()["target"] ?? [];
             $suffix .= "-" . substr(hash("sha256", json_encode($target)), 0, 12);
         }

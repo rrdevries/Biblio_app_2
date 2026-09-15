@@ -4374,3 +4374,39 @@ MIG-02-NOTE-01 is accepted only when:
 Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1026`;
 Biblio Core is `2.32.0`; Biblio UI remains `0.20.0`. Exact evidence is in
 `docs/109-mig-02-note-01-historical-private-note-participant.md`.
+
+## 131. MIG-02-RECON-01 reconciliation and restart evidence
+
+MIG-02-RECON-01 is accepted only when:
+
+- immutable enumeration equals dispositions plus current uncommitted and
+  unexplained state, with unsupported types, unknown categories and findings
+  explicit;
+- committed created/reused mappings come from ledger evidence, required multi-
+  mapping shapes are enforced and entity/relation counts stay separate;
+- preservation/quarantine remain visible by type/reason and do not globally
+  block acceptance merely because they exist;
+- zero-uncommitted, zero-unexplained, zero-unresolved-dependency and zero-
+  broken-target flags are independently enforceable;
+- stored run/observation provenance is authoritative and mismatched/orphaned
+  mapping edges remain visible as unclassified broken state;
+- current Work/Edition/Item/Author/contributor/ReadingRound/Note targets use
+  typed repositories under exact run User/Library scope, enforce mapping
+  cardinality and retain the planned dependency graph;
+- every adapter category has an exact source-type/non-observation strategy;
+  missing/duplicate/mismatched strategy accounting blocks acceptance;
+- reconciliation is read-only and artifacts expose no private Note body, raw
+  evidence or secret;
+- deterministic interruption/resume creates no duplicates and its semantic
+  result equals a clean equivalent run;
+- an identical completed second execution performs zero product writes and
+  creates zero entity/relation targets;
+- changed bytes produce a distinct manifest/run, while changed logical payload
+  retains participant divergent-replay behavior;
+- dry-run stays zero-write and distinguishes planned from applied;
+- schema stays 1026, no current V1 data/count is used, no production apply or
+  repair CLI is added, and focused/full gates plus independent review pass.
+
+Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1026`;
+Biblio Core is `2.33.0`; Biblio UI remains `0.20.0`. Exact evidence is in
+`docs/110-mig-02-recon-01-reconciliation-restart-evidence.md`.

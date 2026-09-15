@@ -337,6 +337,7 @@ final class MigrationRunnerTest extends TestCase
             "synthetic-v1"
         )->payload();
 
+        self::assertSame("profile", $profile["mode"]);
         self::assertSame(["mystery"], $profile["source"]["unknown_categories"]);
         self::assertSame(
             "malformed_record",
@@ -368,6 +369,12 @@ final class MigrationRunnerTest extends TestCase
             true
         )->payload();
 
+        self::assertSame(2, $artifact["migration_artifact_version"]);
+        self::assertFalse($artifact["planning_reconciliation"]["applied"]);
+        self::assertFalse($artifact["planning_reconciliation"]["accepted"]);
+        self::assertSame(6, $artifact["planning_reconciliation"]["source_observations"]);
+        self::assertSame(1, $artifact["planning_reconciliation"]["unsupported_source_type_count"]);
+        self::assertSame(1, $artifact["planning_reconciliation"]["planning_error_count"]);
         self::assertSame(["unknown"], $artifact["plan"]["unsupported_source_types"]);
         self::assertSame(2, $artifact["plan"]["disposition_counts"]["mapped"]);
         self::assertSame(1, $artifact["plan"]["disposition_counts"]["preserved_deferred"]);

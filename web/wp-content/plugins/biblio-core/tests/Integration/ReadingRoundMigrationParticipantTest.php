@@ -164,6 +164,10 @@ final readonly class ReadingRoundFailingOutcomeLedger implements
     {
         return $this->inner->reconciliation($runId);
     }
+    public function snapshot(string $runId): \Biblio\Core\Application\Migration\MigrationLedgerSnapshot
+    {
+        return $this->inner->snapshot($runId);
+    }
     public function priorTargets(
         MigrationRun $run,
         SourceObservation $observation

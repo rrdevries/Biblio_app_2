@@ -189,6 +189,7 @@ final class ProductionApplicationBoundaryTest extends TestCase
             "libraryItemReading",
             "libraryPublicAssessments",
             "migrationParticipants",
+            "migrationReconciliation",
             "myNextReadingList",
             "myPrivateNotes",
             "myWishlist",

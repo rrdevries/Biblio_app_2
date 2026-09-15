@@ -3657,3 +3657,27 @@ text conversion, UI, network call, reconciliation or apply command is added.
 Product remains `v2.001`; schema remains `1026`; Biblio Core is `2.32.0`;
 Biblio UI remains `0.20.0`. Closure evidence:
 `docs/109-mig-02-note-01-historical-private-note-participant.md`.
+
+### MIG-02-RECON-01 — Reconciliation and restart evidence
+
+Biblio Core now reconciles an immutable source inspection against a privacy-
+safe typed MIG-FND ledger snapshot and the current target graph. It accounts
+every enumerated observation, all dispositions, uncommitted/unexplained state,
+participant/type totals, preservation/quarantine/reasons and zero-to-many
+created/reused mappings. Injected contracts distinguish entities from
+relations and require the current CAT/AUTH/READ/NOTE target shapes; typed
+target inspection detects missing, wrongly typed or cross-target mappings
+without repair.
+
+The internal apply coordinator orders records by explicit dependencies,
+invokes participants only inside `CommitMigrationRecordService`, supports
+deterministic interruption and resumes through existing MIG-FND replay.
+Synthetic evidence proves clean-versus-resumed equivalence, an identical
+completed second execution with zero new targets, changed bytes as a distinct
+snapshot/run and broken-target detection. Artifact format 2 adds explicit dry-
+run planning reconciliation and canonical apply-reconciliation JSON/checksum
+without private payloads. No public apply/reconcile CLI, V1 adapter/mapping,
+real source data, schema/UI change, cursor or auto-repair is added. Product
+remains `v2.001`; schema remains `1026`; Biblio Core is `2.33.0`; Biblio UI
+remains `0.20.0`. Closure evidence:
+`docs/110-mig-02-recon-01-reconciliation-restart-evidence.md`.
