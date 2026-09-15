@@ -2472,3 +2472,38 @@ MIG-FND state. Existing history, status, catalog count and reading-sequence
 reads consume imported rounds without a migration-only endpoint. Schema 1026
 changes only the ReadingRound provenance/start-shape checks; UI remains
 unchanged.
+
+## 66. MIG-02-NOTE-01 historical private Note migration boundary
+
+`private_note` owns one stable source Note identity and one typed V2 target
+plan. The plan carries explicit target User, CAT Work source identity, optional
+ReadingRound source identity, canonical `PrivateNoteContent` and explicit
+technical `created_at`/`updated_at` instants. Its canonical payload binds
+content and time for replay, while `PlannedMigrationRecord::toArray()` exposes
+only the allowlisted create/reuse operation and dependency identities.
+
+`PrivateNoteMigrationWriter` is source-neutral and non-transaction-owning. It
+validates the run target and active User, resolves exactly one committed Work
+mapping and, when present, exactly one committed ReadingRound mapping. A mapped
+Round must exist for the target User and exact Work. No title, ISBN, Item,
+Edition, date, order, actor, administrator or Library-role fallback exists.
+
+The writer reuses `StrictPrivateNoteContentPolicy`, `PrivateNote`, the bounded
+opaque-ID creation boundary and `WpdbPrivateNoteRepository`. It does not call
+the ordinary Note service, which resolves an interactive actor, owns a Core
+transaction and injects current time. `CommitMigrationRecordService` remains
+the sole outer transaction owner, so Note and `private_note → private_note`
+mapping/outcome commit or roll back atomically.
+
+Prior reuse requires the same payload hash and complete canonical state:
+owner, Work, nullable Round, content, technical timestamps and initial version.
+Reverse mapping prevents two source Note identities from sharing one target;
+equal content never deduplicates distinct sources. Normal owner-scoped Note
+reads consume migrated rows without a migration-only endpoint.
+
+The Note target has no independent historical business-time field. Both
+existing technical instants are therefore mandatory typed inputs and are never
+derived from migration time. Unknown time or a future distinct `noted_at`
+meaning cannot be represented by this participant without a separate product
+decision. Schema remains 1026; production still has no current V1 adapter or
+apply command and UI remains unchanged.

@@ -3619,3 +3619,41 @@ Truth mapping, provider/network call, UI or apply command is included. Product
 remains `v2.001`; schema is `1026`; Biblio Core is `2.31.0`; Biblio UI remains
 `0.20.0`. Closure evidence:
 `docs/108-mig-02-read-01-concrete-reading-round-participant.md`.
+
+### MIG-02-NOTE-01 — Historical private Note migration participant
+
+Status: **GO / CLOSED**.
+
+The source-neutral `private_note` participant consumes only a reviewed V2 plan
+with stable source Note identity, explicit target User, exact CAT Work source
+reference, optional exact ReadingRound source reference, canonical safe-HTML
+content and explicit technical creation/update instants. It does not interpret
+V1 fields, classify reflections or infer Work, Round, privacy or time.
+
+Apply resolves one committed `catalog_work → work` mapping and, only when
+requested, one committed `reading_round → reading_round` mapping. The Round
+must still belong to the exact target User and Work. Work-only Notes remain
+valid. The ordinary interactive create service is not reused because it owns
+actor, transaction and current-clock behavior; the migration writer instead
+reuses the canonical content policy, aggregate, bounded ID creation and
+owner-/Round-validating repository inside the sole MIG-FND transaction.
+
+Every migrated Note remains user-owned and private. Exact replay requires the
+same payload and complete canonical target state; changed content/time, a
+missing/wrong dependency, cross-owner/cross-Work Round or reverse target reuse
+fails closed. Identical text under distinct source IDs remains distinct. Dry-
+run exposes only the create/reuse operation and dependency identities; Note
+body and timestamps stay out of artifacts and operator output.
+
+The current Note model has only required technical `created_at`/`updated_at`,
+not a nullable or separate historical business instant. The typed participant
+therefore requires both already-approved instants and never substitutes
+`now()` or migration time. A later source mapping that needs unknown time or a
+separate `noted_at` semantic requires a new product decision rather than a
+fallback. No schema change is needed for the accepted contract.
+
+No current V1 adapter/export, source-field mapping, Note-vs-Review decision,
+text conversion, UI, network call, reconciliation or apply command is added.
+Product remains `v2.001`; schema remains `1026`; Biblio Core is `2.32.0`;
+Biblio UI remains `0.20.0`. Closure evidence:
+`docs/109-mig-02-note-01-historical-private-note-participant.md`.

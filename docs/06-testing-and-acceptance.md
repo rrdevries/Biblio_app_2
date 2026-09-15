@@ -4338,3 +4338,39 @@ MIG-02-READ-01 is accepted only when:
 Status: **GO / CLOSED**. Product remains `v2.001`; schema is `1026`; Biblio
 Core is `2.31.0`; Biblio UI remains `0.20.0`. Exact evidence is in
 `docs/108-mig-02-read-01-concrete-reading-round-participant.md`.
+
+## 130. MIG-02-NOTE-01 historical private Note participant
+
+MIG-02-NOTE-01 is accepted only when:
+
+- one stable `private_note` source identity maps to at most one canonical
+  Private Note, while two source IDs with identical content remain distinct;
+- the explicit plan User equals planning/run target User, the exact committed
+  CAT Work mapping is mandatory and no actor/admin/name/title/ISBN fallback
+  exists;
+- an optional ReadingRound dependency resolves through exactly one committed
+  mapping and still matches both target owner and Work; an absent Round remains
+  a valid Work-only Note and no Round is inferred or created;
+- the current strict safe-HTML policy enforces UTF-8, visible text, the 65,535-
+  byte bound and the exact element allowlist without semantic rewriting;
+- explicit approved technical creation/update instants round-trip exactly,
+  invalid order/range fails closed and migration/current time is never used as
+  a historical substitute;
+- all migrated Notes remain owner-only and private, normal owner reads are
+  zero-write and Library/platform roles provide no cross-user access;
+- exact replay reuses one target, while changed payload, divergent canonical
+  state, wrong target type, multiple/reverse mapping and cross-target reuse
+  fail closed;
+- `CommitMigrationRecordService` remains the only transaction owner and
+  injected Note-write, mapping-write and late-outcome failures leave neither
+  an orphan Note nor false mapping;
+- dry-run uses the production participant, is deterministic, changes no Core
+  or MIG-FND table and emits neither Note body nor timestamps; and
+- no current V1 export/fixture authority, V1 parser, source-field mapping,
+  Note-vs-Review classification, provider/network call, schema/UI change,
+  reconciliation or apply command is introduced; focused/full gates and the
+  independent second review are green.
+
+Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1026`;
+Biblio Core is `2.32.0`; Biblio UI remains `0.20.0`. Exact evidence is in
+`docs/109-mig-02-note-01-historical-private-note-participant.md`.
