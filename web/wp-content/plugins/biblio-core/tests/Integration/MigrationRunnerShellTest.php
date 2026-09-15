@@ -9,6 +9,7 @@ use Biblio\Core\Application\Migration\MigrationDisposition;
 use Biblio\Core\Application\Migration\MigrationRecordOutcome;
 use Biblio\Core\Application\Migration\Author\{CatalogAuthorMigrationParticipant,CatalogAuthorPlan,CatalogWorkContributorMigrationParticipant,CatalogWorkContributorPlan};
 use Biblio\Core\Application\Migration\Catalog\{CatalogEditionMigrationParticipant,CatalogEditionPlan,CatalogItemMigrationParticipant,CatalogItemPlan,CatalogWorkMigrationParticipant,CatalogWorkPlan};
+use Biblio\Core\Application\Migration\Notes\{PrivateNoteMigrationParticipant,PrivateNotePlan};
 use Biblio\Core\Application\Migration\Reading\{ReadingRoundMigrationParticipant,ReadingRoundPlan};
 use Biblio\Core\Application\Migration\Runner\MigrationBuildProvenance;
 use Biblio\Core\Application\Migration\Runner\MigrationEnvironment;
@@ -32,7 +33,9 @@ use Biblio\Core\Infrastructure\WordPress\Cli\MigrationCommand;
 use Biblio\Core\Infrastructure\WordPress\Cli\MigrationCommandOutput;
 use Biblio\Core\Infrastructure\WordPress\ProductionComposition;
 use Biblio\Core\Library\LibraryId;
+use Biblio\Core\Notes\StrictPrivateNoteContentPolicy;
 use Biblio\Core\Reading\{ReadingDate,ReadingPeriod,ReadingRoundOutcome};
+use DateTimeImmutable;
 use RuntimeException;
 
 final readonly class RunnerShellSourceAdapter implements MigrationSourceAdapter
@@ -213,6 +216,50 @@ final readonly class RunnerShellReadingAdapter implements MigrationSourceAdapter
     }
 }
 
+final readonly class RunnerShellPrivateNoteAdapter implements MigrationSourceAdapter
+{
+    public function __construct(private UserId $userId)
+    {
+    }
+
+    public function adapterId(): string { return "synthetic-private-note"; }
+    public function sourceFamily(): string { return "synthetic"; }
+
+    public function profile(MigrationSourcePackage $package): MigrationSourceProfile
+    {
+        unset($package);
+        return new MigrationSourceProfile("private-note-test-1", [
+            PrivateNoteMigrationParticipant::SOURCE_TYPE => 1,
+        ]);
+    }
+
+    public function supportsVersion(string $sourceVersion): bool
+    {
+        return $sourceVersion === "private-note-test-1";
+    }
+
+    public function records(
+        MigrationSourcePackage $package,
+        MigrationSourceProfile $profile
+    ): iterable {
+        unset($package, $profile);
+        yield MigrationSourceRecord::typed(
+            PrivateNoteMigrationParticipant::SOURCE_TYPE,
+            "note/dry-run",
+            new PrivateNotePlan(
+                $this->userId,
+                "work/dry-run",
+                (new StrictPrivateNoteContentPolicy())->sanitize(
+                    "<p>private-note-body-must-not-appear</p>"
+                ),
+                new DateTimeImmutable("2001-02-03T04:05:06.123456+00:00"),
+                new DateTimeImmutable("2002-03-04T05:06:07.654321+00:00"),
+                "round/dry-run"
+            )
+        );
+    }
+}
+
 final readonly class RunnerShellEnvironment implements MigrationEnvironment
 {
     public function assertHealthy(): void
@@ -224,7 +271,7 @@ final readonly class RunnerShellEnvironment implements MigrationEnvironment
         return new MigrationBuildProvenance(
             "v2.001",
             1026,
-            "2.31.0",
+            "2.32.0",
             str_repeat("b", 40),
             false
         );
@@ -505,6 +552,79 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
         self::assertStringNotContainsString('"outcome"', $firstArtifact);
         self::assertSame(0, $this->allCoreTableCounts()[
             $this->tableNames->personalReadingTruths()
+        ]);
+    }
+
+    public function testPrivateNoteParticipantDryRunIsDeterministicPrivateAndZeroWrite(): void
+    {
+        $userId = wp_create_user(
+            "runner-private-note-user",
+            "synthetic-test-password",
+            "runner-private-note@example.invalid"
+        );
+        self::assertIsInt($userId);
+        $this->createdUsers[] = $userId;
+        $application = (new ProductionComposition($this->database))->application();
+        $user = new UserId((string) $userId);
+        $target = $application->personalMigrationTargets()->bootstrap($user);
+        $adapter = new RunnerShellPrivateNoteAdapter($user);
+        $source = $this->source("private-note-test-1");
+        $outputDirectory = $this->directory();
+        $output = new RecordingMigrationCommandOutput();
+        $command = new MigrationCommand(
+            static fn (): CoreApplication => $application,
+            dirname(__DIR__, 2) . "/biblio-core.php",
+            static fn (CoreApplication $core): MigrationRunner => new MigrationRunner(
+                new FilesystemMigrationSourcePackageFactory(),
+                new MigrationSourceAdapterRegistry([$adapter]),
+                $core->migrationParticipants(),
+                $core->personalMigrationTargets(),
+                new RunnerShellEnvironment()
+            ),
+            $output
+        );
+
+        $before = $this->allCoreTableCounts();
+        $arguments = [
+            "source-root" => $source,
+            "source-adapter" => "synthetic-private-note",
+            "target-user-id" => (string) $userId,
+            "target-library-id" => $target->libraryId()->value(),
+            "require-empty" => true,
+            "output-dir" => $outputDirectory,
+        ];
+        $command->dry_run([], $arguments);
+        $first = json_decode($output->lines[0], true, 16, JSON_THROW_ON_ERROR);
+        $command->dry_run([], $arguments);
+        $second = json_decode($output->lines[1], true, 16, JSON_THROW_ON_ERROR);
+        self::assertSame($before, $this->allCoreTableCounts());
+
+        $firstArtifact = (string) file_get_contents($first["artifact_path"]);
+        $secondArtifact = (string) file_get_contents($second["artifact_path"]);
+        self::assertSame($firstArtifact, $secondArtifact);
+        $artifact = json_decode($firstArtifact, true, 32, JSON_THROW_ON_ERROR);
+        self::assertTrue($artifact["zero_write_confirmed"]);
+        self::assertSame([[
+            "operation" => "create_or_reuse_private_note",
+        ]], $artifact["plan"]["records"][0]["operations"]);
+        self::assertSame([
+            [
+                "source_id" => "work/dry-run",
+                "source_type" => "catalog_work",
+            ],
+            [
+                "source_id" => "round/dry-run",
+                "source_type" => "reading_round",
+            ],
+        ], $artifact["plan"]["records"][0]["dependencies"]);
+        self::assertStringNotContainsString(
+            "private-note-body-must-not-appear",
+            $firstArtifact
+        );
+        self::assertStringNotContainsString('"content"', $firstArtifact);
+        self::assertStringNotContainsString('"created_at"', $firstArtifact);
+        self::assertSame(0, $this->allCoreTableCounts()[
+            $this->tableNames->privateNotes()
         ]);
     }
 
