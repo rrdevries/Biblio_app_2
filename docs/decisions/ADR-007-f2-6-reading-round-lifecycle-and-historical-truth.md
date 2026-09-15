@@ -46,13 +46,15 @@ No-op en stale-no-op verhogen niet.
 
 ### 2. Provenance en bron
 
-`ReadingRoundProvenance` heeft precies drie waarden:
+`ReadingRoundProvenance` heeft precies vier waarden:
 
 - `legacy_source_started`: vóór schema 1003 via een bestaande source-startflow
   aangemaakt;
 - `source_started`: vanaf schema 1003 via een normale source-startflow
   aangemaakt;
 - `historical_manual`: handmatig als afgesloten historie geregistreerd.
+- `migration_imported`: door een gecontroleerde migratie/import als concrete
+  ronde in Biblio aangebracht, niet handmatig door de gebruiker geregistreerd.
 
 Een `legacy_source_started` of `source_started` ronde begint met exact één
 Item- of ExternalLoan-bron. Work is bij creatie uit die geautoriseerde bron
@@ -367,7 +369,7 @@ Het exacte nieuwe/gewijzigde kolomcontract is:
 |---|---|---:|---|
 | `started_at` | `DATETIME(6)` | ja | ongewijzigde legacy content instant, uitsluitend legacy provenance |
 | `round_outcome` | `VARCHAR(16)` | ja | null active; `completed` of `stopped` ended |
-| `provenance` | `VARCHAR(32)` | nee | een van de drie waarden uit §2 |
+| `provenance` | `VARCHAR(32)` | nee | een van de vier waarden uit §2 |
 | `reading_started_year` | `SMALLINT UNSIGNED` | ja | bekend inhoudelijk startjaar |
 | `reading_started_month` | `TINYINT UNSIGNED` | ja | bekende startmaand |
 | `reading_started_day` | `TINYINT UNSIGNED` | ja | bekende startdag |
@@ -424,7 +426,7 @@ Alle bestaande rijen worden zonder inhoudelijke herinterpretatie:
 Databasechecks borgen minimaal:
 
 - outcome is null, `completed` of `stopped`;
-- provenance is een van de drie waarden;
+- provenance is een van de vier waarden;
 - `legacy_source_started` heeft een legacy `started_at`, geen nieuwe
   startcomponenten en mag active of ended zijn;
 - `source_started` heeft geen legacy `started_at`, een volledige exacte
@@ -667,3 +669,24 @@ Minimale unit- en real-MariaDB-dekking:
 - ID's door REST/UI laten aanleveren of een generieke ID-engine bouwen;
 - Library ActivityEvents of een nieuwe generieke private audit-engine voor
   ReadingRound.
+
+## 15. Amendment — gecontroleerde migratieprovenance
+
+Per 2026-09-15 voegt schema 1026 de immutable provenance
+`migration_imported` toe. Deze waarde is uitsluitend herkomstbewijs en voegt
+geen lifecycle, outcome of bronstatus toe. Een geïmporteerde ronde moet reeds
+als geldig V2-plan zijn aangeleverd: active vereist een expliciete concrete
+bron en exacte startdag; ended vereist `completed|stopped` en een inhoudelijke
+finishdatum, met uitsluitend werkelijk bekende start-/finishprecisie.
+
+`migration_imported` is een normale concrete ronde in Reading History. Zij
+wordt niet als `Historische registratie` gepresenteerd, telt niet mee in
+`historical_completed_rounds` en krijgt niet de speciale hard-deletebevoegdheid
+van `historical_manual`. Een completed geïmporteerde ronde neemt wel normaal
+deel aan completed-status en first-read/reread-chronologie.
+
+Schema 1026 wijzigt alleen de named provenance- en start-shape-CHECKs van de
+bestaande ReadingRound-tabel; er komt geen migratie-only tabel of kolom. De
+bestaande drie provenances behouden exact hun betekenis. Dit amendment beslist
+geen V1 status-, datum-, bron- of Personal Reading Truth-mapping en autoriseert
+geen algemene verwijderfunctie voor geïmporteerde historie.

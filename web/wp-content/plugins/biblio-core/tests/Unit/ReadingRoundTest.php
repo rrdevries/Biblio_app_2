@@ -12,6 +12,9 @@ use Biblio\Core\Reading\ReadingRound;
 use Biblio\Core\Reading\ReadingRoundId;
 use Biblio\Core\Reading\ReadingDate;
 use Biblio\Core\Reading\ReadingRoundLifecycle;
+use Biblio\Core\Reading\ReadingRoundOutcome;
+use Biblio\Core\Reading\ReadingRoundProvenance;
+use Biblio\Core\Reading\ReadingPeriod;
 use Biblio\Core\Reading\ReadingSource;
 use DateTimeImmutable;
 use InvalidArgumentException;
@@ -70,6 +73,73 @@ final class ReadingRoundTest extends TestCase
             ReadingSource::libraryItem(new ItemId("item-a")),
             ReadingDate::exact(1000, 1, 1),
             new DateTimeImmutable("1000-01-01T00:00:00+02:00")
+        );
+    }
+
+    public function testMigrationImportedEndedRoundPreservesTypedStateAndPrecision(): void
+    {
+        $round = ReadingRound::migrationImported(
+            new ReadingRoundId("round-imported"),
+            new UserId("user-x"),
+            new WorkId("work-w"),
+            null,
+            ReadingRoundOutcome::Stopped,
+            ReadingPeriod::ended(
+                ReadingDate::year(2021),
+                ReadingDate::month(2022, 7)
+            ),
+            new DateTimeImmutable("2026-09-15T10:00:00+00:00")
+        );
+
+        self::assertSame(ReadingRoundLifecycle::Ended, $round->lifecycle());
+        self::assertSame(ReadingRoundOutcome::Stopped, $round->outcome());
+        self::assertSame(
+            ReadingRoundProvenance::MigrationImported,
+            $round->provenance()
+        );
+        self::assertSame(2021, $round->period()->startedOn()?->yearValue());
+        self::assertNull($round->period()->startedOn()?->monthValue());
+        self::assertSame(7, $round->period()->finishedOn()?->monthValue());
+        self::assertNull($round->period()->finishedOn()?->dayValue());
+    }
+
+    public function testMigrationImportedActiveRoundRequiresConcreteSource(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        ReadingRound::migrationImported(
+            new ReadingRoundId("round-imported"),
+            new UserId("user-x"),
+            new WorkId("work-w"),
+            null,
+            null,
+            ReadingPeriod::active(ReadingDate::exact(2026, 9, 15)),
+            new DateTimeImmutable("2026-09-15T10:00:00+00:00")
+        );
+    }
+
+    public function testImportedActiveRoundKeepsExistingExplicitUnknownSourceCorrection(): void
+    {
+        $createdAt = new DateTimeImmutable("2026-09-15T10:00:00+00:00");
+        $round = ReadingRound::migrationImported(
+            new ReadingRoundId("round-imported"),
+            new UserId("user-x"),
+            new WorkId("work-w"),
+            ReadingSource::libraryItem(new ItemId("item-a")),
+            null,
+            ReadingPeriod::active(ReadingDate::exact(2026, 9, 15)),
+            $createdAt
+        );
+
+        $corrected = $round->correctSource(
+            null,
+            $createdAt->modify("+1 second")
+        );
+
+        self::assertNull($corrected->source());
+        self::assertSame(
+            ReadingRoundProvenance::MigrationImported,
+            $corrected->provenance()
         );
     }
 }

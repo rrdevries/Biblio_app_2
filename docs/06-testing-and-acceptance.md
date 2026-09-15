@@ -4305,3 +4305,36 @@ MIG-02-AUTH-01 is accepted only when:
 Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1025`;
 Biblio Core is `2.30.0`; Biblio UI remains `0.20.0`. Exact evidence is in
 `docs/107-mig-02-auth-01-canonical-author-participant.md`.
+
+## 129. MIG-02-READ-01 concrete ReadingRound participant
+
+MIG-02-READ-01 is accepted only when:
+
+- `migration_imported` is an immutable provenance only and schema 1026 accepts
+  exactly the approved active/ended shapes without changing lifecycle/outcome;
+- active requires an explicit mapped Item plus exact start day, while ended
+  requires typed `completed|stopped` plus a finish date and preserves all
+  supplied year/month/day precision without fabrication;
+- every source-round identity creates at most one target, rereads and equal
+  dates remain distinct, exact replay converges and changed/divergent mappings
+  fail closed;
+- explicit target User and exact CAT Work mapping are mandatory, optional Item
+  mapping is exact to target Library and Work, and no actor/admin/name/title/
+  ISBN/provider fallback exists;
+- the shared user×Work lock and sole MIG-FND transaction make round plus mapping
+  atomic, including separately injected round-write, mapping-write and late-
+  outcome rollback;
+- simultaneous exact replay converges to one round, while two distinct source
+  rounds for the same user×Work serialize through one lock row and remain two
+  rounds;
+- owner history reads are zero-write and private, completed imported rounds use
+  normal chronology, while manual-history label/count/delete remain false;
+- no Personal Reading Truth is created, dry-run is deterministic/payload-free
+  and changes no Core or MIG-FND table; and
+- no current V1 export, parser, status/date mapping, paused state, UI, network,
+  assessment/note participant or apply command is introduced; focused and full
+  gates plus independent review are green.
+
+Status: **GO / CLOSED**. Product remains `v2.001`; schema is `1026`; Biblio
+Core is `2.31.0`; Biblio UI remains `0.20.0`. Exact evidence is in
+`docs/108-mig-02-read-01-concrete-reading-round-participant.md`.

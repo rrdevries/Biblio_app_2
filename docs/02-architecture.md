@@ -2447,3 +2447,28 @@ cannot duplicate or detach provenance from the product graph. Participant
 conflicts throw through `CommitMigrationRecordService`, which remains the sole
 transaction owner. Production registers both participants but no V1 adapter
 or apply command. Schema remains 1025.
+
+## 65. MIG-02-READ-01 concrete ReadingRound migration boundary
+
+`reading_round` owns one stable source-round identity and one typed V2 target
+plan. The plan carries explicit target User, CAT Work source reference,
+nullable canonical outcome, precision-preserving ReadingPeriod and only when
+explicit an Item source reference. Active therefore declares both
+`catalog_work` and `catalog_item`; source-free ended declares only
+`catalog_work`. No Edition, Author or implicit Item dependency is added.
+
+`ReadingRoundMigrationWriter` is source-neutral and non-transaction-owning. It
+validates the run target User, active platform user, exact committed mappings,
+Item target Library and Item→Edition→Work consistency, then takes the shared
+user×Work mutation lock. Prior `reading_round` mappings are reusable only when
+payload and complete canonical target state remain exact and the target is not
+shared by another source-round identity. New rows use the normal bounded ID
+creation path and immutable `migration_imported` provenance.
+
+`CommitMigrationRecordService` remains the sole outer transaction owner, so
+round and mapping/outcome roll back together. Dry-run calls the same typed
+plan, exposes only allowlisted operations/dependencies and writes no Core or
+MIG-FND state. Existing history, status, catalog count and reading-sequence
+reads consume imported rounds without a migration-only endpoint. Schema 1026
+changes only the ReadingRound provenance/start-shape checks; UI remains
+unchanged.

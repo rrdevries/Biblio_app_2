@@ -1251,6 +1251,16 @@ outcome or content reading period. This is the same ReadingRound, not a new
 round. User, Work and normal-vs-historical provenance remain unchanged; this
 correction does not implicitly change the source.
 
+A concrete round created by a controlled migration has immutable provenance
+`migration_imported`. This is provenance only: active, completed and stopped
+retain their existing meanings and no paused state exists. The migration plan
+must already satisfy every ordinary ReadingRound invariant and preserve only
+known date precision. Imported rounds appear as ordinary concrete Reading
+History, are not labelled as a manual historical registration, do not count in
+manual-only `historical_completed_rounds`, and are not eligible for the
+`historical_manual` hard-delete route. Completed imported rounds participate in
+the normal first-read/reread chronology.
+
 ## Personal Work status
 
 Derived for current user:

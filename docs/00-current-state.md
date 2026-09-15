@@ -3594,3 +3594,28 @@ included. Existing local Search consumes the resulting graph read-only.
 Product remains `v2.001`; schema remains `1025`; Biblio Core is `2.30.0` and
 Biblio UI remains `0.20.0`. Closure evidence:
 `docs/107-mig-02-auth-01-canonical-author-participant.md`.
+
+### MIG-02-READ-01 — Concrete ReadingRound migration participant
+
+Status: **GO / CLOSED**.
+
+The source-neutral `reading_round` participant consumes only an already
+reviewed V2 plan with stable source-round identity, explicit target user,
+exact committed CAT Work mapping, typed active/completed/stopped meaning and
+precision-preserving ReadingPeriod. Active additionally requires an explicit
+CAT Item dependency for the same target Library and Work; ended rounds may be
+source-free. No status, date, Work, source or ownership is inferred.
+
+Schema 1026 adds immutable `migration_imported` provenance. It is normal
+concrete reading history, not `historical_manual`: no manual-history label or
+count and no manual-history hard delete. Completed imported rounds use the
+ordinary first-read/reread rules. Apply joins the sole MIG-FND transaction,
+uses the shared user×Work lock and maps each source round independently; exact
+replay reuses while changed/divergent replay fails closed. Dry-run is
+deterministic and zero-write, and normal owner-scoped reads consume the result.
+
+No current V1 adapter/export, raw field/status/date mapping, Personal Reading
+Truth mapping, provider/network call, UI or apply command is included. Product
+remains `v2.001`; schema is `1026`; Biblio Core is `2.31.0`; Biblio UI remains
+`0.20.0`. Closure evidence:
+`docs/108-mig-02-read-01-concrete-reading-round-participant.md`.

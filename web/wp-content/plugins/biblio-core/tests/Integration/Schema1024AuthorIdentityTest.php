@@ -18,7 +18,7 @@ final class Schema1024AuthorIdentityTest extends PersistenceIntegrationTestCase
         $health = $this->migrator()->healthForVersion(1024);
 
         self::assertTrue($health->isHealthy(), $health->summary());
-        self::assertSame(1025, $this->migrator()->installedVersion());
+        self::assertSame(1026, $this->migrator()->installedVersion());
         self::assertSame(
             ["display_name", "identity_status", "display_name_status", "author_version"],
             $this->columnsAfter($this->tableNames->authors(), "author_id")
@@ -78,7 +78,7 @@ final class Schema1024AuthorIdentityTest extends PersistenceIntegrationTestCase
 
         $this->migrator()->migrate();
 
-        self::assertSame(1025, $this->migrator()->installedVersion());
+        self::assertSame(1026, $this->migrator()->installedVersion());
         $author = $this->database->get_row(
             "SELECT * FROM `{$this->tableNames->authors()}` "
                 . "WHERE author_id='preserved-author'"

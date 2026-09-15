@@ -9,4 +9,5 @@ enum ReadingRoundProvenance: string
     case LegacySourceStarted = "legacy_source_started";
     case SourceStarted = "source_started";
     case HistoricalManual = "historical_manual";
+    case MigrationImported = "migration_imported";
 }
