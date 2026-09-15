@@ -4490,3 +4490,48 @@ Status: **PROFILE GO — MAPPING/DESIGN SLICES REQUIRED**. Product remains
 `v2.001`; schema remains `1026`; Biblio Core is `2.34.0`; Biblio UI remains
 `0.20.0`. Exact evidence is in
 `docs/112-mig-02-source-01-current-v1-source-intake-profile.md`.
+
+## 134. D-MIG-LOAN-01 CURRENT V1 circulation cutover
+
+D-MIG-LOAN-01 is accepted when:
+
+- Option D, deferred circulation promotion, is the chosen CURRENT rehearsal
+  contract and no A/B/C operational or settlement behavior is inferred;
+- only the exact SOURCE-01 snapshot is used and the immutable CURRENT source
+  and read-only extraction remain unchanged;
+- all nine stable circulation IDs are enumerated exactly once while both Book-
+  and Copy-level representations remain losslessly available where present;
+- the eight unambiguously open IDs are `preserved_deferred` and remain
+  explicitly open in evidence rather than returned, completed or historically
+  closed;
+- the one contradictory Book-open/Copy-closed ID is `quarantined`, retains
+  both representations and receives no invented precedence;
+- stable source ID, raw `borrowed`/`lent_out` type, open/closed source state,
+  start/end value and precision, Book/Copy references, private free-text
+  counterparty, source hashes/provenance and conflict evidence are retained
+  where present;
+- private counterparties and notes are absent from docs and ordinary
+  profile/dry-run/reconciliation output, and no name is treated as a User,
+  Member, Renée or hidden account;
+- reconciliation proves `8 preserved_deferred + 1 quarantined = 9`, zero
+  unexplained drop and zero operational ExternalLoan/InternalLoan records;
+- preservation does not grant product ownership, change Item availability,
+  activate an archive guard or present itself as user-visible/actionable loan
+  state;
+- circulation accounting does not block the CURRENT rehearsal once a
+  separately authorized preservation/quarantine participant proves these
+  dispositions;
+- future promotion uses the same source identity and the then-approved V2 loan
+  model, is replay-safe/auditable, retains the original evidence, makes no
+  identity assumption and has its own tests/reconciliation;
+- a fresh explicitly designated final V1 export is profiled before production
+  cutover, and remaining operationally open circulation without a usable V2
+  loan model blocks cutover for a separate explicit transition decision rather
+  than being artificially closed; and
+- no circulation implementation, product/schema/Core/REST/UI change, import,
+  apply or source mutation is included in this design slice.
+
+Status: **DESIGN GO — OPTION D: DEFERRED CIRCULATION PROMOTION**. Product
+remains `v2.001`; schema remains `1026`; Biblio Core remains `2.34.0`; Biblio
+UI remains `0.20.0`. Exact contract and evidence are in
+`docs/113-d-mig-loan-01-current-v1-circulation-cutover.md`.

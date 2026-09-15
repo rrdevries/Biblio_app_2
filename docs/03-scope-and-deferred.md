@@ -71,8 +71,8 @@ Only these release classes are used:
 | Active Leesdoelen feature/UI | V2.001 primary scope | V2.002+ | Goal management is not required for first daily replacement | No active release journey or UI required |
 | Existing V1 goal data | Implicitly active feature data | PRESERVE DATA ONLY | Historical/personal goal data may not disappear | MIG-01 chooses mapped, preserved/deferred or quarantined; never silent discard |
 | Full internal/external lending module | V2.001 primary scope | V2.002+ | Full lending is larger than first replacement needs | Inventory all circulation data and preserve lifecycle/history |
-| Minimal support for migrated circulation state | Not separately bounded | V2.001 MINIMUM IF MIGRATION REQUIRES | Open V1 loans may need limited settlement support at cutover | MIG-01 proves the smallest safe lifecycle; no general lending UI follows automatically |
-| Exact treatment of active/open V1 loans at cutover | Not yet decided | DECISION REQUIRED | The source facts and necessary settlement semantics are not yet known | Decide only after MIG-01 inventories open loans and presents concrete options |
+| CURRENT rehearsal circulation | Previously not separately bounded | PRESERVE DATA ONLY | D-MIG-LOAN-01 chooses deferred circulation promotion rather than a temporary V2.001 loan model | Preserve eight unambiguously open IDs as explicitly open `PRESERVED_DEFERRED`, quarantine the one Book/Copy end-state conflict and create zero product loans |
+| Final production-cutover circulation | Previously one combined open-loan decision | DECISION REQUIRED | CURRENT rehearsal disposition does not prove a later production cutover operationally safe; the decision is conditional on fresh final-export evidence | Re-profile a fresh explicitly designated final export; if open circulation remains without a usable V2 loan model, stop for a separate transition decision rather than artificially closing source records |
 | Biblio-owned cover acquisition/management | Part of broad V2.001 Metadata Hub target | V2.002+ | Truthful no-cover treatment is sufficient for V2.001 | Inventory V1 cover URLs/assets and preserve them without promising active management |
 | Existing V1 cover information/assets without active cover management | Implicitly active cover target | PRESERVE DATA ONLY | Deferral may not silently lose assets or references | MIG-01 records source, ownership/licensing where known, storage and recovery path |
 | Full Librarian queue, correction UI and merge tooling | Lightweight correction proposal in primary scope; rich queue deferred | V2.002+ | Data integrity/provenance can remain without a half-finished management UI | Preserve implemented provenance/foundation and provisional records |
@@ -83,9 +83,10 @@ Only these release classes are used:
 | Bookshelf, extra Author/Series/Location/Collection option routes, social features, general import/export UI and Atmosphere Packs | Deferred or deferred-within-V2.001 | V2.002+ | None is required for the reliable first cutover | Do not fabricate controls; preserve any relevant V1 data independently |
 | Institutional loan/reservation/fine systems and selectable Uitleenbibliotheek | Explicitly deferred | V2.002+ | V2.001 supports only Privébibliotheek and daily V1 replacement | Preserve source evidence if MIG-01 encounters it; do not reinterpret it as supported runtime behavior |
 
-No `DECISION REQUIRED` item above blocks D-SCOPE-01 itself. MIG-01 must first
-establish the relevant source facts; Renée remains the owner of any resulting
-product choice.
+Option D closes CURRENT rehearsal circulation handling without adding a loan
+product. It does not pre-approve the final production cutover: Renée remains
+the owner of a later transition decision if a fresh final export still
+contains operationally open circulation without a usable V2 loan model.
 
 ## 4. V2.001 primary journeys
 
