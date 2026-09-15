@@ -3570,3 +3570,27 @@ Series, provider/network operation, source mapping, schema or UI is included.
 Product remains `v2.001`; schema remains `1025`; Biblio Core is `2.29.0` and
 Biblio UI remains `0.20.0`. Closure evidence:
 `docs/106-mig-02-cat-01-work-edition-item-participant.md`.
+
+### MIG-02-AUTH-01 — Canonical Author migration participants
+
+Status: **GO / CLOSED**.
+
+Two source-neutral typed participants now keep stable source Author identity
+separate from one Work-contributor occurrence. `catalog_author` creates or
+reuses exactly one canonical provisional/observed Author from its MIG-FND
+mapping and never searches by display name. `catalog_work_contributor`
+requires exact committed Author and CAT Work mappings, preserves the supplied
+`author|co_author` role and positive position, and writes canonical migration
+credit/evidence plus the WorkContributor edge in the outer MIG-FND
+transaction.
+
+Exact replay reuses Author, credit and edge; cross-run replay uses the prior
+occurrence mapping rather than manufacturing a new observation-scoped credit.
+Changed payload, missing dependency, occupied position, repeated Author on one
+Work or divergent canonical state fails closed and rolls back. Evidence uses
+the truthful existing `migration` source kind. No provider claim, network
+request, name/title inference, current V1 adapter/export, schema or UI is
+included. Existing local Search consumes the resulting graph read-only.
+Product remains `v2.001`; schema remains `1025`; Biblio Core is `2.30.0` and
+Biblio UI remains `0.20.0`. Closure evidence:
+`docs/107-mig-02-auth-01-canonical-author-participant.md`.

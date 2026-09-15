@@ -36,6 +36,33 @@ final readonly class WpdbAuthorContributorCreditRepository implements
     ) {
     }
 
+    public function find(
+        AuthorContributorCreditId $creditId
+    ): ?AuthorContributorCredit {
+        $row = $this->database->get_row($this->database->prepare(
+            "SELECT credit_id,credit_key,work_id,contributor_role,"
+                . "contributor_position,observed_display_name,"
+                . "normalized_name_hash,author_id,materialization_status,"
+                . "review_reason,created_at,updated_at,credit_version "
+                . "FROM `{$this->tables->authorContributorCredits()}` "
+                . "WHERE credit_id=%s",
+            $creditId->value()
+        ));
+        if ($row === null) {
+            return null;
+        }
+        try {
+            return $this->hydrateCredit($row);
+        } catch (Throwable $exception) {
+            throw new PersistenceException(
+                "Stored Author contributor credit is invalid.",
+                0,
+                $exception,
+                FailureReason::PersistenceReadFailed
+            );
+        }
+    }
+
     public function findByKey(
         AuthorContributorCreditKey $key
     ): ?AuthorContributorCredit {

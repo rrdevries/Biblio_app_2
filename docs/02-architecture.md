@@ -2421,3 +2421,29 @@ mapping edges for later reconciliation.
 Production registers CAT participants but no current V1 adapter and no apply
 command. The CAT dependency graph contains no provider, HTTP client or
 materializer. Schema remains 1025.
+
+## 64. MIG-02-AUTH-01 Author migration boundary
+
+Author migration owns two logical source identities. `catalog_author` maps a
+stable source person identity to one canonical Author. A new target is always
+provisional/observed; an exact approved target or prior mapping may be reused,
+but display-name equality never selects identity. `catalog_work_contributor`
+maps one source occurrence separately and declares exact `catalog_author` and
+`catalog_work` dependencies.
+
+`AuthorMigrationWriter` is non-transaction-owning and resolves every mapping
+through MIG-FND's exact target user+Library and source-family scope. It rejects
+changed payload and divergent/multiple mappings before reuse. The shared
+`CanonicalAuthorMaterializer` has a narrow migration route that links a
+reviewed exact Author to the existing migration credit/evidence and ordered
+WorkContributor contracts. It never creates/promotes the Author or accesses
+provider claims.
+
+First occurrence apply uses the MIG-FND observation ID as the canonical
+migration credit source identity. Later-run exact replay first validates the
+prior occurrence-to-credit and deterministic occurrence-to-edge mappings plus
+the original observation-scoped migration evidence, so the new run observation
+cannot duplicate or detach provenance from the product graph. Participant
+conflicts throw through `CommitMigrationRecordService`, which remains the sole
+transaction owner. Production registers both participants but no V1 adapter
+or apply command. Schema remains 1025.

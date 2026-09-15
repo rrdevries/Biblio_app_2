@@ -8,6 +8,7 @@ final readonly class MigrationTraceEntry
 {
     public function __construct(
         private string $runId,
+        private string $observationId,
         private string $sourceFamily,
         private string $sourceType,
         private string $sourceId,
@@ -20,6 +21,7 @@ final readonly class MigrationTraceEntry
     }
 
     public function runId(): string { return $this->runId; }
+    public function observationId(): string { return $this->observationId; }
     public function sourceFamily(): string { return $this->sourceFamily; }
     public function sourceType(): string { return $this->sourceType; }
     public function sourceId(): string { return $this->sourceId; }

@@ -4268,3 +4268,40 @@ MIG-02-CAT-01 is accepted only when:
 Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1025`;
 Biblio Core is `2.29.0`; Biblio UI remains `0.20.0`. Exact evidence is in
 `docs/106-mig-02-cat-01-work-edition-item-participant.md`.
+
+## 128. MIG-02-AUTH-01 canonical Author migration participants
+
+MIG-02-AUTH-01 is accepted only when:
+
+- separate `catalog_author` and `catalog_work_contributor` typed participants
+  preserve stable Author identity independently from Work occurrences;
+- new migration Authors are provisional/observed, while exact prior or
+  explicitly approved Author IDs may be reused without rewriting canonical
+  presentation;
+- equal names, normalized variants and pre-existing Search results never cause
+  identity reuse, merge, promotion or claim reassignment;
+- contributor apply requires exact committed `catalog_author` and
+  `catalog_work` mappings, preserves only supplied `author|co_author` and the
+  positive position, and never derives role/order;
+- credit/evidence use the existing truthful `migration` shape, no raw payload,
+  and no provider claim/network dependency;
+- one Author can link to multiple Works through separate credits/edges, while
+  an occupied position or duplicate Author on one Work fails closed without
+  changing unrelated contributors;
+- author, credit and deterministic edge mappings report created/reused
+  separately, exact replay produces no duplicate graph and changed payload or
+  unexpected target type, missing migration evidence or divergent prior state
+  fails closed;
+- `CommitMigrationRecordService` remains the sole transaction owner and
+  injected Author, credit, evidence, edge and late outcome failures roll back
+  the complete current observation;
+- local Author Search and Author-to-Works consume the committed graph without
+  a write, and production RUN-01 dry-run emits deterministic payload-free
+  Author plans with explicit dependencies and zero Core/MIG-FND writes;
+- production still has no current V1 adapter or apply command, schema remains
+  1025, all focused/full quality gates pass and independent review reports no
+  blocker.
+
+Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1025`;
+Biblio Core is `2.30.0`; Biblio UI remains `0.20.0`. Exact evidence is in
+`docs/107-mig-02-auth-01-canonical-author-participant.md`.

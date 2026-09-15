@@ -7,6 +7,7 @@ namespace Biblio\Core\Tests\Integration;
 use Biblio\Core\Application\CoreApplication;
 use Biblio\Core\Application\Migration\MigrationDisposition;
 use Biblio\Core\Application\Migration\MigrationRecordOutcome;
+use Biblio\Core\Application\Migration\Author\{CatalogAuthorMigrationParticipant,CatalogAuthorPlan,CatalogWorkContributorMigrationParticipant,CatalogWorkContributorPlan};
 use Biblio\Core\Application\Migration\Catalog\{CatalogEditionMigrationParticipant,CatalogEditionPlan,CatalogItemMigrationParticipant,CatalogItemPlan,CatalogWorkMigrationParticipant,CatalogWorkPlan};
 use Biblio\Core\Application\Migration\Runner\MigrationBuildProvenance;
 use Biblio\Core\Application\Migration\Runner\MigrationEnvironment;
@@ -23,6 +24,7 @@ use Biblio\Core\Application\Migration\Runner\PlannedMigrationRecord;
 use Biblio\Core\Application\Migration\SourceObservation;
 use Biblio\Core\Catalog\Classification\{LibraryBookTypeId,LibraryCatalogSelection};
 use Biblio\Core\Catalog\EditionIsbnMetadata;
+use Biblio\Core\Catalog\{ContributorPosition,ContributorRole};
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Migration\FilesystemMigrationSourcePackageFactory;
 use Biblio\Core\Infrastructure\WordPress\Cli\MigrationCommand;
@@ -106,7 +108,9 @@ final readonly class RunnerShellCatalogAdapter implements MigrationSourceAdapter
     {
         $payload = json_decode($package->read("source.json"), true, 16, JSON_THROW_ON_ERROR);
         return new MigrationSourceProfile((string) ($payload["version"] ?? "unknown"), [
+            CatalogAuthorMigrationParticipant::SOURCE_TYPE => 1,
             CatalogWorkMigrationParticipant::SOURCE_TYPE => 1,
+            CatalogWorkContributorMigrationParticipant::SOURCE_TYPE => 1,
             CatalogEditionMigrationParticipant::SOURCE_TYPE => 1,
             CatalogItemMigrationParticipant::SOURCE_TYPE => 1,
         ]);
@@ -123,6 +127,11 @@ final readonly class RunnerShellCatalogAdapter implements MigrationSourceAdapter
     ): iterable {
         unset($package, $profile);
         yield MigrationSourceRecord::typed(
+            CatalogAuthorMigrationParticipant::SOURCE_TYPE,
+            "author/dry-run",
+            new CatalogAuthorPlan("Dry-run Author")
+        );
+        yield MigrationSourceRecord::typed(
             CatalogWorkMigrationParticipant::SOURCE_TYPE,
             "work/dry-run",
             new CatalogWorkPlan("Dry-run Work")
@@ -134,6 +143,17 @@ final readonly class RunnerShellCatalogAdapter implements MigrationSourceAdapter
                 "work/dry-run",
                 "Dry-run Edition",
                 EditionIsbnMetadata::withoutIsbn()
+            )
+        );
+        yield MigrationSourceRecord::typed(
+            CatalogWorkContributorMigrationParticipant::SOURCE_TYPE,
+            "contributor/dry-run",
+            new CatalogWorkContributorPlan(
+                "author/dry-run",
+                "work/dry-run",
+                ContributorRole::Author,
+                new ContributorPosition(1),
+                "Dry-run Author"
             )
         );
         yield MigrationSourceRecord::typed(
@@ -159,7 +179,7 @@ final readonly class RunnerShellEnvironment implements MigrationEnvironment
         return new MigrationBuildProvenance(
             "v2.001",
             1025,
-            "2.29.0",
+            "2.30.0",
             str_repeat("b", 40),
             false
         );
@@ -351,18 +371,30 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
             JSON_THROW_ON_ERROR
         );
         self::assertTrue($artifact["zero_write_confirmed"]);
-        self::assertCount(3, $artifact["plan"]["records"]);
+        self::assertCount(5, $artifact["plan"]["records"]);
         self::assertSame([], $artifact["plan"]["planning_errors"]);
+        self::assertSame([], $artifact["plan"]["records"][0]["dependencies"]);
         self::assertSame(
             [["source_id" => "work/dry-run", "source_type" => "catalog_work"]],
-            $artifact["plan"]["records"][0]["dependencies"]
+            $artifact["plan"]["records"][1]["dependencies"]
         );
         self::assertSame(
             [["source_id" => "edition/dry-run", "source_type" => "catalog_edition"]],
-            $artifact["plan"]["records"][1]["dependencies"]
+            $artifact["plan"]["records"][2]["dependencies"]
+        );
+        self::assertSame(
+            [
+                ["source_id" => "author/dry-run", "source_type" => "catalog_author"],
+                ["source_id" => "work/dry-run", "source_type" => "catalog_work"],
+            ],
+            $artifact["plan"]["records"][4]["dependencies"]
         );
         self::assertStringNotContainsString(
             "Dry-run Work",
+            (string) file_get_contents($commandOutput["artifact_path"])
+        );
+        self::assertStringNotContainsString(
+            "Dry-run Author",
             (string) file_get_contents($commandOutput["artifact_path"])
         );
     }

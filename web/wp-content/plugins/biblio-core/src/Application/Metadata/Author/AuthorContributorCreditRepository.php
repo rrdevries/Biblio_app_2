@@ -8,6 +8,10 @@ use DateTimeImmutable;
 
 interface AuthorContributorCreditRepository
 {
+    public function find(
+        AuthorContributorCreditId $creditId
+    ): ?AuthorContributorCredit;
+
     public function findByKey(
         AuthorContributorCreditKey $key
     ): ?AuthorContributorCredit;
