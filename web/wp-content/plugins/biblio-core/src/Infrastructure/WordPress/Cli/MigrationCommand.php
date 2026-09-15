@@ -9,6 +9,7 @@ use Biblio\Core\Application\Migration\Runner\MigrationRunner;
 use Biblio\Core\Application\Migration\Runner\MigrationRunnerFailure;
 use Biblio\Core\Application\Migration\Runner\MigrationSourceAdapterRegistry;
 use Biblio\Core\Identity\UserId;
+use Biblio\Core\Infrastructure\Migration\CurrentV1SourceAdapter;
 use Biblio\Core\Infrastructure\Migration\FilesystemMigrationArtifactWriter;
 use Biblio\Core\Infrastructure\Migration\FilesystemMigrationSourcePackageFactory;
 use Biblio\Core\Infrastructure\Migration\MigrationArtifactReceipt;
@@ -39,7 +40,7 @@ final class MigrationCommand
         $this->runnerFactory = $runnerFactory
             ?? fn (CoreApplication $core): MigrationRunner => new MigrationRunner(
                 new FilesystemMigrationSourcePackageFactory(),
-                new MigrationSourceAdapterRegistry([]),
+                new MigrationSourceAdapterRegistry([new CurrentV1SourceAdapter()]),
                 $core->migrationParticipants(),
                 $core->personalMigrationTargets(),
                 new RuntimeMigrationEnvironment($this->pluginFile)

@@ -28,6 +28,7 @@ use Biblio\Core\Catalog\Classification\{LibraryBookTypeId,LibraryCatalogSelectio
 use Biblio\Core\Catalog\EditionIsbnMetadata;
 use Biblio\Core\Catalog\{ContributorPosition,ContributorRole};
 use Biblio\Core\Identity\UserId;
+use Biblio\Core\Infrastructure\Migration\CurrentV1SourceAdapter;
 use Biblio\Core\Infrastructure\Migration\FilesystemMigrationSourcePackageFactory;
 use Biblio\Core\Infrastructure\WordPress\Cli\MigrationCommand;
 use Biblio\Core\Infrastructure\WordPress\Cli\MigrationCommandOutput;
@@ -374,6 +375,42 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
         self::assertSame(1, $dryRunArtifact["planning_reconciliation"]["planned_observations"]);
     }
 
+    public function testDefaultCliProfilesCurrentV1AdapterWithoutProductOrLedgerWrites(): void
+    {
+        $application = (new ProductionComposition($this->database))->application();
+        $source = $this->currentV1Source();
+        $outputDirectory = $this->directory();
+        $output = new RecordingMigrationCommandOutput();
+        $command = new MigrationCommand(
+            static fn (): CoreApplication => $application,
+            dirname(__DIR__, 2) . "/biblio-core.php",
+            output: $output
+        );
+
+        $before = $this->allCoreTableCounts();
+        $command->profile([], [
+            "source-root" => $source,
+            "source-adapter" => CurrentV1SourceAdapter::ADAPTER_ID,
+            "output-dir" => $outputDirectory,
+        ]);
+        self::assertSame($before, $this->allCoreTableCounts());
+
+        self::assertCount(1, $output->lines);
+        $commandOutput = json_decode($output->lines[0], true, 16, JSON_THROW_ON_ERROR);
+        $artifactBytes = (string) file_get_contents($commandOutput["artifact_path"]);
+        $artifact = json_decode($artifactBytes, true, 32, JSON_THROW_ON_ERROR);
+        self::assertSame(CurrentV1SourceAdapter::ADAPTER_ID, $artifact["source"]["adapter_id"]);
+        self::assertSame(CurrentV1SourceAdapter::SOURCE_VERSION, $artifact["source"]["source_version"]);
+        self::assertSame(5, $artifact["record_count"]);
+        self::assertTrue($artifact["zero_write_confirmed"]);
+        self::assertStringNotContainsString("Private Adapter Author", $artifactBytes);
+        self::assertStringNotContainsString("Private Adapter Title", $artifactBytes);
+        self::assertSame(
+            $commandOutput["artifact_sha256"],
+            hash_file("sha256", $commandOutput["artifact_path"])
+        );
+    }
+
     public function testCliReturnsFailureForMissingSourceInvalidTargetAndUnsupportedVersion(): void
     {
         $application = (new ProductionComposition($this->database))->application();
@@ -682,6 +719,99 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
             "records" => [["id" => "record-1", "value" => "synthetic"]],
         ], JSON_THROW_ON_ERROR));
         return $directory;
+    }
+
+    private function currentV1Source(): string
+    {
+        $directory = $this->directory();
+        mkdir($directory . "/data", 0700, true);
+        $this->writeCurrentV1Json($directory, "books.json", [
+            "schemaVersion" => 29,
+            "books" => [[
+                "id" => "book-1",
+                "title" => "Private Adapter Title",
+                "authors" => ["Private Adapter Author"],
+                "authorIds" => ["author-1"],
+                "readingRounds" => [],
+                "notes" => [],
+                "circulationRounds" => [],
+                "containedWorks" => [],
+                "categories" => [],
+                "genres" => [],
+            ]],
+            "copies" => [[
+                "id" => "copy-1",
+                "bookId" => "book-1",
+                "circulationRounds" => [],
+                "condition" => "",
+                "status" => "owned",
+                "ownershipStatus" => "owned",
+                "archived" => false,
+                "notes" => "",
+            ]],
+            "wishlistItems" => [[
+                "id" => "wish-1",
+                "bookId" => "book-1",
+                "fulfilledCopyId" => "",
+                "status" => "active",
+                "type" => "edition",
+            ]],
+        ]);
+        $this->writeCurrentV1Json($directory, "authors.json", [
+            "schemaVersion" => 2,
+            "authors" => [[
+                "id" => "author-1",
+                "displayName" => "Private Adapter Author",
+            ]],
+        ]);
+        $this->writeCurrentV1Json($directory, "reading_goals.json", [
+            "schemaVersion" => 2,
+            "goals" => [["id" => "goal-1", "title" => "Private Adapter Goal"]],
+        ]);
+        foreach ([
+            "book_types.json", "carriers.json", "categories.json", "genres.json",
+            "releases_excluded.json", "releases_merged.json", "taxonomy_review_queue.json",
+        ] as $file) {
+            $this->writeCurrentV1Json($directory, $file, []);
+        }
+        foreach ([
+            "book_enrich_cache.json" => [1, ["entries"]],
+            "cache.json" => [1, ["entries"]],
+            "home_prefs.json" => [1, ["hiddenWidgets", "widgetOrder"]],
+            "recommendations_ignored.json" => [1, ["ignoredBookIds"]],
+            "recommendations_prefs.json" => [2, ["ignored", "shown"]],
+            "releases.json" => [1, ["byAuthor", "lastCheckedAt", "lastRun", "mergedDiff"]],
+            "releases_prefs.json" => [1, ["trackedAuthorIds"]],
+        ] as $file => [$version, $fields]) {
+            $payload = ["schemaVersion" => $version];
+            foreach ($fields as $field) {
+                $payload[$field] = [];
+            }
+            $this->writeCurrentV1Json($directory, $file, $payload);
+        }
+        $this->writeCurrentV1Json($directory, "next_to_read.json", ["items" => []]);
+        $this->writeCurrentV1Json($directory, "releases_dismissed.json", [
+            "version" => 1,
+            "dismissed" => [],
+        ]);
+        $this->writeCurrentV1Json($directory, "taxonomy_aliases.json", [
+            "version" => 2,
+            "rules" => [],
+        ]);
+
+        return $directory;
+    }
+
+    /** @param mixed $payload */
+    private function writeCurrentV1Json(
+        string $root,
+        string $file,
+        mixed $payload
+    ): void {
+        file_put_contents(
+            $root . "/data/" . $file,
+            json_encode($payload, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR)
+        );
     }
 
     private function directory(): string
