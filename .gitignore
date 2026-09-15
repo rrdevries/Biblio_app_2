@@ -12,6 +12,8 @@ vendor/
 .env.*
 !.env.example
 
+/.ddev/config.migration-trial.local.yaml
+
 /.local/
 
 .packages/*
