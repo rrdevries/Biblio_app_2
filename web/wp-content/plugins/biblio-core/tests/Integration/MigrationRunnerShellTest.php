@@ -401,7 +401,7 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
         $artifact = json_decode($artifactBytes, true, 32, JSON_THROW_ON_ERROR);
         self::assertSame(CurrentV1SourceAdapter::ADAPTER_ID, $artifact["source"]["adapter_id"]);
         self::assertSame(CurrentV1SourceAdapter::SOURCE_VERSION, $artifact["source"]["source_version"]);
-        self::assertSame(5, $artifact["record_count"]);
+        self::assertSame(6, $artifact["record_count"]);
         self::assertTrue($artifact["zero_write_confirmed"]);
         self::assertStringNotContainsString("Private Adapter Author", $artifactBytes);
         self::assertStringNotContainsString("Private Adapter Title", $artifactBytes);
@@ -409,6 +409,70 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
             $commandOutput["artifact_sha256"],
             hash_file("sha256", $commandOutput["artifact_path"])
         );
+    }
+
+    public function testDefaultCliPlansCurrentV1CirculationPrivatelyAndWithoutWrites(): void
+    {
+        $userId = wp_create_user(
+            "runner-current-circulation-user",
+            "synthetic-test-password",
+            "runner-current-circulation@example.invalid"
+        );
+        self::assertIsInt($userId);
+        $this->createdUsers[] = $userId;
+        $application = (new ProductionComposition($this->database))->application();
+        $target = $application->personalMigrationTargets()->bootstrap(
+            new UserId((string) $userId)
+        );
+        $source = $this->currentV1Source();
+        $outputDirectory = $this->directory();
+        $output = new RecordingMigrationCommandOutput();
+        $command = new MigrationCommand(
+            static fn (): CoreApplication => $application,
+            dirname(__DIR__, 2) . "/biblio-core.php",
+            output: $output
+        );
+
+        $before = $this->allCoreTableCounts();
+        $command->dry_run([], [
+            "source-root" => $source,
+            "source-adapter" => CurrentV1SourceAdapter::ADAPTER_ID,
+            "target-user-id" => (string) $userId,
+            "target-library-id" => $target->libraryId()->value(),
+            "output-dir" => $outputDirectory,
+        ]);
+        self::assertSame($before, $this->allCoreTableCounts());
+
+        $commandOutput = json_decode($output->lines[0], true, 16, JSON_THROW_ON_ERROR);
+        $artifactBytes = (string) file_get_contents($commandOutput["artifact_path"]);
+        $artifact = json_decode($artifactBytes, true, 32, JSON_THROW_ON_ERROR);
+        self::assertTrue($artifact["zero_write_confirmed"]);
+        self::assertSame(
+            1,
+            $artifact["planning_reconciliation"]["planned_observations"]
+        );
+        self::assertSame(
+            [],
+            $artifact["planning_reconciliation"]["operation_counts"]
+        );
+        self::assertSame(
+            1,
+            $artifact["plan"]["disposition_counts"]["quarantined"]
+        );
+        self::assertSame(
+            "ambiguous_circulation_semantics",
+            $artifact["plan"]["records"][0]["reason_code"]
+        );
+        self::assertSame([], $artifact["plan"]["records"][0]["operations"]);
+        self::assertStringNotContainsString("Private Counterparty", $artifactBytes);
+        self::assertStringNotContainsString("private circulation note", $artifactBytes);
+        self::assertStringNotContainsString('"source_payload"', $artifactBytes);
+        self::assertSame(0, $this->allCoreTableCounts()[
+            $this->tableNames->externalLoans()
+        ]);
+        self::assertSame(0, $this->allCoreTableCounts()[
+            $this->tableNames->migrationSourceObservations()
+        ]);
     }
 
     public function testCliReturnsFailureForMissingSourceInvalidTargetAndUnsupportedVersion(): void
@@ -734,7 +798,17 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
                 "authorIds" => ["author-1"],
                 "readingRounds" => [],
                 "notes" => [],
-                "circulationRounds" => [],
+                "circulationRounds" => [[
+                    "id" => "circulation-private-1",
+                    "type" => "borrowed",
+                    "counterparty" => "Private Counterparty",
+                    "startDate" => [
+                        "value" => "2024-02-03",
+                        "precision" => "day",
+                    ],
+                    "endDate" => null,
+                    "notes" => "private circulation note",
+                ]],
                 "containedWorks" => [],
                 "categories" => [],
                 "genres" => [],
@@ -742,7 +816,20 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
             "copies" => [[
                 "id" => "copy-1",
                 "bookId" => "book-1",
-                "circulationRounds" => [],
+                "circulationRounds" => [[
+                    "id" => "circulation-private-1",
+                    "type" => "borrowed",
+                    "counterparty" => "Private Counterparty",
+                    "startDate" => [
+                        "value" => "2024-02-03",
+                        "precision" => "day",
+                    ],
+                    "endDate" => [
+                        "value" => "2024-02-04",
+                        "precision" => "day",
+                    ],
+                    "notes" => "private circulation note",
+                ]],
                 "condition" => "",
                 "status" => "owned",
                 "ownershipStatus" => "owned",

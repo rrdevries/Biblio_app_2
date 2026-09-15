@@ -13,6 +13,7 @@ use Biblio\Core\Application\Migration\Catalog\{
     CatalogItemMigrationParticipant,
     CatalogWorkMigrationParticipant
 };
+use Biblio\Core\Application\Migration\Circulation\CirculationMigrationParticipant;
 use Biblio\Core\Application\Migration\Notes\PrivateNoteMigrationParticipant;
 use Biblio\Core\Application\Migration\Reading\ReadingRoundMigrationParticipant;
 
@@ -61,6 +62,10 @@ final class CurrentMigrationMappingContracts
             new MigrationMappingContract(
                 PrivateNoteMigrationParticipant::SOURCE_TYPE,
                 [new MigrationMappingRule("private_note", $entity, true)]
+            ),
+            new MigrationMappingContract(
+                CirculationMigrationParticipant::SOURCE_TYPE,
+                []
             ),
         ]);
     }
