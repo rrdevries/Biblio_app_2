@@ -154,7 +154,7 @@ final readonly class CoreTableNames
         $this->authorCreditEvidence = $prefix
             . "biblio_author_credit_evidence";
 
-        foreach ($this->schema1025() as $tableName) {
+        foreach ($this->schema1026() as $tableName) {
             $this->assertSafe($tableName);
         }
         $this->assertSafe($this->nextReadingInsertTrigger);
@@ -681,6 +681,12 @@ final readonly class CoreTableNames
         $itemOffset = array_search($this->items, $tables, true);
         array_splice($tables, (int) $itemOffset + 1, 0, [$this->itemLocalDetails]);
         return $tables;
+    }
+
+    /** @return list<string> */
+    public function schema1026(): array
+    {
+        return $this->schema1025();
     }
 
     private function assertSafe(string $tableName): void

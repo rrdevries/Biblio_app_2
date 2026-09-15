@@ -129,6 +129,39 @@ final readonly class ReadingRound
         );
     }
 
+    public static function migrationImported(
+        ReadingRoundId $id,
+        UserId $userId,
+        WorkId $workId,
+        ?ReadingSource $source,
+        ?ReadingRoundOutcome $outcome,
+        ReadingPeriod $period,
+        DateTimeImmutable $createdAt
+    ): self {
+        if ($outcome === null) {
+            if ($source === null || $period->startedOn()?->isExact() !== true) {
+                throw new ValidationException(
+                    "An active imported Reading Round requires a concrete source and exact start date."
+                );
+            }
+        }
+
+        return new self(
+            $id,
+            $userId,
+            $workId,
+            $source,
+            $outcome,
+            ReadingRoundProvenance::MigrationImported,
+            $period,
+            null,
+            $createdAt,
+            $createdAt,
+            $outcome === null ? null : $createdAt,
+            ReadingRoundVersion::initial()
+        );
+    }
+
     public function end(
         ReadingRoundOutcome $outcome,
         ReadingDate $finishedOn,
@@ -284,6 +317,17 @@ final readonly class ReadingRound
             if ($this->period->startedOn()?->isExact() !== true) {
                 throw new ValidationException(
                     "A source-started Reading Round requires an exact start date."
+                );
+            }
+        } elseif (
+            $this->provenance === ReadingRoundProvenance::MigrationImported
+        ) {
+            if (
+                !$ended
+                && $this->period->startedOn()?->isExact() !== true
+            ) {
+                throw new ValidationException(
+                    "An active imported Reading Round requires an exact start date."
                 );
             }
         } elseif (!$ended) {

@@ -55,6 +55,7 @@ final readonly class CoreSchemaHealthChecker
             1023 => $this->inspectTables($this->tableNames->schema1023(), true, 1023),
             1024 => $this->inspectTables($this->tableNames->schema1024(), true, 1024),
             1025 => $this->inspectTables($this->tableNames->schema1025(), true, 1025),
+            1026 => $this->inspectTables($this->tableNames->schema1026(), true, 1026),
             default => throw new CoreSchemaMigrationException(
                 "No explicit Biblio Core schema-health contract exists for "
                 . "schema version {$expectedVersion}."
@@ -597,20 +598,29 @@ final readonly class CoreSchemaHealthChecker
         int $schemaVersion
     ): void
     {
-        $rows = $this->database->get_col($this->database->prepare(
-            "SELECT c.CHECK_CLAUSE FROM information_schema.CHECK_CONSTRAINTS c "
-            . "INNER JOIN information_schema.TABLE_CONSTRAINTS t "
+        $rows = $this->database->get_results($this->database->prepare(
+            "SELECT t.CONSTRAINT_NAME AS constraint_name,"
+                . "c.CHECK_CLAUSE AS check_clause "
+                . "FROM information_schema.CHECK_CONSTRAINTS c "
+                . "INNER JOIN information_schema.TABLE_CONSTRAINTS t "
             . "ON t.CONSTRAINT_SCHEMA = c.CONSTRAINT_SCHEMA "
             . "AND t.CONSTRAINT_NAME = c.CONSTRAINT_NAME "
             . "WHERE t.CONSTRAINT_SCHEMA = %s AND t.TABLE_NAME = %s "
             . "AND t.CONSTRAINT_TYPE = 'CHECK'",
             DB_NAME,
             $tableName
-        ));
+        ), ARRAY_A);
         $actualChecks = array_map(
-            fn (string $check): string => $this->normalizeExpression($check),
+            fn (array $row): string => $this->normalizeExpression(
+                (string) $row["check_clause"]
+            ),
             $rows
         );
+        $actualByName = [];
+        foreach ($rows as $row) {
+            $actualByName[(string) $row["constraint_name"]]
+                = $this->normalizeExpression((string) $row["check_clause"]);
+        }
 
         foreach (($this->expectedChecks($schemaVersion)[$tableName] ?? []) as $expected) {
             $normalized = $this->normalizeExpression($expected);
@@ -627,12 +637,105 @@ final readonly class CoreSchemaHealthChecker
                 continue;
             }
 
+            if (
+                $tableName === $this->tableNames->readingRounds()
+                && $schemaVersion < 1026
+                && in_array(
+                    $this->forwardCompatibleReadingRoundCheck($normalized),
+                    $actualChecks,
+                    true
+                )
+            ) {
+                continue;
+            }
+
             if (!in_array($normalized, $actualChecks, true)) {
                 $issues[] = "Table {$tableName} missing required CHECK: "
                     . $expected . "; found ["
                     . implode(", ", $actualChecks) . "]";
             }
         }
+
+        if (
+            $tableName === $this->tableNames->readingRounds()
+            && $schemaVersion >= 1003
+        ) {
+            $this->inspectNamedReadingRoundChecks(
+                $actualByName,
+                $actualChecks,
+                $issues,
+                $schemaVersion
+            );
+        }
+    }
+
+    /**
+     * @param array<string,string> $actualByName
+     * @param list<string> $actualChecks
+     * @param list<string> $issues
+     * @param-out list<string> $issues
+     */
+    private function inspectNamedReadingRoundChecks(
+        array $actualByName,
+        array $actualChecks,
+        array &$issues,
+        int $schemaVersion
+    ): void {
+        $expected = [
+            "reading_rounds_provenance" => $this->normalizeExpression(
+                $schemaVersion >= 1026
+                    ? self::readingRoundProvenanceCheck(1026)
+                    : self::readingRoundProvenanceCheck(1025)
+            ),
+            "reading_rounds_start_shape" => $this->normalizeExpression(
+                self::readingRoundStartShapeCheck(
+                    $schemaVersion >= 1026 ? 1026 : 1025
+                )
+            ),
+        ];
+        foreach ($expected as $name => $clause) {
+            $actual = $actualByName[$name] ?? null;
+            if (
+                $actual === $clause
+                || (
+                    $schemaVersion < 1026
+                    && $actual === $this->forwardCompatibleReadingRoundCheck($clause)
+                )
+            ) {
+                continue;
+            }
+            $issues[] = "Table {$this->tableNames->readingRounds()} has unexpected "
+                . "named CHECK {$name}";
+        }
+
+        if ($schemaVersion < 1026) {
+            return;
+        }
+        foreach ([
+            self::readingRoundProvenanceCheck(1025),
+            self::readingRoundStartShapeCheck(1025),
+        ] as $legacy) {
+            if (in_array($this->normalizeExpression($legacy), $actualChecks, true)) {
+                $issues[] = "Table {$this->tableNames->readingRounds()} retains a "
+                    . "conflicting pre-1026 ReadingRound CHECK";
+            }
+        }
+    }
+
+    private function forwardCompatibleReadingRoundCheck(string $normalized): string
+    {
+        if ($normalized === $this->normalizeExpression(
+            self::readingRoundProvenanceCheck(1025)
+        )) {
+            return $this->normalizeExpression(self::readingRoundProvenanceCheck(1026));
+        }
+        if ($normalized === $this->normalizeExpression(
+            self::readingRoundStartShapeCheck(1025)
+        )) {
+            return $this->normalizeExpression(self::readingRoundStartShapeCheck(1026));
+        }
+
+        return "__no_forward_compatible_check__";
     }
 
     /** @param list<string> $issues */
@@ -2822,7 +2925,7 @@ final readonly class CoreSchemaHealthChecker
                     "item_id IS NOT NULL AND external_loan_id IS NULL OR "
                         . "item_id IS NULL AND external_loan_id IS NOT NULL",
                 ]
-                : self::readingRound1003Checks(),
+                : self::readingRoundChecks($schemaVersion),
             $this->tableNames->privateNotes() => [
                 "note_version >= 1",
                 "updated_at >= created_at",
@@ -2963,20 +3066,13 @@ final readonly class CoreSchemaHealthChecker
     }
 
     /** @return list<string> */
-    private static function readingRound1003Checks(): array
+    private static function readingRoundChecks(int $schemaVersion): array
     {
         return [
             "round_outcome IS NULL OR round_outcome IN ('completed', 'stopped')",
-            "provenance IN ('legacy_source_started', 'source_started', "
-                . "'historical_manual')",
+            self::readingRoundProvenanceCheck($schemaVersion),
             "item_id IS NULL OR external_loan_id IS NULL",
-            "provenance = 'legacy_source_started' AND started_at IS NOT NULL "
-                . "AND reading_started_year IS NULL AND reading_started_month IS NULL "
-                . "AND reading_started_day IS NULL OR provenance = 'source_started' "
-                . "AND started_at IS NULL AND reading_started_year IS NOT NULL "
-                . "AND reading_started_month IS NOT NULL AND reading_started_day IS NOT NULL "
-                . "OR provenance = 'historical_manual' AND started_at IS NULL "
-                . "AND round_outcome IS NOT NULL",
+            self::readingRoundStartShapeCheck($schemaVersion),
             "round_outcome IS NULL AND reading_finished_year IS NULL "
                 . "AND reading_finished_month IS NULL AND reading_finished_day IS NULL "
                 . "OR round_outcome IS NOT NULL AND reading_finished_year IS NOT NULL",
@@ -3004,6 +3100,34 @@ final readonly class CoreSchemaHealthChecker
                 . "AND (created_at IS NULL OR updated_at IS NULL OR updated_at >= created_at)",
             "round_version >= 1",
         ];
+    }
+
+    private static function readingRoundProvenanceCheck(int $schemaVersion): string
+    {
+        return $schemaVersion >= 1026
+            ? "provenance IN ('legacy_source_started', 'source_started', "
+                . "'historical_manual', 'migration_imported')"
+            : "provenance IN ('legacy_source_started', 'source_started', "
+                . "'historical_manual')";
+    }
+
+    private static function readingRoundStartShapeCheck(int $schemaVersion): string
+    {
+        $check = "provenance = 'legacy_source_started' AND started_at IS NOT NULL "
+            . "AND reading_started_year IS NULL AND reading_started_month IS NULL "
+            . "AND reading_started_day IS NULL OR provenance = 'source_started' "
+            . "AND started_at IS NULL AND reading_started_year IS NOT NULL "
+            . "AND reading_started_month IS NOT NULL AND reading_started_day IS NOT NULL "
+            . "OR provenance = 'historical_manual' AND started_at IS NULL "
+            . "AND round_outcome IS NOT NULL";
+
+        if ($schemaVersion < 1026) {
+            return $check;
+        }
+
+        return $check . " OR provenance = 'migration_imported' AND started_at IS NULL "
+            . "AND (round_outcome IS NOT NULL OR reading_started_year IS NOT NULL "
+            . "AND reading_started_month IS NOT NULL AND reading_started_day IS NOT NULL)";
     }
 
     private function tableExists(string $tableName): bool

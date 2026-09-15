@@ -9,6 +9,7 @@ use Biblio\Core\Application\Migration\MigrationDisposition;
 use Biblio\Core\Application\Migration\MigrationRecordOutcome;
 use Biblio\Core\Application\Migration\Author\{CatalogAuthorMigrationParticipant,CatalogAuthorPlan,CatalogWorkContributorMigrationParticipant,CatalogWorkContributorPlan};
 use Biblio\Core\Application\Migration\Catalog\{CatalogEditionMigrationParticipant,CatalogEditionPlan,CatalogItemMigrationParticipant,CatalogItemPlan,CatalogWorkMigrationParticipant,CatalogWorkPlan};
+use Biblio\Core\Application\Migration\Reading\{ReadingRoundMigrationParticipant,ReadingRoundPlan};
 use Biblio\Core\Application\Migration\Runner\MigrationBuildProvenance;
 use Biblio\Core\Application\Migration\Runner\MigrationEnvironment;
 use Biblio\Core\Application\Migration\Runner\MigrationParticipant;
@@ -31,6 +32,7 @@ use Biblio\Core\Infrastructure\WordPress\Cli\MigrationCommand;
 use Biblio\Core\Infrastructure\WordPress\Cli\MigrationCommandOutput;
 use Biblio\Core\Infrastructure\WordPress\ProductionComposition;
 use Biblio\Core\Library\LibraryId;
+use Biblio\Core\Reading\{ReadingDate,ReadingPeriod,ReadingRoundOutcome};
 use RuntimeException;
 
 final readonly class RunnerShellSourceAdapter implements MigrationSourceAdapter
@@ -168,6 +170,49 @@ final readonly class RunnerShellCatalogAdapter implements MigrationSourceAdapter
     }
 }
 
+final readonly class RunnerShellReadingAdapter implements MigrationSourceAdapter
+{
+    public function __construct(private UserId $userId)
+    {
+    }
+
+    public function adapterId(): string { return "synthetic-reading"; }
+    public function sourceFamily(): string { return "synthetic"; }
+
+    public function profile(MigrationSourcePackage $package): MigrationSourceProfile
+    {
+        unset($package);
+        return new MigrationSourceProfile("reading-test-1", [
+            ReadingRoundMigrationParticipant::SOURCE_TYPE => 1,
+        ]);
+    }
+
+    public function supportsVersion(string $sourceVersion): bool
+    {
+        return $sourceVersion === "reading-test-1";
+    }
+
+    public function records(
+        MigrationSourcePackage $package,
+        MigrationSourceProfile $profile
+    ): iterable {
+        unset($package, $profile);
+        yield MigrationSourceRecord::typed(
+            ReadingRoundMigrationParticipant::SOURCE_TYPE,
+            "round/dry-run",
+            new ReadingRoundPlan(
+                $this->userId,
+                "work/dry-run",
+                ReadingRoundOutcome::Completed,
+                ReadingPeriod::ended(
+                    ReadingDate::year(2019),
+                    ReadingDate::month(2020, 2)
+                )
+            )
+        );
+    }
+}
+
 final readonly class RunnerShellEnvironment implements MigrationEnvironment
 {
     public function assertHealthy(): void
@@ -178,8 +223,8 @@ final readonly class RunnerShellEnvironment implements MigrationEnvironment
     {
         return new MigrationBuildProvenance(
             "v2.001",
-            1025,
-            "2.30.0",
+            1026,
+            "2.31.0",
             str_repeat("b", 40),
             false
         );
@@ -397,6 +442,70 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
             "Dry-run Author",
             (string) file_get_contents($commandOutput["artifact_path"])
         );
+    }
+
+    public function testReadingRoundParticipantDryRunIsDeterministicAndZeroWrite(): void
+    {
+        $userId = wp_create_user(
+            "runner-reading-user",
+            "synthetic-test-password",
+            "runner-reading@example.invalid"
+        );
+        self::assertIsInt($userId);
+        $this->createdUsers[] = $userId;
+        $application = (new ProductionComposition($this->database))->application();
+        $user = new UserId((string) $userId);
+        $target = $application->personalMigrationTargets()->bootstrap($user);
+        $adapter = new RunnerShellReadingAdapter($user);
+        $source = $this->source("reading-test-1");
+        $outputDirectory = $this->directory();
+        $output = new RecordingMigrationCommandOutput();
+        $command = new MigrationCommand(
+            static fn (): CoreApplication => $application,
+            dirname(__DIR__, 2) . "/biblio-core.php",
+            static fn (CoreApplication $core): MigrationRunner => new MigrationRunner(
+                new FilesystemMigrationSourcePackageFactory(),
+                new MigrationSourceAdapterRegistry([$adapter]),
+                $core->migrationParticipants(),
+                $core->personalMigrationTargets(),
+                new RunnerShellEnvironment()
+            ),
+            $output
+        );
+
+        $before = $this->allCoreTableCounts();
+        $arguments = [
+            "source-root" => $source,
+            "source-adapter" => "synthetic-reading",
+            "target-user-id" => (string) $userId,
+            "target-library-id" => $target->libraryId()->value(),
+            "require-empty" => true,
+            "output-dir" => $outputDirectory,
+        ];
+        $command->dry_run([], $arguments);
+        $first = json_decode($output->lines[0], true, 16, JSON_THROW_ON_ERROR);
+        $command->dry_run([], $arguments);
+        $second = json_decode($output->lines[1], true, 16, JSON_THROW_ON_ERROR);
+        self::assertSame($before, $this->allCoreTableCounts());
+
+        $firstArtifact = (string) file_get_contents($first["artifact_path"]);
+        $secondArtifact = (string) file_get_contents($second["artifact_path"]);
+        self::assertSame($firstArtifact, $secondArtifact);
+        $artifact = json_decode($firstArtifact, true, 32, JSON_THROW_ON_ERROR);
+        self::assertTrue($artifact["zero_write_confirmed"]);
+        self::assertCount(1, $artifact["plan"]["records"]);
+        self::assertSame([[
+            "source_id" => "work/dry-run",
+            "source_type" => "catalog_work",
+        ]], $artifact["plan"]["records"][0]["dependencies"]);
+        self::assertSame([[
+            "operation" => "create_or_reuse_reading_round",
+        ]], $artifact["plan"]["records"][0]["operations"]);
+        self::assertStringNotContainsString('"period"', $firstArtifact);
+        self::assertStringNotContainsString('"outcome"', $firstArtifact);
+        self::assertSame(0, $this->allCoreTableCounts()[
+            $this->tableNames->personalReadingTruths()
+        ]);
     }
 
     private function command(

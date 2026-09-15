@@ -48,6 +48,7 @@ use Biblio\Core\Application\Metadata\Discovery\{BibliographicDiscoveryService,Bi
 use Biblio\Core\Application\Metadata\Search\{BibliographicAuthorWorkSearchProvider,BibliographicAuthorWorkSearchService,BibliographicEditionSearchService,BibliographicExternalEditionSearchProvider,BibliographicTextSearchService};
 use Biblio\Core\Application\Migration\Author\{AuthorMigrationWriter,CatalogAuthorMigrationParticipant,CatalogWorkContributorMigrationParticipant};
 use Biblio\Core\Application\Migration\Catalog\{CatalogEditionMigrationParticipant,CatalogItemMigrationParticipant,CatalogMigrationWriter,CatalogWorkMigrationParticipant};
+use Biblio\Core\Application\Migration\Reading\{ReadingRoundMigrationParticipant,ReadingRoundMigrationWriter};
 use Biblio\Core\Application\Migration\Runner\MigrationParticipantRegistry;
 use Biblio\Core\Application\Notes\CorrectPrivateNoteReadingRoundService;
 use Biblio\Core\Application\Notes\CreatePrivateNoteService;
@@ -512,6 +513,17 @@ final class ProductionComposition
             $authorCredits,
             $canonicalAuthorMaterializer
         );
+        $readingRoundMigrationWriter = new ReadingRoundMigrationWriter(
+            $migrationLedger,
+            $platformUsers,
+            $workRepository,
+            $editionRepository,
+            $itemRepository,
+            $readingRoundRepository,
+            $readingRoundCreation,
+            $personalWorkReadingLock,
+            $readingRoundClock
+        );
         $migrationParticipants = new MigrationParticipantRegistry([
             new CatalogAuthorMigrationParticipant($authorMigrationWriter),
             new CatalogWorkMigrationParticipant($catalogMigrationWriter),
@@ -520,6 +532,9 @@ final class ProductionComposition
             ),
             new CatalogEditionMigrationParticipant($catalogMigrationWriter),
             new CatalogItemMigrationParticipant($catalogMigrationWriter),
+            new ReadingRoundMigrationParticipant(
+                $readingRoundMigrationWriter
+            ),
         ]);
         $libraryItemCreation = new AddLibraryItemService(
             $authenticatedUser,

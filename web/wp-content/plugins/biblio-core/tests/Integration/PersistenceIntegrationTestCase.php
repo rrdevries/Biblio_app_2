@@ -247,6 +247,34 @@ abstract class PersistenceIntegrationTestCase extends TestCase
 
     protected function setHistoricalSchemaVersion(int $version): void
     {
+        if (
+            $version < 1026
+            && str_contains(
+                $this->checkClause(
+                    $this->tableNames->readingRounds(),
+                    "reading_rounds_provenance"
+                ) ?? "",
+                "migration_imported"
+            )
+        ) {
+            $rounds = $this->tableNames->readingRounds();
+            $this->database->query(
+                "ALTER TABLE `{$rounds}` "
+                    . "DROP CONSTRAINT `reading_rounds_provenance`, "
+                    . "DROP CONSTRAINT `reading_rounds_start_shape`, "
+                    . "ADD CONSTRAINT `reading_rounds_provenance` CHECK ("
+                    . "provenance IN ('legacy_source_started', 'source_started', 'historical_manual')), "
+                    . "ADD CONSTRAINT `reading_rounds_start_shape` CHECK ("
+                    . "provenance = 'legacy_source_started' AND started_at IS NOT NULL "
+                    . "AND reading_started_year IS NULL AND reading_started_month IS NULL "
+                    . "AND reading_started_day IS NULL OR provenance = 'source_started' "
+                    . "AND started_at IS NULL AND reading_started_year IS NOT NULL "
+                    . "AND reading_started_month IS NOT NULL AND reading_started_day IS NOT NULL "
+                    . "OR provenance = 'historical_manual' AND started_at IS NULL "
+                    . "AND round_outcome IS NOT NULL)"
+            );
+        }
+
         if ($version < 1025) {
             foreach (
                 array_reverse($this->tableNames->schema1025Additions())
@@ -333,6 +361,23 @@ abstract class PersistenceIntegrationTestCase extends TestCase
         }
 
         update_option(CoreSchemaMigrator::VERSION_OPTION, (string) $version, false);
+    }
+
+    private function checkClause(string $table, string $constraint): ?string
+    {
+        $value = $this->database->get_var($this->database->prepare(
+            "SELECT cc.CHECK_CLAUSE FROM information_schema.TABLE_CONSTRAINTS tc "
+                . "INNER JOIN information_schema.CHECK_CONSTRAINTS cc "
+                . "ON cc.CONSTRAINT_SCHEMA=tc.CONSTRAINT_SCHEMA "
+                . "AND cc.CONSTRAINT_NAME=tc.CONSTRAINT_NAME "
+                . "WHERE tc.CONSTRAINT_SCHEMA=%s AND tc.TABLE_NAME=%s "
+                . "AND tc.CONSTRAINT_NAME=%s AND tc.CONSTRAINT_TYPE='CHECK'",
+            DB_NAME,
+            $table,
+            $constraint
+        ));
+
+        return is_string($value) ? $value : null;
     }
 
     protected function classificationSeedEvolution(): ClassificationSeedEvolutionService
