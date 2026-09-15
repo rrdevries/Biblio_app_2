@@ -331,6 +331,10 @@ final readonly class FailingCommitOutcomeMigrationLedger implements
     {
         return $this->inner->reconciliation($runId);
     }
+    public function snapshot(string $runId): \Biblio\Core\Application\Migration\MigrationLedgerSnapshot
+    {
+        return $this->inner->snapshot($runId);
+    }
     public function priorTargets(
         MigrationRun $run,
         SourceObservation $observation

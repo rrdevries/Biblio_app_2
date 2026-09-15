@@ -13,7 +13,7 @@ use Throwable;
 
 final readonly class MigrationRunner
 {
-    public const ARTIFACT_VERSION = 1;
+    public const ARTIFACT_VERSION = 2;
 
     public function __construct(
         private MigrationSourcePackageFactory $packages,
@@ -26,23 +26,18 @@ final readonly class MigrationRunner
 
     public function profile(string $sourceRoot, string $adapterId): MigrationArtifact
     {
-        [$package, $adapter, $profile, $records, $typeCounts] =
-            $this->inspect($sourceRoot, $adapterId);
+        $inspection = $this->inspectSource($sourceRoot, $adapterId);
 
         return new MigrationArtifact(
             "source-profile",
-            $package->manifestDigest(),
+            $inspection->package()->manifestDigest(),
             [
                 "migration_artifact_version" => self::ARTIFACT_VERSION,
                 "artifact_kind" => "source_profile",
+                "mode" => "profile",
                 "build" => $this->environment->provenance()->toArray(),
-                "source" => $this->sourcePayload(
-                    $package,
-                    $adapter,
-                    $profile,
-                    $typeCounts
-                ),
-                "record_count" => count($records),
+                "source" => $inspection->sourcePayload(),
+                "record_count" => count($inspection->records()),
                 "zero_write_confirmed" => true,
             ]
         );
@@ -55,8 +50,7 @@ final readonly class MigrationRunner
         LibraryId $targetLibraryId,
         bool $requireEmpty
     ): MigrationArtifact {
-        [$package, $adapter, $profile, $records, $typeCounts] =
-            $this->inspect($sourceRoot, $adapterId);
+        $inspection = $this->inspectSource($sourceRoot, $adapterId);
         $this->environment->assertHealthy();
 
         try {
@@ -88,7 +82,9 @@ final readonly class MigrationRunner
         $quarantine = [];
         $unmatchedReferences = [];
 
-        foreach ($records as $record) {
+        $participantCounts = [];
+        $operationCounts = [];
+        foreach ($inspection->records() as $record) {
             $participant = $this->participants->forType($record->sourceType());
             if (!$participant instanceof MigrationParticipant) {
                 $unsupportedTypes[$record->sourceType()] = true;
@@ -109,6 +105,12 @@ final readonly class MigrationRunner
             }
 
             $plans[] = array_merge($record->identityArray(), $plan->toArray());
+            $participantCounts[$record->sourceType()] =
+                ($participantCounts[$record->sourceType()] ?? 0) + 1;
+            foreach ($plan->operations() as $operation) {
+                $name = $operation["operation"];
+                $operationCounts[$name] = ($operationCounts[$name] ?? 0) + 1;
+            }
             $disposition = $plan->disposition()->value;
             $dispositions[$disposition] = ($dispositions[$disposition] ?? 0) + 1;
             if ($plan->disposition() === MigrationDisposition::PreservedDeferred) {
@@ -129,21 +131,18 @@ final readonly class MigrationRunner
         $unsupported = array_keys($unsupportedTypes);
         sort($unsupported, SORT_STRING);
         ksort($dispositions, SORT_STRING);
+        ksort($participantCounts, SORT_STRING);
+        ksort($operationCounts, SORT_STRING);
 
         return new MigrationArtifact(
             "dry-run",
-            $package->manifestDigest(),
+            $inspection->package()->manifestDigest(),
             [
                 "migration_artifact_version" => self::ARTIFACT_VERSION,
                 "artifact_kind" => "dry_run_plan",
                 "mode" => "dry_run",
                 "build" => $this->environment->provenance()->toArray(),
-                "source" => $this->sourcePayload(
-                    $package,
-                    $adapter,
-                    $profile,
-                    $typeCounts
-                ),
+                "source" => $inspection->sourcePayload(),
                 "target" => [
                     "target_user_id" => $target->userId(),
                     "target_library_id" => $target->libraryId(),
@@ -160,15 +159,26 @@ final readonly class MigrationRunner
                     "planning_errors" => $planningErrors,
                     "unmatched_references" => $unmatchedReferences,
                 ],
+                "planning_reconciliation" => [
+                    "applied" => false,
+                    "accepted" => false,
+                    "source_observations" => count($inspection->records()),
+                    "planned_observations" => count($plans),
+                    "participant_counts" => $participantCounts,
+                    "operation_counts" => $operationCounts,
+                    "unsupported_source_type_count" => count($unsupported),
+                    "planning_error_count" => count($planningErrors),
+                    "unmatched_reference_count" => count($unmatchedReferences),
+                ],
                 "zero_write_confirmed" => true,
             ]
         );
     }
 
-    /**
-     * @return array{MigrationSourcePackage,MigrationSourceAdapter,MigrationSourceProfile,list<MigrationSourceRecord>,array<string,int>}
-     */
-    private function inspect(string $sourceRoot, string $adapterId): array
+    public function inspectSource(
+        string $sourceRoot,
+        string $adapterId
+    ): MigrationSourceInspection
     {
         $package = $this->packages->build($sourceRoot);
         $adapter = $this->adapters->get($adapterId);
@@ -210,43 +220,12 @@ final readonly class MigrationRunner
         }
         ksort($typeCounts, SORT_STRING);
 
-        return [$package, $adapter, $profile, $records, $typeCounts];
-    }
-
-    /**
-     * @param array<string, int> $typeCounts
-     * @return array<string, mixed>
-     */
-    private function sourcePayload(
-        MigrationSourcePackage $package,
-        MigrationSourceAdapter $adapter,
-        MigrationSourceProfile $profile,
-        array $typeCounts
-    ): array {
-        $findings = array_map(
-            static fn (MigrationSourceFinding $finding): array => $finding->toArray(),
-            $profile->findings()
+        return new MigrationSourceInspection(
+            $package,
+            $adapter,
+            $profile,
+            $records,
+            $typeCounts
         );
-        $findingCounts = [
-            "malformed_record" => 0,
-            "unreadable_record" => 0,
-        ];
-        foreach ($findings as $finding) {
-            $reason = $finding["reason_code"];
-            $findingCounts[$reason] = ($findingCounts[$reason] ?? 0) + 1;
-        }
-        ksort($findingCounts, SORT_STRING);
-
-        return [
-            "package" => $package->toArray(),
-            "adapter_id" => $adapter->adapterId(),
-            "source_family" => $adapter->sourceFamily(),
-            "source_version" => $profile->sourceVersion(),
-            "category_counts" => $profile->categoryCounts(),
-            "source_type_counts" => $typeCounts,
-            "unknown_categories" => $profile->unknownCategories(),
-            "finding_counts" => $findingCounts,
-            "findings" => $findings,
-        ];
     }
 }

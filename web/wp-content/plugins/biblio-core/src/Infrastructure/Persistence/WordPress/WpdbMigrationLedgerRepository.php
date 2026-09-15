@@ -7,6 +7,9 @@ namespace Biblio\Core\Infrastructure\Persistence\WordPress;
 use Biblio\Core\Application\Migration\MappingDisposition;
 use Biblio\Core\Application\Migration\MigrationDisposition;
 use Biblio\Core\Application\Migration\MigrationLedgerRepository;
+use Biblio\Core\Application\Migration\MigrationLedgerObservation;
+use Biblio\Core\Application\Migration\MigrationLedgerMappingAnomaly;
+use Biblio\Core\Application\Migration\MigrationLedgerSnapshot;
 use Biblio\Core\Application\Migration\MigrationMode;
 use Biblio\Core\Application\Migration\MigrationRecordOutcome;
 use Biblio\Core\Application\Migration\MigrationReconciliation;
@@ -226,6 +229,86 @@ final readonly class WpdbMigrationLedgerRepository implements MigrationLedgerRep
             (int) ($targets["reused_count"] ?? 0),
             (int) ($targets["edges"] ?? 0),
             $uncommitted
+        );
+    }
+
+    public function snapshot(string $runId): MigrationLedgerSnapshot
+    {
+        $run = $this->findRun($runId);
+        if ($run === null) {
+            throw new ValidationException("Migration run is unavailable.");
+        }
+
+        $observations = $this->tables->migrationSourceObservations();
+        $observationRows = $this->database->get_results($this->database->prepare(
+            "SELECT observation_id,source_family,source_snapshot,source_type,source_id,payload_hash,processing_status,"
+                . "disposition,reason_code,retryable FROM " . $observations
+                . " WHERE run_id=%s ORDER BY source_type,source_id,observation_id",
+            $runId
+        ), ARRAY_A);
+        $mappings = $this->tables->migrationTargetMappings();
+        $mappingRows = $this->database->get_results($this->database->prepare(
+            "SELECT observation_id,target_entity_type,target_entity_id,mapping_disposition,reason_code "
+                . "FROM " . $mappings
+                . " WHERE run_id=%s ORDER BY observation_id,target_entity_type,target_entity_id",
+            $runId
+        ), ARRAY_A);
+
+        $knownObservationIds = [];
+        foreach ($observationRows as $row) {
+            $knownObservationIds[(string) $row["observation_id"]] = true;
+        }
+        $byObservation = [];
+        $mappingAnomalies = [];
+        foreach ($mappingRows as $row) {
+            $mapping = new MigrationTargetMapping(
+                    (string) $row["target_entity_type"],
+                    (string) $row["target_entity_id"],
+                    MappingDisposition::from((string) $row["mapping_disposition"]),
+                    $row["reason_code"] === null || $row["reason_code"] === ""
+                        ? null
+                        : (string) $row["reason_code"]
+                );
+            $observationId = (string) $row["observation_id"];
+            if (!isset($knownObservationIds[$observationId])) {
+                $mappingAnomalies[] = new MigrationLedgerMappingAnomaly(
+                    $observationId,
+                    $mapping->targetType(),
+                    $mapping->targetId(),
+                    $mapping->disposition(),
+                    $mapping->reasonCode()
+                );
+                continue;
+            }
+            $byObservation[$observationId][] = $mapping;
+        }
+
+        $safeObservations = [];
+        foreach ($observationRows as $row) {
+            $id = (string) $row["observation_id"];
+            $safeObservations[] = new MigrationLedgerObservation(
+                $id,
+                (string) $row["source_family"],
+                (string) $row["source_snapshot"],
+                (string) $row["source_type"],
+                (string) $row["source_id"],
+                (string) $row["payload_hash"],
+                (string) $row["processing_status"],
+                $row["disposition"] === null
+                    ? null
+                    : MigrationDisposition::from((string) $row["disposition"]),
+                $row["reason_code"] === null || $row["reason_code"] === ""
+                    ? null
+                    : (string) $row["reason_code"],
+                (int) $row["retryable"] === 1,
+                $byObservation[$id] ?? []
+            );
+        }
+
+        return new MigrationLedgerSnapshot(
+            $run,
+            $safeObservations,
+            $mappingAnomalies
         );
     }
 

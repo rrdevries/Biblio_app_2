@@ -12,12 +12,14 @@ final readonly class MigrationSourceProfile
      * @param array<string, int> $categoryCounts
      * @param list<string> $unknownCategories
      * @param list<MigrationSourceFinding> $findings
+     * @param list<MigrationSourceCategoryStrategy> $categoryStrategies
      */
     public function __construct(
         private string $sourceVersion,
         private array $categoryCounts,
         private array $unknownCategories = [],
-        private array $findings = []
+        private array $findings = [],
+        private array $categoryStrategies = []
     ) {
         if (trim($this->sourceVersion) === "" || mb_strlen($this->sourceVersion) > 64) {
             throw new ValidationException("Source version is invalid.");
@@ -55,5 +57,19 @@ final readonly class MigrationSourceProfile
             return DeterministicJson::encode($a->toArray()) <=> DeterministicJson::encode($b->toArray());
         });
         return $findings;
+    }
+
+    /** @return list<MigrationSourceCategoryStrategy> */
+    public function categoryStrategies(): array
+    {
+        $strategies = $this->categoryStrategies;
+        usort(
+            $strategies,
+            static fn (
+                MigrationSourceCategoryStrategy $left,
+                MigrationSourceCategoryStrategy $right
+            ): int => $left->category() <=> $right->category()
+        );
+        return $strategies;
     }
 }

@@ -271,7 +271,7 @@ final readonly class RunnerShellEnvironment implements MigrationEnvironment
         return new MigrationBuildProvenance(
             "v2.001",
             1026,
-            "2.32.0",
+            "2.33.0",
             str_repeat("b", 40),
             false
         );
@@ -362,6 +362,16 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
             $dryRunOutput["artifact_sha256"],
             hash_file("sha256", $dryRunOutput["artifact_path"])
         );
+        $dryRunArtifact = json_decode(
+            (string) file_get_contents($dryRunOutput["artifact_path"]),
+            true,
+            32,
+            JSON_THROW_ON_ERROR
+        );
+        self::assertSame(2, $dryRunArtifact["migration_artifact_version"]);
+        self::assertFalse($dryRunArtifact["planning_reconciliation"]["applied"]);
+        self::assertFalse($dryRunArtifact["planning_reconciliation"]["accepted"]);
+        self::assertSame(1, $dryRunArtifact["planning_reconciliation"]["planned_observations"]);
     }
 
     public function testCliReturnsFailureForMissingSourceInvalidTargetAndUnsupportedVersion(): void
