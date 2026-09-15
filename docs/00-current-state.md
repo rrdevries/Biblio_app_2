@@ -25,11 +25,11 @@ schema seed or V2 transformation. Its format and validation entry point are
 documented in `testdata/data-01-v1/README.md`.
 
 MIG-01's historical audit snapshot remains design/regression evidence only.
-V1 is still active and remains source of truth; every future source-dependent
-dry-run, trial, reconciliation, migration or release decision must ask Renée
-for a current `/data/` directory/export that she explicitly designates. Each
-migration run pins its own snapshot and hash. DATA-01 and earlier ZIP/local
-copies are never presumed current.
+Renée has now explicitly designated the exact ZIP recorded in
+`docs/112-mig-02-source-01-current-v1-source-intake-profile.md` as CURRENT V1
+truth for this rehearsal. MIG-02-SOURCE-01 pins that snapshot by ZIP and
+extracted-manifest hashes and supports only its reviewed source format. DATA-01
+and earlier ZIP/local copies remain non-current and may not be substituted.
 
 MIG-FND-01 has implemented the source-neutral migration ledger, preservation,
 quarantine, idempotency, target locking, transaction and reconciliation
@@ -43,11 +43,12 @@ exposes that private contract through owner-only REST; WISH-UI-01 makes the
 basic personal list normally reachable through the shared App Shell.
 IDENTITY-01 remains the mandatory explicit personal target validator.
 ITEM-MIG-01A closed the Item-local target in schema `1025`; MIG-02-RUN-01 added
-the source-neutral profile/dry-run shell; and MIG-02-CAT-01 now provides typed
-Work/Edition/Item participants. Remaining domain participants and open
-circulation treatment still prevent a complete MIG-02 run.
-No current V1 parser/adapter, import,
-domain cleanup or production-data mutation is included. See
+the source-neutral profile/dry-run shell; and MIG-02-CAT-01 provides typed
+Work/Edition/Item participants. MIG-02-SOURCE-01 adds the exact production
+adapter for the CURRENT format and a privacy-safe zero-write profile. Reviewed
+mapping, required conditional slices and open circulation treatment still
+prevent a complete dry-run or MIG-02 run. No import, domain cleanup or
+production-data mutation is included. See
 `docs/60-mig-01-v1-mapping-and-reconciliation-design.md` and
 `docs/62-mig-fnd-01-migration-ledger-foundation.md` plus
 `docs/63-read-mig-01-personal-reading-truth.md`,
@@ -3684,7 +3685,7 @@ remains `0.20.0`. Closure evidence:
 
 ### MIG-02-OPS-01 — Isolated trial and rollback environment
 
-Status: **TECHNICAL GO — awaiting Renée trial identity/login acceptance**.
+Status: **HUMAN GO / CLOSED**.
 
 A detached clean-SHA worktree now runs current code in the separately named
 local DDEV project `biblio-v2-migration-trial`, URL
@@ -3705,7 +3706,29 @@ artifacts, V2 backups, evidence and local identity/config remain separate
 ignored roots.
 
 No current V1 export, adapter, mapping, apply/import, schema, Core/UI version or
-production-cutover tooling is added. Human login and Owner/Add Book validation
-must occur only at the visibly distinct trial URL before readiness can become
-`READY FOR CURRENT V1 EXPORT`. Closure/runbook:
+production-cutover tooling was added by OPS-01. Renée subsequently completed
+the human login/Owner/Add Book checkpoint and designated the CURRENT ZIP used
+by SOURCE-01. Closure/runbook:
 `docs/111-mig-02-ops-01-isolated-trial-rollback-runbook.md`.
+
+### MIG-02-SOURCE-01 — CURRENT V1 source intake and profile
+
+Status: **PROFILE GO — MAPPING/DESIGN SLICES REQUIRED**.
+
+The exact designated CURRENT ZIP is held unchanged outside Git and copied into
+the dedicated ignored, read-only trial source root for safe extraction. The
+production `current-v1-json-29` adapter accepts only the reviewed explicit
+`books=29`, `authors=2`, `reading_goals=2` structure, enumerates stable raw
+source identities without V2 interpretation, and fails closed on structural
+drift.
+
+The normal RUN-01 profile in the isolated trial reports 3,587 files,
+19,801,196 bytes, 2,624 stable records and the actual source populations. It
+confirms nonzero Series, Wishlist, assessment, archive and circulation data,
+including eight Copy-level open rounds and one conflicting Book/Copy end state.
+Therefore `D-MIG-LOAN-01` and the
+reviewed mapping/conditional slices in doc 112 are prerequisites. Profile
+wrote only its ignored artifact/checksum: every product and MIG-FND table count
+is unchanged. No dry-run or apply/import was run. Product remains `v2.001`,
+schema `1026`, Biblio Core is `2.34.0` and Biblio UI remains `0.20.0`.
+Closure evidence: `docs/112-mig-02-source-01-current-v1-source-intake-profile.md`.

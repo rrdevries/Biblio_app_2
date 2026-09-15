@@ -189,9 +189,10 @@ The following active product capabilities are outside the V2.001 release gate:
 - wishlist grouping, smart groups and smart Collections;
 - completeness claims, social and recommendation features;
 - general import/export UI;
-- CURRENT V1 detection and mapping of source reading records to concrete
-  ReadingRounds or Personal Reading Truth, including any legacy paused/date
-  interpretation and any correction/removal workflow for imported history;
+- post-cutover correction/removal UI for imported reading history; CURRENT V1
+  detection is implemented by MIG-02-SOURCE-01, while its reviewed
+  ReadingRound/Personal Reading Truth mapping is active V2.001 migration work
+  and must not be treated as a V2.002 deferral;
 - institutional loan, reservation and fine systems;
 - Atmosphere Packs until separately release-ready.
 

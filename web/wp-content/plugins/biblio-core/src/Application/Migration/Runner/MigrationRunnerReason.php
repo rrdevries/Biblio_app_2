@@ -13,6 +13,7 @@ enum MigrationRunnerReason: string
     case SourceDuplicate = "source_duplicate";
     case UnsupportedAdapter = "unsupported_source_adapter";
     case UnsupportedVersion = "unsupported_source_version";
+    case UnsupportedStructure = "unsupported_source_structure";
     case InvalidTarget = "invalid_target";
     case UnhealthySchema = "unhealthy_schema";
     case DuplicateParticipant = "duplicate_participant";

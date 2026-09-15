@@ -4442,6 +4442,51 @@ MIG-02-OPS-01 is technically accepted only when:
 - an independent review finds no blocker while human login remains explicitly
   pending.
 
-Status: **TECHNICAL GO — awaiting Renée trial identity/login acceptance**.
+Status: **HUMAN GO / CLOSED**. Renée subsequently accepted the isolated trial
+identity/login checkpoint and designated the exact CURRENT ZIP recorded by
+MIG-02-SOURCE-01.
 Exact runbook and closure evidence are in
 `docs/111-mig-02-ops-01-isolated-trial-rollback-runbook.md`.
+
+## 133. MIG-02-SOURCE-01 CURRENT source intake and profile
+
+MIG-02-SOURCE-01 is accepted only when:
+
+- only Renée's exact designated ZIP is used and its immutable ZIP hash,
+  metadata, safe extraction root, per-file inventory and aggregate source
+  manifest are recorded;
+- extraction uses a new ignored source root outside backup/artifact roots,
+  rejects absolute/traversal paths and symlinks, validates archive integrity
+  and makes source files read-only;
+- the production adapter supports only the observed explicit source markers
+  and reviewed structure, while changed/unknown paths, fields, versions,
+  shapes, malformed JSON and post-profile byte drift fail closed;
+- the adapter enumerates only real stable source IDs and structural references,
+  never invents IDs for contributor, assessment, Series, archive,
+  classification or Item-local substructures and makes no V2 mapping;
+- the profile reports actual CURRENT field/value/population/integrity evidence,
+  raw bounded enum counts, ID-less structures and conditional slice needs
+  without using historical fixture counts as authority;
+- equal Author/Series names never merge identity, empty ISBN never means
+  explicit no-ISBN, unknown values never become `Anders` and no dates, roles,
+  owners, Libraries or loan semantics are inferred;
+- private payloads, Note/review text, names, counterparties and acquisition
+  source values remain absent from docs, Git, fixtures and ordinary operator
+  output;
+- production `wp biblio migration profile` in the isolated trial produces the
+  normal deterministic checksummed artifact outside the source tree;
+- exact before/after counts for all Biblio tables are equal, every MIG-FND
+  table remains empty and no product row is written;
+- dry-run is deliberately not invoked while reviewed mappings/participants are
+  absent, and no public apply command, import, cleanup, provider, schema or UI
+  change is added;
+- source-proven nonzero conditional work is explicit, zero-population work is
+  not created, and eight Copy-level open circulation records plus one
+  contradictory Book/Copy end state force `D-MIG-LOAN-01 REQUIRED`; and
+- targeted/full suites, syntax, PHPStan, Composer/platform, WordPress smoke,
+  manifest, whitespace and independent final review are green.
+
+Status: **PROFILE GO — MAPPING/DESIGN SLICES REQUIRED**. Product remains
+`v2.001`; schema remains `1026`; Biblio Core is `2.34.0`; Biblio UI remains
+`0.20.0`. Exact evidence is in
+`docs/112-mig-02-source-01-current-v1-source-intake-profile.md`.

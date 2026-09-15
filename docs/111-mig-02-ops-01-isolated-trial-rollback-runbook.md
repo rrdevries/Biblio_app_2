@@ -1,10 +1,15 @@
 # MIG-02-OPS-01 — Isolated trial and rollback runbook
 
-Status: **TECHNICAL GO — awaiting Renée trial identity/login acceptance**
+Status: **HUMAN GO / CLOSED**
 
 Date: 2026-09-15
 
 Task severity: **High**
+
+Renée subsequently completed the human identity/login checkpoint and
+designated the exact CURRENT ZIP profiled by MIG-02-SOURCE-01. The versions and
+SHA below remain the historical OPS-01 proof baseline; the later source-profile
+build is recorded separately in doc 112.
 
 Scope: local operations and release safety only. This runbook is both the
 reusable operator procedure and the closure evidence. It adds no current V1
@@ -287,14 +292,13 @@ from the trial Mailpit UI, then verify as the target account:
 5. expected Owner capabilities work; and
 6. no admin/super-admin controls are present.
 
-Automation does not fake this acceptance. Until Renée confirms it, the exact
-status remains:
+Automation did not fake this acceptance. Renée confirmed the checkpoint; the
+exact status is now:
 
-**TECHNICAL GO — awaiting Renée trial identity/login acceptance**
+**HUMAN GO / CLOSED**
 
-Only after that human GO may Renée designate one CURRENT V1 export. The next
-technical work is fingerprint → actual structure/version inspection → exact
-adapter → profile → human review. No apply follows automatically.
+After that human GO, Renée designated the one CURRENT V1 export profiled in
+doc 112. No apply follows automatically.
 
 ## 12. Explicitly deferred
 

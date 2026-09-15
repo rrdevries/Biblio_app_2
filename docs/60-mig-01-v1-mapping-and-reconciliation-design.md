@@ -1,6 +1,6 @@
 # MIG-01 — V1 mapping and reconciliation design
 
-Status: **MIGRATION DESIGN BLOCKED BY REMAINING DOMAIN TARGET GAPS**
+Status: **HISTORICAL MAPPING DESIGN — SUPERSEDED FOR CURRENT COUNTS BY MIG-02-SOURCE-01**
 
 Scope: mapping/reconciliation design. MIG-FND-01 has since implemented only the
 source-neutral ledger foundation; no V1 parser, import or product-domain write.
@@ -13,6 +13,14 @@ V1 blijft source of truth tot de finale cutover.
 > migration or release decision must use a fresh `/data/` directory/export that
 > Renée explicitly supplies or designates. Every run pins its own snapshot and
 > hash. DATA-01 remains regression coverage only.
+
+> **CURRENT designation (2026-09-15):** Renée has now designated one exact
+> CURRENT ZIP. Its immutable identity, actual structure and replacement counts
+> are recorded in `docs/112-mig-02-source-01-current-v1-source-intake-profile.md`.
+> The historical counts and source-specific conclusions below remain evidence
+> only and must not override doc 112. Schema 1026 and the closed CAT/AUTH/READ/
+> NOTE/Item-local target foundations supersede the older target-gap snapshot;
+> reviewed current mappings and circulation policy remain open.
 
 ## 1. Besluit en harde grens
 

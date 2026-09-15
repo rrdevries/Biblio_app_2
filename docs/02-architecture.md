@@ -2573,3 +2573,35 @@ post-restore validation. Source packages, migration artifacts, backups,
 evidence and local state occupy mutually separate ignored roots. The complete
 operator and failure contract is in
 `docs/111-mig-02-ops-01-isolated-trial-rollback-runbook.md`.
+
+## 69. MIG-02-SOURCE-01 exact CURRENT source adapter boundary
+
+The explicitly designated CURRENT ZIP is an immutable external input. Safe
+intake copies its bytes into a dedicated ignored source root, validates the ZIP
+central directory before extraction, rejects absolute/traversal paths and
+symlinks, makes extracted files read-only and keeps source, output, backup and
+operational evidence roots separate. The existing filesystem package factory
+then owns the exact sorted per-file size/hash inventory and aggregate manifest
+identity.
+
+`CurrentV1SourceAdapter` is a version-bound production parser for exactly the
+reviewed source contract: `books.json` schema 29, `authors.json` schema 2,
+`reading_goals.json` schema 2 and the observed auxiliary layout/markers. It
+answers only which raw source records and structural references exist. It does
+not turn a V1 Book into a Work/Edition, assign an owner, map a status/value,
+deduplicate by name, infer no-ISBN or produce a typed V2 participant plan.
+Unknown paths, root or record fields, versions and primary shapes fail closed.
+
+Stable source records use family `biblio-v1` and separate types for Book, Copy,
+Author, Wishlist entry, ReadingRound, Note, circulation round and Reading Goal.
+ID-less contributor, assessment, Series, classification, archive and copy-note
+structures remain explicit category counts/non-observation reasons; the
+adapter invents no identity. Book/Copy duplicate circulation representations
+are grouped only by their explicit shared source ID and retain both raw
+occurrences and references.
+
+Production `wp biblio migration profile` registers this one adapter and uses
+the unchanged RUN-01 artifact/privacy boundary. Current source mappings are
+not yet reviewed, so SOURCE-01 invokes neither dry-run nor the internal apply
+coordinator. No public apply command exists. Isolated before/after table counts
+prove zero product and MIG-FND writes. Schema remains 1026; Core is 2.34.0.
