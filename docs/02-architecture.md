@@ -2542,3 +2542,34 @@ not just target existence, so reconciliation cannot accept an unrelated Work,
 Edition, Item, contributor, ReadingRound or Private Note that happens to exist.
 The repository-stored run owns reconciliation scope; observation-provenance or
 run/observation mapping-edge drift is counted as unclassified broken state.
+
+## 68. MIG-02-OPS-01 isolated trial and restore boundary
+
+Migration rehearsal is not allowed to use the normal DDEV `biblio-v2`/`db`
+target. The operational boundary is a detached clean-SHA worktree with a
+separate DDEV project/container/volume, distinct hostname and explicit
+`biblio_migration_trial` database. Current tracked code supplies the build;
+only non-data WordPress runtime files and dependencies are copied. Normal DB,
+uploads, provider configuration, credentials and catalog content do not cross
+the boundary.
+
+Every destructive trial operation passes one positive guard before its
+payload. The guard binds canonical approot, project, URL, configured and
+selected database, local/environment/database trial ID, database-resident
+purpose marker, Git SHA and clean state. Default `db`, `biblio_core_test`, an
+unknown/missing marker or ambiguous config fails closed. First creation is a
+separate absent-database path and cannot adopt existing state.
+
+The baseline is created only through supported WordPress and Core operations:
+fresh WordPress install, plugin activation/schema migration, ordinary
+subscriber provisioning, designated personal Library and Owner/direct
+membership. IDENTITY-01 `--require-empty` is retained unchanged; OPS adds a
+stricter all-Biblio-table assertion and explicit non-admin check.
+
+Backup and restore use DDEV explicit-database export/import wrapped by the
+guard. Immutable gzip backups have checksum and build/target provenance;
+restore accepts only its dedicated ignored backup root and always performs
+post-restore validation. Source packages, migration artifacts, backups,
+evidence and local state occupy mutually separate ignored roots. The complete
+operator and failure contract is in
+`docs/111-mig-02-ops-01-isolated-trial-rollback-runbook.md`.

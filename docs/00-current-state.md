@@ -3681,3 +3681,31 @@ real source data, schema/UI change, cursor or auto-repair is added. Product
 remains `v2.001`; schema remains `1026`; Biblio Core is `2.33.0`; Biblio UI
 remains `0.20.0`. Closure evidence:
 `docs/110-mig-02-recon-01-reconciliation-restart-evidence.md`.
+
+### MIG-02-OPS-01 — Isolated trial and rollback environment
+
+Status: **TECHNICAL GO — awaiting Renée trial identity/login acceptance**.
+
+A detached clean-SHA worktree now runs current code in the separately named
+local DDEV project `biblio-v2-migration-trial`, URL
+`https://biblio-v2-migration-trial.ddev.site`, with explicit database
+`biblio_migration_trial`. It never copies or resets normal `biblio-v2` database
+`db`. Trial-only reset, mutation and restore all require exact root, project,
+URL, non-default database, environment marker, matching database-resident
+trial marker, clean Git SHA and explicit destructive confirmation.
+
+The reproducible fresh baseline contains one normal subscriber, its one
+designated personal Privébibliotheek and active Owner/direct membership, while
+all migration/product content is empty under both IDENTITY-01
+`--require-empty` and the stricter OPS table check. Explicit-database DDEV
+exports are immutable, checksummed and provenance-bound. Two real isolated
+backup→synthetic-mutation→restore cycles and privacy-safe normal-database
+before/after fingerprints are the acceptance proof. Source packages, migration
+artifacts, V2 backups, evidence and local identity/config remain separate
+ignored roots.
+
+No current V1 export, adapter, mapping, apply/import, schema, Core/UI version or
+production-cutover tooling is added. Human login and Owner/Add Book validation
+must occur only at the visibly distinct trial URL before readiness can become
+`READY FOR CURRENT V1 EXPORT`. Closure/runbook:
+`docs/111-mig-02-ops-01-isolated-trial-rollback-runbook.md`.

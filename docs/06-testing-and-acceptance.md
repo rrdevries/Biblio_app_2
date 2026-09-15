@@ -4410,3 +4410,38 @@ MIG-02-RECON-01 is accepted only when:
 Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1026`;
 Biblio Core is `2.33.0`; Biblio UI remains `0.20.0`. Exact evidence is in
 `docs/110-mig-02-recon-01-reconciliation-restart-evidence.md`.
+
+## 132. MIG-02-OPS-01 isolated trial and rollback
+
+MIG-02-OPS-01 is technically accepted only when:
+
+- normal `biblio-v2` database `db` is never a destructive target and before/
+  after schema, exact Biblio-count and user/Library fingerprints are equal;
+- the isolated target uses exact clean-SHA current code in DDEV project
+  `biblio-v2-migration-trial`, URL
+  `https://biblio-v2-migration-trial.ddev.site` and explicit database
+  `biblio_migration_trial`;
+- reset, mutation and restore require the same positive root/project/URL/DB/
+  environment/database-marker/Git guard plus explicit destructive consent;
+- negative tests prove normal `db`, wrong project/root/URL, missing/wrong
+  marker, dirty build, missing consent and unsafe paths stop before payload;
+- fresh baseline has schema 1026, Core 2.33.0, UI 0.20.0, WordPress 7.0.2,
+  active plugins and HTTP 200;
+- the target is an explicit subscriber/non-super-admin with exactly one
+  designated personal Library and active Owner/direct membership;
+- existing `identity validate --require-empty` passes unchanged and the
+  stricter OPS check finds no migration or other product content;
+- every backup is non-empty, gzip-valid, SHA-256 verified, immutable and bound
+  to exact trial/build/target provenance;
+- two real isolated cycles each prove mutation present before guarded restore,
+  absent afterward and the complete baseline valid again;
+- source, output, backup, evidence and local identity/secret roots are
+  separate and ignored; no generated or credential material is committed;
+- no current V1 data, adapter, mapping, apply CLI or real import is used and
+  product/schema/Core/UI versions stay unchanged; and
+- an independent review finds no blocker while human login remains explicitly
+  pending.
+
+Status: **TECHNICAL GO — awaiting Renée trial identity/login acceptance**.
+Exact runbook and closure evidence are in
+`docs/111-mig-02-ops-01-isolated-trial-rollback-runbook.md`.
