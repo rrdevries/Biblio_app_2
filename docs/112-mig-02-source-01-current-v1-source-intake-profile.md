@@ -215,6 +215,11 @@ Empty ISBN is unknown/not entered and is not converted to V2 explicit
 `Geen ISBN`. Canonical ISBN resolution, Edition grouping, title/publication
 mapping and contained-work treatment all require reviewed planning.
 
+D-MIG-CAT-MAP-01 subsequently closed the target meaning on 2026-09-16: all 150
+blank ISBN Books map to `EditionIsbnMetadata::unknown()`, create no canonical
+ISBN claim and retain `explicitly_no_isbn=0`. The required CAT plan extension
+is approved but not implemented by SOURCE-01.
+
 ## 7. Author findings
 
 There are 257 stable Author IDs, zero duplicate ID groups and zero exact
@@ -404,7 +409,7 @@ reference. No Location slice is required for this population.
 |---|---:|---|---|---|---|---|---|---|
 | Book/Copy catalog identities | 1,139/1,106 | Work/Edition/Item | REVIEW_MAPPING | No | Yes | Yes | CAT exists | catalog mapping plan |
 | non-empty ISBN | 989 | Edition ISBN | REVIEW_MAPPING | No | Yes | Yes | CAT exists | catalog mapping plan |
-| empty ISBN without marker | 150 | unknown ISBN / explicit no-ISBN distinction | QUARANTINE_CANDIDATE | No | Yes | Yes | CAT exists | catalog mapping plan |
+| empty ISBN without marker | 150 | `EditionIsbnMetadata::unknown()`; no claim; `explicitly_no_isbn=0` | EXACT_TARGET | Yes | No | Yes | CAT extension approved, not implemented | MIG-02-CAT-UNKNOWN-01 |
 | stable Authors | 257 | canonical Author | REVIEW_MAPPING | No | Yes | Yes | AUTH exists | Author mapping plan |
 | ID-less contributor names | 531 Books | WorkContributor | PRODUCT_DECISION_REQUIRED | No | Yes | Yes | AUTH cannot identify them yet | Author identity design |
 | stable ReadingRounds | 53 | ReadingRound | REVIEW_MAPPING | No | Yes | Yes | READ exists | reading mapping plan |
@@ -421,7 +426,7 @@ reference. No Location slice is required for this population.
 | circulation | 9 IDs; Copy 8 open/1 closed; Book 7 open; 1 end-state conflict | external/internal loan candidates | PRODUCT_DECISION_REQUIRED | No | Yes | Yes | No approved participant | D-MIG-LOAN-01 |
 | classifications | 2,305 assignments | Library classification context | REVIEW_MAPPING | No | Yes | Yes | CAT target path exists | classification mapping plan |
 | location | 0 populated | Library Location | EXACT_TARGET | Yes target; zero data | No | No | CAT target path exists | none |
-| contained works | 22 | Work/Edition candidates | PRODUCT_DECISION_REQUIRED | No | Yes | Yes | CAT needs stable plans | catalog structure design |
+| contained works | 22 | occurrence-local provisional Work + ordered Work containment; no child Edition/Item | REVIEW_MAPPING | Yes per occurrence | No | Yes | containment participant absent | MIG-02-CAT-CONT-01 |
 | Reading Goals | 2 | deferred Reading Goal design | PRESERVE_DEFERRED | No | Yes | Yes | No | preservation plan |
 | caches/reports/preferences/release state | auxiliary | no active migration target approved | PRESERVE_DEFERRED | No | Yes | Yes | No | preservation plan |
 
@@ -433,7 +438,8 @@ upgraded.
 
 Required before a truthful dry-run:
 
-- reviewed catalog mapping from V1 Book/Copy to the existing CAT plans;
+- reviewed catalog mapping from V1 Book/Copy to the CAT plans, including the
+  approved unknown-ISBN extension and a separate contained-Work relation lane;
 - reviewed Author occurrence/identity mapping, including an explicit strategy
   for ID-less names;
 - reading mapping for rounds and ID-less registrations;
@@ -461,8 +467,7 @@ Only these source-proven questions are unresolved:
 3. stable Series identity and anomalous/missing positions without name merge;
 4. source identities and Note/Review/Rating classification for ID-less
    assessments, reflections and Copy notes;
-5. target identity/cardinality for ID-less contained works;
-6. treatment of `borrowed`/missing-type acquisition and Book-versus-Copy
+5. treatment of `borrowed`/missing-type acquisition and Book-versus-Copy
    acquisition precedence.
 
 No new V2 field is proposed from source evidence.
