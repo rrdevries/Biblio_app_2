@@ -33,7 +33,8 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
     public function __construct(
         private ?CurrentV1CatalogItemDependencyProvider $itemDependencies = null,
         ?IsbnCanonicalizer $isbn = null,
-        private ?CurrentV1ClassificationMapper $classificationMapper = null
+        private ?CurrentV1ClassificationMapper $classificationMapper = null,
+        private ?CurrentV1ItemLocalMapper $itemLocalMapper = null
     ) {
         $this->isbn = $isbn ?? new IsbnCanonicalizer();
     }
@@ -263,6 +264,16 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
             array_push($findings, ...$classification->findings());
         }
 
+        $itemLocal = null;
+        if ($this->itemLocalMapper !== null) {
+            $itemLocal = $this->itemLocalMapper->map(
+                $inspection,
+                $copies,
+                $books
+            );
+            array_push($findings, ...$itemLocal->findings());
+        }
+
         foreach ($copies as $copy) {
             $copyId = $copy->sourceId();
             $bookId = $copy->payload()["bookId"] ?? null;
@@ -281,7 +292,9 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
                     MigrationDisposition::Quarantined,
                     CurrentV1CatalogMappingReason::CatalogBookQuarantined
                 );
-                $this->copyPreservationFindings($copy, $findings);
+                if ($itemLocal === null) {
+                    $this->copyPreservationFindings($copy, $findings);
+                }
                 continue;
             }
 
@@ -290,12 +303,21 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
                 $books[$bookKey],
                 $target
             ) ?? CurrentV1CatalogItemDependencies::unresolved();
+            $itemLocalMapping = $itemLocal?->forCopy($copyId);
+            if ($itemLocalMapping !== null) {
+                $dependencies = $dependencies->withItemLocal($itemLocalMapping);
+            }
             if ($classification !== null) {
-                $dependencies = new CurrentV1CatalogItemDependencies(
-                    $classification->selection($bookId),
-                    $dependencies->itemLocalReviewed(),
-                    $dependencies->localDetails()
+                $dependencies = $dependencies->withClassification(
+                    $classification->selection($bookId)
                 );
+            }
+            if (
+                $dependencies->itemLocalReviewed()
+                && $dependencies->itemEligibility()
+                    !== CurrentV1ItemEligibility::ItemEligible
+            ) {
+                continue;
             }
             $blocked = false;
             if ($dependencies->classification() === null) {
@@ -326,7 +348,8 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
                         $dependencies->classification(),
                         null,
                         null,
-                        $dependencies->localDetails()
+                        $dependencies->localDetails(),
+                        preservation: $dependencies->preservation()
                     ),
                     [CatalogEditionMigrationParticipant::SOURCE_TYPE . ":" . $editionSourceId]
                 );
@@ -347,7 +370,9 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
                     CurrentV1CatalogMappingReason::ConservativeItemSubset
                 );
             }
-            $this->copyPreservationFindings($copy, $findings);
+            if ($itemLocal === null) {
+                $this->copyPreservationFindings($copy, $findings);
+            }
         }
 
         return new MigrationSourceMappingResult($records, $findings);

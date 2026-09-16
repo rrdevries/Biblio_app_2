@@ -22,7 +22,8 @@ final readonly class CatalogItemPlan implements TypedMigrationPlan
         private ?InventoryNumber $inventoryNumber = null,
         private ?LocationId $locationId = null,
         private ?ItemLocalDetailsState $localDetails = null,
-        private ?ItemId $approvedExistingItemId = null
+        private ?ItemId $approvedExistingItemId = null,
+        private ?CatalogItemPreservationPlan $preservation = null
     ) {
         if (trim($this->editionSourceId) === "" || mb_strlen($this->editionSourceId) > 191) {
             throw new ValidationException("Edition source reference is invalid.");
@@ -36,6 +37,10 @@ final readonly class CatalogItemPlan implements TypedMigrationPlan
     public function locationId(): ?LocationId { return $this->locationId; }
     public function localDetails(): ?ItemLocalDetailsState { return $this->localDetails; }
     public function approvedExistingItemId(): ?ItemId { return $this->approvedExistingItemId; }
+    public function preservation(): ?CatalogItemPreservationPlan
+    {
+        return $this->preservation;
+    }
 
     public function canonicalPayload(): array
     {
@@ -80,6 +85,7 @@ final readonly class CatalogItemPlan implements TypedMigrationPlan
             ],
             "approved_existing_item_id" =>
                 $this->approvedExistingItemId?->value(),
+            "preservation" => $this->preservation?->canonicalPayload(),
         ];
     }
 }

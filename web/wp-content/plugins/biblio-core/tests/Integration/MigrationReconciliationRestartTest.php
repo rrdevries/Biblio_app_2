@@ -16,6 +16,7 @@ use Biblio\Core\Application\Migration\Catalog\{
     CatalogEditionPlan,
     CatalogItemMigrationParticipant,
     CatalogItemPlan,
+    CatalogItemPreservationPlan,
     CatalogWorkMigrationParticipant,
     CatalogWorkPlan
 };
@@ -178,7 +179,13 @@ final readonly class ReconciliationFullAdapter implements MigrationSourceAdapter
             new CatalogItemPlan(
                 "edition/1",
                 $this->libraryId,
-                new LibraryCatalogSelection($this->bookTypeId)
+                new LibraryCatalogSelection($this->bookTypeId),
+                preservation: new CatalogItemPreservationPlan(
+                    "copy_auxiliary_evidence_preserved",
+                    hash("sha256", "reconciliation-copy-evidence"),
+                    "synthetic:v1.copy:item-1",
+                    ["source_number_field_count" => 3]
+                )
             )
         );
         yield MigrationSourceRecord::typed(
@@ -196,7 +203,8 @@ final readonly class ReconciliationFullAdapter implements MigrationSourceAdapter
                 ReadingPeriod::ended(
                     ReadingDate::year(2018),
                     ReadingDate::month(2019, 7)
-                )
+                ),
+                "item/1"
             )
         );
         yield MigrationSourceRecord::typed(
@@ -493,6 +501,12 @@ final class MigrationReconciliationRestartTest extends PersistenceIntegrationTes
         self::assertSame(0, $reconciliation["uncommitted_count"]);
         self::assertSame(0, $reconciliation["unexplained_drop_count"]);
         self::assertSame(0, $reconciliation["broken_target_count"]);
+        self::assertSame(1, $reconciliation["preservation"]["total"]);
+        self::assertSame([[
+            "source_type" => CatalogItemMigrationParticipant::SOURCE_TYPE,
+            "source_id" => "item/1",
+            "reason_code" => "copy_auxiliary_evidence_preserved",
+        ]], $reconciliation["preservation"]["records"]);
         self::assertSame(7, $reconciliation["mapping_counts"]["entity"]["total"]);
         self::assertSame(2, $reconciliation["mapping_counts"]["relation"]["total"]);
         self::assertSame(7, $reconciliation["mapping_counts"]["entity"]["created"]);

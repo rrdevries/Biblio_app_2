@@ -3871,3 +3871,30 @@ so this slice creates no Item plan. Exact before/after counts for all 57 Biblio
 tables are identical; no apply/import occurred. Product remains `v2.001`,
 schema remains `1026`, Biblio Core is `2.38.0` and Biblio UI remains `0.20.0`.
 Closure evidence: `docs/119-mig-02-class-map-01-current-v1-classification-mapper.md`.
+
+### MIG-02-ITEMLOCAL-MAP-01 — CURRENT V1 Item-local mapper
+
+Status: **GO / CLOSED**.
+
+The exact manifest-bound CURRENT mapper now converts only explicit Copy
+acquisition facts to the existing nullable `ItemLocalDetailsState`: `bought`
+to `zelf_aangeschaft`, `received` to `gekregen`, exact year/month/day precision
+to `in_library_since`, and explicit source text to `acquired_via`. The one
+missing type retains its exact date with a null method. No unsupported field,
+current date, zero amount, Condition, `anders`, inventory number or collector
+fact is inferred.
+
+It recomputes 72 non-empty states and 1,029 reviewed absences. Five external-
+borrowed Copies are an explicit terminal non-Item outcome and never produce a
+Library Item. Combined with the closed classification contract, 744 Copies
+produce complete Item plans; 355 owned Copies remain classification-blocked
+and two remain under the existing invalid-ISBN quarantine.
+
+All Item plans retain source-number and other auxiliary Copy evidence as one
+`preserved_deferred` outcome with their normal Item/context/optional-details
+mappings. Private source values never enter ordinary artifacts. Exact replay,
+dependency resolution and reconciliation validate the preservation reason and
+target graph. The final clean-SHA isolated dry-run changes none of the 57
+Biblio tables and no apply/import is run. Product remains `v2.001`, schema
+remains `1026`, Biblio Core is `2.39.0` and Biblio UI remains `0.20.0`.
+Closure evidence: `docs/121-mig-02-itemlocal-map-01-current-v1-item-local-mapper.md`.

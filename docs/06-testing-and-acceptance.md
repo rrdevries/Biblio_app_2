@@ -4678,3 +4678,36 @@ MIG-02-CLASS-MAP-01 is accepted only when:
 Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1026`;
 Biblio Core is `2.38.0`; Biblio UI remains `0.20.0`. Exact evidence is in
 `docs/119-mig-02-class-map-01-current-v1-classification-mapper.md`.
+
+## 139. MIG-02-ITEMLOCAL-MAP-01 CURRENT V1 Item-local mapper
+
+MIG-02-ITEMLOCAL-MAP-01 is accepted only when:
+
+- the exact CURRENT manifest and reviewed mapping-contract identity are pinned;
+- `bought`, `received`, missing type, date precision and explicit source text
+  map exactly with every unsupported Item-local member left null;
+- 72 non-empty states and 1,029 reviewed absences are recomputed without an
+  all-null details row;
+- five external-borrowed Copies are terminal non-Items and produce no
+  `CatalogItemPlan`;
+- invalid future dates fail closed without current-time substitution;
+- Book acquisition projections, source numbers, three Copy notes, one disposal
+  object and one photo slot have privacy-safe explicit preservation paths;
+- CAT/classification/Item-local intersection yields exactly 744 Item plans and
+  355 classification-only blockers, with no unresolved Item-local dependency;
+- each Item observation has one `preserved_deferred` disposition, the exact
+  auxiliary-evidence reason and all required Item/context/optional-details
+  mappings;
+- replay and reconciliation reject changed payload, reason, state, missing
+  mapping or broken target, while valid preserved mappings satisfy later
+  dependencies;
+- private source text is absent from docs, artifacts, output and errors;
+- the final clean implementation SHA is rebuilt in the guarded isolated trial,
+  no apply/import runs and all 57 Biblio table counts are identical before and
+  after the exact CURRENT dry-run; and
+- focused/full Core gates, PHP syntax, PHPStan, Composer/platform, WordPress
+  smoke, manifest, whitespace and independent second review pass.
+
+Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1026`;
+Biblio Core is `2.39.0`; Biblio UI remains `0.20.0`. Exact evidence is in
+`docs/121-mig-02-itemlocal-map-01-current-v1-item-local-mapper.md`.

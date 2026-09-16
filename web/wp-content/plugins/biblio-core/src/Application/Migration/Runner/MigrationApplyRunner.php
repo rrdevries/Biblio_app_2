@@ -132,13 +132,6 @@ final readonly class MigrationApplyRunner
             $observation = $this->observe($run, $record);
             if (!$this->processable($observation)) {
                 $this->accountSkipped($observation, $execution);
-                if (in_array(
-                    $observation->disposition(),
-                    [MigrationDisposition::Mapped, MigrationDisposition::Transformed],
-                    true
-                )) {
-                    $resolved[$key] = true;
-                }
                 continue;
             }
             if (!$this->dependenciesResolved($plan, $resolved)) {
@@ -185,11 +178,7 @@ final readonly class MigrationApplyRunner
                     ? "created_targets"
                     : "reused_targets"];
             }
-            if (in_array(
-                $outcome->disposition(),
-                [MigrationDisposition::Mapped, MigrationDisposition::Transformed],
-                true
-            )) {
+            if ($this->resolvesDependencies($outcome)) {
                 $resolved[$key] = true;
             }
             if ($this->shouldInterrupt($execution, $interruptAfter)) {
@@ -273,15 +262,34 @@ final readonly class MigrationApplyRunner
     {
         $resolved = [];
         foreach ($this->ledger->snapshot($run->id())->observations() as $observation) {
-            if (in_array(
-                $observation->disposition(),
-                [MigrationDisposition::Mapped, MigrationDisposition::Transformed],
-                true
-            )) {
+            if (
+                in_array(
+                    $observation->disposition(),
+                    [MigrationDisposition::Mapped, MigrationDisposition::Transformed],
+                    true
+                )
+                || (
+                    $observation->disposition()
+                        === MigrationDisposition::PreservedDeferred
+                    && $observation->mappings() !== []
+                )
+            ) {
                 $resolved[$observation->identityKey()] = true;
             }
         }
         return $resolved;
+    }
+
+    private function resolvesDependencies(MigrationRecordOutcome $outcome): bool
+    {
+        return in_array(
+            $outcome->disposition(),
+            [MigrationDisposition::Mapped, MigrationDisposition::Transformed],
+            true
+        ) || (
+            $outcome->disposition() === MigrationDisposition::PreservedDeferred
+            && $outcome->mappings() !== []
+        );
     }
 
     private function observe(MigrationRun $run, MigrationSourceRecord $record): SourceObservation

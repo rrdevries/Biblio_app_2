@@ -2723,3 +2723,31 @@ mapping findings. There is no classification participant or apply write in
 this slice, so RECON-01 continues to reconcile CAT entities while planning
 accounting proves every active, preserved, review-blocked and conflict outcome.
 Schema remains 1026; Core is 2.38.0.
+
+## 74. MIG-02-ITEMLOCAL-MAP-01 CURRENT Item-local mapping boundary
+
+`CurrentV1ItemLocalMapper` is a manifest-bound collaborator of the existing
+CURRENT catalog mapper. It consumes only adapter-validated Copy and Book
+records and returns explicit `ITEM_ELIGIBLE`,
+`NOT_LIBRARY_ITEM_EXTERNAL_BORROWED` or
+`INVALID_ITEM_LOCAL_ACQUISITION_DATE` outcomes. Reviewed all-null state is
+represented separately from terminal non-Item state.
+
+Only explicit Copy acquisition values become the existing typed
+`ItemLocalDetailsState`; Book acquisition projections never supply fallback or
+precedence. CAT creates an Item plan only after exact target-Library binding,
+typed classification and reviewed Item-local eligibility. External borrowed
+physical sources therefore cannot become Library Items.
+
+Unsupported Copy-local evidence is attached to the derived Item plan as a
+privacy-safe `CatalogItemPreservationPlan`. The participant and writer keep one
+atomic product transaction while returning `preserved_deferred` with normal
+Item, classification-context and optional-details mappings. MIG-FND dependency
+resolution treats only mapped/transformed outcomes and preserved outcomes with
+actual mappings as resolved; quarantined mappings do not gain that meaning.
+Reconciliation verifies disposition, reason, required mappings and target
+existence. Multi-target source observations are filtered by the exact required
+target type when a later participant resolves a dependency.
+
+Profile and dry-run remain zero-write, and production still exposes no apply
+command. Schema remains 1026; Core is 2.39.0.

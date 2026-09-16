@@ -53,9 +53,13 @@ final readonly class CatalogItemMigrationParticipant implements MigrationPartici
         if ($typed->localDetails() !== null) {
             $operations[] = ["operation" => "record_item_local_details"];
         }
+        $preservation = $typed->preservation();
         return new PlannedMigrationRecord(
-            MigrationDisposition::Mapped,
+            $preservation === null
+                ? MigrationDisposition::Mapped
+                : MigrationDisposition::PreservedDeferred,
             $operations,
+            reasonCode: $preservation?->reason(),
             dependencies: [[
                 "source_type" => CatalogEditionMigrationParticipant::SOURCE_TYPE,
                 "source_id" => $typed->editionSourceId(),

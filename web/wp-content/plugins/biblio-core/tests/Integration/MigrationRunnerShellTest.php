@@ -33,6 +33,8 @@ use Biblio\Core\Infrastructure\Migration\CurrentV1SourceAdapter;
 use Biblio\Core\Infrastructure\Migration\CurrentV1CatalogMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ClassificationMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedClassificationContract;
+use Biblio\Core\Infrastructure\Migration\CurrentV1ItemLocalMapper;
+use Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedItemLocalContract;
 use Biblio\Core\Infrastructure\Migration\FilesystemMigrationSourcePackageFactory;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryBookTypeRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryGenreRepository;
@@ -448,6 +450,9 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
                         $this->tableNames
                     ),
                     new CurrentV1ReviewedClassificationContract($manifest)
+                ),
+                itemLocalMapper: new CurrentV1ItemLocalMapper(
+                    new CurrentV1ReviewedItemLocalContract($manifest)
                 )
             ),
         ]);
@@ -507,13 +512,23 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
             $artifact["plan"]["source_mapping_finding_counts"]
                 ["unresolved_classification_dependency"]
         );
+        self::assertArrayNotHasKey(
+            "unresolved_item_local_dependency",
+            $artifact["plan"]["source_mapping_finding_counts"]
+        );
         self::assertSame(
             1,
             $artifact["plan"]["source_mapping_finding_counts"]
-                ["unresolved_item_local_dependency"]
+                ["item_local_non_empty_state_ready"]
+        );
+        self::assertSame(
+            1,
+            $artifact["plan"]["source_mapping_finding_counts"]
+                ["copy_auxiliary_evidence_preserved"]
         );
         self::assertStringNotContainsString("Private Counterparty", $artifactBytes);
         self::assertStringNotContainsString("private circulation note", $artifactBytes);
+        self::assertStringNotContainsString("Private acquisition source", $artifactBytes);
         self::assertStringNotContainsString('"source_payload"', $artifactBytes);
         self::assertSame(0, $this->allCoreTableCounts()[
             $this->tableNames->externalLoans()
@@ -930,10 +945,20 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
                     "notes" => "private circulation note",
                 ]],
                 "condition" => "",
+                "acquisition" => [
+                    "type" => "bought",
+                    "date" => ["value" => "2020-04", "precision" => "month"],
+                    "source" => "Private acquisition source",
+                ],
+                "copyNumber" => "COPY-1",
+                "legacyBookNumber" => "BOOK-1",
+                "sourceBookNumber" => "BOOK-1",
                 "status" => "owned",
                 "ownershipStatus" => "owned",
                 "archived" => false,
                 "notes" => "",
+                "disposal" => null,
+                "exemplarPhotos" => [],
             ]],
             "wishlistItems" => [[
                 "id" => "wish-1",
