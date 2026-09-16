@@ -123,6 +123,31 @@ final readonly class CatalogMigrationWriter
             );
         }
 
+        if ($plan->aliasOfSourceId() !== null) {
+            $representative = $this->requireMappedTarget(
+                $run,
+                CatalogWorkMigrationParticipant::SOURCE_TYPE,
+                $plan->aliasOfSourceId(),
+                "work"
+            );
+            if ($mapped !== null && $mapped !== $representative) {
+                throw $this->failure(
+                    CatalogMigrationReason::DivergentReplay,
+                    "Work alias conflicts with its representative source mapping."
+                );
+            }
+            $work = $this->works->find(new WorkId($representative));
+            if ($work === null) {
+                throw $this->failure(
+                    CatalogMigrationReason::MissingTargetReference,
+                    "Representative Work target does not exist."
+                );
+            }
+            return MigrationRecordOutcome::mapped([
+                $this->mapping("work", $representative, MappingDisposition::Reused),
+            ]);
+        }
+
         if ($mapped !== null || $approved !== null) {
             $id = new WorkId($mapped ?? $approved);
             if ($this->works->find($id) === null) {
@@ -183,6 +208,51 @@ final readonly class CatalogMigrationWriter
         }
 
         $identity = CanonicalIsbnIdentity::fromMetadata($plan->isbnMetadata());
+
+        if ($plan->aliasOfSourceId() !== null) {
+            $representative = new EditionId($this->requireMappedTarget(
+                $run,
+                CatalogEditionMigrationParticipant::SOURCE_TYPE,
+                $plan->aliasOfSourceId(),
+                "edition"
+            ));
+            if ($mapped !== null && $mapped !== $representative->value()) {
+                throw $this->failure(
+                    CatalogMigrationReason::DivergentReplay,
+                    "Edition alias conflicts with its representative source mapping."
+                );
+            }
+            $edition = $this->requireCompatibleEdition(
+                $representative,
+                $workId,
+                $plan->isbnMetadata()
+            );
+            $mappings = [
+                $this->mapping(
+                    "edition",
+                    $edition->id()->value(),
+                    MappingDisposition::Reused
+                ),
+            ];
+            if ($identity !== null) {
+                $claimed = $this->isbnClaims->findByCanonicalIsbn13(
+                    $identity->isbn13()
+                );
+                if ($claimed === null || !$claimed->equals($edition->id())) {
+                    throw $this->failure(
+                        CatalogMigrationReason::IsbnConflict,
+                        "Edition alias canonical ISBN does not resolve to its representative."
+                    );
+                }
+                $mappings[] = $this->mapping(
+                    "canonical_isbn",
+                    $identity->isbn13()->value(),
+                    MappingDisposition::Reused
+                );
+            }
+            return MigrationRecordOutcome::mapped($mappings);
+        }
+
         $edition = null;
         $editionDisposition = MappingDisposition::Reused;
         $claimDisposition = MappingDisposition::Reused;

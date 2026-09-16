@@ -105,6 +105,273 @@ final class CatalogMigrationTestIds implements CatalogMigrationRecordIdGenerator
 
 final class CatalogMigrationParticipantTest extends PersistenceIntegrationTestCase
 {
+    public function testExactSourceAliasesMapBothIdentitiesToOneWorkAndEdition(): void
+    {
+        $fixture = $this->fixture("source-alias");
+        $metadata = EditionIsbnMetadata::identified(
+            null,
+            new Isbn13("9780306406157")
+        );
+        $representativeWork = MigrationSourceRecord::typed(
+            CatalogWorkMigrationParticipant::SOURCE_TYPE,
+            "v1.book/book-a/work",
+            new CatalogWorkPlan("Exact title")
+        );
+        $aliasWork = MigrationSourceRecord::typed(
+            CatalogWorkMigrationParticipant::SOURCE_TYPE,
+            "v1.book/book-b/work",
+            new CatalogWorkPlan(
+                "Exact title",
+                aliasOfSourceId: "v1.book/book-a/work"
+            )
+        );
+        $representativeEdition = MigrationSourceRecord::typed(
+            CatalogEditionMigrationParticipant::SOURCE_TYPE,
+            "v1.book/book-a/edition",
+            new CatalogEditionPlan(
+                "v1.book/book-a/work",
+                "Exact title",
+                $metadata
+            )
+        );
+        $aliasEdition = MigrationSourceRecord::typed(
+            CatalogEditionMigrationParticipant::SOURCE_TYPE,
+            "v1.book/book-b/edition",
+            new CatalogEditionPlan(
+                "v1.book/book-b/work",
+                "Exact title",
+                $metadata,
+                aliasOfSourceId: "v1.book/book-a/edition"
+            )
+        );
+
+        $representativeWorkResult = $this->apply(
+            $fixture,
+            $fixture["work_participant"],
+            $representativeWork
+        );
+        $aliasWorkResult = $this->apply(
+            $fixture,
+            $fixture["work_participant"],
+            $aliasWork
+        );
+        $representativeEditionResult = $this->apply(
+            $fixture,
+            $fixture["edition_participant"],
+            $representativeEdition
+        );
+        $aliasEditionResult = $this->apply(
+            $fixture,
+            $fixture["edition_participant"],
+            $aliasEdition
+        );
+        $aliasCopyResult = $this->apply(
+            $fixture,
+            $fixture["item_participant"],
+            MigrationSourceRecord::typed(
+                CatalogItemMigrationParticipant::SOURCE_TYPE,
+                "v1.copy/copy-b/item",
+                new CatalogItemPlan(
+                    "v1.book/book-b/edition",
+                    $fixture["library"],
+                    $fixture["selection"]
+                )
+            )
+        );
+
+        self::assertSame(
+            $representativeWorkResult["outcome"]->mappings()[0]->targetId(),
+            $aliasWorkResult["outcome"]->mappings()[0]->targetId()
+        );
+        self::assertSame(
+            $representativeEditionResult["outcome"]->mappings()[0]->targetId(),
+            $aliasEditionResult["outcome"]->mappings()[0]->targetId()
+        );
+        self::assertSame(
+            "reuse_work_source_mapping",
+            $aliasWorkResult["plan"]->operations()[0]["operation"]
+        );
+        self::assertSame(
+            "reuse_edition_source_mapping",
+            $aliasEditionResult["plan"]->operations()[0]["operation"]
+        );
+        self::assertSame([[
+            "source_type" => CatalogEditionMigrationParticipant::SOURCE_TYPE,
+            "source_id" => "v1.book/book-b/edition",
+        ]], $aliasCopyResult["plan"]->dependencies());
+        self::assertSame(
+            $representativeEditionResult["outcome"]->mappings()[0]->targetId(),
+            (string) $this->database->get_var(
+                "SELECT edition_id FROM `{$this->tableNames->items()}` LIMIT 1"
+            )
+        );
+        self::assertSame(1, $this->countRows($this->tableNames->works()));
+        self::assertSame(1, $this->countRows($this->tableNames->editions()));
+        self::assertSame(1, $this->countRows($this->tableNames->editionIdentifierClaims()));
+        self::assertSame(1, $this->countRows($this->tableNames->items()));
+    }
+
+    public function testAliasWithoutRepresentativeMappingFailsClosed(): void
+    {
+        $fixture = $this->fixture("alias-missing-representative");
+
+        try {
+            $this->apply(
+                $fixture,
+                $fixture["work_participant"],
+                MigrationSourceRecord::typed(
+                    CatalogWorkMigrationParticipant::SOURCE_TYPE,
+                    "v1.book/alias/work",
+                    new CatalogWorkPlan(
+                        "Alias title",
+                        aliasOfSourceId: "v1.book/missing/work"
+                    )
+                )
+            );
+            self::fail("Alias without a representative mapping was accepted.");
+        } catch (CatalogMigrationFailure $failure) {
+            self::assertSame(
+                CatalogMigrationReason::MissingTargetReference,
+                $failure->reason()
+            );
+        }
+
+        self::assertSame(0, $this->countRows($this->tableNames->works()));
+        self::assertSame(0, $this->countRows($this->tableNames->migrationTargetMappings()));
+    }
+
+    public function testEditionAliasRejectsIncompatibleWorkAndIsbn(): void
+    {
+        $fixture = $this->fixture("alias-incompatible");
+        $metadata = EditionIsbnMetadata::identified(
+            null,
+            new Isbn13("9780306406157")
+        );
+        foreach (["a", "b"] as $suffix) {
+            $this->apply(
+                $fixture,
+                $fixture["work_participant"],
+                MigrationSourceRecord::typed(
+                    CatalogWorkMigrationParticipant::SOURCE_TYPE,
+                    "v1.book/book-{$suffix}/work",
+                    new CatalogWorkPlan("Work {$suffix}")
+                )
+            );
+        }
+        $this->apply(
+            $fixture,
+            $fixture["edition_participant"],
+            MigrationSourceRecord::typed(
+                CatalogEditionMigrationParticipant::SOURCE_TYPE,
+                "v1.book/book-a/edition",
+                new CatalogEditionPlan(
+                    "v1.book/book-a/work",
+                    "Representative edition",
+                    $metadata
+                )
+            )
+        );
+
+        try {
+            $this->apply(
+                $fixture,
+                $fixture["edition_participant"],
+                MigrationSourceRecord::typed(
+                    CatalogEditionMigrationParticipant::SOURCE_TYPE,
+                    "v1.book/work-conflict/edition",
+                    new CatalogEditionPlan(
+                        "v1.book/book-b/work",
+                        "Alias edition",
+                        $metadata,
+                        aliasOfSourceId: "v1.book/book-a/edition"
+                    )
+                )
+            );
+            self::fail("Edition alias was moved across Works.");
+        } catch (CatalogMigrationFailure $failure) {
+            self::assertSame(
+                CatalogMigrationReason::WorkEditionConflict,
+                $failure->reason()
+            );
+        }
+
+        try {
+            $this->apply(
+                $fixture,
+                $fixture["edition_participant"],
+                MigrationSourceRecord::typed(
+                    CatalogEditionMigrationParticipant::SOURCE_TYPE,
+                    "v1.book/isbn-conflict/edition",
+                    new CatalogEditionPlan(
+                        "v1.book/book-a/work",
+                        "Alias edition",
+                        EditionIsbnMetadata::identified(
+                            null,
+                            new Isbn13("9783161484100")
+                        ),
+                        aliasOfSourceId: "v1.book/book-a/edition"
+                    )
+                )
+            );
+            self::fail("Edition alias with incompatible ISBN was accepted.");
+        } catch (CatalogMigrationFailure $failure) {
+            self::assertSame(
+                CatalogMigrationReason::IsbnConflict,
+                $failure->reason()
+            );
+        }
+
+        self::assertSame(2, $this->countRows($this->tableNames->works()));
+        self::assertSame(1, $this->countRows($this->tableNames->editions()));
+        self::assertSame(1, $this->countRows($this->tableNames->editionIdentifierClaims()));
+    }
+
+    public function testAliasDivergentReplayFailsClosed(): void
+    {
+        $fixture = $this->fixture("alias-divergent-replay");
+        $representative = MigrationSourceRecord::typed(
+            CatalogWorkMigrationParticipant::SOURCE_TYPE,
+            "v1.book/book-a/work",
+            new CatalogWorkPlan("Exact title")
+        );
+        $alias = MigrationSourceRecord::typed(
+            CatalogWorkMigrationParticipant::SOURCE_TYPE,
+            "v1.book/book-b/work",
+            new CatalogWorkPlan(
+                "Exact title",
+                aliasOfSourceId: "v1.book/book-a/work"
+            )
+        );
+        $this->apply($fixture, $fixture["work_participant"], $representative);
+        $this->apply($fixture, $fixture["work_participant"], $alias);
+
+        $fixture = $this->laterRun($fixture, "alias-divergent-replay");
+        $this->apply($fixture, $fixture["work_participant"], $representative);
+        try {
+            $this->apply(
+                $fixture,
+                $fixture["work_participant"],
+                MigrationSourceRecord::typed(
+                    CatalogWorkMigrationParticipant::SOURCE_TYPE,
+                    "v1.book/book-b/work",
+                    new CatalogWorkPlan(
+                        "Changed alias title",
+                        aliasOfSourceId: "v1.book/book-a/work"
+                    )
+                )
+            );
+            self::fail("Changed alias payload was silently reused.");
+        } catch (CatalogMigrationFailure $failure) {
+            self::assertSame(
+                CatalogMigrationReason::DivergentReplay,
+                $failure->reason()
+            );
+        }
+
+        self::assertSame(1, $this->countRows($this->tableNames->works()));
+        self::assertSame(3, $this->countRows($this->tableNames->migrationTargetMappings()));
+    }
+
     public function testTypedChainCreatesMapsAndReplaysWithoutDuplicateTargets(): void
     {
         $fixture = $this->fixture("chain");
@@ -911,7 +1178,7 @@ final class CatalogMigrationParticipantTest extends PersistenceIntegrationTestCa
             "snapshot-unknown-isbn-replay-{$suffix}",
             hash("sha256", "snapshot-unknown-isbn-replay-{$suffix}"),
             "test-1",
-            "2.36.0",
+            "2.37.0",
             $fixture["run"]->targetUserId(),
             $fixture["library"],
             MigrationMode::Apply,

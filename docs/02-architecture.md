@@ -2656,3 +2656,36 @@ The Edition table and repository have supported this state since schema 1010,
 so schema remains 1026. No CURRENT source adapter mapping, title lookup,
 provider call, duplicate-ISBN aliasing, Item/classification mapping or public
 apply surface is added. Core is 2.36.0.
+
+## 72. MIG-02-CAT-MAP-01 CURRENT source mapping boundary
+
+RUN-01 now has an optional adapter-keyed `MigrationSourceMapper` stage after
+immutable adapter inspection and explicit target validation but before
+participant routing. It is a deterministic one-to-many semantic bridge:
+source adapters continue to describe source facts, while source-neutral
+participants continue to validate and write only typed V2 plans. Adapters
+without a registered mapper are exact passthrough.
+
+`CurrentV1CatalogMapper` batch-processes raw Book/Copy observations so repeated
+canonical ISBN can be grouped without ordering semantics. Main identities are
+stable namespaced Book→Work, Book→Edition and Copy→Item strings. Repeated ISBN
+chooses the bytewise-smallest source Book ID as a technical representative;
+aliases keep their own CAT source identities and declare exact representative
+source dependencies.
+
+`CatalogWorkPlan` and `CatalogEditionPlan` accept an optional source-alias
+dependency mutually exclusive with an explicitly approved target ID. CAT
+planning exposes reuse operations/dependencies. Apply resolves only an already
+committed representative mapping in the same run and source type, checks target
+existence plus Edition Work/ISBN compatibility and returns ordinary reused
+entity mappings for the alias. It never creates a product alias, rewrites Work
+metadata or moves an Edition. RECON-01 therefore continues to inspect normal
+Work/Edition entity mappings for both source identities.
+
+Mapping findings contain only source identity, disposition, stable reason,
+occurrence count and generated plan identities. They expose invalid/deferred
+and unresolved-dependency accounting without serializing raw titles, ISBNs,
+Authors, Notes or local facts. Item mapping remains gated on typed
+classification and explicit Item-local review; no raw taxonomy, inventory,
+Location or default is inferred. Profile stays raw, dry-run stays zero-write,
+and no apply command is added. Schema remains 1026; Core is 2.37.0.

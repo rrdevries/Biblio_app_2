@@ -17,5 +17,6 @@ enum MigrationRunnerReason: string
     case InvalidTarget = "invalid_target";
     case UnhealthySchema = "unhealthy_schema";
     case DuplicateParticipant = "duplicate_participant";
+    case DuplicateMapper = "duplicate_source_mapper";
     case ArtifactWriteFailed = "artifact_write_failed";
 }

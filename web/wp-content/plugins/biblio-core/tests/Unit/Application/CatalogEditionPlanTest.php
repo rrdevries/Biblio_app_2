@@ -6,6 +6,7 @@ namespace Biblio\Core\Tests\Unit\Application;
 
 use Biblio\Core\Application\Migration\Catalog\CatalogEditionPlan;
 use Biblio\Core\Catalog\EditionIsbnMetadata;
+use Biblio\Core\Catalog\EditionId;
 use Biblio\Core\Catalog\Isbn10;
 use Biblio\Core\Catalog\Isbn13;
 use Biblio\Core\Exception\ValidationException;
@@ -56,6 +57,29 @@ final class CatalogEditionPlanTest extends TestCase
         EditionIsbnMetadata::identified(
             new Isbn10("0306406152"),
             new Isbn13("9780975229804")
+        );
+    }
+
+    public function testAliasIsTypedAndCannotCombineWithApprovedTarget(): void
+    {
+        $alias = new CatalogEditionPlan(
+            "work/alias",
+            "Alias",
+            EditionIsbnMetadata::unknown(),
+            aliasOfSourceId: "edition/representative"
+        );
+        self::assertSame(
+            "edition/representative",
+            $alias->canonicalPayload()["alias_of_source_id"]
+        );
+
+        $this->expectException(ValidationException::class);
+        new CatalogEditionPlan(
+            "work/alias",
+            "Alias",
+            EditionIsbnMetadata::unknown(),
+            new EditionId("edition-approved"),
+            "edition/representative"
         );
     }
 }

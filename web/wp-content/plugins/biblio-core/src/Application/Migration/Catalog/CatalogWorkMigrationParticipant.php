@@ -33,14 +33,27 @@ final readonly class CatalogWorkMigrationParticipant implements MigrationPartici
             CatalogWorkPlan::class,
             $record
         );
+        $alias = $typed->aliasOfSourceId();
+        if ($alias !== null && $alias === $record->sourceId()) {
+            throw new CatalogMigrationFailure(
+                CatalogMigrationReason::UnsafeWorkMapping,
+                "Catalog Work alias cannot reference itself."
+            );
+        }
         return new PlannedMigrationRecord(
             MigrationDisposition::Mapped,
             [[
-                "operation" => "create_or_reuse_work",
+                "operation" => $alias === null
+                    ? "create_or_reuse_work"
+                    : "reuse_work_source_mapping",
                 ...($typed->approvedExistingWorkId() === null ? [] : [
                     "target_type" => "work",
                     "target_id" => $typed->approvedExistingWorkId()->value(),
                 ]),
+            ]],
+            dependencies: $alias === null ? [] : [[
+                "source_type" => self::SOURCE_TYPE,
+                "source_id" => $alias,
             ]],
             typedPlan: $typed
         );

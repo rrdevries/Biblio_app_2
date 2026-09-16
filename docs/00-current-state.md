@@ -3817,3 +3817,32 @@ Item-local mapping, apply command, schema or UI change is included. Product
 remains `v2.001`; schema remains `1026`; Biblio Core is `2.36.0`; Biblio UI
 remains `0.20.0`. Closure evidence:
 `docs/116-mig-02-cat-f1-unknown-isbn-plan-support.md`.
+
+### MIG-02-CAT-MAP-01 — CURRENT V1 catalog mapper
+
+Status: **GO / CLOSED**.
+
+The production CURRENT dry-run now inserts a dedicated batch mapping layer
+between raw adapter enumeration and the source-neutral CAT participants. One
+non-quarantined Book produces separate stable `catalog_work` and
+`catalog_edition` plan identities. Blank ISBN remains unknown; invalid-only
+ISBN quarantines without Edition fabrication; and the 17 repeated canonical-
+ISBN groups use a deterministic stable-source representative plus exact Work
+and Edition alias dependencies. Both original Book IDs retain ordinary CAT
+mappings to the one actual target; no product alias, title/Author/Series/fuzzy
+merge or metadata rewrite exists.
+
+Copies retain Copy-based Item identities. The CURRENT run creates no Item plan
+until reviewed classification and explicit Item-local review are supplied.
+Inventory, Location and local facts remain uninferred. Variants, contained-work
+occurrences, Edition evidence and source numbers remain explicit deferred
+findings.
+
+The unchanged SOURCE-01 manifest maps 953 unique-valid, 34 repeated-valid, 150
+unknown and two invalid-only Books into 1,137 Work plus 1,137 Edition plans,
+with 17 exact aliases, five deferred variants and 22 deferred contained-work
+occurrences. All 1,106 Copies are accounted; 1,104 await both reviewed Item
+dependencies and two follow quarantined Books. Exact before/after counts prove
+zero product/MIG-FND writes. Product remains `v2.001`; schema remains `1026`;
+Biblio Core is `2.37.0`; Biblio UI remains `0.20.0`. Closure evidence:
+`docs/117-mig-02-cat-map-01-current-v1-catalog-mapper.md`.

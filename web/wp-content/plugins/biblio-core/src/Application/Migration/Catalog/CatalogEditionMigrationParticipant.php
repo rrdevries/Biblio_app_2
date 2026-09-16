@@ -34,8 +34,17 @@ final readonly class CatalogEditionMigrationParticipant implements MigrationPart
             CatalogEditionPlan::class,
             $record
         );
+        $alias = $typed->aliasOfSourceId();
+        if ($alias !== null && $alias === $record->sourceId()) {
+            throw new CatalogMigrationFailure(
+                CatalogMigrationReason::IsbnConflict,
+                "Catalog Edition alias cannot reference itself."
+            );
+        }
         $operations = [[
-            "operation" => "create_or_reuse_edition",
+            "operation" => $alias === null
+                ? "create_or_reuse_edition"
+                : "reuse_edition_source_mapping",
             ...($typed->approvedExistingEditionId() === null ? [] : [
                 "target_type" => "edition",
                 "target_id" => $typed->approvedExistingEditionId()->value(),
@@ -50,7 +59,10 @@ final readonly class CatalogEditionMigrationParticipant implements MigrationPart
             dependencies: [[
                 "source_type" => CatalogWorkMigrationParticipant::SOURCE_TYPE,
                 "source_id" => $typed->workSourceId(),
-            ]],
+            ], ...($alias === null ? [] : [[
+                "source_type" => self::SOURCE_TYPE,
+                "source_id" => $alias,
+            ]])],
             typedPlan: $typed
         );
     }

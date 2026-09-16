@@ -4600,3 +4600,49 @@ MIG-02-CAT-F1 is accepted only when:
 
 Status: **GO / CLOSED**. Biblio Core is `2.36.0`. Exact evidence is in
 `docs/116-mig-02-cat-f1-unknown-isbn-plan-support.md`.
+
+## 137. MIG-02-CAT-MAP-01 CURRENT V1 catalog mapper
+
+MIG-02-CAT-MAP-01 is accepted only when:
+
+- the exact raw Book/Copy adapter shapes remain unchanged and CURRENT semantic
+  mapping occurs only in the registered post-enumeration/pre-participant layer;
+- one normal Book produces stable separate Work/Edition identities with
+  provisional/concrete title authority preserved and no title, Author, Series
+  or fuzzy Work merge;
+- valid ISBN uses current canonical rules, blank ISBN is unknown with no claim
+  or explicit-no-ISBN inference, and invalid-only ISBN quarantines without an
+  Edition identity;
+- repeated ISBN groups use a deterministic stable-source representative, keep
+  every original Book Work/Edition source identity and map exact aliases to the
+  same real targets through committed CAT dependencies;
+- alias conflicts, missing representative mappings, incompatible Work/ISBN and
+  divergent replay fail closed without a product alias, metadata rewrite or
+  Edition move;
+- each Copy remains one potential Item identity, multi-Copy Books stay
+  distinct, Books without Copies fabricate no Item and no legacy/source number
+  becomes inventory;
+- classification and Item-local review remain explicit separate dependencies,
+  raw taxonomy strings/defaults are never used and the CURRENT run plans zero
+  Items until both dependencies are supplied;
+- variants, all contained-work occurrences, Edition evidence and source-number
+  evidence remain explicit deferred findings with no active relation/value;
+- downstream Book IDs—including both members of every repeated-ISBN pair—have
+  deterministic Work/Edition source resolution, and RECON-01 retains ordinary
+  mapping contracts for both identities;
+- the unchanged SOURCE-01 manifest recomputes 953 unique-valid, 34 repeated-
+  valid, 150 unknown and two invalid-only Books; 1,137 Work/Edition plans; 17
+  aliases; five variants; 22 contained occurrences; and the 939/912
+  conservative Book/Copy subset;
+- the exact CURRENT dry-run has zero planning errors/unmatched references,
+  artifacts expose no private source content and before/after counts for every
+  product and MIG-FND table are identical;
+- no apply/import, containment implementation, classification/Item-local
+  source mapping, Authors, Series, Wishlist, Archive, assessment, circulation
+  promotion, schema, REST or UI change is introduced; and
+- focused/full Core gates, PHP syntax, PHPStan, Composer/platform, WordPress
+  smoke, manifest, whitespace, privacy scan and independent review pass.
+
+Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1026`;
+Biblio Core is `2.37.0`; Biblio UI remains `0.20.0`. Exact evidence is in
+`docs/117-mig-02-cat-map-01-current-v1-catalog-mapper.md`.
