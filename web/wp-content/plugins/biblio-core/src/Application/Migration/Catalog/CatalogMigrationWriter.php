@@ -482,7 +482,15 @@ final readonly class CatalogMigrationWriter
             );
         }
 
-        return MigrationRecordOutcome::mapped($mappings);
+        $preservation = $plan->preservation();
+        return $preservation === null
+            ? MigrationRecordOutcome::mapped($mappings)
+            : MigrationRecordOutcome::preserved(
+                $preservation->reason(),
+                $preservation->outcomeEvidence(),
+                $preservation->sourceEvidenceReference(),
+                $mappings
+            );
     }
 
     private function assertCompatibleItem(

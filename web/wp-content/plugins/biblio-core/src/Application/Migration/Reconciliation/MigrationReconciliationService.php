@@ -11,6 +11,7 @@ use Biblio\Core\Application\Migration\{
     MigrationLedgerRepository,
     MigrationRun
 };
+use Biblio\Core\Application\Migration\Catalog\CatalogItemPlan;
 use Biblio\Core\Application\Migration\Runner\{
     MigrationSourceInspection,
     MigrationSourceRecord
@@ -356,6 +357,27 @@ final readonly class MigrationReconciliationService
         int &$participantEdges,
         array &$broken
     ): void {
+        $typedPlan = $record->typedPlan();
+        $expectedPreservation = $typedPlan instanceof CatalogItemPlan
+            ? $typedPlan->preservation()
+            : null;
+        if (
+            $expectedPreservation !== null
+            && (
+                $observation->disposition()
+                    !== MigrationDisposition::PreservedDeferred
+                || $observation->reasonCode()
+                    !== $expectedPreservation->reason()
+            )
+        ) {
+            $broken[] = $this->broken(
+                $observation,
+                "migration_outcome",
+                "",
+                "preservation_outcome_mismatch"
+            );
+        }
+
         $typeCounts = [];
         foreach ($observation->mappings() as $mapping) {
             ++$mappingCounts["total"];
@@ -387,7 +409,7 @@ final readonly class MigrationReconciliationService
                 $observation->disposition(),
                 [MigrationDisposition::Mapped, MigrationDisposition::Transformed],
                 true
-            );
+            ) || $expectedPreservation !== null;
             foreach ($contract->rules() as $rule) {
                 $count = $typeCounts[$rule->targetType()] ?? 0;
                 if ($requiresMappings && $rule->required() && $count === 0) {

@@ -261,10 +261,7 @@ final readonly class ReadingRoundMigrationWriter
         $targets = [];
         foreach ($this->ledger->sourceTargets($run, $sourceType, $sourceId) as $trace) {
             if ($trace->targetType() !== $targetType) {
-                throw $this->failure(
-                    $reason,
-                    "Required migration dependency has an unexpected target type."
-                );
+                continue;
             }
             $targets[$trace->targetId()] = true;
         }

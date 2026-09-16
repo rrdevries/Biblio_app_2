@@ -172,6 +172,7 @@ use Biblio\Core\Infrastructure\WordPress\OpaqueCanonicalAuthorMaterializationIdG
 use Biblio\Core\Infrastructure\WordPress\Migration\OpaqueCatalogMigrationRecordIdGenerator;
 use Biblio\Core\Infrastructure\Migration\CurrentV1CatalogMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ClassificationMapper;
+use Biblio\Core\Infrastructure\Migration\CurrentV1ItemLocalMapper;
 use Biblio\Core\Infrastructure\WordPress\Identity\WordPressPlatformUserDirectory;
 use Biblio\Core\Notes\StrictPrivateNoteContentPolicy;
 use wpdb;
@@ -575,7 +576,8 @@ final class ProductionComposition
                 classificationMapper: new CurrentV1ClassificationMapper(
                     $bookTypeRepository,
                     $genreRepository
-                )
+                ),
+                itemLocalMapper: new CurrentV1ItemLocalMapper()
             ),
         ]);
         $migrationReconciliation = new MigrationReconciliationService(

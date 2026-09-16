@@ -25,6 +25,9 @@ use Biblio\Core\Infrastructure\Migration\CurrentV1CatalogItemDependencyProvider;
 use Biblio\Core\Infrastructure\Migration\CurrentV1CatalogMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1CatalogMappingReason;
 use Biblio\Core\Infrastructure\Migration\CurrentV1CatalogSourceIds;
+use Biblio\Core\Infrastructure\Migration\CurrentV1ItemLocalMapper;
+use Biblio\Core\Infrastructure\Migration\CurrentV1ItemLocalMappingReason;
+use Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedItemLocalContract;
 use Biblio\Core\Infrastructure\Migration\CurrentV1SourceAdapter;
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Library\LibraryName;
@@ -256,6 +259,102 @@ final class CurrentV1CatalogMapperTest extends TestCase
         );
     }
 
+    public function testItemLocalReviewedNullAndTypedStateBothCompleteItemPlans(): void
+    {
+        $selection = new LibraryCatalogSelection(new LibraryBookTypeId("type-a"));
+        $provider = new SyntheticCurrentV1CatalogItemDependencyProvider([
+            "copy-null" => CurrentV1CatalogItemDependencies::reviewed($selection, null),
+            "copy-details" => CurrentV1CatalogItemDependencies::reviewed($selection, null),
+        ]);
+        $null = $this->copy("copy-null", "book-a", "LEGACY-NULL");
+        $detailsPayload = $this->copy(
+            "copy-details",
+            "book-a",
+            "LEGACY-DETAILS"
+        )->payload();
+        $detailsPayload["acquisition"] = [
+            "type" => "bought",
+            "date" => ["value" => "1999-08", "precision" => "month"],
+            "source" => "Synthetic seller",
+        ];
+        $details = new MigrationSourceRecord(
+            CurrentV1SourceAdapter::COPY,
+            "copy-details",
+            $detailsPayload
+        );
+
+        $result = $this->map(
+            [$this->book("book-a", "Edition", "9780306406157")],
+            [$null, $details],
+            $provider,
+            $this->itemLocalMapper()
+        );
+        $records = $this->records($result->records());
+        $nullPlan = $records[
+            CatalogItemMigrationParticipant::SOURCE_TYPE . ":"
+                . CurrentV1CatalogSourceIds::item("copy-null")
+        ]->typedPlan();
+        $detailsPlan = $records[
+            CatalogItemMigrationParticipant::SOURCE_TYPE . ":"
+                . CurrentV1CatalogSourceIds::item("copy-details")
+        ]->typedPlan();
+
+        self::assertInstanceOf(CatalogItemPlan::class, $nullPlan);
+        self::assertNull($nullPlan->localDetails());
+        self::assertNotNull($nullPlan->preservation());
+        self::assertInstanceOf(CatalogItemPlan::class, $detailsPlan);
+        self::assertSame(
+            "zelf_aangeschaft",
+            $detailsPlan->localDetails()?->acquisitionMethod()?->value
+        );
+        self::assertSame(
+            ["year" => 1999, "month" => 8, "day" => null],
+            $detailsPlan->localDetails()?->inLibrarySince()?->toArray()
+        );
+    }
+
+    public function testExternalBorrowedExclusionOverridesAvailableClassification(): void
+    {
+        $copy = $this->copy("borrowed", "book-a", "LEGACY-BORROWED");
+        $payload = $copy->payload();
+        $payload["acquisition"] = [
+            "type" => "borrowed",
+            "source" => "Private counterparty",
+        ];
+        $copy = new MigrationSourceRecord(
+            CurrentV1SourceAdapter::COPY,
+            "borrowed",
+            $payload
+        );
+        $provider = new SyntheticCurrentV1CatalogItemDependencyProvider([
+            "borrowed" => CurrentV1CatalogItemDependencies::reviewed(
+                new LibraryCatalogSelection(new LibraryBookTypeId("type-a")),
+                null
+            ),
+        ]);
+
+        $result = $this->map(
+            [$this->book("book-a", "Edition", "9780306406157")],
+            [$copy],
+            $provider,
+            $this->itemLocalMapper()
+        );
+
+        self::assertArrayNotHasKey(
+            CatalogItemMigrationParticipant::SOURCE_TYPE . ":"
+                . CurrentV1CatalogSourceIds::item("borrowed"),
+            $this->records($result->records())
+        );
+        self::assertContains(
+            CurrentV1ItemLocalMappingReason::ExternalBorrowedCopyPreserved->value,
+            $this->reasons($result->findings())
+        );
+        self::assertNotContains(
+            CurrentV1CatalogMappingReason::CatalogItemPlanned->value,
+            $this->reasons($result->findings())
+        );
+    }
+
     public function testVariantContainedAndEditionEvidenceRemainExplicitlyDeferred(): void
     {
         $book = $this->book("book-a", "Edition", "9780306406157");
@@ -281,7 +380,8 @@ final class CurrentV1CatalogMapperTest extends TestCase
     private function map(
         array $books,
         array $copies = [],
-        ?CurrentV1CatalogItemDependencyProvider $provider = null
+        ?CurrentV1CatalogItemDependencyProvider $provider = null,
+        ?CurrentV1ItemLocalMapper $itemLocalMapper = null
     ): \Biblio\Core\Application\Migration\Runner\MigrationSourceMappingResult {
         $records = [...$books, ...$copies];
         $inspection = new MigrationSourceInspection(
@@ -298,7 +398,10 @@ final class CurrentV1CatalogMapperTest extends TestCase
             new PersonalMigrationTargetReadiness([])
         ));
 
-        return (new CurrentV1CatalogMapper($provider))->map($inspection, $target);
+        return (new CurrentV1CatalogMapper(
+            $provider,
+            itemLocalMapper: $itemLocalMapper
+        ))->map($inspection, $target);
     }
 
     private function book(string $id, string $title, ?string $isbn = null): MigrationSourceRecord
@@ -322,7 +425,18 @@ final class CurrentV1CatalogMapperTest extends TestCase
             "copyNumber" => $number,
             "legacyBookNumber" => "",
             "sourceBookNumber" => "",
+            "acquisition" => null,
+            "notes" => "",
+            "disposal" => null,
+            "exemplarPhotos" => [],
         ]);
+    }
+
+    private function itemLocalMapper(): CurrentV1ItemLocalMapper
+    {
+        return new CurrentV1ItemLocalMapper(
+            new CurrentV1ReviewedItemLocalContract(str_repeat("0", 64))
+        );
     }
 
     /** @param list<MigrationSourceRecord> $records */

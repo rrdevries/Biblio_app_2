@@ -12,6 +12,8 @@ use Biblio\Core\Application\Migration\Runner\MigrationSourceInspection;
 use Biblio\Core\Application\Migration\Runner\MigrationSourcePackage;
 use Biblio\Core\Application\Migration\Runner\MigrationSourceProfile;
 use Biblio\Core\Application\Migration\Runner\MigrationSourceRecord;
+use Biblio\Core\Application\Migration\Catalog\CatalogItemMigrationParticipant;
+use Biblio\Core\Application\Migration\Catalog\CatalogItemPlan;
 use Biblio\Core\Catalog\Classification\ClassificationNormalizedName;
 use Biblio\Core\Catalog\Classification\ClassificationSeedKey;
 use Biblio\Core\Catalog\Classification\ClassificationTermName;
@@ -29,6 +31,9 @@ use Biblio\Core\Infrastructure\Migration\CurrentV1ClassificationMappingReason;
 use Biblio\Core\Infrastructure\Migration\CurrentV1CatalogMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1CatalogMappingReason;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedClassificationContract;
+use Biblio\Core\Infrastructure\Migration\CurrentV1ItemLocalMapper;
+use Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedItemLocalContract;
+use Biblio\Core\Infrastructure\Migration\CurrentV1CatalogSourceIds;
 use Biblio\Core\Infrastructure\Migration\CurrentV1SourceAdapter;
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Library\LibraryName;
@@ -352,6 +357,80 @@ final class CurrentV1ClassificationMapperTest extends TestCase
             $reasons
         );
         self::assertCount(2, $result->records(), "No Item plan exists before Item-local review.");
+    }
+
+    public function testCatalogItemPlanRequiresAndCombinesBothReviewedDependencies(): void
+    {
+        $book = new MigrationSourceRecord(CurrentV1SourceAdapter::BOOK, "book-a", [
+            ...$this->book("book-a", "Leesboek", ["Fantasy"])->payload(),
+            "title" => "Synthetic",
+            "isbn" => "9780306406157",
+            "isbn10" => "",
+            "isbn13" => "",
+            "editionFormat" => "standaard",
+            "variantOfBookId" => "",
+            "containedWorks" => [],
+            "acquisition" => null,
+            "acquiredAt" => "",
+            "acqYear" => null,
+            "acqMonth" => null,
+            "acquiredVia" => "",
+            "giftFrom" => "",
+        ]);
+        $copy = new MigrationSourceRecord(CurrentV1SourceAdapter::COPY, "copy-a", [
+            "id" => "copy-a",
+            "bookId" => "book-a",
+            "copyNumber" => "COPY-A",
+            "legacyBookNumber" => "BOOK-A",
+            "sourceBookNumber" => "BOOK-A",
+            "acquisition" => null,
+            "notes" => "",
+            "disposal" => null,
+            "exemplarPhotos" => [],
+        ]);
+        $inspection = new MigrationSourceInspection(
+            new MigrationSourcePackage("/tmp", [], self::MANIFEST),
+            new CurrentV1SourceAdapter(),
+            new MigrationSourceProfile(CurrentV1SourceAdapter::SOURCE_VERSION, []),
+            [$book, $copy],
+            []
+        );
+        $target = new MigrationPlanningTarget(new PersonalMigrationTarget(
+            new UserId("user-a"),
+            new LibraryId("library-a"),
+            LibraryName::personalDefault(),
+            new PersonalMigrationTargetReadiness([])
+        ));
+
+        $result = (new CurrentV1CatalogMapper(
+            classificationMapper: $this->classificationMapper(),
+            itemLocalMapper: new CurrentV1ItemLocalMapper(
+                new CurrentV1ReviewedItemLocalContract(self::MANIFEST)
+            )
+        ))->map($inspection, $target);
+        $items = array_values(array_filter(
+            $result->records(),
+            static fn (MigrationSourceRecord $record): bool =>
+                $record->sourceType() === CatalogItemMigrationParticipant::SOURCE_TYPE
+        ));
+
+        self::assertCount(1, $items);
+        self::assertSame(
+            CurrentV1CatalogSourceIds::item("copy-a"),
+            $items[0]->sourceId()
+        );
+        $plan = $items[0]->typedPlan();
+        self::assertInstanceOf(CatalogItemPlan::class, $plan);
+        self::assertNull($plan->localDetails());
+        self::assertNotNull($plan->preservation());
+        self::assertNotContains(
+            CurrentV1CatalogMappingReason::UnresolvedClassificationDependency->value,
+            $this->reasons($result->findings())
+        );
+        self::assertNotContains(
+            CurrentV1CatalogMappingReason::UnresolvedItemLocalDependency->value,
+            $this->reasons($result->findings())
+        );
     }
 
     /**

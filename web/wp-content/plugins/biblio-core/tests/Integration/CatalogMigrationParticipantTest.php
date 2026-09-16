@@ -14,6 +14,7 @@ use Biblio\Core\Application\Migration\Catalog\CatalogEditionMigrationParticipant
 use Biblio\Core\Application\Migration\Catalog\CatalogEditionPlan;
 use Biblio\Core\Application\Migration\Catalog\CatalogItemMigrationParticipant;
 use Biblio\Core\Application\Migration\Catalog\CatalogItemPlan;
+use Biblio\Core\Application\Migration\Catalog\CatalogItemPreservationPlan;
 use Biblio\Core\Application\Migration\Catalog\CatalogMigrationFailure;
 use Biblio\Core\Application\Migration\Catalog\CatalogMigrationReason;
 use Biblio\Core\Application\Migration\Catalog\CatalogMigrationRecordIdGenerator;
@@ -23,6 +24,7 @@ use Biblio\Core\Application\Migration\Catalog\CatalogWorkPlan;
 use Biblio\Core\Application\Migration\CommitMigrationRecordService;
 use Biblio\Core\Application\Migration\MappingDisposition;
 use Biblio\Core\Application\Migration\MigrationClock;
+use Biblio\Core\Application\Migration\MigrationDisposition;
 use Biblio\Core\Application\Migration\MigrationMode;
 use Biblio\Core\Application\Migration\MigrationRecordOutcome;
 use Biblio\Core\Application\Migration\MigrationRun;
@@ -548,6 +550,88 @@ final class CatalogMigrationParticipantTest extends PersistenceIntegrationTestCa
             self::assertSame(CatalogMigrationReason::DivergentReplay, $failure->reason());
             self::assertSame(2, $this->countRows($this->tableNames->items()));
         }
+    }
+
+    public function testItemWriteAndAuxiliaryPreservationCommitAsOneOutcome(): void
+    {
+        $fixture = $this->fixture("item-preservation");
+        $this->apply(
+            $fixture,
+            $fixture["work_participant"],
+            MigrationSourceRecord::typed(
+                CatalogWorkMigrationParticipant::SOURCE_TYPE,
+                "work/preserved",
+                new CatalogWorkPlan("Preserved Work")
+            )
+        );
+        $this->apply(
+            $fixture,
+            $fixture["edition_participant"],
+            MigrationSourceRecord::typed(
+                CatalogEditionMigrationParticipant::SOURCE_TYPE,
+                "edition/preserved",
+                new CatalogEditionPlan(
+                    "work/preserved",
+                    "Preserved Edition",
+                    EditionIsbnMetadata::withoutIsbn()
+                )
+            )
+        );
+        $record = MigrationSourceRecord::typed(
+            CatalogItemMigrationParticipant::SOURCE_TYPE,
+            "copy/preserved",
+            new CatalogItemPlan(
+                "edition/preserved",
+                $fixture["library"],
+                $fixture["selection"],
+                localDetails: new ItemLocalDetailsState(
+                    condition: ItemCondition::Goed
+                ),
+                preservation: new CatalogItemPreservationPlan(
+                    "copy_auxiliary_evidence_preserved",
+                    hash("sha256", "restricted-source-payload"),
+                    "biblio-v1:v1.copy:synthetic-copy",
+                    [
+                        "copy_note_present" => true,
+                        "source_number_field_count" => 3,
+                    ]
+                )
+            )
+        );
+
+        $result = $this->apply(
+            $fixture,
+            $fixture["item_participant"],
+            $record
+        );
+
+        self::assertSame(
+            MigrationDisposition::PreservedDeferred,
+            $result["plan"]->disposition()
+        );
+        self::assertSame(
+            "copy_auxiliary_evidence_preserved",
+            $result["plan"]->reasonCode()
+        );
+        self::assertSame(
+            MigrationDisposition::PreservedDeferred,
+            $result["outcome"]->disposition()
+        );
+        self::assertSame(
+            "copy_auxiliary_evidence_preserved",
+            $result["outcome"]->preservationReason()
+        );
+        self::assertSame(
+            "biblio-v1:v1.copy:synthetic-copy",
+            $result["outcome"]->evidenceReference()
+        );
+        self::assertCount(3, $result["outcome"]->mappings());
+        self::assertSame(1, $this->countRows($this->tableNames->items()));
+        self::assertSame(1, $this->countRows($this->tableNames->itemLocalDetails()));
+        self::assertStringNotContainsString(
+            "restricted-source-payload",
+            (string) $result["outcome"]->evidenceJson()
+        );
     }
 
     public function testDistinctExplicitNoIsbnEditionsRemainDistinct(): void
