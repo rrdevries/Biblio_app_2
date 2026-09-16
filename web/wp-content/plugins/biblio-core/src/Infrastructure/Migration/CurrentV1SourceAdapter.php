@@ -457,6 +457,86 @@ final readonly class CurrentV1SourceAdapter implements MigrationSourceAdapter
         }
     }
 
+    public function classificationEvidence(
+        MigrationSourcePackage $package
+    ): CurrentV1ClassificationEvidence {
+        $source = $this->load($package);
+        $definitions = [];
+        foreach ([
+            "book_type" => $source["book_types"],
+            "category" => $source["categories"],
+            "genre" => $source["genres"],
+        ] as $dimension => $rows) {
+            foreach ($rows as $row) {
+                if (
+                    !is_array($row)
+                    || !self::nonEmptyString($row["name"] ?? null)
+                    || !self::nonEmptyString($row["status"] ?? null)
+                ) {
+                    throw $this->unsupported(
+                        "CURRENT V1 classification definition is malformed."
+                    );
+                }
+                $definitions[] = [
+                    "dimension" => $dimension,
+                    "raw_value" => $row["name"],
+                    "status" => $row["status"],
+                ];
+            }
+        }
+        usort($definitions, static fn (array $a, array $b): int =>
+            [$a["dimension"], $a["raw_value"]]
+                <=> [$b["dimension"], $b["raw_value"]]);
+
+        $statusCounts = [];
+        $sourceCounts = [];
+        foreach ($source["taxonomy_review_queue"] as $row) {
+            if (!is_array($row)) {
+                throw $this->unsupported(
+                    "CURRENT V1 taxonomy review queue row is malformed."
+                );
+            }
+            $status = $row["status"] ?? null;
+            $provider = $row["source"] ?? null;
+            if (!self::nonEmptyString($status) || !self::nonEmptyString($provider)) {
+                throw $this->unsupported(
+                    "CURRENT V1 taxonomy review queue identity is malformed."
+                );
+            }
+            $statusCounts[$status] = ($statusCounts[$status] ?? 0) + 1;
+            $sourceCounts[$provider] = ($sourceCounts[$provider] ?? 0) + 1;
+        }
+        ksort($statusCounts, SORT_STRING);
+        ksort($sourceCounts, SORT_STRING);
+
+        $aliases = $this->decodeObject($package, "data/taxonomy_aliases.json");
+        $aliasIds = $this->aliasRuleIds($aliases);
+
+        return new CurrentV1ClassificationEvidence(
+            $definitions,
+            [
+                "path" => "data/taxonomy_review_queue.json",
+                "sha256" => $this->fileSha256(
+                    $package,
+                    "data/taxonomy_review_queue.json"
+                ),
+                "count" => count($source["taxonomy_review_queue"]),
+                "status_counts" => $statusCounts,
+                "source_counts" => $sourceCounts,
+            ],
+            [
+                "path" => "data/taxonomy_aliases.json",
+                "sha256" => $this->fileSha256(
+                    $package,
+                    "data/taxonomy_aliases.json"
+                ),
+                "count" => count($aliases["rules"]),
+                "version" => $aliases["version"],
+                "ids" => $aliasIds,
+            ]
+        );
+    }
+
     /**
      * @return array{
      *   books:array{schemaVersion:int,books:list<mixed>,copies:list<mixed>,wishlistItems:list<mixed>},
@@ -648,6 +728,19 @@ final readonly class CurrentV1SourceAdapter implements MigrationSourceAdapter
         }
     }
 
+    private function fileSha256(
+        MigrationSourcePackage $package,
+        string $relativePath
+    ): string {
+        foreach ($package->files() as $file) {
+            if ($file->relativePath() === $relativePath) {
+                return $file->sha256();
+            }
+        }
+
+        throw $this->unsupported("CURRENT V1 evidence file is missing.");
+    }
+
     private function assertAuxiliaryContracts(MigrationSourcePackage $package): void
     {
         $this->assertSchemaObject($package, "data/book_enrich_cache.json", 1, ["entries"]);
@@ -697,6 +790,39 @@ final readonly class CurrentV1SourceAdapter implements MigrationSourceAdapter
         if (($aliases["version"] ?? null) !== 2 || !is_array($aliases["rules"] ?? null)) {
             throw $this->unsupported("CURRENT V1 taxonomy-alias marker is unsupported.");
         }
+        $this->aliasRuleIds($aliases);
+    }
+
+    /**
+     * @param array<string,mixed> $aliases
+     * @return list<string>
+     */
+    private function aliasRuleIds(array $aliases): array
+    {
+        $rules = $aliases["rules"] ?? null;
+        if (!is_array($rules) || !array_is_list($rules)) {
+            throw $this->unsupported(
+                "CURRENT V1 taxonomy-alias rules are unsupported."
+            );
+        }
+        $ids = [];
+        foreach ($rules as $rule) {
+            $id = is_array($rule) ? ($rule["id"] ?? null) : null;
+            if (
+                !is_string($id)
+                || preg_match('/^[a-z0-9][a-z0-9-]{0,63}$/', $id) !== 1
+                || isset($ids[$id])
+            ) {
+                throw $this->unsupported(
+                    "CURRENT V1 taxonomy-alias rule identity is unsupported."
+                );
+            }
+            $ids[$id] = true;
+        }
+        $result = array_keys($ids);
+        sort($result, SORT_STRING);
+
+        return $result;
     }
 
     /** @param list<string> $keys */

@@ -31,6 +31,7 @@ final class CurrentV1SourceAdapterTest extends TestCase
         $package = (new FilesystemMigrationSourcePackageFactory())->build($root);
         $adapter = new CurrentV1SourceAdapter();
         $profile = $adapter->profile($package);
+        $classificationEvidence = $adapter->classificationEvidence($package);
         $first = iterator_to_array($adapter->records($package, $profile));
         $second = iterator_to_array($adapter->records($package, $profile));
 
@@ -39,6 +40,9 @@ final class CurrentV1SourceAdapterTest extends TestCase
         self::assertSame(1, $profile->categoryCounts()["copy_records"]);
         self::assertSame(1, $profile->categoryCounts()["circulation_round_records"]);
         self::assertSame(1, $profile->categoryCounts()["contributor_occurrences"]);
+        self::assertSame([], $classificationEvidence->definitions());
+        self::assertSame(0, $classificationEvidence->reviewQueue()["count"]);
+        self::assertSame(0, $classificationEvidence->aliasRules()["count"]);
         self::assertCount(8, $first);
         self::assertSame(
             array_map(static fn ($record): string => $record->payloadHash(), $first),
@@ -167,6 +171,34 @@ final class CurrentV1SourceAdapterTest extends TestCase
         }
     }
 
+    public function testAliasRuleIdsAreExactAndDuplicateOrMalformedIdsFailClosed(): void
+    {
+        $factory = new FilesystemMigrationSourcePackageFactory();
+        $adapter = new CurrentV1SourceAdapter();
+        $root = $this->source(aliasRules: [
+            ["id" => "comic-manga-strip"],
+            ["id" => "cookbook"],
+        ]);
+        $evidence = $adapter->classificationEvidence($factory->build($root));
+        self::assertSame(
+            ["comic-manga-strip", "cookbook"],
+            $evidence->aliasRules()["ids"]
+        );
+
+        $duplicate = $this->source(aliasRules: [
+            ["id" => "cookbook"],
+            ["id" => "cookbook"],
+        ]);
+        $this->assertUnsupported(
+            static fn () => $adapter->profile($factory->build($duplicate))
+        );
+
+        $malformed = $this->source(aliasRules: [["label" => "No stable ID"]]);
+        $this->assertUnsupported(
+            static fn () => $adapter->profile($factory->build($malformed))
+        );
+    }
+
     /** @param callable():mixed $operation */
     private function assertUnsupported(callable $operation): void
     {
@@ -180,12 +212,14 @@ final class CurrentV1SourceAdapterTest extends TestCase
 
     /**
      * @param list<array<string, mixed>>|null $authors
+     * @param list<array<string, mixed>>|null $aliasRules
      */
     private function source(
         int $booksSchema = 29,
         ?array $authors = null,
         bool $extraBookField = false,
-        bool $extraAcquisitionField = false
+        bool $extraAcquisitionField = false,
+        ?array $aliasRules = null
     ): string {
         $root = $this->directory();
         mkdir($root . "/data", 0700, true);
@@ -321,7 +355,7 @@ final class CurrentV1SourceAdapterTest extends TestCase
         ]);
         $this->writeJson($root, "taxonomy_aliases.json", [
             "version" => 2,
-            "rules" => [],
+            "rules" => $aliasRules ?? [],
         ]);
 
         return $root;

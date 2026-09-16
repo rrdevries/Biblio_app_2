@@ -3846,3 +3846,28 @@ dependencies and two follow quarantined Books. Exact before/after counts prove
 zero product/MIG-FND writes. Product remains `v2.001`; schema remains `1026`;
 Biblio Core is `2.37.0`; Biblio UI remains `0.20.0`. Closure evidence:
 `docs/117-mig-02-cat-map-01-current-v1-catalog-mapper.md`.
+
+### MIG-02-CLASS-MAP-01 — CURRENT V1 classification mapper
+
+Status: **GO / CLOSED**.
+
+The manifest-bound reviewed contract from doc 118 maps exactly seven CURRENT
+Book Type values and only `Fantasy`, `Sciencefiction` and `Thriller` to active
+Library-local V2 targets. `Jeugdboek` and `Kinderboek` are explicit reviewed
+mappings to `Leesboek`; no lexical, name-equality, `Anders` or `Prentenboek`
+fallback exists. Target IDs are resolved by seed key inside the explicit target
+Library and must be active.
+
+Category plus unsupported mixed Genre facts, all 446 provider-review queue
+entries and seven external alias rules remain preserved evidence. The 355
+Book-Type `review`/`no_signal` assignments remain blocked. Repeated-ISBN Books
+must propose an identical selection; seven conflicting groups fail closed as
+`converged_classification_conflict` without record-order precedence.
+
+The unchanged CURRENT source yields 745 classification-ready Books and 748
+classification-ready Copies, versus 353 blocked Books and 356 blocked Copies.
+All 1,104 CAT-eligible Copies still wait independently for Item-local review,
+so this slice creates no Item plan. Exact before/after counts for all 57 Biblio
+tables are identical; no apply/import occurred. Product remains `v2.001`,
+schema remains `1026`, Biblio Core is `2.38.0` and Biblio UI remains `0.20.0`.
+Closure evidence: `docs/119-mig-02-class-map-01-current-v1-classification-mapper.md`.

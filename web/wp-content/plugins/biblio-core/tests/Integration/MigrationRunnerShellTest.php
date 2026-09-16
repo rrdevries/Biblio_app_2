@@ -19,6 +19,7 @@ use Biblio\Core\Application\Migration\Runner\MigrationPlanningTarget;
 use Biblio\Core\Application\Migration\Runner\MigrationRunner;
 use Biblio\Core\Application\Migration\Runner\MigrationSourceAdapter;
 use Biblio\Core\Application\Migration\Runner\MigrationSourceAdapterRegistry;
+use Biblio\Core\Application\Migration\Runner\MigrationSourceMapperRegistry;
 use Biblio\Core\Application\Migration\Runner\MigrationSourcePackage;
 use Biblio\Core\Application\Migration\Runner\MigrationSourceProfile;
 use Biblio\Core\Application\Migration\Runner\MigrationSourceRecord;
@@ -29,7 +30,12 @@ use Biblio\Core\Catalog\EditionIsbnMetadata;
 use Biblio\Core\Catalog\{ContributorPosition,ContributorRole};
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Migration\CurrentV1SourceAdapter;
+use Biblio\Core\Infrastructure\Migration\CurrentV1CatalogMapper;
+use Biblio\Core\Infrastructure\Migration\CurrentV1ClassificationMapper;
+use Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedClassificationContract;
 use Biblio\Core\Infrastructure\Migration\FilesystemMigrationSourcePackageFactory;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryBookTypeRepository;
+use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryGenreRepository;
 use Biblio\Core\Infrastructure\WordPress\Cli\MigrationCommand;
 use Biblio\Core\Infrastructure\WordPress\Cli\MigrationCommandOutput;
 use Biblio\Core\Infrastructure\WordPress\ProductionComposition;
@@ -411,7 +417,7 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
         );
     }
 
-    public function testDefaultCliPlansCurrentV1CirculationPrivatelyAndWithoutWrites(): void
+    public function testReviewedSyntheticCurrentV1PlansCirculationPrivatelyAndWithoutWrites(): void
     {
         $userId = wp_create_user(
             "runner-current-circulation-user",
@@ -425,11 +431,37 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
             new UserId((string) $userId)
         );
         $source = $this->currentV1Source();
+        $manifest = (new FilesystemMigrationSourcePackageFactory())
+            ->build($source)
+            ->manifestDigest();
         $outputDirectory = $this->directory();
         $output = new RecordingMigrationCommandOutput();
+        $sourceMappers = new MigrationSourceMapperRegistry([
+            new CurrentV1CatalogMapper(
+                classificationMapper: new CurrentV1ClassificationMapper(
+                    new WpdbLibraryBookTypeRepository(
+                        $this->database,
+                        $this->tableNames
+                    ),
+                    new WpdbLibraryGenreRepository(
+                        $this->database,
+                        $this->tableNames
+                    ),
+                    new CurrentV1ReviewedClassificationContract($manifest)
+                )
+            ),
+        ]);
         $command = new MigrationCommand(
             static fn (): CoreApplication => $application,
             dirname(__DIR__, 2) . "/biblio-core.php",
+            static fn (CoreApplication $core): MigrationRunner => new MigrationRunner(
+                new FilesystemMigrationSourcePackageFactory(),
+                new MigrationSourceAdapterRegistry([new CurrentV1SourceAdapter()]),
+                $core->migrationParticipants(),
+                $core->personalMigrationTargets(),
+                new RunnerShellEnvironment(),
+                $sourceMappers
+            ),
             output: $output
         );
 
@@ -489,6 +521,42 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
         self::assertSame(0, $this->allCoreTableCounts()[
             $this->tableNames->migrationSourceObservations()
         ]);
+    }
+
+    public function testDefaultCliRejectsUnreviewedCurrentV1Manifest(): void
+    {
+        $userId = wp_create_user(
+            "runner-current-manifest-user",
+            "synthetic-test-password",
+            "runner-current-manifest@example.invalid"
+        );
+        self::assertIsInt($userId);
+        $this->createdUsers[] = $userId;
+        $application = (new ProductionComposition($this->database))->application();
+        $target = $application->personalMigrationTargets()->bootstrap(
+            new UserId((string) $userId)
+        );
+        $source = $this->currentV1Source();
+        $before = $this->allCoreTableCounts();
+
+        try {
+            (new MigrationCommand(
+                static fn (): CoreApplication => $application,
+                dirname(__DIR__, 2) . "/biblio-core.php",
+                output: new RecordingMigrationCommandOutput()
+            ))->dry_run([], [
+                "source-root" => $source,
+                "source-adapter" => CurrentV1SourceAdapter::ADAPTER_ID,
+                "target-user-id" => (string) $userId,
+                "target-library-id" => $target->libraryId()->value(),
+                "output-dir" => $this->directory(),
+            ]);
+            self::fail("An unreviewed CURRENT manifest must fail closed.");
+        } catch (RuntimeException $exception) {
+            self::assertStringContainsString("source_changed", $exception->getMessage());
+        }
+
+        self::assertSame($before, $this->allCoreTableCounts());
     }
 
     public function testCliReturnsFailureForMissingSourceInvalidTargetAndUnsupportedVersion(): void

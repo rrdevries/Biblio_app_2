@@ -2689,3 +2689,37 @@ Authors, Notes or local facts. Item mapping remains gated on typed
 classification and explicit Item-local review; no raw taxonomy, inventory,
 Location or default is inferred. Profile stays raw, dry-run stays zero-write,
 and no apply command is added. Schema remains 1026; Core is 2.37.0.
+
+## 73. MIG-02-CLASS-MAP-01 CURRENT classification mapping boundary
+
+`CurrentV1ClassificationMapper` is a bounded collaborator of the existing
+CURRENT catalog mapper. It consumes only adapter-validated Book classification
+fields plus a privacy-safe auxiliary projection of name-keyed definitions,
+taxonomy alias-rule file identity and aggregate review-queue evidence. That
+auxiliary evidence never enters participant routing and never invents source
+entity IDs.
+
+The immutable reviewed contract is bound to adapter `current-v1-json-29`, the
+exact SOURCE-01 manifest and mapping version `d-mig-class-map-01.2026-09-16`.
+Future explicit per-Book rows are fully validated and change a sorted approval-
+set digest in the artifact contract identity; production currently has none.
+Alias rules retain exact unique source IDs plus file-hash provenance.
+Raw values select only explicit seed keys. Existing Book Type and Genre
+repositories resolve those keys inside the explicit target Library; missing,
+inactive or foreign targets fail closed. Display names, normalized names,
+synonyms and source order are not resolution inputs.
+
+Each eligible Book proposes one typed `LibraryCatalogSelection`. Source
+`review`/`no_signal` provenance blocks only that source assignment. Books that
+CAT converges to one Work are compared before Copy planning: equal selections
+remain deterministic, while different Book Type or Genre sets block the group
+as `converged_classification_conflict`. A ready Copy receives the typed
+classification dependency, but Item-local review remains an independent gate.
+Every conflicting member is also bound by representative ID, source Book ID
+and payload hash without becoming a migration observation.
+
+Embedded assignments and auxiliary populations become deterministic source-
+mapping findings. There is no classification participant or apply write in
+this slice, so RECON-01 continues to reconcile CAT entities while planning
+accounting proves every active, preserved, review-blocked and conflict outcome.
+Schema remains 1026; Core is 2.38.0.

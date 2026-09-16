@@ -4646,3 +4646,35 @@ MIG-02-CAT-MAP-01 is accepted only when:
 Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1026`;
 Biblio Core is `2.37.0`; Biblio UI remains `0.20.0`. Exact evidence is in
 `docs/117-mig-02-cat-map-01-current-v1-catalog-mapper.md`.
+
+## 138. MIG-02-CLASS-MAP-01 CURRENT V1 classification mapper
+
+MIG-02-CLASS-MAP-01 is accepted only when:
+
+- all seven reviewed Book Type rows map explicitly, including
+  `Jeugdboek`/`Kinderboek` to `Leesboek`, with no generic equality, lexical,
+  `Anders` or `Prentenboek` fallback;
+- only `Fantasy`, `Sciencefiction` and `Thriller` activate as V2 Genres;
+- target terms resolve by seed key in the exact Library and missing, inactive
+  or foreign terms fail closed;
+- all Category assignments, unsupported Genre assignments, 65 definitions,
+  446 queue entries and seven alias rules receive an exact mapped or preserved
+  planning outcome without fake identities or private queue context;
+- all 355 `review`/`no_signal` Books remain blocked absent an exact immutable
+  Book-ID plus payload-hash approval whose raw value, source state, explicit
+  targets and provenance are validated and change the contract digest;
+- compatible converged selections remain deterministic and the seven differing
+  groups block without representative or record-order precedence, with all 14
+  member IDs and payload hashes retained as supporting conflict evidence;
+- exact CURRENT counts are 745/748 classification-ready Books/Copies and
+  353/356 blocked Books/Copies;
+- classification readiness removes only that CAT dependency; all 1,104
+  CAT-eligible Copies remain Item-local blocked and produce zero Item plans;
+- exact before/after counts for all product and MIG-FND tables match, with zero
+  apply/import, term creation, schema, REST or UI change; and
+- focused/full Core gates, PHP syntax, PHPStan, Composer/platform, WordPress
+  smoke, manifest, whitespace, privacy scan and independent review pass.
+
+Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1026`;
+Biblio Core is `2.38.0`; Biblio UI remains `0.20.0`. Exact evidence is in
+`docs/119-mig-02-class-map-01-current-v1-classification-mapper.md`.
