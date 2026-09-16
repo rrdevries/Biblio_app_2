@@ -170,6 +170,7 @@ use Biblio\Core\Infrastructure\WordPress\Lifecycle\WpTransientLifecycleStateStor
 use Biblio\Core\Infrastructure\WordPress\Identity\WordPressAuthenticatedUser;
 use Biblio\Core\Infrastructure\WordPress\OpaqueCanonicalAuthorMaterializationIdGenerator;
 use Biblio\Core\Infrastructure\WordPress\Migration\OpaqueCatalogMigrationRecordIdGenerator;
+use Biblio\Core\Infrastructure\Migration\CurrentV1AuthorMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1CatalogMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ClassificationMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ItemLocalMapper;
@@ -577,7 +578,8 @@ final class ProductionComposition
                     $bookTypeRepository,
                     $genreRepository
                 ),
-                itemLocalMapper: new CurrentV1ItemLocalMapper()
+                itemLocalMapper: new CurrentV1ItemLocalMapper(),
+                authorMapper: new CurrentV1AuthorMapper()
             ),
         ]);
         $migrationReconciliation = new MigrationReconciliationService(
