@@ -313,6 +313,160 @@ final class CatalogMigrationParticipantTest extends PersistenceIntegrationTestCa
         ));
     }
 
+    public function testUnknownIsbnEditionsRemainDistinctAndSupportItems(): void
+    {
+        $fixture = $this->fixture("unknown-isbn");
+        $this->apply(
+            $fixture,
+            $fixture["work_participant"],
+            MigrationSourceRecord::typed(
+                CatalogWorkMigrationParticipant::SOURCE_TYPE,
+                "work/unknown-isbn",
+                new CatalogWorkPlan("Unknown ISBN Work")
+            )
+        );
+
+        $first = $this->apply(
+            $fixture,
+            $fixture["edition_participant"],
+            MigrationSourceRecord::typed(
+                CatalogEditionMigrationParticipant::SOURCE_TYPE,
+                "edition/unknown-isbn-a",
+                new CatalogEditionPlan(
+                    "work/unknown-isbn",
+                    "Same unknown-ISBN title",
+                    EditionIsbnMetadata::unknown()
+                )
+            )
+        );
+        $second = $this->apply(
+            $fixture,
+            $fixture["edition_participant"],
+            MigrationSourceRecord::typed(
+                CatalogEditionMigrationParticipant::SOURCE_TYPE,
+                "edition/unknown-isbn-b",
+                new CatalogEditionPlan(
+                    "work/unknown-isbn",
+                    "Same unknown-ISBN title",
+                    EditionIsbnMetadata::unknown()
+                )
+            )
+        );
+
+        self::assertNotSame(
+            $first["outcome"]->mappings()[0]->targetId(),
+            $second["outcome"]->mappings()[0]->targetId()
+        );
+        self::assertSame(2, $this->countRows($this->tableNames->editions()));
+        self::assertSame(
+            2,
+            (int) $this->database->get_var(
+                "SELECT COUNT(*) FROM `{$this->tableNames->editions()}` "
+                . "WHERE isbn_10 IS NULL AND isbn_13 IS NULL "
+                . "AND explicitly_no_isbn=0"
+            )
+        );
+        self::assertSame(
+            0,
+            $this->countRows($this->tableNames->editionIdentifierClaims())
+        );
+
+        $this->apply(
+            $fixture,
+            $fixture["item_participant"],
+            MigrationSourceRecord::typed(
+                CatalogItemMigrationParticipant::SOURCE_TYPE,
+                "copy/unknown-isbn-a",
+                new CatalogItemPlan(
+                    "edition/unknown-isbn-a",
+                    $fixture["library"],
+                    $fixture["selection"]
+                )
+            )
+        );
+        $item = $this->database->get_row(
+            "SELECT i.edition_id,e.work_id "
+            . "FROM `{$this->tableNames->items()}` i "
+            . "JOIN `{$this->tableNames->editions()}` e "
+            . "ON e.edition_id=i.edition_id"
+        );
+        self::assertSame(
+            $first["outcome"]->mappings()[0]->targetId(),
+            (string) $item->edition_id
+        );
+        self::assertSame(
+            $this->database->get_var(
+                "SELECT work_id FROM `{$this->tableNames->works()}` LIMIT 1"
+            ),
+            $item->work_id
+        );
+    }
+
+    public function testUnknownIsbnExactReplayReusesAndStateChangesFailClosed(): void
+    {
+        $fixture = $this->fixture("unknown-isbn-replay");
+        $workRecord = MigrationSourceRecord::typed(
+            CatalogWorkMigrationParticipant::SOURCE_TYPE,
+            "work/unknown-isbn-replay",
+            new CatalogWorkPlan("Replay Work")
+        );
+        $unknownRecord = MigrationSourceRecord::typed(
+            CatalogEditionMigrationParticipant::SOURCE_TYPE,
+            "edition/unknown-isbn-replay",
+            new CatalogEditionPlan(
+                "work/unknown-isbn-replay",
+                "Replay Edition",
+                EditionIsbnMetadata::unknown()
+            )
+        );
+        $this->apply($fixture, $fixture["work_participant"], $workRecord);
+        $created = $this->apply(
+            $fixture,
+            $fixture["edition_participant"],
+            $unknownRecord
+        )["outcome"];
+
+        $fixture = $this->laterRun($fixture, "exact");
+        $this->apply($fixture, $fixture["work_participant"], $workRecord);
+        $replayed = $this->apply(
+            $fixture,
+            $fixture["edition_participant"],
+            $unknownRecord
+        )["outcome"];
+        self::assertSame(
+            $created->mappings()[0]->targetId(),
+            $replayed->mappings()[0]->targetId()
+        );
+        self::assertSame(
+            MappingDisposition::Reused,
+            $replayed->mappings()[0]->disposition()
+        );
+        self::assertSame(1, $this->countRows($this->tableNames->editions()));
+
+        $fixture = $this->laterRun($fixture, "explicit-no-isbn");
+        $this->apply($fixture, $fixture["work_participant"], $workRecord);
+        $this->assertEditionStateChangeFails(
+            $fixture,
+            EditionIsbnMetadata::withoutIsbn()
+        );
+
+        $fixture = $this->laterRun($fixture, "known-isbn");
+        $this->apply($fixture, $fixture["work_participant"], $workRecord);
+        $this->assertEditionStateChangeFails(
+            $fixture,
+            EditionIsbnMetadata::identified(
+                null,
+                new Isbn13("9780306406157")
+            )
+        );
+
+        self::assertSame(1, $this->countRows($this->tableNames->editions()));
+        self::assertSame(
+            0,
+            $this->countRows($this->tableNames->editionIdentifierClaims())
+        );
+    }
+
     public function testCanonicalIsbnConvergesButNeverMovesEditionAcrossWorks(): void
     {
         $fixture = $this->fixture("isbn");
@@ -443,19 +597,12 @@ final class CatalogMigrationParticipantTest extends PersistenceIntegrationTestCa
         self::assertSame(0, $this->countRows($this->tableNames->items()));
         self::assertSame(0, $this->countRows($this->tableNames->migrationSourceObservations()));
 
-        try {
-            new CatalogEditionPlan(
-                "work/anything",
-                "Unknown ISBN is not no-ISBN",
-                EditionIsbnMetadata::unknown()
-            );
-            self::fail("Unknown ISBN state was silently converted to no-ISBN.");
-        } catch (ValidationException $exception) {
-            self::assertStringContainsString(
-                "canonical ISBN or explicit no-ISBN",
-                $exception->getMessage()
-            );
-        }
+        $unknown = new CatalogEditionPlan(
+            "work/anything",
+            "Unknown ISBN is not no-ISBN",
+            EditionIsbnMetadata::unknown()
+        );
+        self::assertSame("unknown", $unknown->canonicalPayload()["isbn_state"]);
     }
 
     public function testOuterCommitRollbackRemovesItemClassificationDetailsAndMappings(): void
@@ -752,6 +899,58 @@ final class CatalogMigrationParticipantTest extends PersistenceIntegrationTestCa
                 (new CatalogMigrationTestClock())->now()
             )
         );
+    }
+
+    /** @param array<string, mixed> $fixture */
+    private function laterRun(array $fixture, string $suffix): array
+    {
+        $fixture["ledger"]->releaseRunLock($fixture["run"]->id());
+        $fixture["run"] = $fixture["ledger"]->beginOrResume(MigrationRun::start(
+            "catalog-run-unknown-isbn-replay-{$suffix}",
+            "synthetic",
+            "snapshot-unknown-isbn-replay-{$suffix}",
+            hash("sha256", "snapshot-unknown-isbn-replay-{$suffix}"),
+            "test-1",
+            "2.36.0",
+            $fixture["run"]->targetUserId(),
+            $fixture["library"],
+            MigrationMode::Apply,
+            (new CatalogMigrationTestClock())->now()
+        ));
+        $fixture["commit"] = new CommitMigrationRecordService(
+            $fixture["ledger"],
+            $fixture["transactions"],
+            new CatalogMigrationTestClock()
+        );
+        return $fixture;
+    }
+
+    /** @param array<string, mixed> $fixture */
+    private function assertEditionStateChangeFails(
+        array $fixture,
+        EditionIsbnMetadata $metadata
+    ): void {
+        try {
+            $this->apply(
+                $fixture,
+                $fixture["edition_participant"],
+                MigrationSourceRecord::typed(
+                    CatalogEditionMigrationParticipant::SOURCE_TYPE,
+                    "edition/unknown-isbn-replay",
+                    new CatalogEditionPlan(
+                        "work/unknown-isbn-replay",
+                        "Replay Edition",
+                        $metadata
+                    )
+                )
+            );
+            self::fail("A committed unknown ISBN state was silently changed.");
+        } catch (CatalogMigrationFailure $failure) {
+            self::assertSame(
+                CatalogMigrationReason::DivergentReplay,
+                $failure->reason()
+            );
+        }
     }
 
     private function countRows(string $table): int
