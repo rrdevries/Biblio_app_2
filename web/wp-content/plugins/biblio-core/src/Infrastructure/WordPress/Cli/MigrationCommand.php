@@ -8,10 +8,8 @@ use Biblio\Core\Application\CoreApplication;
 use Biblio\Core\Application\Migration\Runner\MigrationRunner;
 use Biblio\Core\Application\Migration\Runner\MigrationRunnerFailure;
 use Biblio\Core\Application\Migration\Runner\MigrationSourceAdapterRegistry;
-use Biblio\Core\Application\Migration\Runner\MigrationSourceMapperRegistry;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Migration\CurrentV1SourceAdapter;
-use Biblio\Core\Infrastructure\Migration\CurrentV1CatalogMapper;
 use Biblio\Core\Infrastructure\Migration\FilesystemMigrationArtifactWriter;
 use Biblio\Core\Infrastructure\Migration\FilesystemMigrationSourcePackageFactory;
 use Biblio\Core\Infrastructure\Migration\MigrationArtifactReceipt;
@@ -46,7 +44,7 @@ final class MigrationCommand
                 $core->migrationParticipants(),
                 $core->personalMigrationTargets(),
                 new RuntimeMigrationEnvironment($this->pluginFile),
-                new MigrationSourceMapperRegistry([new CurrentV1CatalogMapper()])
+                $core->migrationSourceMappers()
             );
         $this->output = $output ?? new WordPressMigrationCommandOutput();
         $this->writer = $writer ?? new FilesystemMigrationArtifactWriter();

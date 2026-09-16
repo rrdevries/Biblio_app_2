@@ -57,6 +57,7 @@ use Biblio\Core\Application\Migration\Reconciliation\{
     MigrationReconciliationService
 };
 use Biblio\Core\Application\Migration\Runner\MigrationParticipantRegistry;
+use Biblio\Core\Application\Migration\Runner\MigrationSourceMapperRegistry;
 use Biblio\Core\Application\Notes\CorrectPrivateNoteReadingRoundService;
 use Biblio\Core\Application\Notes\CreatePrivateNoteService;
 use Biblio\Core\Application\Notes\DeletePrivateNoteService;
@@ -169,6 +170,8 @@ use Biblio\Core\Infrastructure\WordPress\Lifecycle\WpTransientLifecycleStateStor
 use Biblio\Core\Infrastructure\WordPress\Identity\WordPressAuthenticatedUser;
 use Biblio\Core\Infrastructure\WordPress\OpaqueCanonicalAuthorMaterializationIdGenerator;
 use Biblio\Core\Infrastructure\WordPress\Migration\OpaqueCatalogMigrationRecordIdGenerator;
+use Biblio\Core\Infrastructure\Migration\CurrentV1CatalogMapper;
+use Biblio\Core\Infrastructure\Migration\CurrentV1ClassificationMapper;
 use Biblio\Core\Infrastructure\WordPress\Identity\WordPressPlatformUserDirectory;
 use Biblio\Core\Notes\StrictPrivateNoteContentPolicy;
 use wpdb;
@@ -566,6 +569,14 @@ final class ProductionComposition
                 $privateNoteContentPolicy
             ),
             new CirculationMigrationParticipant(),
+        ]);
+        $migrationSourceMappers = new MigrationSourceMapperRegistry([
+            new CurrentV1CatalogMapper(
+                classificationMapper: new CurrentV1ClassificationMapper(
+                    $bookTypeRepository,
+                    $genreRepository
+                )
+            ),
         ]);
         $migrationReconciliation = new MigrationReconciliationService(
             $migrationLedger,
@@ -1104,6 +1115,7 @@ final class ProductionComposition
             $bibliographicDiscovery,
             $bibliographicMaterialization,
             $migrationParticipants,
+            $migrationSourceMappers,
             $migrationReconciliation
         );
         $this->lifecycle = new CoreLifecycleCoordinator(

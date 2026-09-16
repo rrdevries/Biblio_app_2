@@ -32,7 +32,8 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
 
     public function __construct(
         private ?CurrentV1CatalogItemDependencyProvider $itemDependencies = null,
-        ?IsbnCanonicalizer $isbn = null
+        ?IsbnCanonicalizer $isbn = null,
+        private ?CurrentV1ClassificationMapper $classificationMapper = null
     ) {
         $this->isbn = $isbn ?? new IsbnCanonicalizer();
     }
@@ -233,6 +234,35 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
             }
         }
 
+        $classification = null;
+        if ($this->classificationMapper !== null) {
+            $representatives = [];
+            foreach ($books as $book) {
+                $state = $states[$this->sourceKey($book->sourceId())] ?? null;
+                if (($state["status"] ?? null) === "ready") {
+                    $representatives[$book->sourceId()] = $state["representative"];
+                }
+            }
+            $candidateBooks = [];
+            foreach ($copies as $copy) {
+                $bookId = $copy->payload()["bookId"] ?? null;
+                if (
+                    is_string($bookId)
+                    && ($states[$this->sourceKey($bookId)]["status"] ?? null) === "ready"
+                ) {
+                    $candidateBooks[$bookId] = true;
+                }
+            }
+            $classification = $this->classificationMapper->map(
+                $inspection,
+                $target,
+                $books,
+                $representatives,
+                $candidateBooks
+            );
+            array_push($findings, ...$classification->findings());
+        }
+
         foreach ($copies as $copy) {
             $copyId = $copy->sourceId();
             $bookId = $copy->payload()["bookId"] ?? null;
@@ -260,6 +290,13 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
                 $books[$bookKey],
                 $target
             ) ?? CurrentV1CatalogItemDependencies::unresolved();
+            if ($classification !== null) {
+                $dependencies = new CurrentV1CatalogItemDependencies(
+                    $classification->selection($bookId),
+                    $dependencies->itemLocalReviewed(),
+                    $dependencies->localDetails()
+                );
+            }
             $blocked = false;
             if ($dependencies->classification() === null) {
                 $blocked = true;

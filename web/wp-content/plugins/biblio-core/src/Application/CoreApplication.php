@@ -35,6 +35,7 @@ use Biblio\Core\Application\Metadata\{AddBookCommitService,AddBookMetadataLookup
 use Biblio\Core\Application\Metadata\Discovery\{BibliographicDiscoveryService,BibliographicMaterializationService};
 use Biblio\Core\Application\Metadata\Search\{BibliographicAuthorWorkSearchService,BibliographicEditionSearchService,BibliographicTextSearchService};
 use Biblio\Core\Application\Migration\Runner\MigrationParticipantRegistry;
+use Biblio\Core\Application\Migration\Runner\MigrationSourceMapperRegistry;
 use Biblio\Core\Application\Migration\Reconciliation\MigrationReconciliationService;
 use Biblio\Core\Application\Notes\CorrectPrivateNoteReadingRoundService;
 use Biblio\Core\Application\Notes\CreatePrivateNoteService;
@@ -159,6 +160,7 @@ final readonly class CoreApplication
         private BibliographicDiscoveryService $bibliographicDiscovery,
         private BibliographicMaterializationService $bibliographicMaterialization,
         private MigrationParticipantRegistry $migrationParticipants,
+        private MigrationSourceMapperRegistry $migrationSourceMappers,
         private MigrationReconciliationService $migrationReconciliation
     ) {
     }
@@ -166,6 +168,11 @@ final readonly class CoreApplication
     public function migrationParticipants(): MigrationParticipantRegistry
     {
         return $this->migrationParticipants;
+    }
+
+    public function migrationSourceMappers(): MigrationSourceMapperRegistry
+    {
+        return $this->migrationSourceMappers;
     }
 
     public function migrationReconciliation(): MigrationReconciliationService
