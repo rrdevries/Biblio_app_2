@@ -448,22 +448,38 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
         $artifact = json_decode($artifactBytes, true, 32, JSON_THROW_ON_ERROR);
         self::assertTrue($artifact["zero_write_confirmed"]);
         self::assertSame(
-            1,
+            3,
             $artifact["planning_reconciliation"]["planned_observations"]
         );
         self::assertSame(
-            [],
-            $artifact["planning_reconciliation"]["operation_counts"]
+            2,
+            $artifact["plan"]["disposition_counts"]["mapped"]
         );
         self::assertSame(
             1,
             $artifact["plan"]["disposition_counts"]["quarantined"]
         );
+        $circulation = array_values(array_filter(
+            $artifact["plan"]["records"],
+            static fn (array $record): bool =>
+                $record["source_type"] === CurrentV1SourceAdapter::CIRCULATION_ROUND
+        ));
+        self::assertCount(1, $circulation);
         self::assertSame(
             "ambiguous_circulation_semantics",
-            $artifact["plan"]["records"][0]["reason_code"]
+            $circulation[0]["reason_code"]
         );
-        self::assertSame([], $artifact["plan"]["records"][0]["operations"]);
+        self::assertSame([], $circulation[0]["operations"]);
+        self::assertSame(
+            1,
+            $artifact["plan"]["source_mapping_finding_counts"]
+                ["unresolved_classification_dependency"]
+        );
+        self::assertSame(
+            1,
+            $artifact["plan"]["source_mapping_finding_counts"]
+                ["unresolved_item_local_dependency"]
+        );
         self::assertStringNotContainsString("Private Counterparty", $artifactBytes);
         self::assertStringNotContainsString("private circulation note", $artifactBytes);
         self::assertStringNotContainsString('"source_payload"', $artifactBytes);

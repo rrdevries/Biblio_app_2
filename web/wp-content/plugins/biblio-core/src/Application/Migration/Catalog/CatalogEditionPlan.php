@@ -18,7 +18,8 @@ final readonly class CatalogEditionPlan implements TypedMigrationPlan
         private string $workSourceId,
         private string $title,
         private EditionIsbnMetadata $isbnMetadata,
-        private ?EditionId $approvedExistingEditionId = null
+        private ?EditionId $approvedExistingEditionId = null,
+        private ?string $aliasOfSourceId = null
     ) {
         if (trim($this->workSourceId) === "" || mb_strlen($this->workSourceId) > 191) {
             throw new ValidationException("Work source reference is invalid.");
@@ -29,6 +30,20 @@ final readonly class CatalogEditionPlan implements TypedMigrationPlan
             $this->title,
             $this->isbnMetadata
         );
+        if (
+            $this->aliasOfSourceId !== null
+            && (
+                trim($this->aliasOfSourceId) === ""
+                || mb_strlen($this->aliasOfSourceId) > 191
+            )
+        ) {
+            throw new ValidationException("Edition alias source reference is invalid.");
+        }
+        if ($this->approvedExistingEditionId !== null && $this->aliasOfSourceId !== null) {
+            throw new ValidationException(
+                "Edition plan cannot combine an approved target with a source alias."
+            );
+        }
     }
 
     public function workSourceId(): string { return $this->workSourceId; }
@@ -38,6 +53,7 @@ final readonly class CatalogEditionPlan implements TypedMigrationPlan
     {
         return $this->approvedExistingEditionId;
     }
+    public function aliasOfSourceId(): ?string { return $this->aliasOfSourceId; }
 
     public function canonicalPayload(): array
     {
@@ -56,6 +72,9 @@ final readonly class CatalogEditionPlan implements TypedMigrationPlan
             "isbn_13" => $identity?->isbn13()->value(),
             "approved_existing_edition_id" =>
                 $this->approvedExistingEditionId?->value(),
+            ...($this->aliasOfSourceId === null ? [] : [
+                "alias_of_source_id" => $this->aliasOfSourceId,
+            ]),
         ];
     }
 }

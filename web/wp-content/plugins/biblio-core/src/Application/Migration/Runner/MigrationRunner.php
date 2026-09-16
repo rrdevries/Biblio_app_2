@@ -20,7 +20,8 @@ final readonly class MigrationRunner
         private MigrationSourceAdapterRegistry $adapters,
         private MigrationParticipantRegistry $participants,
         private MigrationTargetValidator $targets,
-        private MigrationEnvironment $environment
+        private MigrationEnvironment $environment,
+        private ?MigrationSourceMapperRegistry $mappers = null
     ) {
     }
 
@@ -74,6 +75,10 @@ final readonly class MigrationRunner
         }
 
         $target = new MigrationPlanningTarget($validated);
+        $mapper = $this->mappers?->forAdapter($inspection->adapter()->adapterId());
+        $mapping = $mapper === null
+            ? MigrationSourceMappingResult::passthrough($inspection->records())
+            : $mapper->map($inspection, $target);
         $plans = [];
         $unsupportedTypes = [];
         $planningErrors = [];
@@ -84,7 +89,7 @@ final readonly class MigrationRunner
 
         $participantCounts = [];
         $operationCounts = [];
-        foreach ($inspection->records() as $record) {
+        foreach ($mapping->records() as $record) {
             $participant = $this->participants->forType($record->sourceType());
             if (!$participant instanceof MigrationParticipant) {
                 $unsupportedTypes[$record->sourceType()] = true;
@@ -133,6 +138,19 @@ final readonly class MigrationRunner
         ksort($dispositions, SORT_STRING);
         ksort($participantCounts, SORT_STRING);
         ksort($operationCounts, SORT_STRING);
+        $mappingFindings = array_map(
+            static fn (MigrationSourceMappingFinding $finding): array =>
+                $finding->toArray(),
+            $mapping->findings()
+        );
+        $mappingFindingCounts = [];
+        foreach ($mappingFindings as $finding) {
+            $reason = $finding["reason_code"];
+            $mappingFindingCounts[$reason] =
+                ($mappingFindingCounts[$reason] ?? 0)
+                + $finding["occurrence_count"];
+        }
+        ksort($mappingFindingCounts, SORT_STRING);
 
         return new MigrationArtifact(
             "dry-run",
@@ -158,11 +176,14 @@ final readonly class MigrationRunner
                     "quarantine_candidates" => $quarantine,
                     "planning_errors" => $planningErrors,
                     "unmatched_references" => $unmatchedReferences,
+                    "source_mapping_findings" => $mappingFindings,
+                    "source_mapping_finding_counts" => $mappingFindingCounts,
                 ],
                 "planning_reconciliation" => [
                     "applied" => false,
                     "accepted" => false,
                     "source_observations" => count($inspection->records()),
+                    "mapped_planning_records" => count($mapping->records()),
                     "planned_observations" => count($plans),
                     "participant_counts" => $participantCounts,
                     "operation_counts" => $operationCounts,
