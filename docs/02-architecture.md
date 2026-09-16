@@ -2630,3 +2630,29 @@ counts; typed/private payloads are not serialized.
 
 No ExternalLoan/InternalLoan, Item state, identity, schema, REST, UI, provider
 or public apply surface is added. Schema remains 1026; Core is 2.35.0.
+
+## 71. MIG-02-CAT-F1 unknown-ISBN plan boundary
+
+`CatalogEditionPlan` carries the existing `EditionIsbnMetadata` value object as
+its single ISBN source of truth. Its canonical payload distinguishes exactly
+`canonical`, `without_isbn` and `unknown`; no parallel booleans or migration-
+specific ISBN state are introduced.
+
+Planning always retains the exact `catalog_work` dependency. It adds
+`claim_or_reuse_canonical_isbn` only when
+`CanonicalIsbnIdentity::fromMetadata()` returns an identity. Unknown and
+explicit no-ISBN therefore share no claim path but remain distinguishable in
+the typed payload.
+
+Apply continues through `CatalogMigrationWriter` and the caller-owned
+`CommitMigrationRecordService` transaction. Unknown metadata is passed to the
+ordinary `Edition` and `WpdbEditionRepository`; persistence writes null ISBN
+columns and `explicitly_no_isbn=0`. Exact source mapping controls replay and
+identity. Equal titles or similar metadata never create an unknown-ISBN
+convergence path, while a later state change has a different canonical payload
+and fails existing divergent-replay checks.
+
+The Edition table and repository have supported this state since schema 1010,
+so schema remains 1026. No CURRENT source adapter mapping, title lookup,
+provider call, duplicate-ISBN aliasing, Item/classification mapping or public
+apply surface is added. Core is 2.36.0.

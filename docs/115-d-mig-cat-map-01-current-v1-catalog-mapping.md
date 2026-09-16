@@ -1,6 +1,6 @@
 # D-MIG-CAT-MAP-01 — Current V1 catalog mapping
 
-Status: **DESIGN GO — mapping contract closed; implementation not started**
+Status: **DESIGN GO — mapping contract closed; mapper implementation not started**
 
 Date: 2026-09-16
 
@@ -24,7 +24,7 @@ Git remain authoritative.
 | Edition title | Concrete catalog display uses required Edition title | CAT-T1; ADR-014 | Required `edition_title` is persisted and read | All 1,139 Book titles are non-empty; subtitles are empty | EXACT_TARGET | Closed |
 | ISBN-10/13 | Both normalize and checksum-validate through current canonical rules | ADR-010; MH-B1; docs 44 and 106 | `IsbnRules`, `IsbnCanonicalizer`, canonical claim and resolver exist | 325 ISBN-10 and 904 ISBN-13 field occurrences | EXACT_TARGET when valid | Closed |
 | Canonical ISBN | ISBN is Edition evidence, never Work or Item identity | ADR-010; docs 44 and 106 | Unique canonical ISBN claim and fail-closed Work conflict exist | 970 canonical identities; 17 repeated groups | REVIEW_MAPPING | Technical convergence contract needed |
-| Unknown versus no ISBN | Unknown/not entered, explicit no-ISBN and identified ISBN are distinct | Docs 35, 44 and 106; Renée decision 2026-09-16 | Domain and schema support all three; `CatalogEditionPlan` still rejects unknown and may now be extended | 150 blank Books; zero explicit no-ISBN markers | EXACT_TARGET; CAT implementation pending | Closed |
+| Unknown versus no ISBN | Unknown/not entered, explicit no-ISBN and identified ISBN are distinct | Docs 35, 44 and 106; Renée decision 2026-09-16 | Domain, schema and `CatalogEditionPlan` support all three through MIG-02-CAT-F1 | 150 blank Books; zero explicit no-ISBN markers | EXACT_TARGET; CAT contract ready | Closed |
 | Edition format/type | No generic format mapping; only an approved allowlist may become binding | ADR-014; `AddBookMetadataReviewPolicy` | Format currently falls back to evidence-only | `standaard` 1,129; `special edition` 9; `omnibus` 1 | PRESERVE_DEFERRED except structural containment | Closed |
 | Binding | Publication form is Edition-level; no unapproved value mapping | ADR-014 | Metadata binding target exists, but current allowlist is empty | blank 1,113; `hardcover` 9; `softcover` 17 | PRESERVE_DEFERRED/evidence-only | Closed |
 | Publication metadata | Subtitle, language, publisher, publication date and page count are Edition-bound evidence | ADR-014 | Field-review/evidence model exists; CAT plan does not write it | Publisher 724; date 940; language 761; pages 659 | REVIEW_MAPPING with implementation gap | Closed |
@@ -40,7 +40,7 @@ Git remain authoritative.
 
 The external Current Phase snapshot contains older interim version statements.
 Current Git is the technical authority: product `v2.001`, schema `1026`, Biblio
-Core `2.35.0` and Biblio UI `0.20.0`.
+Core `2.36.0` and Biblio UI `0.20.0`.
 
 ## 2. CURRENT source provenance
 
@@ -217,20 +217,19 @@ The 150 blank Books have no explicit marker proving that the publication has
 no ISBN. Their correct source meaning is **unknown/not supplied**, not explicit
 no-ISBN. They account for 145 Copies and five Wishlist-only Books.
 
-V2 domain and persistence already model this truth through
+V2 domain and persistence model this truth through
 `EditionIsbnMetadata::unknown()`: both ISBN columns are null and
-`explicitly_no_isbn=0`. The current `CatalogEditionPlan` nevertheless throws
-unless it receives a canonical ISBN or `withoutIsbn()`.
+`explicitly_no_isbn=0`. MIG-02-CAT-F1 extended `CatalogEditionPlan` to accept
+that same value-object state without adding a parallel flag.
 
 Renée approved on 2026-09-16 that MIG-02 must use this existing unknown state
 for the 150 Books, create no canonical ISBN claim, retain
 `explicitly_no_isbn=0` and preserve the stable Book→Edition source identity in
 MIG-FND. Substituting `withoutIsbn()` remains prohibited.
 
-The product meaning is closed. A truthful typed CAT plan still cannot be
-constructed until the approved `CatalogEditionPlan` extension is implemented,
-but that is now a technical implementation dependency rather than a design
-blocker.
+The product meaning is closed and the truthful typed CAT plan can now be
+constructed. The CURRENT source mapper remains separate and is not implemented
+by MIG-02-CAT-F1.
 
 ## 11. Duplicate ISBN/convergence
 
@@ -406,8 +405,8 @@ For an ordinary mapped Book/Copy, the future layer produces:
 - exact `workSourceId` dependency;
 - exact Book title as Edition title;
 - `EditionIsbnMetadata::identified()` for one valid canonical identity;
-- `EditionIsbnMetadata::unknown()` for blank source under the approved §24 CAT
-  contract change;
+- `EditionIsbnMetadata::unknown()` for blank source under the implemented §24
+  CAT contract change;
 - never `withoutIsbn()` for this CURRENT population because it has zero explicit
   no-ISBN evidence;
 - `approvedExistingEditionId` only from exact prior mapping or reviewed strong
@@ -432,7 +431,7 @@ separate containment relation lane. Neither is smuggled into a title or ID.
 |---|---:|---:|---:|---|
 | Valid unique canonical ISBN | 953 | 925 | 34 | Base Work+Edition plannable; Item awaits classification |
 | Valid ISBN in repeated group | 34 | 34 | 0 | 17 convergence groups; blocked on alias contract |
-| Blank/unknown ISBN | 150 | 145 | 5 | Exact approved mapping; CAT implementation pending |
+| Blank/unknown ISBN | 150 | 145 | 5 | Exact approved mapping; CAT plan contract ready |
 | Invalid-only ISBN | 2 | 2 | 0 | Quarantine candidate |
 | Conservative uncomplicated subset | 939 | 912 | 33 | Unique valid ISBN, standard format, no variant or containment |
 
@@ -478,7 +477,8 @@ these downstream participants can be considered ready.
 
 ### CAT-specific implementation blockers
 
-- 150 unknown-ISBN Books await the approved `CatalogEditionPlan` extension;
+- 150 unknown-ISBN Books are representable by the closed MIG-02-CAT-F1 plan
+  contract; the CURRENT mapper itself remains separate;
 - 17 repeated-ISBN groups need a deterministic representative/alias contract;
 - five variant relations are preservation-only and do not block their main
   records unless they overlap another blocker.
@@ -510,8 +510,9 @@ remain separate reviewed dependencies.
 
 Implementation remains separately authorized and should stay bounded:
 
-1. `MIG-02-CAT-UNKNOWN-01` — allow and prove unknown ISBN in the existing CAT
-   Edition plan/writer without weakening identified/no-ISBN invariants.
+1. `MIG-02-CAT-F1` — **GO / CLOSED** in doc 116: unknown ISBN is accepted and
+   proven in the existing CAT Edition plan/writer without weakening
+   identified/no-ISBN invariants.
 2. `MIG-02-CAT-MAP-01` — translate exact CURRENT Book/Copy records into reviewed
    CAT plans, including deterministic repeated-ISBN representative/alias
    mappings and preservation dispositions.
@@ -558,9 +559,9 @@ allowlisted raw enums only.
 
 ### Schema/Core/UI impact
 
-This design slice changes no schema, Core, UI, adapter, participant or runtime
-data. Schema remains `1026`; Biblio Core remains `2.35.0`; Biblio UI remains
-`0.20.0`.
+This design slice itself changed no schema, Core, UI, adapter, participant or
+runtime data. The separately authorized MIG-02-CAT-F1 follow-up keeps schema
+`1026` and Biblio UI `0.20.0`, and bumps Biblio Core to `2.36.0`.
 
 ### Git
 

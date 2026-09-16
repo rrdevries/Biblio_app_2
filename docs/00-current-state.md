@@ -3791,3 +3791,29 @@ occurred. Product remains `v2.001`; schema remains `1026`; Biblio Core is
 `2.35.0`; Biblio UI remains `0.20.0`. Final-cutover policy and
 `MIG-LOAN-BACKFILL-01` remain deferred. Closure evidence:
 `docs/114-mig-02-circ-01-deferred-circulation-preservation.md`.
+
+### MIG-02-CAT-F1 — Unknown ISBN plan support
+
+Status: **GO / CLOSED**.
+
+`CatalogEditionPlan` now accepts the existing
+`EditionIsbnMetadata::unknown()` state beside identified ISBN and explicit
+no-ISBN. Its canonical payload records `unknown`, `without_isbn` and
+`canonical` as three distinct states. Unknown ISBN creates or reuses an
+Edition only through exact MIG-FND source mapping or an explicitly approved
+target, creates no canonical ISBN claim and persists both ISBN columns as
+`NULL` with `explicitly_no_isbn=0`.
+
+Exact replay reuses the mapped Edition. A changed source state between unknown,
+explicit no-ISBN and canonical ISBN fails closed, and separate unknown-ISBN
+source Editions do not converge by title or metadata similarity. Normal Item
+dependency through the Edition remains available. Synthetic dry-run is
+deterministic and zero-write and emits only the ordinary Edition operation,
+with no ISBN-claim operation or invented no-ISBN flag.
+
+No CURRENT V1 catalog mapper, source-field interpretation, target lookup
+heuristic, duplicate-ISBN representative logic, containment, classification,
+Item-local mapping, apply command, schema or UI change is included. Product
+remains `v2.001`; schema remains `1026`; Biblio Core is `2.36.0`; Biblio UI
+remains `0.20.0`. Closure evidence:
+`docs/116-mig-02-cat-f1-unknown-isbn-plan-support.md`.

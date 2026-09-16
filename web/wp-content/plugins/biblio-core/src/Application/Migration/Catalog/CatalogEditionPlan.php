@@ -29,14 +29,6 @@ final readonly class CatalogEditionPlan implements TypedMigrationPlan
             $this->title,
             $this->isbnMetadata
         );
-        if (
-            CanonicalIsbnIdentity::fromMetadata($this->isbnMetadata) === null
-            && !$this->isbnMetadata->isExplicitlyWithoutIsbn()
-        ) {
-            throw new ValidationException(
-                "Catalog migration Edition requires canonical ISBN or explicit no-ISBN."
-            );
-        }
     }
 
     public function workSourceId(): string { return $this->workSourceId; }
@@ -50,11 +42,16 @@ final readonly class CatalogEditionPlan implements TypedMigrationPlan
     public function canonicalPayload(): array
     {
         $identity = CanonicalIsbnIdentity::fromMetadata($this->isbnMetadata);
+        $isbnState = $identity !== null
+            ? "canonical"
+            : ($this->isbnMetadata->isExplicitlyWithoutIsbn()
+                ? "without_isbn"
+                : "unknown");
         return [
             "target_kind" => "catalog_edition",
             "work_source_id" => $this->workSourceId,
             "title" => $this->title,
-            "isbn_state" => $identity === null ? "without_isbn" : "canonical",
+            "isbn_state" => $isbnState,
             "isbn_10" => $identity?->isbn10()?->value(),
             "isbn_13" => $identity?->isbn13()->value(),
             "approved_existing_edition_id" =>

@@ -4568,3 +4568,35 @@ MIG-02-CIRC-01 is accepted only when:
 Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1026`;
 Biblio Core is `2.35.0`; Biblio UI remains `0.20.0`. Exact evidence is in
 `docs/114-mig-02-circ-01-deferred-circulation-preservation.md`.
+
+## 136. MIG-02-CAT-F1 unknown ISBN plan support
+
+MIG-02-CAT-F1 is accepted only when:
+
+- `CatalogEditionPlan` accepts identified ISBN, explicit no-ISBN and unknown
+  ISBN through one `EditionIsbnMetadata` value object and exposes three
+  different canonical payload states;
+- invalid ISBN metadata combinations continue to fail closed;
+- unknown-ISBN planning keeps its exact Work dependency and deterministic
+  Edition operation while adding no canonical-ISBN claim operation and no fake
+  no-ISBN operation or flag;
+- apply creates a normal Edition with null ISBN columns,
+  `explicitly_no_isbn=0`, zero canonical claims and the exact Work relation;
+- an Item can depend normally on that Edition;
+- independently mapped unknown-ISBN Editions do not converge by equal title or
+  similar metadata;
+- exact replay reuses the Edition, while unknown to explicit-no-ISBN and
+  unknown to known-ISBN changes fail closed as divergent replay;
+- known-ISBN convergence, explicit no-ISBN, CAT transaction ownership,
+  mapping/reconciliation and Item dependencies remain unchanged;
+- production receives no CURRENT V1 catalog mapping, new target lookup,
+  duplicate-ISBN representative logic, containment, variants, Authors, Series,
+  classification mapping, Item-local mapping or apply command;
+- product remains `v2.001`, schema remains `1026` and Biblio UI remains
+  `0.20.0`; and
+- focused plan/apply/replay/dry-run tests, the full Core gate, PHP syntax,
+  PHPStan, Composer/platform, WordPress smoke, manifest, whitespace and an
+  independent second review are green.
+
+Status: **GO / CLOSED**. Biblio Core is `2.36.0`. Exact evidence is in
+`docs/116-mig-02-cat-f1-unknown-isbn-plan-support.md`.

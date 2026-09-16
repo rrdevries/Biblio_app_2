@@ -148,7 +148,7 @@ final readonly class RunnerShellCatalogAdapter implements MigrationSourceAdapter
             new CatalogEditionPlan(
                 "work/dry-run",
                 "Dry-run Edition",
-                EditionIsbnMetadata::withoutIsbn()
+                EditionIsbnMetadata::unknown()
             )
         );
         yield MigrationSourceRecord::typed(
@@ -556,17 +556,29 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
         );
 
         $before = $this->allCoreTableCounts();
-        $command->dry_run([], [
+        $arguments = [
             "source-root" => $source,
             "source-adapter" => "synthetic-catalog",
             "target-user-id" => (string) $userId,
             "target-library-id" => $target->libraryId()->value(),
             "require-empty" => true,
             "output-dir" => $outputDirectory,
-        ]);
+        ];
+        $command->dry_run([], $arguments);
+        $command->dry_run([], $arguments);
         self::assertSame($before, $this->allCoreTableCounts());
 
         $commandOutput = json_decode($output->lines[0], true, 16, JSON_THROW_ON_ERROR);
+        $secondCommandOutput = json_decode(
+            $output->lines[1],
+            true,
+            16,
+            JSON_THROW_ON_ERROR
+        );
+        self::assertSame(
+            file_get_contents($commandOutput["artifact_path"]),
+            file_get_contents($secondCommandOutput["artifact_path"])
+        );
         $artifact = json_decode(
             (string) file_get_contents($commandOutput["artifact_path"]),
             true,
@@ -581,6 +593,9 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
             [["source_id" => "work/dry-run", "source_type" => "catalog_work"]],
             $artifact["plan"]["records"][1]["dependencies"]
         );
+        self::assertSame([[
+            "operation" => "create_or_reuse_edition",
+        ]], $artifact["plan"]["records"][1]["operations"]);
         self::assertSame(
             [["source_id" => "edition/dry-run", "source_type" => "catalog_edition"]],
             $artifact["plan"]["records"][2]["dependencies"]
