@@ -34,7 +34,8 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
         private ?CurrentV1CatalogItemDependencyProvider $itemDependencies = null,
         ?IsbnCanonicalizer $isbn = null,
         private ?CurrentV1ClassificationMapper $classificationMapper = null,
-        private ?CurrentV1ItemLocalMapper $itemLocalMapper = null
+        private ?CurrentV1ItemLocalMapper $itemLocalMapper = null,
+        private ?CurrentV1AuthorMapper $authorMapper = null
     ) {
         $this->isbn = $isbn ?? new IsbnCanonicalizer();
     }
@@ -51,6 +52,7 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
         $records = [];
         $books = [];
         $copies = [];
+        $authors = [];
         foreach ($inspection->records() as $record) {
             if ($record->sourceType() === CurrentV1SourceAdapter::BOOK) {
                 $books[$this->sourceKey($record->sourceId())] = $record;
@@ -60,10 +62,18 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
                 $copies[$this->sourceKey($record->sourceId())] = $record;
                 continue;
             }
+            if (
+                $this->authorMapper !== null
+                && $record->sourceType() === CurrentV1SourceAdapter::AUTHOR
+            ) {
+                $authors[$this->sourceKey($record->sourceId())] = $record;
+                continue;
+            }
             $records[] = $record;
         }
         ksort($books, SORT_STRING);
         ksort($copies, SORT_STRING);
+        ksort($authors, SORT_STRING);
 
         $findings = [];
         $states = [];
@@ -233,6 +243,24 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
                     CurrentV1CatalogMappingReason::ConservativeCatalogSubset
                 );
             }
+        }
+
+        if ($this->authorMapper !== null) {
+            $workRepresentatives = [];
+            foreach ($books as $book) {
+                $state = $states[$this->sourceKey($book->sourceId())] ?? null;
+                if (($state["status"] ?? null) === "ready") {
+                    $workRepresentatives[$book->sourceId()] = $state["representative"];
+                }
+            }
+            $authorMapping = $this->authorMapper->map(
+                $inspection,
+                $authors,
+                $books,
+                $workRepresentatives
+            );
+            array_push($records, ...$authorMapping->records());
+            array_push($findings, ...$authorMapping->findings());
         }
 
         $classification = null;

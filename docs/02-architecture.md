@@ -2751,3 +2751,30 @@ target type when a later participant resolves a dependency.
 
 Profile and dry-run remain zero-write, and production still exposes no apply
 command. Schema remains 1026; Core is 2.39.0.
+
+## 75. MIG-02-AUTH-MAP-01 CURRENT Author mapping boundary
+
+`CurrentV1AuthorMapper` is a manifest-bound collaborator of the existing
+CURRENT catalog mapper. It runs after CAT has established each Book's exact
+Work representative and before source-neutral participant routing. It emits
+only existing typed Author and WorkContributor plans plus privacy-safe mapping
+findings; it performs no product or migration-ledger writes.
+
+Stable `v1.author/<id>` identities map once to provisional/observed Authors.
+ID-less occurrences use a Book-, position- and normalized-observation-bound
+source identity, so equal display names cannot merge identities. Contributor
+plans keep their own `v1.book/<id>/author-occurrence/<position>` identity,
+depend only on the exact `v1.book/<id>/work` CAT identity and always carry the
+reviewed role `author` plus original one-based position.
+
+CAT aliases are evaluated as complete positive edge sets. An edge present in
+every positive alias source remains as distinct contributor observations and
+converges through AUTH onto one canonical edge. A differing positive remainder
+is quarantined as an alias conflict; a source with no positive Author evidence
+does not erase evidence from its alias. Upstream-quarantined Works create no
+dangling occurrence-scoped Author or contributor plan. Corporate/collective,
+malformed and contained-work evidence keeps its explicit terminal finding.
+
+The mapper remains zero-write under profile/dry-run, introduces no network or
+provider claim path and adds no apply command. Schema remains 1026; Core is
+2.40.0.

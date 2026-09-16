@@ -641,6 +641,63 @@ final class AuthorMigrationParticipantTest extends PersistenceIntegrationTestCas
         }
     }
 
+    public function testDistinctOccurrencesConvergeOnOneExactContributorEdge(): void
+    {
+        $fixture = $this->fixture("edge-convergence");
+        $this->apply(
+            $fixture,
+            $fixture["author_participant"],
+            MigrationSourceRecord::typed(
+                CatalogAuthorMigrationParticipant::SOURCE_TYPE,
+                "author/converged",
+                new CatalogAuthorPlan("Converged Author")
+            )
+        );
+        $this->mapWork(
+            $fixture,
+            "work/converged",
+            "work-converged",
+            "Converged Work"
+        );
+
+        $first = $this->apply(
+            $fixture,
+            $fixture["contributor_participant"],
+            $this->contributor(
+                "occurrence/representative",
+                "author/converged",
+                "work/converged",
+                ContributorRole::Author,
+                1,
+                "Converged Author"
+            )
+        );
+        $second = $this->apply(
+            $fixture,
+            $fixture["contributor_participant"],
+            $this->contributor(
+                "occurrence/alias",
+                "author/converged",
+                "work/converged",
+                ContributorRole::Author,
+                1,
+                "Converged Author"
+            )
+        );
+
+        self::assertSame(2, $this->rows($this->tableNames->authorContributorCredits()));
+        self::assertSame(2, $this->rows($this->tableNames->authorCreditEvidence()));
+        self::assertSame(1, $this->rows($this->tableNames->workContributors()));
+        self::assertSame(
+            MappingDisposition::Created,
+            $first["outcome"]->mappings()[1]->disposition()
+        );
+        self::assertSame(
+            MappingDisposition::Reused,
+            $second["outcome"]->mappings()[1]->disposition()
+        );
+    }
+
     public function testMissingWrongAndConflictingDependenciesFailClosed(): void
     {
         $fixture = $this->fixture("conflicts");

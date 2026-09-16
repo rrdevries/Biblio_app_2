@@ -3898,3 +3898,31 @@ target graph. The final clean-SHA isolated dry-run changes none of the 57
 Biblio tables and no apply/import is run. Product remains `v2.001`, schema
 remains `1026`, Biblio Core is `2.39.0` and Biblio UI remains `0.20.0`.
 Closure evidence: `docs/121-mig-02-itemlocal-map-01-current-v1-item-local-mapper.md`.
+
+### MIG-02-AUTH-MAP-01 — CURRENT V1 Author mapper
+
+Status: **GO / CLOSED**.
+
+The manifest-bound CURRENT mapper now translates stable source Authors and
+ordered Book contributor occurrences to the existing source-neutral
+`CatalogAuthorPlan` and `CatalogWorkContributorPlan` contracts. Stable source
+IDs remain provisional/observed Author identities; ID-less names receive
+deterministic occurrence-scoped identities. Equal names are never identity,
+no existing Author is selected by name and no provider claim is created.
+
+The reviewed positional-prefix rule binds only the exact CURRENT adapter and
+manifest. Every active base occurrence keeps role `author`, its original
+one-based position, its exact CAT Work dependency and its own source-credit
+identity. Duplicate-ISBN aliases retain both occurrence traces: 11 exact edge
+pairs converge on one canonical WorkContributor edge, while incompatible
+positive alias sets fail closed without union or position shifting.
+
+The unchanged source yields 256 active stable Author plans plus 672
+occurrence-scoped plans, for 928 `catalog_author` plans; 1,139 contributor
+plans produce 1,128 unique edge intents. Four valid but unsupported or
+upstream-blocked base occurrences are preserved, three malformed occurrences
+are quarantined and all 17 non-empty contained-work Author values remain in
+the deferred containment lane. Exact table fingerprints confirm zero product
+or MIG-FND writes, and no apply/import occurred. Product remains `v2.001`,
+schema remains `1026`, Biblio Core is `2.40.0` and Biblio UI remains `0.20.0`.
+Closure evidence: `docs/123-mig-02-auth-map-01-current-v1-author-mapper.md`.

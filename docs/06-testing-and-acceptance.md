@@ -4711,3 +4711,39 @@ MIG-02-ITEMLOCAL-MAP-01 is accepted only when:
 Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1026`;
 Biblio Core is `2.39.0`; Biblio UI remains `0.20.0`. Exact evidence is in
 `docs/121-mig-02-itemlocal-map-01-current-v1-item-local-mapper.md`.
+
+## 140. MIG-02-AUTH-MAP-01 CURRENT V1 Author mapper
+
+MIG-02-AUTH-MAP-01 is accepted only when:
+
+- the exact docs/122 contract, CURRENT adapter and immutable manifest are
+  bound and a changed manifest or incompatible positional structure fails
+  closed;
+- 256 active stable source Authors remain provisional/observed, the reviewed
+  corporate entity is preserved and all unreferenced valid stable Authors
+  remain independently planned;
+- equal names never select or merge Authors, ID-less names produce
+  deterministic occurrence-scoped identities and no provider claim or network
+  lookup exists;
+- every active occurrence has explicit role `author`, keeps its original
+  one-based position and depends only on its exact CAT Work source identity;
+- case-only occurrence variants remain credit evidence without rewriting the
+  canonical display name;
+- alias occurrences retain distinct source credits, 11 exact pairs converge
+  to one edge each and incompatible positive alias sets fail closed without
+  union, last-write-wins or position shifting;
+- quarantined CAT Works produce no dangling ID-less Author or contributor edge;
+- all 1,146 base occurrences reconcile to 1,139 active contributor plans,
+  four preserved and three quarantined outcomes, while 928 Author plans yield
+  1,128 unique edge intents;
+- all 17 non-empty contained-work Author values remain explicitly preserved
+  outside the base mapper;
+- exact before/after fingerprints for every Biblio table match on the clean
+  final-SHA isolated trial, with no apply/import; and
+- mapper, AUTH participant, CAT alias, conflict, preservation, reconciliation,
+  full Core, PHP syntax, PHPStan, Composer/platform, WordPress smoke, manifest,
+  whitespace, privacy and independent-review gates pass.
+
+Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1026`;
+Biblio Core is `2.40.0`; Biblio UI remains `0.20.0`. Exact evidence is in
+`docs/123-mig-02-auth-map-01-current-v1-author-mapper.md`.

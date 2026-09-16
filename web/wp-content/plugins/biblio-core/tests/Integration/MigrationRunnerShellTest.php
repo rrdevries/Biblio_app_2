@@ -30,8 +30,10 @@ use Biblio\Core\Catalog\EditionIsbnMetadata;
 use Biblio\Core\Catalog\{ContributorPosition,ContributorRole};
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Migration\CurrentV1SourceAdapter;
+use Biblio\Core\Infrastructure\Migration\CurrentV1AuthorMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1CatalogMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ClassificationMapper;
+use Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedAuthorContract;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedClassificationContract;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ItemLocalMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedItemLocalContract;
@@ -453,6 +455,13 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
                 ),
                 itemLocalMapper: new CurrentV1ItemLocalMapper(
                     new CurrentV1ReviewedItemLocalContract($manifest)
+                ),
+                authorMapper: new CurrentV1AuthorMapper(
+                    new CurrentV1ReviewedAuthorContract(
+                        $manifest,
+                        [],
+                        []
+                    )
                 )
             ),
         ]);
@@ -485,12 +494,22 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
         $artifact = json_decode($artifactBytes, true, 32, JSON_THROW_ON_ERROR);
         self::assertTrue($artifact["zero_write_confirmed"]);
         self::assertSame(
-            3,
+            5,
             $artifact["planning_reconciliation"]["planned_observations"]
         );
         self::assertSame(
-            2,
+            4,
             $artifact["plan"]["disposition_counts"]["mapped"]
+        );
+        self::assertSame(
+            1,
+            $artifact["planning_reconciliation"]["participant_counts"]
+                [CatalogAuthorMigrationParticipant::SOURCE_TYPE]
+        );
+        self::assertSame(
+            1,
+            $artifact["planning_reconciliation"]["participant_counts"]
+                [CatalogWorkContributorMigrationParticipant::SOURCE_TYPE]
         );
         self::assertSame(
             1,
