@@ -272,9 +272,15 @@ reason: reflection_target_not_available
 
 They are not quarantined because their source shape is valid and
 non-contradictory. They are not transformed into Private Note, WrittenReview
-or a ReadingRound comment. Restricted preservation retains Book identity,
-structural slot, exact body and payload hash for possible later promotion,
-without placing body text in dry-run artifacts, logs or exceptions.
+or a ReadingRound comment. For `MIG-02-ASSESS-MAP-01`,
+`PRESERVE_DEFERRED` is the semantic disposition, while persistence is a
+deterministic manifest-bound dry-run finding only. The finding retains the
+Book identity, structural slot and privacy-safe hash evidence without placing
+body text in artifacts, logs or exceptions. The exact body remains exclusively
+in the immutable CURRENT source package.
+
+This zero-write slice writes no durable MIG-FND Reflection observation, adds
+no Reflection plan/participant and adds no mapper-aware apply route.
 
 ## 12. ReadingRound dependency
 
@@ -379,7 +385,9 @@ HistoricalWrittenReviewPlan
 The CURRENT-specific `CurrentV1AssessmentMapper` belongs between adapter
 enumeration and those source-neutral plans. It creates no generic
 `AssessmentPlan`. Reflection yields preservation evidence only and needs no
-product participant.
+product participant. In `MIG-02-ASSESS-MAP-01`, that evidence is deliberately
+limited to the dry-run finding contract; it is not a durable MIG-FND
+observation.
 
 ## 18. Preservation and quarantine
 
@@ -389,9 +397,15 @@ cardinality conflicts, divergent replay and contradictory state quarantine or
 fail closed under existing MIG-FND rules.
 
 Preservation and dry-run output may contain allowlisted source identities,
-payload hashes, counts, target dependency identities and reason codes. They
-must not contain Review/Reflection bodies or their exact timestamps. Exceptions
-and logs follow the same prohibition.
+privacy-safe evidence hashes, counts, target dependency identities and reason
+codes. They must not contain Review/Reflection bodies or their exact
+timestamps. Exceptions and logs follow the same prohibition.
+
+For the five CURRENT Reflections, the finding is sufficient only for this
+zero-write slice. It is not the production-cutover preservation mechanism. A
+separately reviewed bounded slice must design and implement durable
+preservation of mapper-only / auxiliary `preserved_deferred` evidence,
+including replay and reconciliation, before any real CURRENT apply/import.
 
 There is no silent drop and no `INTENTIONALLY_DROPPED_WITH_REASON` outcome in
 this design.
@@ -473,9 +487,17 @@ the existing owner-only Work projection. The Rating and Review on the same Book
 remain separate sources. None is visible in a Library, contributes to a public
 aggregate or receives mutation/publication UI merely through migration.
 
-The five Reflections are not displayed as Notes or Reviews. They remain
-restricted migration preservation data until an explicit future product target
-and promotion contract exist.
+The five Reflections are not displayed as Notes or Reviews. Their bodies remain
+only in the immutable CURRENT source package; this slice's zero-write artifact
+contains privacy-safe findings only. Durable preservation for a real cutover
+remains a required separate capability.
+
+Until that mapper-only / auxiliary preservation capability is reviewed,
+implemented and closed:
+
+```text
+PRODUCTION APPLY = BLOCKED
+```
 
 No assessment changes Item, classification, archive, circulation, Wishlist,
 ReadingRound, Personal Reading Truth, reread state or public contribution
@@ -504,14 +526,16 @@ Scope:
 - derive the three reviewed structural source-identity forms;
 - require exact target User and CAT Work dependencies;
 - emit 15 Rating plans, one WrittenReview plan and five privacy-safe
-  `preserved_deferred` Reflection outcomes;
+  `preserved_deferred` Reflection dry-run findings;
 - fail closed on changed scale/shape, invalid content/time, missing Work,
   alias cardinality conflict and divergent replay;
 - integrate exact 21-observation reconciliation; and
 - prove a deterministic zero-write dry-run without source text leakage.
 
-Excluded: apply/import, Reflection product model, publication, Note routing,
-ReadingRound inference, schema/REST/UI changes, Series, Wishlist and Archive.
+Excluded: apply/import, durable Reflection MIG-FND observations, a Reflection
+participant, any mapper-aware apply seam, Reflection product model,
+publication, Note routing, ReadingRound inference, schema/REST/UI changes,
+Series, Wishlist and Archive.
 
 ## 23. Acceptance criteria
 
@@ -523,8 +547,8 @@ The implementation slice is acceptable only when:
    `assessed_at = NULL`;
 3. the one Review maps as a private unlinked WrittenReview with exact content
    and exact source `date` as `assessed_at`;
-4. all five Reflections are restricted `preserved_deferred` evidence and never
-   Private Notes or WrittenReviews;
+4. all five Reflections are restricted `preserved_deferred` dry-run findings,
+   never durable observations, Private Notes or WrittenReviews;
 5. source identities use Book slot/array position only, never content, value,
    timestamp or target ID;
 6. exact target User and CAT Work dependencies are mandatory and no fallback
@@ -541,6 +565,10 @@ The implementation slice is acceptable only when:
 12. focused tests, manifest/checksum validation, privacy scan, diff validation
     and independent review pass.
 
+A real CURRENT apply/import is not acceptable after this slice alone. It
+remains blocked until a separate bounded durable-preservation slice for
+mapper-only / auxiliary `preserved_deferred` evidence is GO / CLOSED.
+
 ## 24. Current V1 data rule
 
 This decision is valid only for the designated ZIP, validated read-only
@@ -551,7 +579,8 @@ scale signal or source relationship requires fresh review.
 
 ## 25. Schema, Core, UI and Git impact
 
-This design changes documentation only.
+This design record itself changed documentation only. Its implementation and
+closure are recorded separately in doc 129.
 
 - product: `v2.001` unchanged;
 - schema: `1026` unchanged;

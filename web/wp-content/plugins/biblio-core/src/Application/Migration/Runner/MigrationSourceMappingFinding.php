@@ -18,7 +18,8 @@ final readonly class MigrationSourceMappingFinding
         private MigrationDisposition $disposition,
         private string $reasonCode,
         private array $plannedIdentities = [],
-        private int $occurrenceCount = 1
+        private int $occurrenceCount = 1,
+        private ?string $evidenceHash = null
     ) {
         if (preg_match('/^[a-z0-9][a-z0-9._-]{0,63}$/', $this->sourceType) !== 1) {
             throw new ValidationException("Mapping finding source type is invalid.");
@@ -31,6 +32,12 @@ final readonly class MigrationSourceMappingFinding
         }
         if ($this->occurrenceCount < 1) {
             throw new ValidationException("Mapping finding occurrence count is invalid.");
+        }
+        if (
+            $this->evidenceHash !== null
+            && preg_match('/^[a-f0-9]{64}$/D', $this->evidenceHash) !== 1
+        ) {
+            throw new ValidationException("Mapping finding evidence hash is invalid.");
         }
         foreach ($this->plannedIdentities as $identity) {
             if (
@@ -56,7 +63,7 @@ final readonly class MigrationSourceMappingFinding
             [$a["source_type"], $a["source_id"]]
                 <=> [$b["source_type"], $b["source_id"]]);
 
-        return [
+        $result = [
             "source_type" => $this->sourceType,
             "source_id" => $this->sourceId,
             "disposition" => $this->disposition->value,
@@ -64,5 +71,9 @@ final readonly class MigrationSourceMappingFinding
             "occurrence_count" => $this->occurrenceCount,
             "planned_identities" => $identities,
         ];
+        if ($this->evidenceHash !== null) {
+            $result["evidence_hash"] = $this->evidenceHash;
+        }
+        return $result;
     }
 }

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Infrastructure\WordPress;
 
-use Biblio\Core\Application\Assessments\{AssessmentQueryService,CorrectRatingReadingRoundService,CorrectReviewReadingRoundService,CreateRatingForReadingRoundService,CreateRatingForWorkService,CreateReviewForReadingRoundService,CreateReviewForWorkService,DeleteOwnRatingService,DeleteOwnReviewService,ModerateContributionPublicationService,MoveContributionPublicationService,PublicationService,PublishRatingToLibraryService,PublishReviewToLibraryService,RestoreContributionPublicationService,SourceContributionService,UpdateRatingValueService,UpdateReviewContentService,WithdrawContributionPublicationService};
+use Biblio\Core\Application\Assessments\{AssessmentQueryService,CorrectRatingReadingRoundService,CorrectReviewReadingRoundService,CreateRatingForReadingRoundService,CreateRatingForWorkService,CreateReviewForReadingRoundService,CreateReviewForWorkService,DeleteOwnRatingService,DeleteOwnReviewService,HistoricalAssessmentRecorder,ModerateContributionPublicationService,MoveContributionPublicationService,PublicationService,PublishRatingToLibraryService,PublishReviewToLibraryService,RestoreContributionPublicationService,SourceContributionService,UpdateRatingValueService,UpdateReviewContentService,WithdrawContributionPublicationService};
 use Biblio\Core\Application\Assessments\Read\{GetLibraryPublicAssessmentsService,GetOwnAssessmentsForWorkService};
 
 use Biblio\Core\Application\Borrowing\GetOwnedExternalLoanService;
@@ -49,6 +49,7 @@ use Biblio\Core\Application\Metadata\Search\{BibliographicAuthorWorkSearchProvid
 use Biblio\Core\Application\Migration\Author\{AuthorMigrationWriter,CatalogAuthorMigrationParticipant,CatalogWorkContributorMigrationParticipant};
 use Biblio\Core\Application\Migration\Catalog\{CatalogEditionMigrationParticipant,CatalogItemMigrationParticipant,CatalogMigrationWriter,CatalogWorkMigrationParticipant};
 use Biblio\Core\Application\Migration\Circulation\CirculationMigrationParticipant;
+use Biblio\Core\Application\Migration\Assessments\{HistoricalAssessmentMigrationWriter,HistoricalRatingMigrationParticipant,HistoricalWrittenReviewMigrationParticipant};
 use Biblio\Core\Application\Migration\Notes\{PrivateNoteMigrationParticipant,PrivateNoteMigrationWriter};
 use Biblio\Core\Application\Migration\Reading\{ReadingRoundMigrationParticipant,ReadingRoundMigrationWriter,ReadingTruthMigrationParticipant,ReadingTruthMigrationWriter};
 use Biblio\Core\Application\Migration\Reconciliation\{
@@ -171,6 +172,7 @@ use Biblio\Core\Infrastructure\WordPress\Identity\WordPressAuthenticatedUser;
 use Biblio\Core\Infrastructure\WordPress\OpaqueCanonicalAuthorMaterializationIdGenerator;
 use Biblio\Core\Infrastructure\WordPress\Migration\OpaqueCatalogMigrationRecordIdGenerator;
 use Biblio\Core\Infrastructure\Migration\CurrentV1AuthorMapper;
+use Biblio\Core\Infrastructure\Migration\CurrentV1AssessmentMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1CatalogMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ClassificationMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ItemLocalMapper;
@@ -509,6 +511,19 @@ final class ProductionComposition
             new OpaquePrivateNoteIdGenerator(),
             $privateNoteRepository
         );
+        $assessmentClock = new SystemAssessmentClock();
+        $ratingRepository = new WpdbRatingRepository($database, $tableNames);
+        $reviewRepository = new WpdbReviewRepository($database, $tableNames);
+        $historicalAssessmentRecorder = new HistoricalAssessmentRecorder(
+            $platformUsers,
+            $workRepository,
+            $readingRoundRepository,
+            $ratingRepository,
+            $reviewRepository,
+            new OpaqueRatingIdGenerator(),
+            new OpaqueReviewIdGenerator(),
+            $assessmentClock
+        );
         $catalogMigrationWriter = new CatalogMigrationWriter(
             $migrationLedger,
             new OpaqueCatalogMigrationRecordIdGenerator(),
@@ -565,6 +580,12 @@ final class ProductionComposition
             $privateNoteCreation,
             $privateNoteContentPolicy
         );
+        $assessmentMigrationWriter = new HistoricalAssessmentMigrationWriter(
+            $migrationLedger,
+            $historicalAssessmentRecorder,
+            $ratingRepository,
+            $reviewRepository
+        );
         $migrationParticipants = new MigrationParticipantRegistry([
             new CatalogAuthorMigrationParticipant($authorMigrationWriter),
             new CatalogWorkMigrationParticipant($catalogMigrationWriter),
@@ -583,6 +604,8 @@ final class ProductionComposition
                 $privateNoteMigrationWriter,
                 $privateNoteContentPolicy
             ),
+            new HistoricalRatingMigrationParticipant($assessmentMigrationWriter),
+            new HistoricalWrittenReviewMigrationParticipant($assessmentMigrationWriter),
             new CirculationMigrationParticipant(),
         ]);
         $migrationSourceMappers = new MigrationSourceMapperRegistry([
@@ -596,7 +619,8 @@ final class ProductionComposition
                 readingMapper: new CurrentV1ReadingMapper(),
                 noteMapper: new CurrentV1NoteMapper(
                     contentPolicy: $privateNoteContentPolicy
-                )
+                ),
+                assessmentMapper: new CurrentV1AssessmentMapper()
             ),
         ]);
         $migrationReconciliation = new MigrationReconciliationService(
@@ -613,7 +637,9 @@ final class ProductionComposition
                 $authorCredits,
                 $readingRoundRepository,
                 $privateNoteRepository,
-                $personalReadingTruthRepository
+                $personalReadingTruthRepository,
+                $ratingRepository,
+                $reviewRepository
             )
         );
         $libraryItemCreation = new AddLibraryItemService(
@@ -770,9 +796,6 @@ final class ProductionComposition
             $readingRoundClock,
             $transactionManager
         );
-        $assessmentClock = new SystemAssessmentClock();
-        $ratingRepository = new WpdbRatingRepository($database, $tableNames);
-        $reviewRepository = new WpdbReviewRepository($database, $tableNames);
         $assessmentSources = new SourceContributionService(
             $authenticatedUser,
             $workRepository,

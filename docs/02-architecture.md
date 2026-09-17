@@ -2835,3 +2835,37 @@ mapping, canonical target inspection and transaction boundaries. Dry-run
 artifacts expose identities, hashes, counts and reason codes but no Note body
 or timestamp. No schema, REST, UI, network or apply/import path is added.
 Schema remains 1026; Core is 2.42.0.
+
+## 78. MIG-02-ASSESS-MAP-01 CURRENT assessment mapping boundary
+
+`CurrentV1AssessmentMapper` is a manifest-bound batch mapper after raw CURRENT
+adapter enumeration and CAT Work representative resolution. It emits separate
+typed source-neutral `historical_rating` and `historical_written_review`
+records; there is no generic Assessment plan. Stable identities are
+`v1.book/<book-id>/rating` and `v1.book/<book-id>/review/1`, with the exact
+source Book Work identity as dependency and the explicit migration target User
+inside the canonical typed payload.
+
+`HistoricalRatingMigrationParticipant` and
+`HistoricalWrittenReviewMigrationParticipant` validate typed payload/replay,
+declare exact Work and optional Round dependencies, and delegate product writes
+to one `HistoricalAssessmentMigrationWriter`. That writer joins the outer
+`CommitMigrationRecordService` transaction and calls the existing
+`HistoricalAssessmentRecorder`; it does not reimplement persistence,
+ownership, publication or assessment invariants. Mapping contracts require one
+`rating` or `written_review` entity, and `CoreMigrationTargetInspector` checks
+owner, Work, nullable Round, value/content, assessment time and initial version.
+
+Reflection remains outside that participant graph. The source-slot identity is
+`v1.book/<book-id>/reflection`. In this slice its semantic disposition is
+`preserved_deferred`, while its persistence representation is only a
+`MigrationSourceMappingFinding` carrying the manifest-bound slot, reason and a
+privacy-safe evidence hash. No body, product mapping, durable source
+observation or apply operation exists. The immutable CURRENT source package is
+the restricted body store.
+
+Therefore the dry-run reconciles 16 active participant plans plus five
+mapper-only findings as 21 accounted observations, while production apply is
+still prohibited. A separate bounded capability must durably preserve and
+reconcile mapper-only / auxiliary `preserved_deferred` evidence before any
+CURRENT apply/import can be authorized. Schema remains 1026; Core is 2.43.0.

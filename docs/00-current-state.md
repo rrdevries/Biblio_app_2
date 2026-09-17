@@ -3976,3 +3976,38 @@ product or MIG-FND state and exposes no apply/import path. Product remains
 `v2.001`; schema remains `1026`; Biblio Core is `2.42.0`; Biblio UI remains
 `0.20.0`. Closure evidence:
 `docs/127-mig-02-note-map-01-current-v1-note-mapper.md`.
+
+### MIG-02-ASSESS-MAP-01 — CURRENT V1 assessment mapper
+
+Status: **GO / CLOSED — PRODUCTION APPLY BLOCKED**.
+
+The manifest-bound CURRENT mapper translates the 15 positive Book-level
+Rating slots and the sole structural Review occurrence to separate typed
+`HistoricalRatingPlan` and `HistoricalWrittenReviewPlan` records. Both plans
+bind the explicit migration target User and exact CAT Work source dependency.
+Ratings retain the exact 1–5 value through `RatingValue`, use null
+`assessed_at` and no ReadingRound. The Review retains its validated content and
+exact source instant through `ReviewContent`, also without a ReadingRound.
+
+The two source-neutral participants reuse `HistoricalAssessmentRecorder`
+inside the MIG-FND transaction. They create only private, unpublished product
+sources, support exact replay and fail closed on changed payload, missing or
+wrong dependencies, reverse mapping reuse and occupied User×Work cardinality.
+Reconciliation now validates canonical Rating and WrittenReview targets.
+
+The five valid Reflections retain semantic disposition
+`PRESERVE_DEFERRED`, reason `reflection_target_not_available`, but this
+zero-write slice emits only deterministic manifest-bound privacy-safe dry-run
+findings. It creates no durable MIG-FND Reflection observation, Reflection
+plan/participant, product target or mapper-aware apply route. Reflection bodies
+remain exclusively in the immutable CURRENT source package.
+
+The exact CURRENT accounting is 15 Rating plans, one WrittenReview plan and
+five Reflection findings, with zero quarantine, conflict, unmatched dependency
+or planning error: all 21 assessment-like observations are accounted. A real
+CURRENT apply/import remains blocked until a separate bounded slice provides
+durable replayable/reconcilable preservation for mapper-only / auxiliary
+`preserved_deferred` evidence. No apply/import is run here. Product remains
+`v2.001`; schema remains `1026`; Biblio Core is `2.43.0`; Biblio UI remains
+`0.20.0`. Closure evidence:
+`docs/129-mig-02-assess-map-01-current-v1-assessment-mapper.md`.

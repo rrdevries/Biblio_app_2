@@ -4821,3 +4821,49 @@ MIG-02-NOTE-MAP-01 is accepted only when:
 Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1026`;
 Biblio Core is `2.42.0`; Biblio UI remains `0.20.0`. Exact evidence is in
 `docs/127-mig-02-note-map-01-current-v1-note-mapper.md`.
+
+## 143. MIG-02-ASSESS-MAP-01 CURRENT V1 assessment mapper
+
+Acceptance requires the exact SOURCE-01 manifest and reviewed contract from
+doc 128. Unit evidence covers positive integer Ratings, zero as no observation,
+canonical `RatingValue`, null time/Round, the `/rating` identity, exact target
+User and CAT Work reference, the structural `/review/1` identity, exact Review
+time, `ReviewContent`, and absence of Note/reading-truth contamination.
+
+Synthetic duplicate-ISBN aliases prove that two converged unlinked Ratings or
+Reviews fail closed even when their payloads are equal; no representative,
+last-write-wins or content dedup rule exists. Invalid values, structures,
+content/time, CAT-blocked Work and manifest drift also fail closed without
+private payloads in findings or exceptions.
+
+Participant integration proves private/unpublished Rating and WrittenReview
+creation through `HistoricalAssessmentRecorder`, exact committed Work and
+optional Round resolution, target-User validation, cardinality protection,
+replay reuse, divergent-payload rejection, reverse source exclusivity and
+rollback of both product and mapping on a late failure. Reconciliation restart
+evidence validates both entity mappings against current target state.
+
+Each valid Reflection must yield exactly one dry-run mapping finding with:
+
+- source identity `v1.book/<book-id>/reflection`;
+- disposition `preserved_deferred`;
+- reason `reflection_target_not_available`; and
+- a deterministic SHA-256 evidence hash.
+
+The finding must contain no body or source timestamp. It is not a participant
+plan or durable MIG-FND observation, and zero Reflection product writes or
+mappings may exist. The immutable CURRENT package remains the restricted body
+store.
+
+The exact final-SHA CURRENT dry-run must show 15 Rating plans, one
+WrittenReview plan, five Reflection findings, zero quarantine, zero conflict,
+zero unmatched reference and zero planning error. All 57 Biblio table
+fingerprints and normal-environment guard fingerprints must be identical
+before/after; artifact scans must find zero Review/Reflection body or sensitive
+timestamp hits. No apply/import is permitted.
+
+`PRODUCTION APPLY = BLOCKED` remains an acceptance invariant until a separate
+bounded durable-preservation slice for mapper-only / auxiliary
+`preserved_deferred` evidence is GO / CLOSED. Product remains `v2.001`, schema
+`1026`, Core `2.43.0` and UI `0.20.0`. Exact closure evidence is in
+`docs/129-mig-02-assess-map-01-current-v1-assessment-mapper.md`.
