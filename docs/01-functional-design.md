@@ -2923,3 +2923,21 @@ A source is not discarded wholesale merely because one section is superseded.
 Duplicate source copies do not gain authority by duplication.
 
 New product decisions belong first in the relevant canonical chapter, then in the source register.
+
+## 20. Migration-only deferred source evidence
+
+Reviewed source evidence that has no current product target may be committed as
+`preserved_deferred` without creating a placeholder product record. This is a
+migration-infrastructure outcome, not a user-facing content type.
+
+Eligibility is closed: a source-specific reviewed mapper must emit an admitted
+typed preservation plan with a deterministic semantic source identity, bounded
+reason, immutable package/manifest binding, mapper-contract identity,
+source-relative locator, restricted-evidence hash and privacy class. Ordinary
+findings, warnings and arbitrary metadata are never promoted automatically.
+
+Equivalent committed evidence is reused across runs. The same semantic source
+identity with any changed evidence, reason, locator, contract or provenance
+fails closed. Restricted content stays in the retained immutable source
+package; ordinary artifacts, logs, exceptions, REST and the Biblio UI expose
+neither that content nor an internal recovery capability.

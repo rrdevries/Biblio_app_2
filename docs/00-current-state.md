@@ -4011,3 +4011,37 @@ durable replayable/reconcilable preservation for mapper-only / auxiliary
 `v2.001`; schema remains `1026`; Biblio Core is `2.43.0`; Biblio UI remains
 `0.20.0`. Closure evidence:
 `docs/129-mig-02-assess-map-01-current-v1-assessment-mapper.md`.
+
+### MIG-02-PRESERVE-01 — durable mapper-only preservation
+
+Status: **GO / CLOSED — PRESERVATION APPLY BLOCKER RESOLVED; PRODUCTION APPLY
+STILL NOT AUTHORIZED**.
+
+The migration runner now prepares one manifest-, adapter-, mapper-contract-,
+target- and build-bound executable record set. Dry-run, apply preflight and
+reconciliation consume that same `PreparedMigrationPlan`. Artifact contract
+version 3 exposes its privacy-safe provenance and deterministic plan-set
+digest. Apply requires the accepted digest and fails before creating a run or
+observation when independent preparation differs.
+
+`PreservedSourceEvidencePlan` and its closed admission registry provide the
+source-neutral no-target route accepted by D-MIG-PRESERVE-01. The generic
+participant commits a MIG-FND source observation plus preservation row with
+zero product mappings. Prior committed evidence is resolved across all run
+statuses by exact target, source family/type and semantic source identity;
+every matching descriptor must be equivalent or replay fails closed. The
+stored descriptor contains only bounded provenance, contract, locator and
+hash data. Restricted bodies remain in the immutable source package and the
+internal CURRENT resolver verifies package manifest, logical locator and
+evidence hash without returning the body.
+
+The five reviewed CURRENT Reflection slots are now five executable
+`preserved_source_evidence` plans in addition to 15 Rating and one
+WrittenReview plan. Their diagnostic findings remain summaries and do not
+become extra observations. Item auxiliary evidence and circulation keep their
+existing participant-owned durable routes; other classification, Author,
+Reading and contained-work deferred/diagnostic populations are not bulk
+converted by this foundation slice. No REST/UI surface or promotion/backfill
+was added and no CURRENT apply/import was run. Product remains `v2.001`, schema
+remains `1026`, Biblio Core is `2.44.0`, and Biblio UI remains `0.20.0`.
+Closure evidence: `docs/131-mig-02-preserve-01-durable-mapper-only-preservation.md`.

@@ -18,7 +18,9 @@ final readonly class MigrationLedgerObservation
         private ?MigrationDisposition $disposition,
         private ?string $reasonCode,
         private bool $retryable,
-        private array $mappings
+        private array $mappings,
+        private ?string $preservationReason = null,
+        private ?string $preservationStatus = null
     ) {
     }
 
@@ -34,6 +36,8 @@ final readonly class MigrationLedgerObservation
     public function retryable(): bool { return $this->retryable; }
     /** @return list<MigrationTargetMapping> */
     public function mappings(): array { return $this->mappings; }
+    public function preservationReason(): ?string { return $this->preservationReason; }
+    public function preservationStatus(): ?string { return $this->preservationStatus; }
 
     public function identityKey(): string
     {

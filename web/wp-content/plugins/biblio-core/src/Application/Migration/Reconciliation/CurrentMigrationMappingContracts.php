@@ -19,6 +19,7 @@ use Biblio\Core\Application\Migration\Assessments\{
     HistoricalWrittenReviewMigrationParticipant
 };
 use Biblio\Core\Application\Migration\Notes\PrivateNoteMigrationParticipant;
+use Biblio\Core\Application\Migration\Preservation\PreservedSourceEvidenceMigrationParticipant;
 use Biblio\Core\Application\Migration\Reading\{
     ReadingRoundMigrationParticipant,
     ReadingTruthMigrationParticipant
@@ -84,6 +85,10 @@ final class CurrentMigrationMappingContracts
             ),
             new MigrationMappingContract(
                 CirculationMigrationParticipant::SOURCE_TYPE,
+                []
+            ),
+            new MigrationMappingContract(
+                PreservedSourceEvidenceMigrationParticipant::SOURCE_TYPE,
                 []
             ),
         ]);

@@ -28,6 +28,24 @@ interface MigrationLedgerRepository
         SourceObservation $observation
     ): array;
 
+    /** @return list<PriorPreservedEvidence> */
+    public function priorPreservations(
+        string $targetUserId,
+        string $targetLibraryId,
+        string $sourceFamily,
+        string $sourceType,
+        string $sourceId
+    ): array;
+
+    public function preservationMatches(
+        string $runId,
+        string $observationId,
+        string $reasonCode,
+        string $processingStatus,
+        string $evidenceJson,
+        string $evidenceReference
+    ): bool;
+
     /** @return list<MigrationTraceEntry> */
     public function sourceTargets(
         MigrationRun $run,

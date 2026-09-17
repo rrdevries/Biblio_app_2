@@ -174,6 +174,39 @@ final readonly class ReadingRoundFailingOutcomeLedger implements
     ): array {
         return $this->inner->priorTargets($run, $observation);
     }
+    public function priorPreservations(
+        string $targetUserId,
+        string $targetLibraryId,
+        string $sourceFamily,
+        string $sourceType,
+        string $sourceId
+    ): array {
+        return $this->inner->priorPreservations(
+            $targetUserId,
+            $targetLibraryId,
+            $sourceFamily,
+            $sourceType,
+            $sourceId
+        );
+    }
+
+    public function preservationMatches(
+        string $runId,
+        string $observationId,
+        string $reasonCode,
+        string $processingStatus,
+        string $evidenceJson,
+        string $evidenceReference
+    ): bool {
+        return $this->inner->preservationMatches(
+            $runId,
+            $observationId,
+            $reasonCode,
+            $processingStatus,
+            $evidenceJson,
+            $evidenceReference
+        );
+    }
     public function sourceTargets(
         MigrationRun $run,
         string $sourceType,

@@ -269,3 +269,19 @@ The following remains deferred independently of D-SCOPE-01:
   D-SEARCH-01 preserves the optional secondary product layer without making it
   a V2.001 release requirement;
 - final hosting product selection until hosting context is known.
+
+## 11. Durable mapper-only preservation boundary
+
+MIG-02-PRESERVE-01 closes only the migration-foundation inability to durably
+commit reviewed mapper-only `preserved_deferred` evidence. The implemented
+proof population is CURRENT Reflection. Item auxiliary evidence and
+circulation remain on their existing participant-owned routes. Classification,
+Author, Reading and contained-work populations not already carrying a complete
+approved executable preservation contract remain diagnostic or deferred to a
+later bounded mapping slice; they are not inferred or bulk-converted here.
+
+Still explicitly out of scope are a Reflection product model, promotion or
+backfill, general source-package storage infrastructure, public/internal UI or
+REST exposure, Series, Wishlist, Archive, contained-work product migration,
+loan backfill and production apply/import. Closing this blocker does not
+authorize production migration.

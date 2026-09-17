@@ -12,6 +12,11 @@ use Biblio\Core\Application\Migration\Assessments\{
     HistoricalWrittenReviewPlan
 };
 use Biblio\Core\Application\Migration\Notes\PrivateNoteMigrationParticipant;
+use Biblio\Core\Application\Migration\Preservation\{
+    PreservedSourceEvidenceMigrationParticipant,
+    PreservedSourceEvidencePlan,
+    PreservedSourceEvidencePrivacy
+};
 use Biblio\Core\Application\Migration\Runner\{
     MigrationPlanningTarget,
     MigrationRunnerFailure,
@@ -65,9 +70,20 @@ final class CurrentV1AssessmentMapperTest extends TestCase
             $result,
             HistoricalWrittenReviewMigrationParticipant::SOURCE_TYPE
         );
+        $reflections = $this->plans(
+            $result,
+            PreservedSourceEvidenceMigrationParticipant::SOURCE_TYPE
+        );
 
         self::assertCount(4, $ratings);
         self::assertCount(1, $reviews);
+        self::assertCount(5, $reflections);
+        self::assertCount(5, array_unique(array_keys($reflections)));
+        self::assertCount(5, array_unique(array_map(
+            static fn (PreservedSourceEvidencePlan $plan): string =>
+                $plan->evidenceSha256(),
+            $reflections
+        )));
         foreach ([1, 3, 4, 5] as $index => $stars) {
             $sourceId = CurrentV1CatalogSourceIds::rating("rating-{$index}");
             self::assertInstanceOf(HistoricalRatingPlan::class, $ratings[$sourceId]);
@@ -99,10 +115,29 @@ final class CurrentV1AssessmentMapperTest extends TestCase
                 === CurrentV1AssessmentMappingReason::ReflectionTargetNotAvailable->value
         ));
         foreach ($reflectionFindings as $finding) {
+            $plan = $reflections[$finding->sourceId()] ?? null;
+            self::assertInstanceOf(PreservedSourceEvidencePlan::class, $plan);
+            self::assertSame("current_v1_reflection", $plan->evidenceType());
+            self::assertSame(
+                "reflection_target_not_available",
+                $plan->reasonCode()
+            );
+            self::assertSame(
+                PreservedSourceEvidencePrivacy::RestrictedSource,
+                $plan->privacy()
+            );
+            self::assertSame("data/books.json", $plan->sourceFile());
+            self::assertSame("books", $plan->sourceCollection());
+            self::assertSame("reflection", $plan->sourceField());
+            self::assertArrayNotHasKey("body", $plan->canonicalPayload());
             self::assertMatchesRegularExpression(
                 '/^[a-f0-9]{64}$/D',
                 $finding->toArray()["evidence_hash"]
             );
+            self::assertSame([[
+                "source_type" => PreservedSourceEvidenceMigrationParticipant::SOURCE_TYPE,
+                "source_id" => $finding->sourceId(),
+            ]], $finding->toArray()["planned_identities"]);
         }
         $artifactProjection = json_encode(array_map(
             static fn ($finding): array => $finding->toArray(),

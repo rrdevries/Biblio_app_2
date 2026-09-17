@@ -4867,3 +4867,33 @@ bounded durable-preservation slice for mapper-only / auxiliary
 `preserved_deferred` evidence is GO / CLOSED. Product remains `v2.001`, schema
 `1026`, Core `2.43.0` and UI `0.20.0`. Exact closure evidence is in
 `docs/129-mig-02-assess-map-01-current-v1-assessment-mapper.md`.
+
+## MIG-02-PRESERVE-01 acceptance
+
+Acceptance requires all of the following:
+
+- dry-run, apply preflight and reconciliation use one prepared executable set
+  and expose the same deterministic plan-set digest;
+- a stale digest or changed manifest, mapper contract, target or executable
+  population fails before the first apply write;
+- a valid typed preservation commits exactly one source observation and one
+  preservation row with `preserved_deferred`, the reviewed reason and zero
+  target mappings;
+- replay searches committed preservation evidence from running, interrupted,
+  failed and completed runs; all equivalent matches are reusable and any
+  divergent match fails closed without newest/oldest preference;
+- interruption after one or several commits resumes only missing evidence and
+  creates no duplicate semantic observation;
+- raw restricted bodies are absent from dry-run, reconciliation, apply
+  artifacts and exception messages;
+- internal recovery accepts only the exact manifest-bound source-relative
+  locator and evidence hash, and rejects the wrong package or changed body;
+- CURRENT zero-write planning produces 15 Rating, one WrittenReview and five
+  executable Reflection preservation plans, while all Biblio table
+  fingerprints remain identical before/after;
+- Item auxiliary and circulation regression tests prove their existing routes
+  are not duplicated; schema remains 1026 and no production apply/import is
+  executed.
+
+The full command/result record and privacy evidence are maintained in
+`docs/131-mig-02-preserve-01-durable-mapper-only-preservation.md`.

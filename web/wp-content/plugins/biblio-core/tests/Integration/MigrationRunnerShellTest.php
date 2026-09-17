@@ -11,6 +11,7 @@ use Biblio\Core\Application\Migration\Author\{CatalogAuthorMigrationParticipant,
 use Biblio\Core\Application\Migration\Catalog\{CatalogEditionMigrationParticipant,CatalogEditionPlan,CatalogItemMigrationParticipant,CatalogItemPlan,CatalogWorkMigrationParticipant,CatalogWorkPlan};
 use Biblio\Core\Application\Migration\Assessments\{HistoricalRatingMigrationParticipant,HistoricalWrittenReviewMigrationParticipant};
 use Biblio\Core\Application\Migration\Notes\{PrivateNoteMigrationParticipant,PrivateNotePlan};
+use Biblio\Core\Application\Migration\Preservation\PreservedSourceEvidenceMigrationParticipant;
 use Biblio\Core\Application\Migration\Reading\{ReadingRoundMigrationParticipant,ReadingRoundPlan,ReadingTruthMigrationParticipant};
 use Biblio\Core\Application\Migration\Runner\MigrationBuildProvenance;
 use Biblio\Core\Application\Migration\Runner\MigrationEnvironment;
@@ -386,7 +387,7 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
             32,
             JSON_THROW_ON_ERROR
         );
-        self::assertSame(2, $dryRunArtifact["migration_artifact_version"]);
+        self::assertSame(3, $dryRunArtifact["migration_artifact_version"]);
         self::assertFalse($dryRunArtifact["planning_reconciliation"]["applied"]);
         self::assertFalse($dryRunArtifact["planning_reconciliation"]["accepted"]);
         self::assertSame(1, $dryRunArtifact["planning_reconciliation"]["planned_observations"]);
@@ -512,7 +513,7 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
         $artifact = json_decode($artifactBytes, true, 32, JSON_THROW_ON_ERROR);
         self::assertTrue($artifact["zero_write_confirmed"]);
         self::assertSame(
-            9,
+            10,
             $artifact["planning_reconciliation"]["planned_observations"]
         );
         self::assertSame(
@@ -552,6 +553,15 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
         self::assertSame(
             1,
             $artifact["plan"]["disposition_counts"]["quarantined"]
+        );
+        self::assertSame(
+            1,
+            $artifact["plan"]["disposition_counts"]["preserved_deferred"]
+        );
+        self::assertSame(
+            1,
+            $artifact["planning_reconciliation"]["participant_counts"]
+                [PreservedSourceEvidenceMigrationParticipant::SOURCE_TYPE]
         );
         $circulation = array_values(array_filter(
             $artifact["plan"]["records"],
@@ -610,6 +620,10 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
         ));
         self::assertCount(1, $reflectionFindings);
         self::assertSame("preserved_deferred", $reflectionFindings[0]["disposition"]);
+        self::assertSame([[
+            "source_id" => $reflectionFindings[0]["source_id"],
+            "source_type" => PreservedSourceEvidenceMigrationParticipant::SOURCE_TYPE,
+        ]], $reflectionFindings[0]["planned_identities"]);
         self::assertMatchesRegularExpression(
             '/^[a-f0-9]{64}$/D',
             $reflectionFindings[0]["evidence_hash"]

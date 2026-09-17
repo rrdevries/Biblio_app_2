@@ -51,6 +51,13 @@ use Biblio\Core\Application\Migration\Catalog\{CatalogEditionMigrationParticipan
 use Biblio\Core\Application\Migration\Circulation\CirculationMigrationParticipant;
 use Biblio\Core\Application\Migration\Assessments\{HistoricalAssessmentMigrationWriter,HistoricalRatingMigrationParticipant,HistoricalWrittenReviewMigrationParticipant};
 use Biblio\Core\Application\Migration\Notes\{PrivateNoteMigrationParticipant,PrivateNoteMigrationWriter};
+use Biblio\Core\Application\Migration\Preservation\{
+    PreservedSourceEvidenceAdmission,
+    PreservedSourceEvidenceAdmissionRegistry,
+    PreservedSourceEvidenceMigrationParticipant,
+    PreservedSourceEvidencePlanGuard,
+    PreservedSourceEvidencePrivacy
+};
 use Biblio\Core\Application\Migration\Reading\{ReadingRoundMigrationParticipant,ReadingRoundMigrationWriter,ReadingTruthMigrationParticipant,ReadingTruthMigrationWriter};
 use Biblio\Core\Application\Migration\Reconciliation\{
     CoreMigrationTargetInspector,
@@ -586,6 +593,13 @@ final class ProductionComposition
             $ratingRepository,
             $reviewRepository
         );
+        $preservedEvidenceAdmissions = new PreservedSourceEvidenceAdmissionRegistry([
+            new PreservedSourceEvidenceAdmission(
+                "current_v1_reflection",
+                "reflection_target_not_available",
+                PreservedSourceEvidencePrivacy::RestrictedSource
+            ),
+        ]);
         $migrationParticipants = new MigrationParticipantRegistry([
             new CatalogAuthorMigrationParticipant($authorMigrationWriter),
             new CatalogWorkMigrationParticipant($catalogMigrationWriter),
@@ -607,6 +621,10 @@ final class ProductionComposition
             new HistoricalRatingMigrationParticipant($assessmentMigrationWriter),
             new HistoricalWrittenReviewMigrationParticipant($assessmentMigrationWriter),
             new CirculationMigrationParticipant(),
+            new PreservedSourceEvidenceMigrationParticipant(
+                $migrationLedger,
+                new PreservedSourceEvidencePlanGuard($preservedEvidenceAdmissions)
+            ),
         ]);
         $migrationSourceMappers = new MigrationSourceMapperRegistry([
             new CurrentV1CatalogMapper(

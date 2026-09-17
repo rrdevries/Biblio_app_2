@@ -2869,3 +2869,43 @@ mapper-only findings as 21 accounted observations, while production apply is
 still prohibited. A separate bounded capability must durably preserve and
 reconcile mapper-only / auxiliary `preserved_deferred` evidence before any
 CURRENT apply/import can be authorized. Schema remains 1026; Core is 2.43.0.
+
+## Prepared migration execution and no-target preservation
+
+MIG-02-PRESERVE-01 implements D-MIG-PRESERVE-01 with one
+`MigrationPlanPreparer` boundary:
+
+```text
+immutable inspection + explicit User/Library target
+  -> registered source mapper
+  -> PreparedMigrationPlan
+  -> dry-run artifact / apply preflight / reconciliation
+```
+
+The prepared plan holds executable typed records, sanitized planning failures,
+diagnostic findings and mapping-contract identities. Its deterministic digest
+binds manifest, adapter/source version, mapper contracts, explicit target,
+build provenance, record identities, payload hashes, dispositions, reasons and
+safe findings. Apply independently reconstructs this plan and compares the
+accepted digest before `BeginMigrationRunService` can write.
+
+`PreservedSourceEvidenceMigrationParticipant` is source-neutral. A closed
+`PreservedSourceEvidenceAdmissionRegistry` admits only reviewed evidence
+type/reason/privacy triples; `PreservedSourceEvidencePlanGuard` proves record,
+typed plan, observation and provenance agreement. The ordinary
+`CommitMigrationRecordService` transaction commits the observation and
+preservation outcome with zero mappings. No generic metadata bag exists.
+
+Cross-run lookup is keyed by exact target User/Library, source family, fixed
+preservation source type and semantic source ID. It deliberately has no run
+status or payload-hash prefilter. All committed matches are compared for exact
+manifest/source version, canonical payload, reason, descriptor and locator;
+one divergent match stops execution before a new run write. Reconciliation
+uses the prepared executable universe while retaining the raw inspection for
+category accounting, and may satisfy a missing current-run preservation only
+through the same exact equivalence check.
+
+Restricted evidence recovery is internal and non-returning: the CURRENT
+resolver verifies the package manifest, allowed logical locator and canonical
+evidence hash. Absolute developer paths and private bodies are not durable
+semantics. Artifact format is version 3. Schema remains 1026; Core is 2.44.0.

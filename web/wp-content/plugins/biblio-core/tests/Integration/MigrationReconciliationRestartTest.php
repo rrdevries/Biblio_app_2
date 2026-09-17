@@ -518,6 +518,7 @@ final class MigrationReconciliationRestartTest extends PersistenceIntegrationTes
             "synthetic-reconciliation",
             $userA,
             $libraryA,
+            $this->digest($runnerA, $source, "synthetic-reconciliation", $userA, $libraryA),
             3
         );
         self::assertSame(MigrationRunStatus::Interrupted, $interrupted->run()->status());
@@ -531,7 +532,8 @@ final class MigrationReconciliationRestartTest extends PersistenceIntegrationTes
             $source,
             "synthetic-reconciliation",
             $userA,
-            $libraryA
+            $libraryA,
+            $this->digest($runnerA, $source, "synthetic-reconciliation", $userA, $libraryA)
         );
         self::assertSame(MigrationRunStatus::Completed, $resumed->run()->status());
         self::assertTrue($resumed->reconciliation()->accepted());
@@ -577,7 +579,8 @@ final class MigrationReconciliationRestartTest extends PersistenceIntegrationTes
             $source,
             "synthetic-reconciliation",
             $userA,
-            $libraryA
+            $libraryA,
+            $this->digest($runnerA, $source, "synthetic-reconciliation", $userA, $libraryA)
         );
         self::assertSame($resumed->run()->id(), $second->run()->id());
         self::assertSame(0, $second->reconciliation()->toArray()["execution"]["created_targets"]);
@@ -587,7 +590,8 @@ final class MigrationReconciliationRestartTest extends PersistenceIntegrationTes
             $source,
             "synthetic-reconciliation",
             $userA,
-            $libraryA
+            $libraryA,
+            $this->digest($runnerA, $source, "synthetic-reconciliation", $userA, $libraryA)
         );
         self::assertSame($second->artifact()->checksum(), $repeat->artifact()->checksum());
 
@@ -620,14 +624,16 @@ final class MigrationReconciliationRestartTest extends PersistenceIntegrationTes
         self::assertFileExists($receipt->checksumPath());
 
         [$userB, $libraryB, $bookTypeB] = $this->target($application, "recon-b");
-        $clean = $this->applyRunner(
+        $runnerB = $this->applyRunner(
             $application,
             new ReconciliationFullAdapter($userB, $libraryB, $bookTypeB)
-        )->apply(
+        );
+        $clean = $runnerB->apply(
             $source,
             "synthetic-reconciliation",
             $userB,
-            $libraryB
+            $libraryB,
+            $this->digest($runnerB, $source, "synthetic-reconciliation", $userB, $libraryB)
         );
         self::assertTrue($clean->reconciliation()->accepted());
         $graphB = $this->targetGraph($userB, $libraryB);
@@ -651,7 +657,8 @@ final class MigrationReconciliationRestartTest extends PersistenceIntegrationTes
             $source,
             "synthetic-reconciliation",
             $userA,
-            $libraryA
+            $libraryA,
+            $this->digest($runnerA, $source, "synthetic-reconciliation", $userA, $libraryA)
         );
         self::assertNotSame($second->run()->id(), $changed->run()->id());
         self::assertNotSame(
@@ -690,7 +697,8 @@ final class MigrationReconciliationRestartTest extends PersistenceIntegrationTes
             $source,
             "synthetic-reconciliation",
             $userA,
-            $libraryA
+            $libraryA,
+            $this->digest($runnerA, $source, "synthetic-reconciliation", $userA, $libraryA)
         );
         self::assertFalse($wrongTarget->reconciliation()->accepted());
         self::assertSame(1, $wrongTarget->reconciliation()->brokenTargetCount());
@@ -707,7 +715,8 @@ final class MigrationReconciliationRestartTest extends PersistenceIntegrationTes
             $source,
             "synthetic-reconciliation",
             $userA,
-            $libraryA
+            $libraryA,
+            $this->digest($runnerA, $source, "synthetic-reconciliation", $userA, $libraryA)
         );
         self::assertFalse($broken->reconciliation()->accepted());
         self::assertSame(1, $broken->reconciliation()->toArray()["broken_target_count"]);
@@ -716,7 +725,7 @@ final class MigrationReconciliationRestartTest extends PersistenceIntegrationTes
             $noteId
         )));
 
-        $inspection = (new MigrationRunner(
+        $foreignPlanning = new MigrationRunner(
             new FilesystemMigrationSourcePackageFactory(),
             new MigrationSourceAdapterRegistry([
                 new ReconciliationFullAdapter($userA, $libraryA, $bookTypeA),
@@ -724,7 +733,14 @@ final class MigrationReconciliationRestartTest extends PersistenceIntegrationTes
             $application->migrationParticipants(),
             $application->personalMigrationTargets(),
             new ReconciliationEnvironment()
-        ))->inspectSource($source, "synthetic-reconciliation");
+        );
+        $inspection = $foreignPlanning->inspectSource($source, "synthetic-reconciliation");
+        $prepared = $foreignPlanning->prepare(
+            $inspection,
+            new MigrationPlanningTarget(
+                $application->personalMigrationTargets()->validate($userA, $libraryA)
+            )
+        );
         $storedRun = $changed->run();
         $foreignScopeRun = new MigrationRun(
             $storedRun->id(),
@@ -745,7 +761,7 @@ final class MigrationReconciliationRestartTest extends PersistenceIntegrationTes
         try {
             $application->migrationReconciliation()->reconcile(
                 $foreignScopeRun,
-                $inspection
+                $prepared
             );
             self::fail("Caller-supplied target scope must not override ledger scope.");
         } catch (ValidationException $exception) {
@@ -777,7 +793,8 @@ final class MigrationReconciliationRestartTest extends PersistenceIntegrationTes
             $source,
             "synthetic-reconciliation",
             $userA,
-            $libraryA
+            $libraryA,
+            $this->digest($runnerA, $source, "synthetic-reconciliation", $userA, $libraryA)
         )->reconciliation()->toArray();
         self::assertSame(1, $mappingAnomaly["mapping_anomaly_count"]);
         self::assertSame(1, $mappingAnomaly["mapping_counts"]["unclassified"]["reused"]);
@@ -800,7 +817,8 @@ final class MigrationReconciliationRestartTest extends PersistenceIntegrationTes
             $source,
             "synthetic-reconciliation",
             $userA,
-            $libraryA
+            $libraryA,
+            $this->digest($runnerA, $source, "synthetic-reconciliation", $userA, $libraryA)
         )->reconciliation()->toArray();
         self::assertSame(1, $scopeAnomaly["observation_scope_anomaly_count"]);
         self::assertSame(1, $scopeAnomaly["unexplained_drop_count"]);
@@ -852,7 +870,6 @@ final class MigrationReconciliationRestartTest extends PersistenceIntegrationTes
         );
         $runner = new MigrationApplyRunner(
             $planningRunner,
-            $participants,
             $application->personalMigrationTargets(),
             $environment,
             new BeginMigrationRunService(
@@ -874,7 +891,8 @@ final class MigrationReconciliationRestartTest extends PersistenceIntegrationTes
             $source,
             "synthetic-accounting",
             $user,
-            $library
+            $library,
+            $this->digest($runner, $source, "synthetic-accounting", $user, $library)
         );
         $report = $result->reconciliation()->toArray();
         self::assertSame(MigrationRunStatus::Failed, $result->run()->status());
@@ -906,7 +924,7 @@ final class MigrationReconciliationRestartTest extends PersistenceIntegrationTes
         self::assertSame(1, $report["reason_code_summaries"]["future_target_deferred"]);
         self::assertSame(1, $report["reason_code_summaries"]["unsupported_source_type"]);
 
-        $gapInspection = (new MigrationRunner(
+        $gapRunner = new MigrationRunner(
             new FilesystemMigrationSourcePackageFactory(),
             new MigrationSourceAdapterRegistry([
                 new ReconciliationAccountingAdapter(true),
@@ -914,10 +932,17 @@ final class MigrationReconciliationRestartTest extends PersistenceIntegrationTes
             $participants,
             $application->personalMigrationTargets(),
             $environment
-        ))->inspectSource($source, "synthetic-accounting");
+        );
+        $gapInspection = $gapRunner->inspectSource($source, "synthetic-accounting");
+        $gapPrepared = $gapRunner->prepare(
+            $gapInspection,
+            new MigrationPlanningTarget(
+                $application->personalMigrationTargets()->validate($user, $library)
+            )
+        );
         $gapReport = $reconciliation->reconcile(
             $result->run(),
-            $gapInspection
+            $gapPrepared
         )->toArray();
         self::assertFalse($gapReport["acceptance_flags"]["source_strategies_complete"]);
         self::assertContains(
@@ -926,7 +951,7 @@ final class MigrationReconciliationRestartTest extends PersistenceIntegrationTes
         );
     }
 
-    public function testUnexpectedPlanningDefectInterruptsAndRethrows(): void
+    public function testUnexpectedPlanningDefectIsSanitizedAndFailsTheRun(): void
     {
         $application = (new ProductionComposition($this->database))->application();
         [$user, $library] = $this->target($application, "recon-unexpected");
@@ -938,27 +963,31 @@ final class MigrationReconciliationRestartTest extends PersistenceIntegrationTes
             new ReconciliationUnexpectedPlanningAdapter(),
             $participants
         );
+        $source = $this->source();
 
-        try {
-            $runner->apply(
-                $this->source(),
+        $result = $runner->apply(
+            $source,
+            "synthetic-unexpected-planning",
+            $user,
+            $library,
+            $this->digest(
+                $runner,
+                $source,
                 "synthetic-unexpected-planning",
                 $user,
                 $library
-            );
-            self::fail("Unexpected planning defect must be rethrown.");
-        } catch (\RuntimeException $exception) {
-            self::assertSame("unexpected planning defect", $exception->getMessage());
-        }
+            )
+        );
 
-        self::assertSame("interrupted", $this->database->get_var($this->database->prepare(
-            "SELECT run_status FROM `{$this->tableNames->migrationRuns()}` "
+        self::assertSame(MigrationRunStatus::Failed, $result->run()->status());
+        self::assertSame(1, (int) $this->database->get_var($this->database->prepare(
+            "SELECT COUNT(*) FROM `{$this->tableNames->migrationRuns()}` "
                 . "WHERE source_family=%s AND target_user_id=%s AND target_library_id=%s",
             "synthetic-unexpected-planning",
             $user->value(),
             $library->value()
         )));
-        self::assertSame(0, (int) $this->database->get_var($this->database->prepare(
+        self::assertSame(1, (int) $this->database->get_var($this->database->prepare(
             "SELECT COUNT(*) FROM `{$this->tableNames->migrationSourceObservations()}` "
                 . "WHERE run_id IN (SELECT run_id FROM `{$this->tableNames->migrationRuns()}` "
                 . "WHERE source_family=%s)",
@@ -1016,7 +1045,6 @@ final class MigrationReconciliationRestartTest extends PersistenceIntegrationTes
         );
         return new MigrationApplyRunner(
             $runner,
-            $participants,
             $application->personalMigrationTargets(),
             $environment,
             new BeginMigrationRunService(
@@ -1033,6 +1061,23 @@ final class MigrationReconciliationRestartTest extends PersistenceIntegrationTes
             $application->migrationReconciliation(),
             "mig-02-recon-1"
         );
+    }
+
+    private function digest(
+        MigrationApplyRunner $runner,
+        string $source,
+        string $adapter,
+        UserId $user,
+        LibraryId $library
+    ): string {
+        $digest = $runner->dryRunArtifact(
+            $source,
+            $adapter,
+            $user,
+            $library
+        )->payload()["prepared_plan"]["plan_set_digest"] ?? null;
+        self::assertIsString($digest);
+        return $digest;
     }
 
     /** @return array<string, int> */

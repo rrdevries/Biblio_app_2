@@ -40,7 +40,6 @@ final readonly class MigrationApplyRunner
 {
     public function __construct(
         private MigrationRunner $runner,
-        private MigrationParticipantRegistry $participants,
         private MigrationTargetValidator $targets,
         private MigrationEnvironment $environment,
         private BeginMigrationRunService $runs,
@@ -61,6 +60,7 @@ final readonly class MigrationApplyRunner
         string $adapterId,
         UserId $targetUserId,
         LibraryId $targetLibraryId,
+        string $acceptedPlanSetDigest,
         ?int $interruptAfter = null
     ): MigrationApplyResult {
         if ($interruptAfter !== null && $interruptAfter < 1) {
@@ -78,6 +78,17 @@ final readonly class MigrationApplyRunner
             );
         }
         $target = new MigrationPlanningTarget($validated);
+        $prepared = $this->runner->prepare($inspection, $target);
+        if (
+            preg_match('/^[a-f0-9]{64}$/D', $acceptedPlanSetDigest) !== 1
+            || !hash_equals($prepared->planSetDigest(), $acceptedPlanSetDigest)
+        ) {
+            throw new MigrationRunnerFailure(
+                MigrationRunnerReason::PreparedPlanMismatch,
+                "Apply preparation does not match the accepted dry-run plan."
+            );
+        }
+        $priorReplays = $this->priorReplays($prepared);
         $run = $this->runs->begin(
             $inspection->adapter()->sourceFamily(),
             $inspection->package()->manifestDigest(),
@@ -91,15 +102,15 @@ final readonly class MigrationApplyRunner
 
         $execution = $this->executionCounts();
         if ($run->status() === MigrationRunStatus::Completed) {
-            $execution = $this->completedExecution($run, $inspection);
-            return $this->result($run, $inspection, $execution);
+            $execution = $this->completedExecution($run, $prepared);
+            return $this->result($run, $prepared, $execution);
         }
         if (in_array($run->status(), [MigrationRunStatus::Interrupted, MigrationRunStatus::Failed], true)) {
             $run = $this->lifecycle->resume($run);
         }
 
         try {
-            [$planned, $earlyFailures] = $this->plans($inspection, $target);
+            [$planned, $earlyFailures] = $this->plans($prepared);
         } catch (Throwable $exception) {
             $this->lifecycle->interrupt($run);
             throw $exception;
@@ -120,7 +131,7 @@ final readonly class MigrationApplyRunner
             if ($this->shouldInterrupt($execution, $interruptAfter)) {
                 return $this->result(
                     $this->lifecycle->interrupt($run),
-                    $inspection,
+                    $prepared,
                     $execution
                 );
             }
@@ -129,6 +140,10 @@ final readonly class MigrationApplyRunner
         $resolved = $this->resolvedDependencies($run);
         foreach ($this->dependencyOrder($planned) as [$record, $participant, $plan]) {
             $key = $this->recordKey($record);
+            if (isset($priorReplays[$key])) {
+                ++$execution["reused_prior_preservations"];
+                continue;
+            }
             $observation = $this->observe($run, $record);
             if (!$this->processable($observation)) {
                 $this->accountSkipped($observation, $execution);
@@ -184,43 +199,70 @@ final readonly class MigrationApplyRunner
             if ($this->shouldInterrupt($execution, $interruptAfter)) {
                 return $this->result(
                     $this->lifecycle->interrupt($run),
-                    $inspection,
+                    $prepared,
                     $execution
                 );
             }
         }
 
-        $report = $this->reconciliation->reconcile($run, $inspection, $execution);
+        $report = $this->reconciliation->reconcile($run, $prepared, $execution);
         if ($report->accepted()) {
             $run = $this->lifecycle->complete($run);
         } else {
             $run = $this->lifecycle->fail($run);
         }
-        return $this->result($run, $inspection, $execution);
+        return $this->result($run, $prepared, $execution);
+    }
+
+    public function dryRunArtifact(
+        string $sourceRoot,
+        string $adapterId,
+        UserId $targetUserId,
+        LibraryId $targetLibraryId
+    ): MigrationArtifact {
+        return $this->runner->dryRun(
+            $sourceRoot,
+            $adapterId,
+            $targetUserId,
+            $targetLibraryId,
+            false
+        );
     }
 
     /**
      * @return array{list<array{MigrationSourceRecord,MigrationParticipant,PlannedMigrationRecord}>,list<array{MigrationSourceRecord,string}>}
      */
-    private function plans(
-        MigrationSourceInspection $inspection,
-        MigrationPlanningTarget $target
-    ): array {
+    private function plans(PreparedMigrationPlan $prepared): array
+    {
         $planned = [];
         $failures = [];
-        foreach ($inspection->records() as $record) {
-            $participant = $this->participants->forType($record->sourceType());
-            if (!$participant instanceof MigrationParticipant) {
-                $failures[] = [$record, "unsupported_source_type"];
-                continue;
-            }
-            try {
-                $planned[] = [$record, $participant, $participant->plan($record, $target)];
-            } catch (MigrationParticipantFailure $exception) {
-                $failures[] = [$record, $exception->reasonCode()];
-            }
+        foreach ($prepared->records() as $item) {
+            $planned[] = [$item->record(), $item->participant(), $item->plan()];
+        }
+        foreach ($prepared->failures() as $failure) {
+            $failures[] = [$failure->record(), $failure->reasonCode()];
         }
         return [$planned, $failures];
+    }
+
+    /** @return array<string, true> */
+    private function priorReplays(PreparedMigrationPlan $prepared): array
+    {
+        $replays = [];
+        foreach ($prepared->records() as $item) {
+            $participant = $item->participant();
+            if (
+                $participant instanceof CrossRunMigrationReplayParticipant
+                && $participant->hasEquivalentPrior(
+                    $item->record(),
+                    $item->plan(),
+                    $prepared->target()
+                )
+            ) {
+                $replays[$this->recordKey($item->record())] = true;
+            }
+        }
+        return $replays;
     }
 
     /**
@@ -351,6 +393,7 @@ final readonly class MigrationApplyRunner
             "skipped_terminal_observations" => 0,
             "created_targets" => 0,
             "reused_targets" => 0,
+            "reused_prior_preservations" => 0,
         ];
     }
 
@@ -368,14 +411,14 @@ final readonly class MigrationApplyRunner
     /** @return array<string, int> */
     private function completedExecution(
         MigrationRun $run,
-        MigrationSourceInspection $inspection
+        PreparedMigrationPlan $prepared
     ): array {
         $execution = $this->executionCounts();
         $stored = [];
         foreach ($this->ledger->snapshot($run->id())->observations() as $observation) {
             $stored[$observation->identityKey()] = $observation;
         }
-        foreach ($inspection->records() as $record) {
+        foreach ($prepared->executableRecords() as $record) {
             $observation = $stored[$this->recordKey($record)] ?? null;
             if (
                 $observation !== null
@@ -390,10 +433,11 @@ final readonly class MigrationApplyRunner
     /** @param array<string, int> $execution */
     private function result(
         MigrationRun $run,
-        MigrationSourceInspection $inspection,
+        PreparedMigrationPlan $prepared,
         array $execution
     ): MigrationApplyResult {
-        $report = $this->reconciliation->reconcile($run, $inspection, $execution);
+        $inspection = $prepared->inspection();
+        $report = $this->reconciliation->reconcile($run, $prepared, $execution);
         $artifact = new MigrationArtifact(
             "apply-reconciliation",
             $inspection->package()->manifestDigest(),
@@ -408,6 +452,7 @@ final readonly class MigrationApplyRunner
                     "target_library_id" => $run->targetLibraryId()->value(),
                     "validation" => "valid",
                 ],
+                "prepared_plan" => $prepared->safeProvenance(),
                 "run" => [
                     "run_id" => $run->id(),
                     "status" => $run->status()->value,

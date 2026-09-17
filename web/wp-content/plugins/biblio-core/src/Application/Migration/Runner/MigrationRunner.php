@@ -9,11 +9,10 @@ use Biblio\Core\Application\Identity\PersonalMigrationTargetInvalid;
 use Biblio\Core\Application\Migration\MigrationDisposition;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Library\LibraryId;
-use Throwable;
 
 final readonly class MigrationRunner
 {
-    public const ARTIFACT_VERSION = 2;
+    public const ARTIFACT_VERSION = 3;
 
     public function __construct(
         private MigrationSourcePackageFactory $packages,
@@ -75,10 +74,7 @@ final readonly class MigrationRunner
         }
 
         $target = new MigrationPlanningTarget($validated);
-        $mapper = $this->mappers?->forAdapter($inspection->adapter()->adapterId());
-        $mapping = $mapper === null
-            ? MigrationSourceMappingResult::passthrough($inspection->records())
-            : $mapper->map($inspection, $target);
+        $prepared = $this->prepare($inspection, $target);
         $plans = [];
         $unsupportedTypes = [];
         $planningErrors = [];
@@ -89,26 +85,9 @@ final readonly class MigrationRunner
 
         $participantCounts = [];
         $operationCounts = [];
-        foreach ($mapping->records() as $record) {
-            $participant = $this->participants->forType($record->sourceType());
-            if (!$participant instanceof MigrationParticipant) {
-                $unsupportedTypes[$record->sourceType()] = true;
-                continue;
-            }
-
-            try {
-                $plan = $participant->plan($record, $target);
-            } catch (Throwable $exception) {
-                $planningErrors[] = [
-                    "reason_code" => $exception instanceof MigrationParticipantFailure
-                        ? $exception->reasonCode()
-                        : "participant_planning_error",
-                    "source_type" => $record->sourceType(),
-                    "source_id" => $record->sourceId(),
-                ];
-                continue;
-            }
-
+        foreach ($prepared->records() as $preparedRecord) {
+            $record = $preparedRecord->record();
+            $plan = $preparedRecord->plan();
             $plans[] = array_merge($record->identityArray(), $plan->toArray());
             $participantCounts[$record->sourceType()] =
                 ($participantCounts[$record->sourceType()] ?? 0) + 1;
@@ -133,6 +112,19 @@ final readonly class MigrationRunner
             }
         }
 
+        foreach ($prepared->failures() as $failure) {
+            $record = $failure->record();
+            if ($failure->reasonCode() === "unsupported_source_type") {
+                $unsupportedTypes[$record->sourceType()] = true;
+                continue;
+            }
+            $planningErrors[] = [
+                "reason_code" => $failure->reasonCode(),
+                "source_type" => $record->sourceType(),
+                "source_id" => $record->sourceId(),
+            ];
+        }
+
         $unsupported = array_keys($unsupportedTypes);
         sort($unsupported, SORT_STRING);
         ksort($dispositions, SORT_STRING);
@@ -141,7 +133,7 @@ final readonly class MigrationRunner
         $mappingFindings = array_map(
             static fn (MigrationSourceMappingFinding $finding): array =>
                 $finding->toArray(),
-            $mapping->findings()
+            $prepared->findings()
         );
         $mappingFindingCounts = [];
         foreach ($mappingFindings as $finding) {
@@ -168,6 +160,7 @@ final readonly class MigrationRunner
                     "require_empty" => $requireEmpty,
                     "cleanliness" => $validated->readiness()->status(),
                 ],
+                "prepared_plan" => $prepared->safeProvenance(),
                 "plan" => [
                     "records" => $plans,
                     "disposition_counts" => $dispositions,
@@ -183,7 +176,7 @@ final readonly class MigrationRunner
                     "applied" => false,
                     "accepted" => false,
                     "source_observations" => count($inspection->records()),
-                    "mapped_planning_records" => count($mapping->records()),
+                    "mapped_planning_records" => count($prepared->executableRecords()),
                     "planned_observations" => count($plans),
                     "participant_counts" => $participantCounts,
                     "operation_counts" => $operationCounts,
@@ -194,6 +187,17 @@ final readonly class MigrationRunner
                 "zero_write_confirmed" => true,
             ]
         );
+    }
+
+    public function prepare(
+        MigrationSourceInspection $inspection,
+        MigrationPlanningTarget $target
+    ): PreparedMigrationPlan {
+        return (new MigrationPlanPreparer(
+            $this->participants,
+            $this->mappers,
+            $this->environment
+        ))->prepare($inspection, $target);
     }
 
     public function inspectSource(
