@@ -9,6 +9,7 @@ use Biblio\Core\Application\Migration\MigrationDisposition;
 use Biblio\Core\Application\Migration\MigrationRecordOutcome;
 use Biblio\Core\Application\Migration\Author\{CatalogAuthorMigrationParticipant,CatalogAuthorPlan,CatalogWorkContributorMigrationParticipant,CatalogWorkContributorPlan};
 use Biblio\Core\Application\Migration\Catalog\{CatalogEditionMigrationParticipant,CatalogEditionPlan,CatalogItemMigrationParticipant,CatalogItemPlan,CatalogWorkMigrationParticipant,CatalogWorkPlan};
+use Biblio\Core\Application\Migration\Assessments\{HistoricalRatingMigrationParticipant,HistoricalWrittenReviewMigrationParticipant};
 use Biblio\Core\Application\Migration\Notes\{PrivateNoteMigrationParticipant,PrivateNotePlan};
 use Biblio\Core\Application\Migration\Reading\{ReadingRoundMigrationParticipant,ReadingRoundPlan,ReadingTruthMigrationParticipant};
 use Biblio\Core\Application\Migration\Runner\MigrationBuildProvenance;
@@ -30,6 +31,8 @@ use Biblio\Core\Catalog\EditionIsbnMetadata;
 use Biblio\Core\Catalog\{ContributorPosition,ContributorRole};
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Migration\CurrentV1SourceAdapter;
+use Biblio\Core\Infrastructure\Migration\CurrentV1AssessmentMapper;
+use Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedAssessmentContract;
 use Biblio\Core\Infrastructure\Migration\CurrentV1AuthorMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1CatalogMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ClassificationMapper;
@@ -474,6 +477,9 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
                 ),
                 noteMapper: new CurrentV1NoteMapper(
                     new CurrentV1ReviewedNoteContract($manifest)
+                ),
+                assessmentMapper: new CurrentV1AssessmentMapper(
+                    new CurrentV1ReviewedAssessmentContract($manifest)
                 )
             ),
         ]);
@@ -506,11 +512,11 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
         $artifact = json_decode($artifactBytes, true, 32, JSON_THROW_ON_ERROR);
         self::assertTrue($artifact["zero_write_confirmed"]);
         self::assertSame(
-            7,
+            9,
             $artifact["planning_reconciliation"]["planned_observations"]
         );
         self::assertSame(
-            6,
+            8,
             $artifact["plan"]["disposition_counts"]["mapped"]
         );
         self::assertSame(
@@ -532,6 +538,16 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
             1,
             $artifact["planning_reconciliation"]["participant_counts"]
                 [PrivateNoteMigrationParticipant::SOURCE_TYPE]
+        );
+        self::assertSame(
+            1,
+            $artifact["planning_reconciliation"]["participant_counts"]
+                [HistoricalRatingMigrationParticipant::SOURCE_TYPE]
+        );
+        self::assertSame(
+            1,
+            $artifact["planning_reconciliation"]["participant_counts"]
+                [HistoricalWrittenReviewMigrationParticipant::SOURCE_TYPE]
         );
         self::assertSame(
             1,
@@ -572,10 +588,38 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
             $artifact["plan"]["source_mapping_finding_counts"]
                 ["private_note_planned"]
         );
+        self::assertSame(
+            1,
+            $artifact["plan"]["source_mapping_finding_counts"]
+                ["historical_rating_planned"]
+        );
+        self::assertSame(
+            1,
+            $artifact["plan"]["source_mapping_finding_counts"]
+                ["historical_written_review_planned"]
+        );
+        self::assertSame(
+            1,
+            $artifact["plan"]["source_mapping_finding_counts"]
+                ["reflection_target_not_available"]
+        );
+        $reflectionFindings = array_values(array_filter(
+            $artifact["plan"]["source_mapping_findings"],
+            static fn (array $finding): bool =>
+                $finding["reason_code"] === "reflection_target_not_available"
+        ));
+        self::assertCount(1, $reflectionFindings);
+        self::assertSame("preserved_deferred", $reflectionFindings[0]["disposition"]);
+        self::assertMatchesRegularExpression(
+            '/^[a-f0-9]{64}$/D',
+            $reflectionFindings[0]["evidence_hash"]
+        );
         self::assertStringNotContainsString("Private Counterparty", $artifactBytes);
         self::assertStringNotContainsString("private circulation note", $artifactBytes);
         self::assertStringNotContainsString("Private acquisition source", $artifactBytes);
         self::assertStringNotContainsString("Do not expose current note body", $artifactBytes);
+        self::assertStringNotContainsString("Do not expose current review body", $artifactBytes);
+        self::assertStringNotContainsString("Do not expose current reflection body", $artifactBytes);
         self::assertStringNotContainsString("2024-02-03T04:05:06.123Z", $artifactBytes);
         self::assertStringNotContainsString("2024-02-03T04:05:06.123000Z", $artifactBytes);
         self::assertStringNotContainsString('"source_payload"', $artifactBytes);
@@ -987,6 +1031,12 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
                 "containedWorks" => [],
                 "categories" => [],
                 "genres" => [],
+                "rating" => 4,
+                "reviews" => [[
+                    "date" => "2024-02-03T04:05:06.123Z",
+                    "text" => "Do not expose current review body",
+                ]],
+                "reflection" => "Do not expose current reflection body",
             ]],
             "copies" => [[
                 "id" => "copy-1",

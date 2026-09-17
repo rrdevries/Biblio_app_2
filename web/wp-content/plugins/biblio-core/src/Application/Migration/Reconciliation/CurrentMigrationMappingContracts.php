@@ -14,6 +14,10 @@ use Biblio\Core\Application\Migration\Catalog\{
     CatalogWorkMigrationParticipant
 };
 use Biblio\Core\Application\Migration\Circulation\CirculationMigrationParticipant;
+use Biblio\Core\Application\Migration\Assessments\{
+    HistoricalRatingMigrationParticipant,
+    HistoricalWrittenReviewMigrationParticipant
+};
 use Biblio\Core\Application\Migration\Notes\PrivateNoteMigrationParticipant;
 use Biblio\Core\Application\Migration\Reading\{
     ReadingRoundMigrationParticipant,
@@ -69,6 +73,14 @@ final class CurrentMigrationMappingContracts
             new MigrationMappingContract(
                 PrivateNoteMigrationParticipant::SOURCE_TYPE,
                 [new MigrationMappingRule("private_note", $entity, true)]
+            ),
+            new MigrationMappingContract(
+                HistoricalRatingMigrationParticipant::SOURCE_TYPE,
+                [new MigrationMappingRule("rating", $entity, true)]
+            ),
+            new MigrationMappingContract(
+                HistoricalWrittenReviewMigrationParticipant::SOURCE_TYPE,
+                [new MigrationMappingRule("written_review", $entity, true)]
             ),
             new MigrationMappingContract(
                 CirculationMigrationParticipant::SOURCE_TYPE,

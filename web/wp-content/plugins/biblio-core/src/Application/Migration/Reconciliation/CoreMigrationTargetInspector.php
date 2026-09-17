@@ -25,6 +25,10 @@ use Biblio\Core\Application\Migration\Author\{
     CatalogWorkContributorPlan
 };
 use Biblio\Core\Application\Migration\Notes\PrivateNotePlan;
+use Biblio\Core\Application\Migration\Assessments\{
+    HistoricalRatingPlan,
+    HistoricalWrittenReviewPlan
+};
 use Biblio\Core\Application\Migration\Reading\{ReadingRoundPlan,ReadingTruthPlan};
 use Biblio\Core\Application\Migration\MigrationLedgerObservation;
 use Biblio\Core\Application\Migration\MigrationLedgerSnapshot;
@@ -47,6 +51,12 @@ use Biblio\Core\Catalog\{
     WorkRepository
 };
 use Biblio\Core\Notes\{PrivateNoteId, PrivateNoteRepository};
+use Biblio\Core\Assessments\{
+    RatingId,
+    ReviewId,
+    WritableRatingRepository,
+    WritableReviewRepository
+};
 use Biblio\Core\Reading\{
     PersonalReadingTruthRepository,
     ReadingRoundId,
@@ -69,7 +79,9 @@ final readonly class CoreMigrationTargetInspector implements MigrationTargetInsp
         private AuthorContributorCreditRepository $authorCredits,
         private ReadingRoundRepository $readingRounds,
         private PrivateNoteRepository $privateNotes,
-        private ?PersonalReadingTruthRepository $readingTruths = null
+        private ?PersonalReadingTruthRepository $readingTruths = null,
+        private ?WritableRatingRepository $ratings = null,
+        private ?WritableReviewRepository $reviews = null
     ) {
     }
 
@@ -127,6 +139,18 @@ final readonly class CoreMigrationTargetInspector implements MigrationTargetInsp
                     $snapshot
                 ),
                 "private_note" => $this->privateNoteExists(
+                    $run,
+                    $record,
+                    $mapping->targetId(),
+                    $snapshot
+                ),
+                "rating" => $this->ratingExists(
+                    $run,
+                    $record,
+                    $mapping->targetId(),
+                    $snapshot
+                ),
+                "written_review" => $this->writtenReviewExists(
                     $run,
                     $record,
                     $mapping->targetId(),
@@ -505,6 +529,88 @@ final readonly class CoreMigrationTargetInspector implements MigrationTargetInsp
             new WorkId($workId)
         );
         return $truth !== null && $truth->state() === $plan->state();
+    }
+
+    private function ratingExists(
+        MigrationRun $run,
+        MigrationSourceRecord $record,
+        string $targetId,
+        MigrationLedgerSnapshot $snapshot
+    ): bool {
+        $plan = $record->typedPlan();
+        if (
+            !$plan instanceof HistoricalRatingPlan
+            || !$plan->targetUserId()->equals($run->targetUserId())
+        ) {
+            return false;
+        }
+        $workId = $this->dependencyMappingId(
+            $snapshot,
+            CatalogWorkMigrationParticipant::SOURCE_TYPE,
+            $plan->workSourceId(),
+            "work"
+        );
+        $roundId = $plan->readingRoundSourceId() === null
+            ? null
+            : $this->dependencyMappingId(
+                $snapshot,
+                \Biblio\Core\Application\Migration\Reading\ReadingRoundMigrationParticipant::SOURCE_TYPE,
+                $plan->readingRoundSourceId(),
+                "reading_round"
+            );
+        $rating = $this->ratings?->findForUser(
+            new RatingId($targetId),
+            $run->targetUserId()
+        );
+        return $workId !== null
+            && ($plan->readingRoundSourceId() === null || $roundId !== null)
+            && $rating !== null
+            && $rating->workId()->value() === $workId
+            && $rating->readingRoundId()?->value() === $roundId
+            && $rating->value()->equals($plan->value())
+            && $rating->assessedAt() == $plan->assessedAt()
+            && $rating->version()->value() === 1;
+    }
+
+    private function writtenReviewExists(
+        MigrationRun $run,
+        MigrationSourceRecord $record,
+        string $targetId,
+        MigrationLedgerSnapshot $snapshot
+    ): bool {
+        $plan = $record->typedPlan();
+        if (
+            !$plan instanceof HistoricalWrittenReviewPlan
+            || !$plan->targetUserId()->equals($run->targetUserId())
+        ) {
+            return false;
+        }
+        $workId = $this->dependencyMappingId(
+            $snapshot,
+            CatalogWorkMigrationParticipant::SOURCE_TYPE,
+            $plan->workSourceId(),
+            "work"
+        );
+        $roundId = $plan->readingRoundSourceId() === null
+            ? null
+            : $this->dependencyMappingId(
+                $snapshot,
+                \Biblio\Core\Application\Migration\Reading\ReadingRoundMigrationParticipant::SOURCE_TYPE,
+                $plan->readingRoundSourceId(),
+                "reading_round"
+            );
+        $review = $this->reviews?->findForUser(
+            new ReviewId($targetId),
+            $run->targetUserId()
+        );
+        return $workId !== null
+            && ($plan->readingRoundSourceId() === null || $roundId !== null)
+            && $review !== null
+            && $review->workId()->value() === $workId
+            && $review->readingRoundId()?->value() === $roundId
+            && $review->content()->equals($plan->content())
+            && $review->assessedAt() == $plan->assessedAt()
+            && $review->version()->value() === 1;
     }
 
     private function mappingId(
