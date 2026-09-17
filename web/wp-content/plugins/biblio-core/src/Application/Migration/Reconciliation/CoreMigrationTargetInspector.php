@@ -25,7 +25,7 @@ use Biblio\Core\Application\Migration\Author\{
     CatalogWorkContributorPlan
 };
 use Biblio\Core\Application\Migration\Notes\PrivateNotePlan;
-use Biblio\Core\Application\Migration\Reading\ReadingRoundPlan;
+use Biblio\Core\Application\Migration\Reading\{ReadingRoundPlan,ReadingTruthPlan};
 use Biblio\Core\Application\Migration\MigrationLedgerObservation;
 use Biblio\Core\Application\Migration\MigrationLedgerSnapshot;
 use Biblio\Core\Application\Migration\MigrationRun;
@@ -48,6 +48,7 @@ use Biblio\Core\Catalog\{
 };
 use Biblio\Core\Notes\{PrivateNoteId, PrivateNoteRepository};
 use Biblio\Core\Reading\{
+    PersonalReadingTruthRepository,
     ReadingRoundId,
     ReadingRoundProvenance,
     ReadingRoundRepository,
@@ -67,7 +68,8 @@ final readonly class CoreMigrationTargetInspector implements MigrationTargetInsp
         private AuthorRepository $authors,
         private AuthorContributorCreditRepository $authorCredits,
         private ReadingRoundRepository $readingRounds,
-        private PrivateNoteRepository $privateNotes
+        private PrivateNoteRepository $privateNotes,
+        private ?PersonalReadingTruthRepository $readingTruths = null
     ) {
     }
 
@@ -113,6 +115,12 @@ final readonly class CoreMigrationTargetInspector implements MigrationTargetInsp
                     $snapshot
                 ),
                 "reading_round" => $this->readingRoundExists(
+                    $run,
+                    $record,
+                    $mapping->targetId(),
+                    $snapshot
+                ),
+                "personal_reading_truth" => $this->readingTruthExists(
                     $run,
                     $record,
                     $mapping->targetId(),
@@ -468,6 +476,35 @@ final readonly class CoreMigrationTargetInspector implements MigrationTargetInsp
             && $note->createdAt() == $plan->createdAt()
             && $note->updatedAt() == $plan->updatedAt()
             && $note->version()->value() === 1;
+    }
+
+    private function readingTruthExists(
+        MigrationRun $run,
+        MigrationSourceRecord $record,
+        string $targetId,
+        MigrationLedgerSnapshot $snapshot
+    ): bool {
+        $plan = $record->typedPlan();
+        if (
+            !$plan instanceof ReadingTruthPlan
+            || !$plan->targetUserId()->equals($run->targetUserId())
+        ) {
+            return false;
+        }
+        $workId = $this->dependencyMappingId(
+            $snapshot,
+            CatalogWorkMigrationParticipant::SOURCE_TYPE,
+            $plan->workSourceId(),
+            "work"
+        );
+        if ($workId === null || $targetId !== $workId) {
+            return false;
+        }
+        $truth = $this->readingTruths?->findForUserAndWork(
+            $run->targetUserId(),
+            new WorkId($workId)
+        );
+        return $truth !== null && $truth->state() === $plan->state();
     }
 
     private function mappingId(

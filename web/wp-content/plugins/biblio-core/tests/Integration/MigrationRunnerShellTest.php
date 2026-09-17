@@ -10,7 +10,7 @@ use Biblio\Core\Application\Migration\MigrationRecordOutcome;
 use Biblio\Core\Application\Migration\Author\{CatalogAuthorMigrationParticipant,CatalogAuthorPlan,CatalogWorkContributorMigrationParticipant,CatalogWorkContributorPlan};
 use Biblio\Core\Application\Migration\Catalog\{CatalogEditionMigrationParticipant,CatalogEditionPlan,CatalogItemMigrationParticipant,CatalogItemPlan,CatalogWorkMigrationParticipant,CatalogWorkPlan};
 use Biblio\Core\Application\Migration\Notes\{PrivateNoteMigrationParticipant,PrivateNotePlan};
-use Biblio\Core\Application\Migration\Reading\{ReadingRoundMigrationParticipant,ReadingRoundPlan};
+use Biblio\Core\Application\Migration\Reading\{ReadingRoundMigrationParticipant,ReadingRoundPlan,ReadingTruthMigrationParticipant};
 use Biblio\Core\Application\Migration\Runner\MigrationBuildProvenance;
 use Biblio\Core\Application\Migration\Runner\MigrationEnvironment;
 use Biblio\Core\Application\Migration\Runner\MigrationParticipant;
@@ -37,6 +37,8 @@ use Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedAuthorContract;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedClassificationContract;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ItemLocalMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedItemLocalContract;
+use Biblio\Core\Infrastructure\Migration\CurrentV1ReadingMapper;
+use Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedReadingContract;
 use Biblio\Core\Infrastructure\Migration\FilesystemMigrationSourcePackageFactory;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryBookTypeRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryGenreRepository;
@@ -462,6 +464,9 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
                         [],
                         []
                     )
+                ),
+                readingMapper: new CurrentV1ReadingMapper(
+                    new CurrentV1ReviewedReadingContract($manifest)
                 )
             ),
         ]);
@@ -494,11 +499,11 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
         $artifact = json_decode($artifactBytes, true, 32, JSON_THROW_ON_ERROR);
         self::assertTrue($artifact["zero_write_confirmed"]);
         self::assertSame(
-            5,
+            6,
             $artifact["planning_reconciliation"]["planned_observations"]
         );
         self::assertSame(
-            4,
+            5,
             $artifact["plan"]["disposition_counts"]["mapped"]
         );
         self::assertSame(
@@ -510,6 +515,11 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
             1,
             $artifact["planning_reconciliation"]["participant_counts"]
                 [CatalogWorkContributorMigrationParticipant::SOURCE_TYPE]
+        );
+        self::assertSame(
+            1,
+            $artifact["planning_reconciliation"]["participant_counts"]
+                [ReadingTruthMigrationParticipant::SOURCE_TYPE]
         );
         self::assertSame(
             1,
@@ -930,6 +940,10 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
                 "authors" => ["Private Adapter Author"],
                 "authorIds" => ["author-1"],
                 "readingRounds" => [],
+                "readRegistration" => null,
+                "readStatus" => "unknown",
+                "readMarker" => "unknown",
+                "readHistory" => [],
                 "notes" => [],
                 "circulationRounds" => [[
                     "id" => "circulation-private-1",

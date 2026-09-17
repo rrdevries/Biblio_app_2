@@ -50,7 +50,7 @@ use Biblio\Core\Application\Migration\Author\{AuthorMigrationWriter,CatalogAutho
 use Biblio\Core\Application\Migration\Catalog\{CatalogEditionMigrationParticipant,CatalogItemMigrationParticipant,CatalogMigrationWriter,CatalogWorkMigrationParticipant};
 use Biblio\Core\Application\Migration\Circulation\CirculationMigrationParticipant;
 use Biblio\Core\Application\Migration\Notes\{PrivateNoteMigrationParticipant,PrivateNoteMigrationWriter};
-use Biblio\Core\Application\Migration\Reading\{ReadingRoundMigrationParticipant,ReadingRoundMigrationWriter};
+use Biblio\Core\Application\Migration\Reading\{ReadingRoundMigrationParticipant,ReadingRoundMigrationWriter,ReadingTruthMigrationParticipant,ReadingTruthMigrationWriter};
 use Biblio\Core\Application\Migration\Reconciliation\{
     CoreMigrationTargetInspector,
     CurrentMigrationMappingContracts,
@@ -174,6 +174,7 @@ use Biblio\Core\Infrastructure\Migration\CurrentV1AuthorMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1CatalogMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ClassificationMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ItemLocalMapper;
+use Biblio\Core\Infrastructure\Migration\CurrentV1ReadingMapper;
 use Biblio\Core\Infrastructure\WordPress\Identity\WordPressPlatformUserDirectory;
 use Biblio\Core\Notes\StrictPrivateNoteContentPolicy;
 use wpdb;
@@ -546,6 +547,14 @@ final class ProductionComposition
             $personalWorkReadingLock,
             $readingRoundClock
         );
+        $readingTruthMigrationWriter = new ReadingTruthMigrationWriter(
+            $migrationLedger,
+            $platformUsers,
+            $workRepository,
+            $personalReadingTruthRepository,
+            $personalReadingTruthRecorder,
+            $personalWorkReadingLock
+        );
         $privateNoteMigrationWriter = new PrivateNoteMigrationWriter(
             $migrationLedger,
             $platformUsers,
@@ -566,6 +575,9 @@ final class ProductionComposition
             new ReadingRoundMigrationParticipant(
                 $readingRoundMigrationWriter
             ),
+            new ReadingTruthMigrationParticipant(
+                $readingTruthMigrationWriter
+            ),
             new PrivateNoteMigrationParticipant(
                 $privateNoteMigrationWriter,
                 $privateNoteContentPolicy
@@ -579,7 +591,8 @@ final class ProductionComposition
                     $genreRepository
                 ),
                 itemLocalMapper: new CurrentV1ItemLocalMapper(),
-                authorMapper: new CurrentV1AuthorMapper()
+                authorMapper: new CurrentV1AuthorMapper(),
+                readingMapper: new CurrentV1ReadingMapper()
             ),
         ]);
         $migrationReconciliation = new MigrationReconciliationService(
@@ -595,7 +608,8 @@ final class ProductionComposition
                 $authorRepository,
                 $authorCredits,
                 $readingRoundRepository,
-                $privateNoteRepository
+                $privateNoteRepository,
+                $personalReadingTruthRepository
             )
         );
         $libraryItemCreation = new AddLibraryItemService(
