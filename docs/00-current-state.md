@@ -4045,3 +4045,33 @@ converted by this foundation slice. No REST/UI surface or promotion/backfill
 was added and no CURRENT apply/import was run. Product remains `v2.001`, schema
 remains `1026`, Biblio Core is `2.44.0`, and Biblio UI remains `0.20.0`.
 Closure evidence: `docs/131-mig-02-preserve-01-durable-mapper-only-preservation.md`.
+
+### MIG-02-SERIES-MAP-01 — CURRENT V1 Series mapper
+
+Status: **GO / CLOSED — PRODUCTION APPLY NOT AUTHORIZED**.
+
+The manifest-bound CURRENT mapper now emits source-neutral typed minimal
+Series and Work-Series plans plus durable preservation plans. Byte-identical
+non-empty decoded `seriesName` UTF-8 bytes share one migration-derived source
+identity only under the exact docs/132 contract; case, punctuation, whitespace,
+fuzzy, provider and display-name matching never merge Series.
+
+The unchanged source produces 58 Series plans and 161 Book-scoped membership
+plans. Each membership depends only on its exact CAT Work mapping. The 102
+reviewed ordinary integer positions map exactly, including `0`; 59 positions
+remain unknown. No role, Series type, confirmation, completeness, group or
+lifecycle is claimed.
+
+Five unsafe decimal/year position components, three nameless base observations
+and 19 contained-work observations produce 27 executable
+`PreservedSourceEvidencePlan` records through the existing MIG-02-PRESERVE-01
+route. They use exact manifest-bound locators and hashes, create no fake product
+target and are internally recoverable only through the closed CURRENT
+verifier. CAT aliases converge through source mappings; CURRENT has zero
+Series conflict, quarantine or unmatched dependency.
+
+The Series lane contributes 246 typed prepared plans to dry-run, apply
+preflight and reconciliation. Schema remains `1026`, Biblio Core is `2.45.0`
+and Biblio UI remains `0.20.0`. No CURRENT apply/import, REST, UI, provider or
+rich Series Intelligence work is included. Closure evidence:
+`docs/133-mig-02-series-map-01-current-v1-series-mapper.md`.

@@ -15,6 +15,7 @@ use Biblio\Core\Application\Migration\Runner\{
 };
 use Biblio\Core\Infrastructure\Migration\{
     CurrentV1RestrictedSourceEvidenceResolver,
+    CurrentV1SeriesSourceIds,
     CurrentV1SourceAdapter,
     FilesystemMigrationSourcePackageFactory
 };
@@ -111,6 +112,72 @@ final class CurrentV1RestrictedSourceEvidenceResolverTest extends TestCase
         }
     }
 
+    public function testReviewedSeriesEvidenceShapesVerifyExactSlotsAndHashes(): void
+    {
+        $directory = $this->seriesSource();
+        $package = (new FilesystemMigrationSourcePackageFactory())->build($directory);
+        $resolver = new CurrentV1RestrictedSourceEvidenceResolver();
+        $bookId = "book-series";
+
+        $missingIdentity = CurrentV1SeriesSourceIds::membership($bookId);
+        $resolver->verify($package, $this->seriesPlan(
+            $package->manifestDigest(),
+            $missingIdentity,
+            "current_v1_series_membership_without_name",
+            "series_name_missing",
+            "seriesName",
+            DeterministicJson::hash([
+                "source_slot" => $missingIdentity,
+                "series" => true,
+                "series_name" => "",
+                "series_number" => "1",
+            ])
+        ));
+
+        $positionIdentity = CurrentV1SeriesSourceIds::unsafePosition("book-position");
+        $resolver->verify($package, $this->seriesPlan(
+            $package->manifestDigest(),
+            $positionIdentity,
+            "current_v1_series_position",
+            "series_position_not_safely_mappable",
+            "seriesNumber",
+            DeterministicJson::hash([
+                "source_slot" => $positionIdentity,
+                "series_name" => "Unsafe Series",
+                "series_number" => "1.2",
+            ]),
+            "book-position"
+        ));
+
+        $containedIdentity = CurrentV1SeriesSourceIds::contained("book-contained", 2);
+        $resolver->verify($package, $this->seriesPlan(
+            $package->manifestDigest(),
+            $containedIdentity,
+            "current_v1_contained_work_series",
+            "contained_work_series_deferred",
+            "containedWorks",
+            DeterministicJson::hash([
+                "source_slot" => $containedIdentity,
+                "one_based_slot" => 2,
+                "series" => "Contained Series",
+                "series_index" => "4",
+            ]),
+            "book-contained"
+        ));
+        self::addToAssertionCount(3);
+
+        $this->expectException(MigrationRunnerFailure::class);
+        $resolver->verify($package, $this->seriesPlan(
+            $package->manifestDigest(),
+            $containedIdentity,
+            "current_v1_contained_work_series",
+            "contained_work_series_deferred",
+            "containedWorks",
+            str_repeat("f", 64),
+            "book-contained"
+        ));
+    }
+
     private function plan(
         string $manifest,
         string $sourceIdentity,
@@ -153,13 +220,75 @@ final class CurrentV1RestrictedSourceEvidenceResolverTest extends TestCase
         return $directory;
     }
 
+    private function seriesPlan(
+        string $manifest,
+        string $sourceIdentity,
+        string $evidenceType,
+        string $reason,
+        string $sourceField,
+        string $evidenceHash,
+        string $bookId = "book-series"
+    ): PreservedSourceEvidencePlan {
+        return new PreservedSourceEvidencePlan(
+            $sourceIdentity,
+            $evidenceType,
+            $reason,
+            CurrentV1SourceAdapter::ADAPTER_ID,
+            CurrentV1SourceAdapter::SOURCE_FAMILY,
+            CurrentV1SourceAdapter::SOURCE_VERSION,
+            $manifest,
+            "d-mig-series-map-01.2026-09-17:test",
+            "data/books.json",
+            "books",
+            $bookId,
+            $sourceField,
+            $evidenceHash,
+            PreservedSourceEvidencePrivacy::OrdinarySource
+        );
+    }
+
+    private function seriesSource(): string
+    {
+        $directory = sys_get_temp_dir()
+            . "/biblio-series-recovery-"
+            . bin2hex(random_bytes(8));
+        mkdir($directory . "/data", 0750, true);
+        $this->temporaryDirectories[] = $directory;
+        file_put_contents(
+            $directory . "/data/books.json",
+            json_encode(["books" => [
+                [
+                    "id" => "book-series",
+                    "series" => true,
+                    "seriesName" => "",
+                    "seriesNumber" => "1",
+                    "containedWorks" => [],
+                ],
+                [
+                    "id" => "book-position",
+                    "series" => true,
+                    "seriesName" => "Unsafe Series",
+                    "seriesNumber" => "1.2",
+                    "containedWorks" => [],
+                ],
+                [
+                    "id" => "book-contained",
+                    "series" => false,
+                    "seriesName" => "",
+                    "seriesNumber" => "",
+                    "containedWorks" => [
+                        ["series" => "", "seriesIndex" => ""],
+                        ["series" => "Contained Series", "seriesIndex" => "4"],
+                    ],
+                ],
+            ]], JSON_THROW_ON_ERROR) . "\n"
+        );
+        return $directory;
+    }
+
     private function removeDirectory(string $directory): void
     {
-        $files = [
-            $directory . "/data/books.json",
-            $directory . "/data",
-            $directory,
-        ];
+        $files = [$directory . "/data/books.json", $directory . "/data", $directory];
         foreach ($files as $path) {
             if (is_file($path)) {
                 unlink($path);

@@ -2909,3 +2909,38 @@ Restricted evidence recovery is internal and non-returning: the CURRENT
 resolver verifies the package manifest, allowed logical locator and canonical
 evidence hash. Absolute developer paths and private bodies are not durable
 semantics. Artifact format is version 3. Schema remains 1026; Core is 2.44.0.
+
+## CURRENT Series migration mapping
+
+`CurrentV1SeriesMapper` is the only layer that interprets CURRENT Book-level
+`series`, `seriesName`, `seriesNumber` and contained-work Series fields. It is
+composed after CAT Work representative selection and emits three independent
+source-neutral streams:
+
+```text
+exact raw non-empty name -> CatalogSeriesPlan
+Book occurrence -> CatalogWorkSeriesPlan(CAT Work, Series, nullable position)
+unsafe/missing/contained slot -> PreservedSourceEvidencePlan
+```
+
+Series source identity uses unpadded RFC 4648 base64url over the exact decoded
+UTF-8 name bytes in a contract-versioned namespace. This is manifest-bound
+migration semantics, never a product-wide name identity or target lookup.
+Target Series IDs and membership edge IDs are deterministic derivatives of
+semantic source/target identity; existing records are reusable only through
+exact MIG-FND mappings and target inspection.
+
+`CatalogSeriesMigrationParticipant` owns the minimal central Series entity.
+`CatalogWorkSeriesMigrationParticipant` resolves only committed CAT Work and
+Series mappings and owns the unique Work-Series edge. The writer compares exact
+display name and nullable position on replay; occupied unmapped IDs, changed
+payload, missing/wrong dependencies and incompatible positions fail closed.
+Reconciliation classifies Series as an entity and membership as a relation and
+inspects both against the current schema-1026 repositories.
+
+The existing preservation participant admits only three additional reviewed
+ordinary-source triples: missing base name, unsafe base position and contained-
+work Series evidence. The CURRENT verifier reconstructs each exact typed hash
+envelope without returning source content. No role, type, confirmation,
+provider, rich lifecycle or schema field is added. Schema remains 1026; Core is
+2.45.0.

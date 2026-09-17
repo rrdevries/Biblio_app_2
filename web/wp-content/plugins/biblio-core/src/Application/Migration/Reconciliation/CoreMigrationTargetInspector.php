@@ -30,6 +30,13 @@ use Biblio\Core\Application\Migration\Assessments\{
     HistoricalWrittenReviewPlan
 };
 use Biblio\Core\Application\Migration\Reading\{ReadingRoundPlan,ReadingTruthPlan};
+use Biblio\Core\Application\Migration\Series\{
+    CatalogSeriesMigrationParticipant,
+    CatalogSeriesPlan,
+    CatalogWorkSeriesMigrationParticipant,
+    CatalogWorkSeriesPlan,
+    SeriesMigrationWriter
+};
 use Biblio\Core\Application\Migration\MigrationLedgerObservation;
 use Biblio\Core\Application\Migration\MigrationLedgerSnapshot;
 use Biblio\Core\Application\Migration\MigrationRun;
@@ -47,6 +54,8 @@ use Biblio\Core\Catalog\{
     ItemId,
     ItemStatus,
     ItemLocalDetailsRepository,
+    SeriesId,
+    SeriesRepository,
     WorkId,
     WorkRepository
 };
@@ -81,7 +90,8 @@ final readonly class CoreMigrationTargetInspector implements MigrationTargetInsp
         private PrivateNoteRepository $privateNotes,
         private ?PersonalReadingTruthRepository $readingTruths = null,
         private ?WritableRatingRepository $ratings = null,
-        private ?WritableReviewRepository $reviews = null
+        private ?WritableReviewRepository $reviews = null,
+        private ?SeriesRepository $series = null
     ) {
     }
 
@@ -95,6 +105,12 @@ final readonly class CoreMigrationTargetInspector implements MigrationTargetInsp
         try {
             return match ($mapping->targetType()) {
                 "work" => $this->workExists($record, $mapping->targetId()),
+                "series" => $this->seriesExists($record, $mapping->targetId()),
+                "work_series_membership" => $this->workSeriesMembershipExists(
+                    $record,
+                    $mapping->targetId(),
+                    $snapshot
+                ),
                 "edition" => $this->editionExists($record, $mapping->targetId(), $snapshot),
                 "item" => $this->itemExists($run, $record, $mapping->targetId(), $snapshot),
                 "canonical_isbn" => $this->isbnClaimExists(
@@ -172,6 +188,55 @@ final readonly class CoreMigrationTargetInspector implements MigrationTargetInsp
             && ($plan->approvedExistingWorkId() === null
                 || $plan->approvedExistingWorkId()->value() === $targetId)
             && $this->works->find(new WorkId($targetId)) !== null;
+    }
+
+    private function seriesExists(MigrationSourceRecord $record, string $targetId): bool
+    {
+        $plan = $record->typedPlan();
+        $stored = $this->series?->find(new SeriesId($targetId));
+        return $plan instanceof CatalogSeriesPlan
+            && $stored !== null
+            && $stored->displayName() === $plan->displayName();
+    }
+
+    private function workSeriesMembershipExists(
+        MigrationSourceRecord $record,
+        string $targetId,
+        MigrationLedgerSnapshot $snapshot
+    ): bool {
+        $plan = $record->typedPlan();
+        if (!$plan instanceof CatalogWorkSeriesPlan || $this->series === null) {
+            return false;
+        }
+        $workId = $this->dependencyMappingId(
+            $snapshot,
+            CatalogWorkMigrationParticipant::SOURCE_TYPE,
+            $plan->workSourceId(),
+            "work"
+        );
+        $seriesId = $this->dependencyMappingId(
+            $snapshot,
+            CatalogSeriesMigrationParticipant::SOURCE_TYPE,
+            $plan->seriesSourceId(),
+            "series"
+        );
+        if ($workId === null || $seriesId === null) {
+            return false;
+        }
+        $work = new WorkId($workId);
+        $series = new SeriesId($seriesId);
+        if ($targetId !== SeriesMigrationWriter::membershipTargetId($work, $series)) {
+            return false;
+        }
+        foreach ($this->series->membershipsForWorks([$work])[$workId] ?? [] as $membership) {
+            if (
+                $membership->seriesId()->value() === $seriesId
+                && $membership->position()->value() === $plan->position()->value()
+            ) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private function authorExists(

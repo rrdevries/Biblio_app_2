@@ -282,6 +282,9 @@ later bounded mapping slice; they are not inferred or bulk-converted here.
 
 Still explicitly out of scope are a Reflection product model, promotion or
 backfill, general source-package storage infrastructure, public/internal UI or
-REST exposure, Series, Wishlist, Archive, contained-work product migration,
-loan backfill and production apply/import. Closing this blocker does not
-authorize production migration.
+REST exposure, rich Series Intelligence/UI, Wishlist, Archive, contained-work
+product migration, loan backfill and production apply/import. The separately
+closed MIG-02-SERIES-MAP-01 now uses this durable route for exactly five unsafe
+position components, three nameless base observations and 19 contained-work
+Series observations; that does not promote contained Works or authorize a
+production migration.

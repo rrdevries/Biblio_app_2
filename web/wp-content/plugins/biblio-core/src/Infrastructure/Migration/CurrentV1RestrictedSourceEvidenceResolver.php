@@ -25,10 +25,8 @@ final class CurrentV1RestrictedSourceEvidenceResolver
             || $plan->sourceFamily() !== CurrentV1SourceAdapter::SOURCE_FAMILY
             || $plan->sourceVersion() !== CurrentV1SourceAdapter::SOURCE_VERSION
             || !hash_equals($package->manifestDigest(), $plan->manifestSha256())
-            || $plan->evidenceType() !== "current_v1_reflection"
             || $plan->sourceFile() !== "data/books.json"
             || $plan->sourceCollection() !== "books"
-            || $plan->sourceField() !== "reflection"
         ) {
             throw $this->failure();
         }
@@ -56,17 +54,103 @@ final class CurrentV1RestrictedSourceEvidenceResolver
         if (count($matches) !== 1) {
             throw $this->failure();
         }
-        $body = $matches[0][$plan->sourceField()] ?? null;
-        if (!is_string($body) || $body === "") {
+        $book = $matches[0];
+        $actual = $this->evidenceEnvelope($plan, $book);
+        if ($actual === null) {
             throw $this->failure();
         }
-        $actual = DeterministicJson::hash([
+        if (!hash_equals($plan->evidenceSha256(), DeterministicJson::hash($actual))) {
+            throw $this->failure();
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $book
+     * @return array<string, mixed>|null
+     */
+    private function evidenceEnvelope(PreservedSourceEvidencePlan $plan, array $book): ?array
+    {
+        if (
+            $plan->evidenceType() === "current_v1_reflection"
+            && $plan->reasonCode() === "reflection_target_not_available"
+            && $plan->sourceField() === "reflection"
+        ) {
+            $body = $book["reflection"] ?? null;
+            return is_string($body) && $body !== "" ? [
+                "source_slot" => $plan->sourceIdentity(),
+                "body" => $body,
+            ] : null;
+        }
+
+        if (
+            $plan->evidenceType() === "current_v1_series_membership_without_name"
+            && $plan->reasonCode() === "series_name_missing"
+            && $plan->sourceField() === "seriesName"
+            && $plan->sourceIdentity() === CurrentV1SeriesSourceIds::membership($plan->sourceEntityId())
+            && is_bool($book["series"] ?? null)
+            && is_string($book["seriesName"] ?? null)
+            && is_string($book["seriesNumber"] ?? null)
+            && $book["seriesName"] === ""
+        ) {
+            return [
+                "source_slot" => $plan->sourceIdentity(),
+                "series" => $book["series"],
+                "series_name" => $book["seriesName"],
+                "series_number" => $book["seriesNumber"],
+            ];
+        }
+
+        if (
+            $plan->evidenceType() === "current_v1_series_position"
+            && $plan->reasonCode() === "series_position_not_safely_mappable"
+            && $plan->sourceField() === "seriesNumber"
+            && $plan->sourceIdentity() === CurrentV1SeriesSourceIds::unsafePosition($plan->sourceEntityId())
+            && is_string($book["seriesName"] ?? null)
+            && $book["seriesName"] !== ""
+            && is_string($book["seriesNumber"] ?? null)
+            && $book["seriesNumber"] !== ""
+        ) {
+            return [
+                "source_slot" => $plan->sourceIdentity(),
+                "series_name" => $book["seriesName"],
+                "series_number" => $book["seriesNumber"],
+            ];
+        }
+
+        if (
+            $plan->evidenceType() !== "current_v1_contained_work_series"
+            || $plan->reasonCode() !== "contained_work_series_deferred"
+            || $plan->sourceField() !== "containedWorks"
+            || preg_match(
+                '/\/contained-work\/([1-9][0-9]*)\/series$/D',
+                $plan->sourceIdentity(),
+                $matches
+            ) !== 1
+        ) {
+            return null;
+        }
+        $slot = (int) $matches[1];
+        if ($plan->sourceIdentity() !== CurrentV1SeriesSourceIds::contained($plan->sourceEntityId(), $slot)) {
+            return null;
+        }
+        $containedWorks = $book["containedWorks"] ?? null;
+        $contained = is_array($containedWorks) && array_is_list($containedWorks)
+            ? ($containedWorks[$slot - 1] ?? null)
+            : null;
+        if (
+            !is_array($contained)
+            || !is_string($contained["series"] ?? null)
+            || !is_string($contained["seriesIndex"] ?? null)
+            || ($contained["series"] === "" && $contained["seriesIndex"] === "")
+        ) {
+            return null;
+        }
+        return [
             "source_slot" => $plan->sourceIdentity(),
-            "body" => $body,
-        ]);
-        if (!hash_equals($plan->evidenceSha256(), $actual)) {
-            throw $this->failure();
-        }
+            "one_based_slot" => $slot,
+            "series" => $contained["series"],
+            "series_index" => $contained["seriesIndex"],
+        ];
     }
 
     private function failure(): MigrationRunnerFailure

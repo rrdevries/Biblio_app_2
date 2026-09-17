@@ -4897,3 +4897,40 @@ Acceptance requires all of the following:
 
 The full command/result record and privacy evidence are maintained in
 `docs/131-mig-02-preserve-01-durable-mapper-only-preservation.md`.
+
+## MIG-02-SERIES-MAP-01 acceptance
+
+Acceptance requires all of the following:
+
+- the mapper is bound to docs/132, adapter `current-v1-json-29` and manifest
+  `35a18156490f103d4b6b610f524a1963e5be189d74c64637c49059396b1c7c67`;
+- exact decoded UTF-8 name bytes alone produce 58 Series identities; case,
+  punctuation and whitespace variants remain separate and no fuzzy/name target
+  lookup exists;
+- 161 Book-scoped memberships depend only on exact CAT Work source mappings;
+  no role, Series type, Edition or Item relation is emitted;
+- 102 ordinary integer positions map exactly, including `0`; 59 positions stay
+  `NULL`, gaps remain gaps and no rounding/renumbering occurs;
+- five unsafe positions, three nameless base observations and 19 contained-
+  work observations create 27 admitted executable preservation plans with
+  exact reason, locator, manifest, mapper contract and evidence hash;
+- CAT representative/alias cases remain independently traceable, compatible
+  exact edges converge and different Series or incompatible positive positions
+  fail closed;
+- replay proves stable Series/membership identities, changed name bytes change
+  Series identity, changed position changes membership payload only, and
+  changed preserved evidence fails closed;
+- reconciliation validates Series entities, Work-Series relations and all
+  no-target preservation records with zero unexplained Series observation;
+- the prepared Series lane is exactly 58 + 161 + 27 = 246 typed plans, with
+  zero quarantine, conflict, planning error or unmatched CAT dependency;
+- the final clean implementation SHA is loaded in the guarded isolated trial,
+  all 57 Biblio table fingerprints are identical before/after the exact CURRENT
+  dry-run, and source/normal-environment guards remain unchanged;
+- full Core unit/integration, syntax, PHPStan, Composer/platform, WordPress
+  smoke, manifest, whitespace, privacy and independent second review pass; and
+- schema remains 1026 and no CURRENT apply/import, REST/UI, provider or rich
+  Series Intelligence work occurs.
+
+Exact closure evidence is in
+`docs/133-mig-02-series-map-01-current-v1-series-mapper.md`.

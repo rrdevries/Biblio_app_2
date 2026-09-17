@@ -24,6 +24,10 @@ use Biblio\Core\Application\Migration\Reading\{
     ReadingRoundMigrationParticipant,
     ReadingTruthMigrationParticipant
 };
+use Biblio\Core\Application\Migration\Series\{
+    CatalogSeriesMigrationParticipant,
+    CatalogWorkSeriesMigrationParticipant
+};
 
 final class CurrentMigrationMappingContracts
 {
@@ -40,6 +44,14 @@ final class CurrentMigrationMappingContracts
             new MigrationMappingContract(
                 CatalogWorkMigrationParticipant::SOURCE_TYPE,
                 [new MigrationMappingRule("work", $entity, true)]
+            ),
+            new MigrationMappingContract(
+                CatalogSeriesMigrationParticipant::SOURCE_TYPE,
+                [new MigrationMappingRule("series", $entity, true)]
+            ),
+            new MigrationMappingContract(
+                CatalogWorkSeriesMigrationParticipant::SOURCE_TYPE,
+                [new MigrationMappingRule("work_series_membership", $relation, true)]
             ),
             new MigrationMappingContract(
                 CatalogWorkContributorMigrationParticipant::SOURCE_TYPE,
