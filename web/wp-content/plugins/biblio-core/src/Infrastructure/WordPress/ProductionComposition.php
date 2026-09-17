@@ -59,6 +59,7 @@ use Biblio\Core\Application\Migration\Preservation\{
     PreservedSourceEvidencePrivacy
 };
 use Biblio\Core\Application\Migration\Reading\{ReadingRoundMigrationParticipant,ReadingRoundMigrationWriter,ReadingTruthMigrationParticipant,ReadingTruthMigrationWriter};
+use Biblio\Core\Application\Migration\Series\{CatalogSeriesMigrationParticipant,CatalogWorkSeriesMigrationParticipant,SeriesMigrationWriter};
 use Biblio\Core\Application\Migration\Reconciliation\{
     CoreMigrationTargetInspector,
     CurrentMigrationMappingContracts,
@@ -185,6 +186,7 @@ use Biblio\Core\Infrastructure\Migration\CurrentV1ClassificationMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ItemLocalMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1NoteMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ReadingMapper;
+use Biblio\Core\Infrastructure\Migration\CurrentV1SeriesMapper;
 use Biblio\Core\Infrastructure\WordPress\Identity\WordPressPlatformUserDirectory;
 use Biblio\Core\Notes\StrictPrivateNoteContentPolicy;
 use wpdb;
@@ -559,6 +561,11 @@ final class ProductionComposition
             $authorCredits,
             $canonicalAuthorMaterializer
         );
+        $seriesMigrationWriter = new SeriesMigrationWriter(
+            $migrationLedger,
+            $seriesRepository,
+            $workRepository
+        );
         $readingRoundMigrationWriter = new ReadingRoundMigrationWriter(
             $migrationLedger,
             $platformUsers,
@@ -599,10 +606,27 @@ final class ProductionComposition
                 "reflection_target_not_available",
                 PreservedSourceEvidencePrivacy::RestrictedSource
             ),
+            new PreservedSourceEvidenceAdmission(
+                "current_v1_series_membership_without_name",
+                "series_name_missing",
+                PreservedSourceEvidencePrivacy::OrdinarySource
+            ),
+            new PreservedSourceEvidenceAdmission(
+                "current_v1_series_position",
+                "series_position_not_safely_mappable",
+                PreservedSourceEvidencePrivacy::OrdinarySource
+            ),
+            new PreservedSourceEvidenceAdmission(
+                "current_v1_contained_work_series",
+                "contained_work_series_deferred",
+                PreservedSourceEvidencePrivacy::OrdinarySource
+            ),
         ]);
         $migrationParticipants = new MigrationParticipantRegistry([
             new CatalogAuthorMigrationParticipant($authorMigrationWriter),
             new CatalogWorkMigrationParticipant($catalogMigrationWriter),
+            new CatalogSeriesMigrationParticipant($seriesMigrationWriter),
+            new CatalogWorkSeriesMigrationParticipant($seriesMigrationWriter),
             new CatalogWorkContributorMigrationParticipant(
                 $authorMigrationWriter
             ),
@@ -638,7 +662,8 @@ final class ProductionComposition
                 noteMapper: new CurrentV1NoteMapper(
                     contentPolicy: $privateNoteContentPolicy
                 ),
-                assessmentMapper: new CurrentV1AssessmentMapper()
+                assessmentMapper: new CurrentV1AssessmentMapper(),
+                seriesMapper: new CurrentV1SeriesMapper()
             ),
         ]);
         $migrationReconciliation = new MigrationReconciliationService(
@@ -657,7 +682,8 @@ final class ProductionComposition
                 $privateNoteRepository,
                 $personalReadingTruthRepository,
                 $ratingRepository,
-                $reviewRepository
+                $reviewRepository,
+                $seriesRepository
             )
         );
         $libraryItemCreation = new AddLibraryItemService(

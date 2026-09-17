@@ -38,7 +38,8 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
         private ?CurrentV1AuthorMapper $authorMapper = null,
         private ?CurrentV1ReadingMapper $readingMapper = null,
         private ?CurrentV1NoteMapper $noteMapper = null,
-        private ?CurrentV1AssessmentMapper $assessmentMapper = null
+        private ?CurrentV1AssessmentMapper $assessmentMapper = null,
+        private ?CurrentV1SeriesMapper $seriesMapper = null
     ) {
         $this->isbn = $isbn ?? new IsbnCanonicalizer();
     }
@@ -338,6 +339,23 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
             );
             array_push($records, ...$authorMapping->records());
             array_push($findings, ...$authorMapping->findings());
+        }
+
+        if ($this->seriesMapper !== null) {
+            $workRepresentatives = [];
+            foreach ($books as $book) {
+                $state = $states[$this->sourceKey($book->sourceId())] ?? null;
+                if (($state["status"] ?? null) === "ready") {
+                    $workRepresentatives[$book->sourceId()] = $state["representative"];
+                }
+            }
+            $seriesMapping = $this->seriesMapper->map(
+                $inspection,
+                $books,
+                $workRepresentatives
+            );
+            array_push($records, ...$seriesMapping->records());
+            array_push($findings, ...$seriesMapping->findings());
         }
 
         $classification = null;
