@@ -12,6 +12,11 @@ use Biblio\Core\Application\Migration\Assessments\{
 };
 use Biblio\Core\Application\Migration\Catalog\CatalogWorkMigrationParticipant;
 use Biblio\Core\Application\Migration\MigrationDisposition;
+use Biblio\Core\Application\Migration\Preservation\{
+    PreservedSourceEvidenceMigrationParticipant,
+    PreservedSourceEvidencePlan,
+    PreservedSourceEvidencePrivacy
+};
 use Biblio\Core\Application\Migration\Runner\{
     DeterministicJson,
     MigrationPlanningTarget,
@@ -59,6 +64,7 @@ final readonly class CurrentV1AssessmentMapper
 
         $ratingCandidates = [];
         $reviewCandidates = [];
+        $records = [];
         $findings = [];
         $targetUserId = new UserId($target->userId());
 
@@ -175,6 +181,35 @@ final readonly class CurrentV1AssessmentMapper
                 $identity = CurrentV1CatalogSourceIds::reflection($bookId);
                 $valid = mb_check_encoding($reflection, "UTF-8")
                     && !str_contains($reflection, "\0");
+                $evidenceHash = $valid ? DeterministicJson::hash([
+                    "source_slot" => $identity,
+                    "body" => $reflection,
+                ]) : null;
+                $plannedIdentities = [];
+                if (is_string($evidenceHash)) {
+                    $preservation = MigrationSourceRecord::typed(
+                        PreservedSourceEvidenceMigrationParticipant::SOURCE_TYPE,
+                        $identity,
+                        new PreservedSourceEvidencePlan(
+                            $identity,
+                            "current_v1_reflection",
+                            CurrentV1AssessmentMappingReason::ReflectionTargetNotAvailable->value,
+                            $inspection->adapter()->adapterId(),
+                            $inspection->adapter()->sourceFamily(),
+                            $inspection->profile()->sourceVersion(),
+                            $inspection->package()->manifestDigest(),
+                            $this->contract->identity(),
+                            "data/books.json",
+                            "books",
+                            $bookId,
+                            "reflection",
+                            $evidenceHash,
+                            PreservedSourceEvidencePrivacy::RestrictedSource
+                        )
+                    );
+                    $records[] = $preservation;
+                    $plannedIdentities[] = $this->identity($preservation);
+                }
                 $findings[] = $this->finding(
                     "v1.reflection",
                     $identity,
@@ -184,10 +219,8 @@ final readonly class CurrentV1AssessmentMapper
                     $valid
                         ? CurrentV1AssessmentMappingReason::ReflectionTargetNotAvailable
                         : CurrentV1AssessmentMappingReason::InvalidReflection,
-                    evidenceHash: $valid ? DeterministicJson::hash([
-                        "source_slot" => $identity,
-                        "body" => $reflection,
-                    ]) : null
+                    plannedIdentities: $plannedIdentities,
+                    evidenceHash: $evidenceHash
                 );
             } elseif ($reflection !== "") {
                 $findings[] = $this->finding(
@@ -199,7 +232,6 @@ final readonly class CurrentV1AssessmentMapper
             }
         }
 
-        $records = [];
         $this->finalizeCandidates(
             $ratingCandidates,
             HistoricalRatingMigrationParticipant::SOURCE_TYPE,

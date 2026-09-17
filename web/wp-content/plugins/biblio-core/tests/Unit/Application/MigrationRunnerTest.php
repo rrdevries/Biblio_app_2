@@ -369,7 +369,7 @@ final class MigrationRunnerTest extends TestCase
             true
         )->payload();
 
-        self::assertSame(2, $artifact["migration_artifact_version"]);
+        self::assertSame(3, $artifact["migration_artifact_version"]);
         self::assertFalse($artifact["planning_reconciliation"]["applied"]);
         self::assertFalse($artifact["planning_reconciliation"]["accepted"]);
         self::assertSame(6, $artifact["planning_reconciliation"]["source_observations"]);

@@ -7,13 +7,18 @@ namespace Biblio\Core\Application\Migration\Reconciliation;
 use Biblio\Core\Application\Migration\{
     MappingDisposition,
     MigrationDisposition,
+    MigrationEvidence,
     MigrationLedgerObservation,
     MigrationLedgerRepository,
     MigrationRun
 };
 use Biblio\Core\Application\Migration\Catalog\CatalogItemPlan;
+use Biblio\Core\Application\Migration\Preservation\PreservedSourceEvidencePlan;
 use Biblio\Core\Application\Migration\Runner\{
+    CrossRunMigrationReplayParticipant,
     MigrationSourceInspection,
+    PreparedMigrationPlan,
+    PreparedMigrationRecord,
     MigrationSourceRecord
 };
 use Biblio\Core\Exception\ValidationException;
@@ -39,16 +44,24 @@ final readonly class MigrationReconciliationService
     /** @param array<string, int> $execution */
     public function reconcile(
         MigrationRun $run,
-        MigrationSourceInspection $inspection,
+        PreparedMigrationPlan $prepared,
         array $execution = []
     ): MigrationReconciliationReport {
+        $inspection = $prepared->inspection();
         $this->assertProvenance($run, $inspection);
         $snapshot = $this->ledger->snapshot($run->id());
         $authoritativeRun = $snapshot->run();
         $this->assertRunAuthority($run, $authoritativeRun);
 
         $expected = [];
-        foreach ($inspection->records() as $record) {
+        $preparedByKey = [];
+        foreach ($prepared->records() as $item) {
+            $record = $item->record();
+            $expected[$this->recordKey($record)] = $record;
+            $preparedByKey[$this->recordKey($record)] = $item;
+        }
+        foreach ($prepared->failures() as $failure) {
+            $record = $failure->record();
             $expected[$this->recordKey($record)] = $record;
         }
         $stored = [];
@@ -77,7 +90,13 @@ final readonly class MigrationReconciliationService
             MigrationDisposition::cases()
         ), 0);
         $sourceTypes = [];
-        foreach ($inspection->typeCounts() as $sourceType => $count) {
+        $preparedTypeCounts = [];
+        foreach ($expected as $record) {
+            $preparedTypeCounts[$record->sourceType()] =
+                ($preparedTypeCounts[$record->sourceType()] ?? 0) + 1;
+        }
+        ksort($preparedTypeCounts, SORT_STRING);
+        foreach ($preparedTypeCounts as $sourceType => $count) {
             $sourceTypes[$sourceType] = [
                 "enumerated" => $count,
                 "observed" => 0,
@@ -140,6 +159,37 @@ final readonly class MigrationReconciliationService
 
         foreach ($expected as $key => $record) {
             $observation = $stored[$key] ?? null;
+            $preparedItem = $preparedByKey[$key] ?? null;
+            if (
+                !$observation instanceof MigrationLedgerObservation
+                && $preparedItem instanceof PreparedMigrationRecord
+                && $this->hasEquivalentPrior($preparedItem, $prepared)
+            ) {
+                $sourceType = $record->sourceType();
+                ++$sourceTypes[$sourceType]["observed"];
+                ++$dispositions[MigrationDisposition::PreservedDeferred->value];
+                $sourceTypes[$sourceType]["disposition_counts"][
+                    MigrationDisposition::PreservedDeferred->value
+                ] = ($sourceTypes[$sourceType]["disposition_counts"][
+                    MigrationDisposition::PreservedDeferred->value
+                ] ?? 0) + 1;
+                $reason = $preparedItem->plan()->reasonCode();
+                if (is_string($reason)) {
+                    $reasonCounts[$reason] = ($reasonCounts[$reason] ?? 0) + 1;
+                }
+                $preservationByType[$sourceType] =
+                    ($preservationByType[$sourceType] ?? 0) + 1;
+                $preservedRecords[] = [
+                    "source_type" => $record->sourceType(),
+                    "source_id" => $record->sourceId(),
+                    "reason_code" => $reason,
+                    "reused_prior" => true,
+                ];
+                if ($this->contracts->forSourceType($sourceType) === null) {
+                    $unsupported[$sourceType] = true;
+                }
+                continue;
+            }
             if (
                 !$observation instanceof MigrationLedgerObservation
                 || !hash_equals($record->payloadHash(), $observation->payloadHash())
@@ -257,7 +307,8 @@ final readonly class MigrationReconciliationService
                 "category_accounting" => $categoryAccounting,
                 "category_strategy_errors" => $categoryStrategyErrors,
                 "unassigned_source_types" => $unassignedSourceTypes,
-                "source_type_counts" => $inspection->typeCounts(),
+                "source_type_counts" => $preparedTypeCounts,
+                "raw_source_observation_count" => count($inspection->records()),
                 "unknown_categories" => $profile["unknown_categories"],
                 "finding_counts" => $profile["finding_counts"],
                 "unexplained_observations" => $unexplained,
@@ -361,6 +412,32 @@ final readonly class MigrationReconciliationService
         $expectedPreservation = $typedPlan instanceof CatalogItemPlan
             ? $typedPlan->preservation()
             : null;
+        if ($typedPlan instanceof PreservedSourceEvidencePlan) {
+            if (
+                $observation->disposition() !== MigrationDisposition::PreservedDeferred
+                || $observation->reasonCode() !== $typedPlan->reasonCode()
+                || $observation->preservationReason() !== $typedPlan->reasonCode()
+                || $observation->preservationStatus() !== "awaiting_future_processing"
+                || !$this->ledger->preservationMatches(
+                    $run->id(),
+                    $observation->id(),
+                    $typedPlan->reasonCode(),
+                    "awaiting_future_processing",
+                    MigrationEvidence::canonicalJson(
+                        $typedPlan->evidenceDescriptor()
+                    ),
+                    $typedPlan->locator()
+                )
+                || $observation->mappings() !== []
+            ) {
+                $broken[] = $this->broken(
+                    $observation,
+                    "migration_preservation",
+                    "",
+                    "preservation_outcome_mismatch"
+                );
+            }
+        }
         if (
             $expectedPreservation !== null
             && (
@@ -471,6 +548,7 @@ final readonly class MigrationReconciliationService
             "skipped_terminal_observations" => 0,
             "created_targets" => 0,
             "reused_targets" => 0,
+            "reused_prior_preservations" => 0,
         ];
         $counts = array_intersect_key($execution, $defaults) + $defaults;
         ksort($counts, SORT_STRING);
@@ -480,6 +558,19 @@ final readonly class MigrationReconciliationService
     private function recordKey(MigrationSourceRecord $record): string
     {
         return $record->sourceType() . "\0" . $record->sourceId();
+    }
+
+    private function hasEquivalentPrior(
+        PreparedMigrationRecord $preparedRecord,
+        PreparedMigrationPlan $prepared
+    ): bool {
+        $participant = $preparedRecord->participant();
+        return $participant instanceof CrossRunMigrationReplayParticipant
+            && $participant->hasEquivalentPrior(
+                $preparedRecord->record(),
+                $preparedRecord->plan(),
+                $prepared->target()
+            );
     }
 
     /**

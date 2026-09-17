@@ -17,6 +17,7 @@ use Biblio\Core\Application\Migration\MigrationRun;
 use Biblio\Core\Application\Migration\MigrationRunStatus;
 use Biblio\Core\Application\Migration\MigrationTargetMapping;
 use Biblio\Core\Application\Migration\MigrationTraceEntry;
+use Biblio\Core\Application\Migration\PriorPreservedEvidence;
 use Biblio\Core\Application\Migration\SourceObservation;
 use Biblio\Core\Exception\ConflictException;
 use Biblio\Core\Exception\FailureReason;
@@ -240,10 +241,14 @@ final readonly class WpdbMigrationLedgerRepository implements MigrationLedgerRep
         }
 
         $observations = $this->tables->migrationSourceObservations();
+        $preservations = $this->tables->migrationPreservations();
         $observationRows = $this->database->get_results($this->database->prepare(
-            "SELECT observation_id,source_family,source_snapshot,source_type,source_id,payload_hash,processing_status,"
-                . "disposition,reason_code,retryable FROM " . $observations
-                . " WHERE run_id=%s ORDER BY source_type,source_id,observation_id",
+            "SELECT o.observation_id,o.source_family,o.source_snapshot,o.source_type,o.source_id,"
+                . "o.payload_hash,o.processing_status,o.disposition,o.reason_code,o.retryable,"
+                . "p.reason_code AS preservation_reason,p.processing_status AS preservation_status "
+                . "FROM " . $observations . " o LEFT JOIN " . $preservations
+                . " p ON p.run_id=o.run_id AND p.observation_id=o.observation_id "
+                . "WHERE o.run_id=%s ORDER BY o.source_type,o.source_id,o.observation_id",
             $runId
         ), ARRAY_A);
         $mappings = $this->tables->migrationTargetMappings();
@@ -301,7 +306,13 @@ final readonly class WpdbMigrationLedgerRepository implements MigrationLedgerRep
                     ? null
                     : (string) $row["reason_code"],
                 (int) $row["retryable"] === 1,
-                $byObservation[$id] ?? []
+                $byObservation[$id] ?? [],
+                $row["preservation_reason"] === null
+                    ? null
+                    : (string) $row["preservation_reason"],
+                $row["preservation_status"] === null
+                    ? null
+                    : (string) $row["preservation_status"]
             );
         }
 
@@ -347,6 +358,85 @@ final readonly class WpdbMigrationLedgerRepository implements MigrationLedgerRep
         }
 
         return array_values($targets);
+    }
+
+    public function priorPreservations(
+        string $targetUserId,
+        string $targetLibraryId,
+        string $sourceFamily,
+        string $sourceType,
+        string $sourceId
+    ): array {
+        $runs = $this->tables->migrationRuns();
+        $observations = $this->tables->migrationSourceObservations();
+        $preservations = $this->tables->migrationPreservations();
+        $rows = $this->database->get_results($this->database->prepare(
+            "SELECT r.run_id,r.source_version,o.observation_id,o.source_snapshot,"
+                . "o.payload_hash,o.payload_json,o.reason_code AS observation_reason,"
+                . "p.reason_code AS preservation_reason,p.evidence_json,p.evidence_reference "
+                . "FROM " . $observations . " o INNER JOIN " . $runs
+                . " r ON r.run_id=o.run_id INNER JOIN " . $preservations
+                . " p ON p.run_id=o.run_id AND p.observation_id=o.observation_id "
+                . "WHERE r.target_user_id=%s AND r.target_library_id=%s "
+                . "AND o.source_family=%s AND o.source_type=%s AND o.source_id=%s "
+                . "AND o.processing_status='committed' "
+                . "AND o.disposition='preserved_deferred' "
+                . "ORDER BY r.run_id,o.observation_id",
+            $targetUserId,
+            $targetLibraryId,
+            $sourceFamily,
+            $sourceType,
+            $sourceId
+        ), ARRAY_A);
+
+        $result = [];
+        foreach ($rows as $row) {
+            if (
+                !is_string($row["payload_json"])
+                || !is_string($row["evidence_json"])
+                || !is_string($row["evidence_reference"])
+            ) {
+                throw new ValidationException(
+                    "Committed preserved migration evidence is incomplete."
+                );
+            }
+            $result[] = new PriorPreservedEvidence(
+                (string) $row["run_id"],
+                (string) $row["observation_id"],
+                (string) $row["source_snapshot"],
+                $row["source_version"] === null ? null : (string) $row["source_version"],
+                (string) $row["payload_hash"],
+                $row["payload_json"],
+                (string) $row["observation_reason"],
+                (string) $row["preservation_reason"],
+                $row["evidence_json"],
+                $row["evidence_reference"]
+            );
+        }
+        return $result;
+    }
+
+    public function preservationMatches(
+        string $runId,
+        string $observationId,
+        string $reasonCode,
+        string $processingStatus,
+        string $evidenceJson,
+        string $evidenceReference
+    ): bool {
+        $preservations = $this->tables->migrationPreservations();
+        return 1 === (int) $this->database->get_var($this->database->prepare(
+            "SELECT COUNT(*) FROM " . $preservations
+                . " WHERE run_id=%s AND observation_id=%s AND reason_code=%s "
+                . "AND processing_status=%s AND BINARY evidence_json=%s "
+                . "AND BINARY evidence_reference=%s",
+            $runId,
+            $observationId,
+            $reasonCode,
+            $processingStatus,
+            $evidenceJson,
+            $evidenceReference
+        ));
     }
 
     public function sourceTargets(MigrationRun $run, string $sourceType, string $sourceId): array

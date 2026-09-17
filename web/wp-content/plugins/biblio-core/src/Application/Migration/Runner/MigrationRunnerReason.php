@@ -19,4 +19,5 @@ enum MigrationRunnerReason: string
     case DuplicateParticipant = "duplicate_participant";
     case DuplicateMapper = "duplicate_source_mapper";
     case ArtifactWriteFailed = "artifact_write_failed";
+    case PreparedPlanMismatch = "prepared_plan_mismatch";
 }

@@ -173,7 +173,8 @@ final class CirculationMigrationParticipantTest extends PersistenceIntegrationTe
             $source,
             "synthetic-circulation",
             $user,
-            $library
+            $library,
+            $this->digest($runner, $source, $user, $library)
         );
         $report = $result->reconciliation()->toArray();
         self::assertTrue($result->reconciliation()->accepted());
@@ -232,7 +233,8 @@ final class CirculationMigrationParticipantTest extends PersistenceIntegrationTe
             $source,
             "synthetic-circulation",
             $user,
-            $library
+            $library,
+            $this->digest($runner, $source, $user, $library)
         );
         self::assertTrue($replay->reconciliation()->accepted());
         self::assertSame(2, $this->countRows(
@@ -257,7 +259,8 @@ final class CirculationMigrationParticipantTest extends PersistenceIntegrationTe
             $source,
             "synthetic-circulation",
             $user,
-            $library
+            $library,
+            $this->digest($runner, $source, $user, $library)
         );
 
         $ledger = new WpdbMigrationLedgerRepository($this->database, $this->tableNames);
@@ -304,7 +307,6 @@ final class CirculationMigrationParticipantTest extends PersistenceIntegrationTe
 
         return new MigrationApplyRunner(
             $planning,
-            $participants,
             $targets,
             $environment,
             new BeginMigrationRunService(
@@ -321,6 +323,22 @@ final class CirculationMigrationParticipantTest extends PersistenceIntegrationTe
             $application->migrationReconciliation(),
             "mig-02-circ-1"
         );
+    }
+
+    private function digest(
+        MigrationApplyRunner $runner,
+        string $source,
+        UserId $user,
+        LibraryId $library
+    ): string {
+        $digest = $runner->dryRunArtifact(
+            $source,
+            "synthetic-circulation",
+            $user,
+            $library
+        )->payload()["prepared_plan"]["plan_set_digest"] ?? null;
+        self::assertIsString($digest);
+        return $digest;
     }
 
     /** @return array{UserId,LibraryId} */
