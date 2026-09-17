@@ -36,7 +36,8 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
         private ?CurrentV1ClassificationMapper $classificationMapper = null,
         private ?CurrentV1ItemLocalMapper $itemLocalMapper = null,
         private ?CurrentV1AuthorMapper $authorMapper = null,
-        private ?CurrentV1ReadingMapper $readingMapper = null
+        private ?CurrentV1ReadingMapper $readingMapper = null,
+        private ?CurrentV1NoteMapper $noteMapper = null
     ) {
         $this->isbn = $isbn ?? new IsbnCanonicalizer();
     }
@@ -55,6 +56,7 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
         $copies = [];
         $authors = [];
         $readingRounds = [];
+        $notes = [];
         foreach ($inspection->records() as $record) {
             if ($record->sourceType() === CurrentV1SourceAdapter::BOOK) {
                 $books[$this->sourceKey($record->sourceId())] = $record;
@@ -78,12 +80,20 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
                 $readingRounds[$this->sourceKey($record->sourceId())] = $record;
                 continue;
             }
+            if (
+                $this->noteMapper !== null
+                && $record->sourceType() === CurrentV1SourceAdapter::NOTE
+            ) {
+                $notes[$this->sourceKey($record->sourceId())] = $record;
+                continue;
+            }
             $records[] = $record;
         }
         ksort($books, SORT_STRING);
         ksort($copies, SORT_STRING);
         ksort($authors, SORT_STRING);
         ksort($readingRounds, SORT_STRING);
+        ksort($notes, SORT_STRING);
 
         $findings = [];
         $states = [];
@@ -272,6 +282,25 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
             );
             array_push($records, ...$readingMapping->records());
             array_push($findings, ...$readingMapping->findings());
+        }
+
+        if ($this->noteMapper !== null) {
+            $workRepresentatives = [];
+            foreach ($books as $book) {
+                $state = $states[$this->sourceKey($book->sourceId())] ?? null;
+                if (($state["status"] ?? null) === "ready") {
+                    $workRepresentatives[$book->sourceId()] = $state["representative"];
+                }
+            }
+            $noteMapping = $this->noteMapper->map(
+                $inspection,
+                $target,
+                $books,
+                $notes,
+                $workRepresentatives
+            );
+            array_push($records, ...$noteMapping->records());
+            array_push($findings, ...$noteMapping->findings());
         }
 
         if ($this->authorMapper !== null) {
