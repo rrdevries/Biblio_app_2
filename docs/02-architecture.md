@@ -2805,3 +2805,33 @@ resolves exactly one committed Work mapping, delegates domain validation to
 Replay and reconciliation verify payload, owner, Work, state and reverse source
 exclusivity. No generic event framework, product state, network path, CURRENT
 apply command or schema change is added. Schema remains 1026; Core is 2.41.0.
+
+## 77. MIG-02-NOTE-MAP-01 CURRENT Note mapping boundary
+
+`CurrentV1NoteMapper` is a manifest-bound collaborator of
+`CurrentV1CatalogMapper`. It consumes only adapter-validated stable
+`books[].notes[]` records after CAT establishes the parent Book's exact Work
+identity. The mapper emits the existing typed `PrivateNotePlan` plus
+privacy-safe findings and performs no product or MIG-FND write.
+
+The stable source Note ID remains the typed `private_note` source ID. The plan
+uses only the explicit validated migration target User and
+`v1.book/<book-id>/work`; title, ISBN, Edition, Item, actor, administrator and
+Library-owner lookup do not exist. CURRENT supplies no explicit Round
+relationship, so every plan keeps `readingRoundSourceId = null` regardless of
+sibling rounds, registrations, status, timestamps or cardinality.
+
+One-line plaintext is UTF-8 validated, normalized for the already-absent CRLF
+case, escaped as data and enclosed in exactly one `<p>` before the existing
+strict policy validates canonical safe HTML. Both technical UTC instants are
+parsed from the exact millisecond source representation and never repaired
+with current time. Invalid evidence and CAT-blocked dependencies quarantine;
+meaningful future content outside the reviewed lossless shape is preserved
+instead of rewritten or dropped.
+
+The source-neutral participant, writer and reconciliation contract remain
+authoritative for exact Work resolution, target ownership, replay, reverse
+mapping, canonical target inspection and transaction boundaries. Dry-run
+artifacts expose identities, hashes, counts and reason codes but no Note body
+or timestamp. No schema, REST, UI, network or apply/import path is added.
+Schema remains 1026; Core is 2.42.0.

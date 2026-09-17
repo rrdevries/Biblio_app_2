@@ -174,6 +174,7 @@ use Biblio\Core\Infrastructure\Migration\CurrentV1AuthorMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1CatalogMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ClassificationMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ItemLocalMapper;
+use Biblio\Core\Infrastructure\Migration\CurrentV1NoteMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ReadingMapper;
 use Biblio\Core\Infrastructure\WordPress\Identity\WordPressPlatformUserDirectory;
 use Biblio\Core\Notes\StrictPrivateNoteContentPolicy;
@@ -592,7 +593,10 @@ final class ProductionComposition
                 ),
                 itemLocalMapper: new CurrentV1ItemLocalMapper(),
                 authorMapper: new CurrentV1AuthorMapper(),
-                readingMapper: new CurrentV1ReadingMapper()
+                readingMapper: new CurrentV1ReadingMapper(),
+                noteMapper: new CurrentV1NoteMapper(
+                    contentPolicy: $privateNoteContentPolicy
+                )
             ),
         ]);
         $migrationReconciliation = new MigrationReconciliationService(

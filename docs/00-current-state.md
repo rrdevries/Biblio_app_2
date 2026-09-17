@@ -3951,3 +3951,28 @@ clean-SHA isolated dry-run changes none of the 57 Biblio tables and no
 apply/import occurs. Product remains `v2.001`; schema remains `1026`; Biblio
 Core is `2.41.0`; Biblio UI remains `0.20.0`. Closure evidence:
 `docs/125-mig-02-read-map-01-current-v1-reading-mapper.md`.
+
+### MIG-02-NOTE-MAP-01 — CURRENT V1 Note mapper
+
+Status: **GO / CLOSED**.
+
+The manifest-bound CURRENT mapper now translates only stable
+`books[].notes[]` records to the existing source-neutral `PrivateNotePlan`.
+Each plan retains the unchanged Note source ID, uses the explicit migration
+target User, depends only on its parent Book's exact CAT Work identity and has
+no ReadingRound dependency. The existing Note participant, writer, domain,
+privacy boundary and schema remain unchanged.
+
+The unchanged source yields 17 active typed Note plans. All 17 bodies are
+non-empty one-line plaintext and become exactly one escaped safe `<p>`
+envelope before passing unchanged through `StrictPrivateNoteContentPolicy`.
+All 17 creation/update pairs retain their exact UTC millisecond instants; no
+current or migration time is substituted. Zero Notes are CAT-blocked,
+alias-attached, preserved, quarantined, unmatched or Round-linked.
+
+Copy notes and Rating/Review/Reflection evidence remain outside this mapper.
+Dry-run output contains neither Note bodies nor source timestamps, writes no
+product or MIG-FND state and exposes no apply/import path. Product remains
+`v2.001`; schema remains `1026`; Biblio Core is `2.42.0`; Biblio UI remains
+`0.20.0`. Closure evidence:
+`docs/127-mig-02-note-map-01-current-v1-note-mapper.md`.

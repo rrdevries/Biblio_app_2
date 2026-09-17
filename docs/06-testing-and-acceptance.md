@@ -4784,3 +4784,40 @@ MIG-02-READ-MAP-01 is accepted only when:
 Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1026`;
 Biblio Core is `2.41.0`; Biblio UI remains `0.20.0`. Exact evidence is in
 `docs/125-mig-02-read-map-01-current-v1-reading-mapper.md`.
+
+## 142. MIG-02-NOTE-MAP-01 CURRENT V1 Note mapper
+
+MIG-02-NOTE-MAP-01 is accepted only when:
+
+- the exact docs/126 contract, CURRENT adapter and immutable manifest are
+  bound and changed/incompatible source structure fails closed;
+- exactly 17 stable `books[].notes[]` records produce 17 typed
+  `PrivateNotePlan` records with unchanged source IDs;
+- all plans use only the explicit target User and exact parent-Book CAT Work
+  source identity, with no actor/admin/Library-owner/title/ISBN fallback;
+- every ReadingRound dependency is null and sibling rounds, registrations,
+  Work equality, timestamps and cardinality cause no inference;
+- plaintext is escaped into exactly one safe paragraph and the existing strict
+  policy accepts the canonical result unchanged without labels or prose edits;
+- exact UTC millisecond creation/update instants are retained, equality is
+  valid, impossible chronology fails closed and current time is never used;
+- distinct source IDs remain distinct despite equal content, time or future
+  CAT Work convergence, while exact replay stays deterministic;
+- Copy notes, Ratings, Review and Reflections never enter Note planning;
+- CAT-blocked or unmatched source evidence creates no dangling Note, and every
+  source Note is active, preserved or quarantined without silent loss;
+- dry-run and reconciliation expose no Note body or source timestamp and
+  validate exactly one private Note target with its owner, Work, null Round,
+  canonical content, instants and initial version;
+- the source-neutral participant and writer remain semantically unchanged,
+  schema stays 1026 and no network, REST, UI or apply/import path is added;
+- the final clean implementation SHA is loaded in the guarded isolated trial,
+  all 57 Biblio table fingerprints are identical before/after the exact CURRENT
+  dry-run, and the normal environment and source manifest remain unchanged;
+  and
+- focused/full Core gates, PHP syntax, PHPStan, Composer/platform, WordPress
+  smoke, manifest, whitespace, privacy scan and independent review pass.
+
+Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1026`;
+Biblio Core is `2.42.0`; Biblio UI remains `0.20.0`. Exact evidence is in
+`docs/127-mig-02-note-map-01-current-v1-note-mapper.md`.

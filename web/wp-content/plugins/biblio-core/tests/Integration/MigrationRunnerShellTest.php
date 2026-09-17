@@ -36,6 +36,8 @@ use Biblio\Core\Infrastructure\Migration\CurrentV1ClassificationMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedAuthorContract;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedClassificationContract;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ItemLocalMapper;
+use Biblio\Core\Infrastructure\Migration\CurrentV1NoteMapper;
+use Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedNoteContract;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedItemLocalContract;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ReadingMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedReadingContract;
@@ -413,10 +415,12 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
         $artifact = json_decode($artifactBytes, true, 32, JSON_THROW_ON_ERROR);
         self::assertSame(CurrentV1SourceAdapter::ADAPTER_ID, $artifact["source"]["adapter_id"]);
         self::assertSame(CurrentV1SourceAdapter::SOURCE_VERSION, $artifact["source"]["source_version"]);
-        self::assertSame(6, $artifact["record_count"]);
+        self::assertSame(7, $artifact["record_count"]);
         self::assertTrue($artifact["zero_write_confirmed"]);
         self::assertStringNotContainsString("Private Adapter Author", $artifactBytes);
         self::assertStringNotContainsString("Private Adapter Title", $artifactBytes);
+        self::assertStringNotContainsString("Do not expose current note body", $artifactBytes);
+        self::assertStringNotContainsString("2024-02-03T04:05:06.123Z", $artifactBytes);
         self::assertSame(
             $commandOutput["artifact_sha256"],
             hash_file("sha256", $commandOutput["artifact_path"])
@@ -467,6 +471,9 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
                 ),
                 readingMapper: new CurrentV1ReadingMapper(
                     new CurrentV1ReviewedReadingContract($manifest)
+                ),
+                noteMapper: new CurrentV1NoteMapper(
+                    new CurrentV1ReviewedNoteContract($manifest)
                 )
             ),
         ]);
@@ -499,11 +506,11 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
         $artifact = json_decode($artifactBytes, true, 32, JSON_THROW_ON_ERROR);
         self::assertTrue($artifact["zero_write_confirmed"]);
         self::assertSame(
-            6,
+            7,
             $artifact["planning_reconciliation"]["planned_observations"]
         );
         self::assertSame(
-            5,
+            6,
             $artifact["plan"]["disposition_counts"]["mapped"]
         );
         self::assertSame(
@@ -520,6 +527,11 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
             1,
             $artifact["planning_reconciliation"]["participant_counts"]
                 [ReadingTruthMigrationParticipant::SOURCE_TYPE]
+        );
+        self::assertSame(
+            1,
+            $artifact["planning_reconciliation"]["participant_counts"]
+                [PrivateNoteMigrationParticipant::SOURCE_TYPE]
         );
         self::assertSame(
             1,
@@ -555,15 +567,26 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
             $artifact["plan"]["source_mapping_finding_counts"]
                 ["copy_auxiliary_evidence_preserved"]
         );
+        self::assertSame(
+            1,
+            $artifact["plan"]["source_mapping_finding_counts"]
+                ["private_note_planned"]
+        );
         self::assertStringNotContainsString("Private Counterparty", $artifactBytes);
         self::assertStringNotContainsString("private circulation note", $artifactBytes);
         self::assertStringNotContainsString("Private acquisition source", $artifactBytes);
+        self::assertStringNotContainsString("Do not expose current note body", $artifactBytes);
+        self::assertStringNotContainsString("2024-02-03T04:05:06.123Z", $artifactBytes);
+        self::assertStringNotContainsString("2024-02-03T04:05:06.123000Z", $artifactBytes);
         self::assertStringNotContainsString('"source_payload"', $artifactBytes);
         self::assertSame(0, $this->allCoreTableCounts()[
             $this->tableNames->externalLoans()
         ]);
         self::assertSame(0, $this->allCoreTableCounts()[
             $this->tableNames->migrationSourceObservations()
+        ]);
+        self::assertSame(0, $this->allCoreTableCounts()[
+            $this->tableNames->privateNotes()
         ]);
     }
 
@@ -944,7 +967,12 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
                 "readStatus" => "unknown",
                 "readMarker" => "unknown",
                 "readHistory" => [],
-                "notes" => [],
+                "notes" => [[
+                    "createdAt" => "2024-02-03T04:05:06.123Z",
+                    "id" => "1700000000000_aaaaaa",
+                    "text" => "Do not expose current note body",
+                    "updatedAt" => "2024-02-03T04:05:06.123Z",
+                ]],
                 "circulationRounds" => [[
                     "id" => "circulation-private-1",
                     "type" => "borrowed",
