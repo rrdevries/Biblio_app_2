@@ -4747,3 +4747,40 @@ MIG-02-AUTH-MAP-01 is accepted only when:
 Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1026`;
 Biblio Core is `2.40.0`; Biblio UI remains `0.20.0`. Exact evidence is in
 `docs/123-mig-02-auth-map-01-current-v1-author-mapper.md`.
+
+## 141. MIG-02-READ-MAP-01 CURRENT V1 reading mapper
+
+MIG-02-READ-MAP-01 is accepted only when:
+
+- the exact docs/124 contract, CURRENT adapter and immutable manifest are bound
+  and changed/incompatible source shapes fail closed;
+- exact stable and registration-derived identities produce 53 concrete plans:
+  51 completed, two stopped and zero active;
+- three active-like source rounds remain `preserved_deferred` without choosing
+  an Item from Work cardinality, Copy order, classification or availability;
+- historical paused evidence creates no V2 state, stopped inference or round;
+- Book status, registrations and stable rounds follow the reviewed overlap
+  rules without last-write-wins, reread inference or duplicate round/truth;
+- 1,064 Personal Reading Truth plans recompute as 378
+  `read_known_date_unknown`, 326 `explicit_not_read` and 360 `unknown`;
+- day, month, year and unknown precision remain exact, with no current,
+  migration or completed placeholder date;
+- all product outputs use the explicit migration target User and exact CAT Work
+  source dependency; aliases resolve only via their committed CAT mappings;
+- CAT-quarantined reading evidence creates no active target dependency and
+  every source fact is mapped, derived/duplicate evidence, preserved or
+  quarantined;
+- the bounded `reading_truth` participant locks and records the existing
+  User×Work truth domain, while replay/reconciliation reject wrong owner,
+  missing Work, changed payload/state or conflicting source identity;
+- all concrete rounds retain `migration_imported` provenance and no private
+  content enters ordinary output, artifacts, documentation or errors;
+- the final clean implementation SHA is loaded in the guarded isolated trial,
+  no apply/import runs and all 57 Biblio table fingerprints remain identical;
+  and
+- focused/full Core gates, PHP syntax, PHPStan, Composer/platform, WordPress
+  smoke, manifest, whitespace, privacy scan and independent review pass.
+
+Status: **GO / CLOSED**. Product remains `v2.001`; schema remains `1026`;
+Biblio Core is `2.41.0`; Biblio UI remains `0.20.0`. Exact evidence is in
+`docs/125-mig-02-read-map-01-current-v1-reading-mapper.md`.

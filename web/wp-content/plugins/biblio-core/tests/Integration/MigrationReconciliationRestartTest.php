@@ -26,7 +26,9 @@ use Biblio\Core\Application\Migration\Notes\{
 };
 use Biblio\Core\Application\Migration\Reading\{
     ReadingRoundMigrationParticipant,
-    ReadingRoundPlan
+    ReadingRoundPlan,
+    ReadingTruthMigrationParticipant,
+    ReadingTruthPlan
 };
 use Biblio\Core\Application\Migration\Runner\{
     MigrationApplyRunner,
@@ -94,7 +96,7 @@ use Biblio\Core\Infrastructure\WordPress\Migration\{
 use Biblio\Core\Infrastructure\WordPress\ProductionComposition;
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Notes\StrictPrivateNoteContentPolicy;
-use Biblio\Core\Reading\{ReadingDate, ReadingPeriod, ReadingRoundOutcome};
+use Biblio\Core\Reading\{PersonalReadingTruthState,ReadingDate,ReadingPeriod,ReadingRoundOutcome};
 use DateTimeImmutable;
 
 final readonly class ReconciliationFullAdapter implements MigrationSourceAdapter
@@ -116,7 +118,7 @@ final readonly class ReconciliationFullAdapter implements MigrationSourceAdapter
             "authors" => 1,
             "books" => 3,
             "notes" => 1,
-            "reading" => 1,
+            "reading" => 2,
             "relationships" => 1,
         ], categoryStrategies: [
             new MigrationSourceCategoryStrategy("authors", [
@@ -132,6 +134,7 @@ final readonly class ReconciliationFullAdapter implements MigrationSourceAdapter
             ]),
             new MigrationSourceCategoryStrategy("reading", [
                 ReadingRoundMigrationParticipant::SOURCE_TYPE,
+                ReadingTruthMigrationParticipant::SOURCE_TYPE,
             ]),
             new MigrationSourceCategoryStrategy("relationships", [
                 CatalogWorkContributorMigrationParticipant::SOURCE_TYPE,
@@ -205,6 +208,15 @@ final readonly class ReconciliationFullAdapter implements MigrationSourceAdapter
                     ReadingDate::month(2019, 7)
                 ),
                 "item/1"
+            )
+        );
+        yield MigrationSourceRecord::typed(
+            ReadingTruthMigrationParticipant::SOURCE_TYPE,
+            "reading-truth/1",
+            new ReadingTruthPlan(
+                $this->userId,
+                "work/1",
+                PersonalReadingTruthState::ReadKnownDateUnknown
             )
         );
         yield MigrationSourceRecord::typed(
@@ -491,13 +503,13 @@ final class MigrationReconciliationRestartTest extends PersistenceIntegrationTes
         );
         self::assertSame(MigrationRunStatus::Completed, $resumed->run()->status());
         self::assertTrue($resumed->reconciliation()->accepted());
-        self::assertSame(7, $resumed->reconciliation()->sourceObservationCount());
+        self::assertSame(8, $resumed->reconciliation()->sourceObservationCount());
         self::assertSame(0, $resumed->reconciliation()->uncommittedCount());
         self::assertSame(0, $resumed->reconciliation()->unexplainedDropCount());
         self::assertSame(0, $resumed->reconciliation()->unresolvedDependencyCount());
         self::assertSame(0, $resumed->reconciliation()->brokenTargetCount());
         $reconciliation = $resumed->reconciliation()->toArray();
-        self::assertSame(7, $reconciliation["source"]["enumerated_observations"]);
+        self::assertSame(8, $reconciliation["source"]["enumerated_observations"]);
         self::assertSame(0, $reconciliation["uncommitted_count"]);
         self::assertSame(0, $reconciliation["unexplained_drop_count"]);
         self::assertSame(0, $reconciliation["broken_target_count"]);
@@ -507,11 +519,11 @@ final class MigrationReconciliationRestartTest extends PersistenceIntegrationTes
             "source_id" => "item/1",
             "reason_code" => "copy_auxiliary_evidence_preserved",
         ]], $reconciliation["preservation"]["records"]);
-        self::assertSame(7, $reconciliation["mapping_counts"]["entity"]["total"]);
+        self::assertSame(8, $reconciliation["mapping_counts"]["entity"]["total"]);
         self::assertSame(2, $reconciliation["mapping_counts"]["relation"]["total"]);
-        self::assertSame(7, $reconciliation["mapping_counts"]["entity"]["created"]);
+        self::assertSame(8, $reconciliation["mapping_counts"]["entity"]["created"]);
         self::assertSame(2, $reconciliation["mapping_counts"]["relation"]["created"]);
-        self::assertSame(9, $reconciliation["mapping_counts"]["created"]);
+        self::assertSame(10, $reconciliation["mapping_counts"]["created"]);
 
         $graphA = $this->targetGraph($userA, $libraryA);
         self::assertSame([
@@ -522,6 +534,7 @@ final class MigrationReconciliationRestartTest extends PersistenceIntegrationTes
             "items" => 1,
             "notes" => 1,
             "reading_rounds" => 1,
+            "reading_truths" => 1,
             "work_contributors" => 1,
             "works" => 1,
         ], $graphA);
@@ -534,7 +547,7 @@ final class MigrationReconciliationRestartTest extends PersistenceIntegrationTes
         );
         self::assertSame($resumed->run()->id(), $second->run()->id());
         self::assertSame(0, $second->reconciliation()->toArray()["execution"]["created_targets"]);
-        self::assertSame(7, $second->reconciliation()->toArray()["execution"]["skipped_committed_observations"]);
+        self::assertSame(8, $second->reconciliation()->toArray()["execution"]["skipped_committed_observations"]);
         self::assertSame($graphA, $this->targetGraph($userA, $libraryA));
         $repeat = $runnerA->apply(
             $source,
@@ -583,7 +596,7 @@ final class MigrationReconciliationRestartTest extends PersistenceIntegrationTes
         );
         self::assertTrue($clean->reconciliation()->accepted());
         $graphB = $this->targetGraph($userB, $libraryB);
-        foreach (["catalog_contexts", "items", "notes", "reading_rounds"] as $localKey) {
+        foreach (["catalog_contexts", "items", "notes", "reading_rounds", "reading_truths"] as $localKey) {
             self::assertSame($graphA[$localKey], $graphB[$localKey]);
         }
         self::assertSame(
@@ -611,8 +624,8 @@ final class MigrationReconciliationRestartTest extends PersistenceIntegrationTes
             $changed->artifact()->sourceDigest()
         );
         self::assertSame(0, $changed->reconciliation()->toArray()["execution"]["created_targets"]);
-        self::assertSame(9, $changed->reconciliation()->toArray()["execution"]["reused_targets"]);
-        self::assertSame(7, $changed->reconciliation()->toArray()["mapping_counts"]["entity"]["reused"]);
+        self::assertSame(10, $changed->reconciliation()->toArray()["execution"]["reused_targets"]);
+        self::assertSame(8, $changed->reconciliation()->toArray()["mapping_counts"]["entity"]["reused"]);
         self::assertSame(2, $changed->reconciliation()->toArray()["mapping_counts"]["relation"]["reused"]);
         self::assertSame($graphB, $this->targetGraph($userA, $libraryA));
 
@@ -1014,6 +1027,10 @@ final class MigrationReconciliationRestartTest extends PersistenceIntegrationTes
             )),
             "reading_rounds" => (int) $this->database->get_var($this->database->prepare(
                 "SELECT COUNT(*) FROM `{$this->tableNames->readingRounds()}` WHERE user_id=%s",
+                $user->value()
+            )),
+            "reading_truths" => (int) $this->database->get_var($this->database->prepare(
+                "SELECT COUNT(*) FROM `{$this->tableNames->personalReadingTruths()}` WHERE user_id=%s",
                 $user->value()
             )),
             "work_contributors" => (int) $this->database->get_var(

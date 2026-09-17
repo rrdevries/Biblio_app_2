@@ -3926,3 +3926,28 @@ the deferred containment lane. Exact table fingerprints confirm zero product
 or MIG-FND writes, and no apply/import occurred. Product remains `v2.001`,
 schema remains `1026`, Biblio Core is `2.40.0` and Biblio UI remains `0.20.0`.
 Closure evidence: `docs/123-mig-02-auth-map-01-current-v1-author-mapper.md`.
+
+### MIG-02-READ-MAP-01 — CURRENT V1 reading mapper
+
+Status: **GO / CLOSED**.
+
+The manifest-bound CURRENT mapper now translates the reviewed reading evidence
+to the existing source-neutral `ReadingRoundPlan` and the bounded new
+`ReadingTruthPlan`. Stable ended rounds remain distinct occurrences with exact
+date precision and `migration_imported` provenance. Personal Reading Truth
+remains one explicit target-User×Work state and never fabricates a round.
+
+The unchanged source yields 53 concrete round plans: 51 completed and two
+stopped. Three active-like source rounds remain `preserved_deferred` because no
+exact physical Item provenance exists; the historical paused observation is
+source-only evidence and creates no V2 state. Book status and registrations
+converge through the reviewed CAT Work identities without last-write-wins,
+reread inference or duplicate product truth. The resulting 1,064 truth plans
+are 378 `read_known_date_unknown`, 326 `explicit_not_read` and 360 `unknown`.
+
+CAT-quarantined evidence creates no dangling reading relation. Every source
+fact is mapped, derived/duplicate evidence, preserved or quarantined. The final
+clean-SHA isolated dry-run changes none of the 57 Biblio tables and no
+apply/import occurs. Product remains `v2.001`; schema remains `1026`; Biblio
+Core is `2.41.0`; Biblio UI remains `0.20.0`. Closure evidence:
+`docs/125-mig-02-read-map-01-current-v1-reading-mapper.md`.

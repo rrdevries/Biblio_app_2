@@ -15,7 +15,10 @@ use Biblio\Core\Application\Migration\Catalog\{
 };
 use Biblio\Core\Application\Migration\Circulation\CirculationMigrationParticipant;
 use Biblio\Core\Application\Migration\Notes\PrivateNoteMigrationParticipant;
-use Biblio\Core\Application\Migration\Reading\ReadingRoundMigrationParticipant;
+use Biblio\Core\Application\Migration\Reading\{
+    ReadingRoundMigrationParticipant,
+    ReadingTruthMigrationParticipant
+};
 
 final class CurrentMigrationMappingContracts
 {
@@ -58,6 +61,10 @@ final class CurrentMigrationMappingContracts
             new MigrationMappingContract(
                 ReadingRoundMigrationParticipant::SOURCE_TYPE,
                 [new MigrationMappingRule("reading_round", $entity, true)]
+            ),
+            new MigrationMappingContract(
+                ReadingTruthMigrationParticipant::SOURCE_TYPE,
+                [new MigrationMappingRule("personal_reading_truth", $entity, true)]
             ),
             new MigrationMappingContract(
                 PrivateNoteMigrationParticipant::SOURCE_TYPE,

@@ -2778,3 +2778,30 @@ malformed and contained-work evidence keeps its explicit terminal finding.
 The mapper remains zero-write under profile/dry-run, introduces no network or
 provider claim path and adds no apply command. Schema remains 1026; Core is
 2.40.0.
+
+## 76. MIG-02-READ-MAP-01 CURRENT reading mapping boundary
+
+`CurrentV1ReadingMapper` is a manifest-bound collaborator of
+`CurrentV1CatalogMapper`. It consumes only adapter-validated reading-round,
+Book-status, registration and audit evidence after CAT has established exact
+Book→Work representative and alias identities. Its boundary emits existing
+typed `ReadingRoundPlan` records, bounded typed `ReadingTruthPlan` records and
+privacy-safe terminal findings; raw CURRENT enums never enter source-neutral
+participants.
+
+Stable ended occurrences keep their own source identity. Reviewed ID-less
+partial-finish registrations receive deterministic Book-slot identities.
+Active-like rounds without exact physical provenance create no active plan and
+remain preserved evidence. Historical paused data creates no lifecycle value.
+Book status can become truth or derived/conflict evidence, but never creates a
+concrete round by itself. CAT aliases converge only through the explicit
+docs/124 rules and never through source order or generic state strength.
+
+The new `reading_truth` participant owns only exact target User, exact CAT Work
+source dependency and an existing `PersonalReadingTruthState`. Its writer
+joins the caller-owned MIG-FND transaction, locks the User×Work mutation,
+resolves exactly one committed Work mapping, delegates domain validation to
+`PersonalReadingTruthRecorder` and records the Work ID as the target identity.
+Replay and reconciliation verify payload, owner, Work, state and reverse source
+exclusivity. No generic event framework, product state, network path, CURRENT
+apply command or schema change is added. Schema remains 1026; Core is 2.41.0.
