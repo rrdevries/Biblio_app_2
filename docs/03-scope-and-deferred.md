@@ -277,14 +277,17 @@ MIG-02-PRESERVE-01 closes only the migration-foundation inability to durably
 commit reviewed mapper-only `preserved_deferred` evidence. The implemented
 proof population is CURRENT Reflection. Item auxiliary evidence and
 circulation remain on their existing participant-owned routes. Classification,
-Author, Reading and contained-work populations not already carrying a complete
-approved executable preservation contract remain diagnostic or deferred to a
-later bounded mapping slice; they are not inferred or bulk-converted here.
+Author and Reading populations not already carrying a complete approved
+executable preservation contract remain diagnostic or deferred to a later
+bounded mapping slice; they are not inferred or bulk-converted here.
 
-Still explicitly out of scope are a Reflection product model, promotion or
-backfill, general source-package storage infrastructure, public/internal UI or
-REST exposure, rich Series Intelligence/UI, Archive, contained-work product
-migration, loan backfill and production apply/import. The separately closed
+Still explicitly out of scope are a Reflection product model, generic
+promotion or backfill, general source-package storage infrastructure,
+public/internal UI or REST exposure, rich Series Intelligence/UI, Archive,
+contained-work merge/governance UI, loan backfill and production apply/import.
+The bounded CURRENT contained-work mapper is implemented separately by
+MIG-02-CONTAINED-MAP-01; it does not generalize preservation promotion or
+authorize product UI. The separately closed
 MIG-02-SERIES-MAP-01 uses this durable route for exactly five unsafe position
 components, three nameless base observations and 19 contained-work Series
 observations. MIG-02-WISHLIST-MAP-01 uses it for exactly 41 reviewed Wishlist

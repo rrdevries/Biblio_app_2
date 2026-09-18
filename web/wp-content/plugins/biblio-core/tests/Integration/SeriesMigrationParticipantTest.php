@@ -9,6 +9,7 @@ use Biblio\Core\Application\Migration\{
     CommitMigrationRecordService,
     MappingDisposition,
     MigrationClock,
+    MigrationDisposition,
     MigrationMode,
     MigrationRecordOutcome,
     MigrationRun,
@@ -16,10 +17,18 @@ use Biblio\Core\Application\Migration\{
     ObserveSourceRecordService,
     SourceObservation
 };
-use Biblio\Core\Application\Migration\Catalog\CatalogWorkMigrationParticipant;
+use Biblio\Core\Application\Migration\Catalog\{CatalogWorkMigrationParticipant,CatalogWorkPlan};
 use Biblio\Core\Application\Migration\Catalog\CatalogMigrationItemRepository;
-use Biblio\Core\Application\Migration\Reconciliation\CoreMigrationTargetInspector;
-use Biblio\Core\Application\Migration\Runner\{MigrationParticipant,MigrationPlanningTarget,MigrationSourceRecord};
+use Biblio\Core\Application\Migration\Preservation\{
+    PreservedSourceEvidenceAdmission,
+    PreservedSourceEvidenceAdmissionRegistry,
+    PreservedSourceEvidenceMigrationParticipant,
+    PreservedSourceEvidencePlan,
+    PreservedSourceEvidencePlanGuard,
+    PreservedSourceEvidencePrivacy
+};
+use Biblio\Core\Application\Migration\Reconciliation\{CoreMigrationTargetInspector,CurrentMigrationMappingContracts,MigrationReconciliationService};
+use Biblio\Core\Application\Migration\Runner\{DeterministicJson,MigrationParticipant,MigrationPlanningTarget,MigrationSourceAdapter,MigrationSourceInspection,MigrationSourcePackage,MigrationSourceProfile,MigrationSourceRecord,PlannedMigrationRecord,PreparedMigrationPlan,PreparedMigrationRecord};
 use Biblio\Core\Application\Migration\Series\{
     CatalogSeriesMigrationParticipant,
     CatalogSeriesPlan,
@@ -27,7 +36,8 @@ use Biblio\Core\Application\Migration\Series\{
     CatalogWorkSeriesPlan,
     SeriesMigrationFailure,
     SeriesMigrationReason,
-    SeriesMigrationWriter
+    SeriesMigrationWriter,
+    SeriesPreservationPromotionPolicy
 };
 use Biblio\Core\Application\Metadata\Author\AuthorContributorCreditRepository;
 use Biblio\Core\Catalog\Classification\LibraryCatalogContextRepository;
@@ -200,6 +210,209 @@ final class SeriesMigrationParticipantTest extends PersistenceIntegrationTestCas
         self::assertSame("Unrelated Existing Series", $fixture["series"]->find($target)?->displayName());
     }
 
+    public function testContainedSeriesPromotionProcessesExactPriorEvidenceAndRollsBackOnDivergence(): void
+    {
+        $fixture = $this->fixture("promotion");
+        $this->mapWork($fixture, "work/source", "work-target");
+        $this->apply(
+            $fixture,
+            $fixture["series_participant"],
+            $this->seriesRecord("series/source", "Promoted Series")
+        );
+        $priorFixture = $this->laterRunWithSameSnapshot(
+            $fixture,
+            "promotion-preservation",
+            "2.48.0"
+        );
+        $preservation = $this->promotionPlan(
+            $priorFixture,
+            "exact-evidence"
+        );
+        $stored = $this->apply(
+            $priorFixture,
+            $priorFixture["preservation_participant"],
+            $this->preservationRecord($preservation)
+        );
+
+        $prior = $this->preservationRow(
+            $priorFixture,
+            $stored["observation"]->id()
+        );
+        self::assertSame("awaiting_future_processing", $prior["processing_status"]);
+        self::assertNull($prior["processed_at"]);
+
+        $later = $this->laterRunWithSameSnapshot(
+            $priorFixture,
+            "promotion-later",
+            "2.49.0"
+        );
+        $workApplied = $this->mapWork($later, "work/source", "work-target");
+        $seriesApplied = $this->apply(
+            $later,
+            $later["series_participant"],
+            $this->seriesRecord("series/source", "Promoted Series")
+        );
+        $membershipApplied = $this->apply(
+            $later,
+            $later["membership_participant"],
+            $this->membershipRecord("membership/promoted", "2", $preservation)
+        );
+
+        $processed = $this->preservationRow($later, $stored["observation"]->id());
+        self::assertSame("processed", $processed["processing_status"]);
+        self::assertNotNull($processed["processed_at"]);
+        self::assertSame($prior["reason_code"], $processed["reason_code"]);
+        self::assertSame($prior["evidence_json"], $processed["evidence_json"]);
+        self::assertSame($prior["evidence_reference"], $processed["evidence_reference"]);
+        self::assertCount(1, $later["series"]->membershipsForWorks([new WorkId("work-target")])["work-target"]);
+
+        $reconciliation = $this->reconciliation($later);
+        $priorReport = $reconciliation->reconcile(
+            $priorFixture["run"],
+            $this->preparedPlan($priorFixture, [$stored])
+        );
+        self::assertTrue(
+            $priorReport->accepted(),
+            json_encode($priorReport->toArray(), JSON_THROW_ON_ERROR)
+        );
+        self::assertTrue($reconciliation->reconcile(
+            $later["run"],
+            $this->preparedPlan(
+                $later,
+                [$workApplied, $seriesApplied, $membershipApplied]
+            )
+        )->accepted());
+
+        $this->database->update(
+            $this->tableNames->migrationPreservations(),
+            ["evidence_json" => "{}"],
+            ["observation_id" => $stored["observation"]->id()],
+            ["%s"],
+            ["%s"]
+        );
+        $mutated = $reconciliation->reconcile(
+            $priorFixture["run"],
+            $this->preparedPlan($priorFixture, [$stored])
+        );
+        self::assertFalse($mutated->accepted());
+        self::assertSame(1, $mutated->brokenTargetCount());
+
+        $divergent = $this->fixture("promotion-divergent");
+        $this->mapWork($divergent, "work/source", "work-target-divergent");
+        $this->apply(
+            $divergent,
+            $divergent["series_participant"],
+            $this->seriesRecord("series/divergent", "Divergent Series")
+        );
+        $divergentPreservation = $this->laterRunWithSameSnapshot(
+            $divergent,
+            "promotion-divergent-preservation",
+            "2.48.0"
+        );
+        $storedDivergent = $this->apply(
+            $divergentPreservation,
+            $divergentPreservation["preservation_participant"],
+            $this->preservationRecord($this->promotionPlan(
+                $divergentPreservation,
+                "old-evidence"
+            ))
+        );
+        $laterDivergent = $this->laterRunWithSameSnapshot(
+            $divergentPreservation,
+            "promotion-divergent-later",
+            "2.49.0"
+        );
+        $this->mapWork(
+            $laterDivergent,
+            "work/source",
+            "work-target-divergent"
+        );
+        $this->apply(
+            $laterDivergent,
+            $laterDivergent["series_participant"],
+            $this->seriesRecord("series/divergent", "Divergent Series")
+        );
+
+        try {
+            $this->apply(
+                $laterDivergent,
+                $laterDivergent["membership_participant"],
+                $this->membershipRecord(
+                    "membership/promoted",
+                    "2",
+                    $this->promotionPlan($laterDivergent, "changed-evidence"),
+                    "series/divergent"
+                )
+            );
+            self::fail("Divergent prior contained-Series evidence was silently promoted.");
+        } catch (SeriesMigrationFailure $failure) {
+            self::assertSame(SeriesMigrationReason::DivergentReplay, $failure->reason());
+        }
+        self::assertSame(
+            "awaiting_future_processing",
+            $this->preservationRow($laterDivergent, $storedDivergent["observation"]->id())["processing_status"]
+        );
+        self::assertSame(
+            [],
+            $laterDivergent["series"]->membershipsForWorks([new WorkId("work-target-divergent")])["work-target-divergent"]
+        );
+    }
+
+    public function testContainedSeriesPromotionRejectsUnrelatedIdentityAndUnadmittedLane(): void
+    {
+        $fixture = $this->fixture("promotion-policy");
+        $this->mapWork($fixture, "work/source", "work-target-policy");
+        $this->apply(
+            $fixture,
+            $fixture["series_participant"],
+            $this->seriesRecord("series/source", "Policy Series")
+        );
+
+        foreach ([
+            [
+                "record" => "membership/promoted",
+                "plan" => $this->promotionPlan(
+                    $fixture,
+                    "exact-evidence",
+                    "membership/unrelated"
+                ),
+            ],
+            [
+                "record" => "membership/promoted-other-lane",
+                "plan" => $this->promotionPlan(
+                    $fixture,
+                    "exact-evidence",
+                    "membership/promoted-other-lane",
+                    "current_v1_contained_work_isbn",
+                    "contained_work_isbn_deferred"
+                ),
+            ],
+        ] as $case) {
+            try {
+                $this->apply(
+                    $fixture,
+                    $fixture["membership_participant"],
+                    $this->membershipRecord(
+                        $case["record"],
+                        "2",
+                        $case["plan"]
+                    )
+                );
+                self::fail("Unadmitted Series preservation promotion was accepted.");
+            } catch (SeriesMigrationFailure $failure) {
+                self::assertSame(
+                    SeriesMigrationReason::DivergentReplay,
+                    $failure->reason()
+                );
+            }
+        }
+
+        self::assertSame(
+            [],
+            $fixture["series"]->membershipsForWorks([new WorkId("work-target-policy")])["work-target-policy"]
+        );
+    }
+
     /** @return array<string,mixed> */
     private function fixture(string $suffix): array
     {
@@ -212,7 +425,7 @@ final class SeriesMigrationParticipantTest extends PersistenceIntegrationTestCas
         $run = $ledger->beginOrResume(MigrationRun::start(
             "series-migration-run-{$suffix}",
             "synthetic",
-            "snapshot-{$suffix}",
+            hash("sha256", "snapshot-{$suffix}"),
             hash("sha256", "snapshot-{$suffix}"),
             "test-1",
             "2.45.0",
@@ -223,7 +436,32 @@ final class SeriesMigrationParticipantTest extends PersistenceIntegrationTestCas
         ));
         $works = new WpdbWorkRepository($this->database, $this->tableNames);
         $series = new WpdbSeriesRepository($this->database, $this->tableNames);
-        $writer = new SeriesMigrationWriter($ledger, $series, $works);
+        $writer = new SeriesMigrationWriter(
+            $ledger,
+            $series,
+            $works,
+            new SeriesPreservationPromotionPolicy(
+                "current_v1_contained_work_series",
+                "contained_work_series_deferred",
+                "synthetic-adapter",
+                $run->sourceFamily(),
+                (string) $run->sourceVersion(),
+                $run->sourceSnapshot(),
+                "series-test-contract",
+                "data/books.json",
+                "books",
+                "containedWorks"
+            )
+        );
+        $preservationGuard = new PreservedSourceEvidencePlanGuard(
+            new PreservedSourceEvidenceAdmissionRegistry([
+                new PreservedSourceEvidenceAdmission(
+                    "current_v1_contained_work_series",
+                    "contained_work_series_deferred",
+                    PreservedSourceEvidencePrivacy::OrdinarySource
+                ),
+            ])
+        );
         return $this->withRunServices([
             "library" => $library,
             "ledger" => $ledger,
@@ -234,6 +472,10 @@ final class SeriesMigrationParticipantTest extends PersistenceIntegrationTestCas
             "series" => $series,
             "series_participant" => new CatalogSeriesMigrationParticipant($writer),
             "membership_participant" => new CatalogWorkSeriesMigrationParticipant($writer),
+            "preservation_participant" => new PreservedSourceEvidenceMigrationParticipant(
+                $ledger,
+                $preservationGuard
+            ),
         ]);
     }
 
@@ -262,7 +504,7 @@ final class SeriesMigrationParticipantTest extends PersistenceIntegrationTestCas
         $fixture["run"] = $fixture["ledger"]->beginOrResume(MigrationRun::start(
             "series-migration-run-{$suffix}",
             "synthetic",
-            "snapshot-{$suffix}",
+            hash("sha256", "snapshot-{$suffix}"),
             hash("sha256", "snapshot-{$suffix}"),
             "test-1",
             "2.45.0",
@@ -274,22 +516,65 @@ final class SeriesMigrationParticipantTest extends PersistenceIntegrationTestCas
         return $this->withRunServices($fixture);
     }
 
-    /** @param array<string,mixed> $fixture */
-    private function mapWork(array $fixture, string $sourceId, string $targetId): void
+    /** @param array<string,mixed> $fixture @return array<string,mixed> */
+    private function laterRunWithSameSnapshot(
+        array $fixture,
+        string $suffix,
+        string $migratorVersion
+    ): array
     {
-        $fixture["works"]->add(new Work(new WorkId($targetId), "Mapped Work"));
-        $record = new MigrationSourceRecord(
+        $fixture["ledger"]->releaseRunLock($fixture["run"]->id());
+        $fixture["run"] = $fixture["ledger"]->beginOrResume(MigrationRun::start(
+            "series-migration-run-{$suffix}",
+            $fixture["run"]->sourceFamily(),
+            $fixture["run"]->sourceSnapshot(),
+            $fixture["run"]->sourceFingerprint(),
+            $fixture["run"]->sourceVersion(),
+            $migratorVersion,
+            $fixture["run"]->targetUserId(),
+            $fixture["library"],
+            MigrationMode::Apply,
+            $fixture["clock"]->now()
+        ));
+        return $this->withRunServices($fixture);
+    }
+
+    /** @param array<string,mixed> $fixture @return array<string,mixed> */
+    private function mapWork(array $fixture, string $sourceId, string $targetId): array
+    {
+        if ($fixture["works"]->find(new WorkId($targetId)) === null) {
+            $fixture["works"]->add(new Work(new WorkId($targetId), "Mapped Work"));
+        }
+        $record = MigrationSourceRecord::typed(
             CatalogWorkMigrationParticipant::SOURCE_TYPE,
             $sourceId,
-            ["approved_work_id" => $targetId]
+            new CatalogWorkPlan(
+                "Mapped Work",
+                approvedExistingWorkId: new WorkId($targetId)
+            )
         );
         $observation = $this->observe($fixture, $record);
-        $fixture["commit"]->commit(
+        $outcome = $fixture["commit"]->commit(
             $fixture["run"],
             $observation,
             static fn (): MigrationRecordOutcome => MigrationRecordOutcome::mapped([
                 new MigrationTargetMapping("work", $targetId, MappingDisposition::Reused),
             ])
+        );
+        $plan = new PlannedMigrationRecord(
+            MigrationDisposition::Mapped,
+            [[
+                "operation" => "create_or_reuse_work",
+                "target_type" => "work",
+                "target_id" => $targetId,
+            ]],
+            typedPlan: $record->typedPlan()
+        );
+        return compact(
+            "record",
+            "observation",
+            "outcome",
+            "plan"
         );
     }
 
@@ -302,16 +587,158 @@ final class SeriesMigrationParticipantTest extends PersistenceIntegrationTestCas
         );
     }
 
-    private function membershipRecord(string $sourceId, ?string $position): MigrationSourceRecord
+    private function membershipRecord(
+        string $sourceId,
+        ?string $position,
+        ?PreservedSourceEvidencePlan $promotedPriorPreservation = null,
+        string $seriesSourceId = "series/source"
+    ): MigrationSourceRecord
     {
         return MigrationSourceRecord::typed(
             CatalogWorkSeriesMigrationParticipant::SOURCE_TYPE,
             $sourceId,
             new CatalogWorkSeriesPlan(
                 "work/source",
-                "series/source",
+                $seriesSourceId,
                 $position === null ? SeriesPosition::unknown() : SeriesPosition::known($position),
-                "series-test-contract"
+                "series-test-contract",
+                $promotedPriorPreservation
+            )
+        );
+    }
+
+    /** @param array<string,mixed> $fixture */
+    private function promotionPlan(
+        array $fixture,
+        string $evidence,
+        string $sourceIdentity = "membership/promoted",
+        string $evidenceType = "current_v1_contained_work_series",
+        string $reasonCode = "contained_work_series_deferred"
+    ): PreservedSourceEvidencePlan
+    {
+        return new PreservedSourceEvidencePlan(
+            $sourceIdentity,
+            $evidenceType,
+            $reasonCode,
+            "synthetic-adapter",
+            $fixture["run"]->sourceFamily(),
+            (string) $fixture["run"]->sourceVersion(),
+            $fixture["run"]->sourceSnapshot(),
+            "series-test-contract",
+            "data/books.json",
+            "books",
+            "parent-1",
+            "containedWorks",
+            DeterministicJson::hash(["series" => $evidence]),
+            PreservedSourceEvidencePrivacy::OrdinarySource
+        );
+    }
+
+    private function preservationRecord(PreservedSourceEvidencePlan $plan): MigrationSourceRecord
+    {
+        return MigrationSourceRecord::typed(
+            PreservedSourceEvidenceMigrationParticipant::SOURCE_TYPE,
+            $plan->sourceIdentity(),
+            $plan
+        );
+    }
+
+    /**
+     * @param array<string,mixed> $fixture
+     * @return array{reason_code:string,processing_status:string,processed_at:?string,evidence_json:string,evidence_reference:string}
+     */
+    private function preservationRow(array $fixture, string $observationId): array
+    {
+        $row = $this->database->get_row($this->database->prepare(
+            "SELECT reason_code,processing_status,processed_at,evidence_json,evidence_reference "
+                . "FROM `{$this->tableNames->migrationPreservations()}` WHERE observation_id=%s",
+            $observationId
+        ), ARRAY_A);
+        self::assertIsArray($row);
+        return $row;
+    }
+
+    /**
+     * @param array<string,mixed> $fixture
+     * @param list<array<string,mixed>> $applications
+     */
+    private function preparedPlan(
+        array $fixture,
+        array $applications
+    ): PreparedMigrationPlan {
+        $run = $fixture["run"];
+        $adapter = new readonly class($run) implements MigrationSourceAdapter {
+            public function __construct(private MigrationRun $run) {}
+            public function adapterId(): string { return "synthetic-adapter"; }
+            public function sourceFamily(): string
+            {
+                return $this->run->sourceFamily();
+            }
+            public function profile(MigrationSourcePackage $package): MigrationSourceProfile
+            {
+                unset($package);
+                return new MigrationSourceProfile(
+                    (string) $this->run->sourceVersion(),
+                    []
+                );
+            }
+            public function supportsVersion(string $sourceVersion): bool
+            {
+                return $sourceVersion === $this->run->sourceVersion();
+            }
+            public function records(
+                MigrationSourcePackage $package,
+                MigrationSourceProfile $profile
+            ): iterable {
+                unset($package, $profile);
+                return [];
+            }
+        };
+        $inspection = new MigrationSourceInspection(
+            new MigrationSourcePackage("/tmp", [], $run->sourceSnapshot()),
+            $adapter,
+            new MigrationSourceProfile((string) $run->sourceVersion(), []),
+            [],
+            []
+        );
+        $prepared = [];
+        foreach ($applications as $application) {
+            $prepared[] = new PreparedMigrationRecord(
+                $application["record"],
+                $application["participant"]
+                    ?? $fixture["membership_participant"],
+                $application["plan"]
+            );
+        }
+        return new PreparedMigrationPlan(
+            $inspection,
+            $fixture["target"],
+            $prepared,
+            [],
+            [],
+            ["series-test-contract"],
+            DeterministicJson::hash(["run" => $run->id()])
+        );
+    }
+
+    /** @param array<string,mixed> $fixture */
+    private function reconciliation(array $fixture): MigrationReconciliationService
+    {
+        return new MigrationReconciliationService(
+            $fixture["ledger"],
+            CurrentMigrationMappingContracts::create(),
+            new CoreMigrationTargetInspector(
+                $fixture["works"],
+                $this->createStub(EditionRepository::class),
+                $this->createStub(CatalogMigrationItemRepository::class),
+                $this->createStub(EditionIdentifierClaimRepository::class),
+                $this->createStub(LibraryCatalogContextRepository::class),
+                $this->createStub(ItemLocalDetailsRepository::class),
+                $this->createStub(AuthorRepository::class),
+                $this->createStub(AuthorContributorCreditRepository::class),
+                $this->createStub(ReadingRoundRepository::class),
+                $this->createStub(PrivateNoteRepository::class),
+                series: $fixture["series"]
             )
         );
     }
@@ -331,7 +758,7 @@ final class SeriesMigrationParticipantTest extends PersistenceIntegrationTestCas
                 $fixture["target"]
             )
         );
-        return compact("plan", "observation", "outcome");
+        return compact("plan", "observation", "outcome", "participant", "record");
     }
 
     /** @param array<string,mixed> $fixture */

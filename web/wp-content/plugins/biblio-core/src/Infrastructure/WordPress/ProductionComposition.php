@@ -47,7 +47,7 @@ use Biblio\Core\Application\Metadata\Author\CanonicalAuthorMaterializer;
 use Biblio\Core\Application\Metadata\Discovery\{BibliographicDiscoveryService,BibliographicMaterializationService,BibliographicTextDiscoveryProvider,DesignatedPersonalBibliographicAuthorization};
 use Biblio\Core\Application\Metadata\Search\{BibliographicAuthorWorkSearchProvider,BibliographicAuthorWorkSearchService,BibliographicEditionSearchService,BibliographicExternalEditionSearchProvider,BibliographicTextSearchService};
 use Biblio\Core\Application\Migration\Author\{AuthorMigrationWriter,CatalogAuthorMigrationParticipant,CatalogWorkContributorMigrationParticipant};
-use Biblio\Core\Application\Migration\Catalog\{CatalogEditionMigrationParticipant,CatalogItemMigrationParticipant,CatalogMigrationWriter,CatalogWorkMigrationParticipant};
+use Biblio\Core\Application\Migration\Catalog\{CatalogEditionMigrationParticipant,CatalogItemMigrationParticipant,CatalogMigrationWriter,CatalogWorkContainmentMigrationParticipant,CatalogWorkContainmentMigrationWriter,CatalogWorkMigrationParticipant};
 use Biblio\Core\Application\Migration\Circulation\CirculationMigrationParticipant;
 use Biblio\Core\Application\Migration\Assessments\{HistoricalAssessmentMigrationWriter,HistoricalRatingMigrationParticipant,HistoricalWrittenReviewMigrationParticipant};
 use Biblio\Core\Application\Migration\Notes\{PrivateNoteMigrationParticipant,PrivateNoteMigrationWriter};
@@ -59,7 +59,7 @@ use Biblio\Core\Application\Migration\Preservation\{
     PreservedSourceEvidencePrivacy
 };
 use Biblio\Core\Application\Migration\Reading\{ReadingRoundMigrationParticipant,ReadingRoundMigrationWriter,ReadingTruthMigrationParticipant,ReadingTruthMigrationWriter};
-use Biblio\Core\Application\Migration\Series\{CatalogSeriesMigrationParticipant,CatalogWorkSeriesMigrationParticipant,SeriesMigrationWriter};
+use Biblio\Core\Application\Migration\Series\{CatalogSeriesMigrationParticipant,CatalogWorkSeriesMigrationParticipant,SeriesMigrationWriter,SeriesPreservationPromotionPolicy};
 use Biblio\Core\Application\Migration\Wishlist\{HistoricalWishlistRecorder,WishlistMigrationParticipant,WishlistMigrationWriter};
 use Biblio\Core\Application\Migration\Reconciliation\{
     CoreMigrationTargetInspector,
@@ -184,11 +184,14 @@ use Biblio\Core\Infrastructure\Migration\CurrentV1AuthorMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1AssessmentMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1CatalogMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ClassificationMapper;
+use Biblio\Core\Infrastructure\Migration\CurrentV1ContainedWorkMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ItemLocalMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1NoteMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ReadingMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ReadingGoalMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1SeriesMapper;
+use Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedSeriesContract;
+use Biblio\Core\Infrastructure\Migration\CurrentV1SourceAdapter;
 use Biblio\Core\Infrastructure\Migration\CurrentV1WishlistMapper;
 use Biblio\Core\Infrastructure\WordPress\Identity\WordPressPlatformUserDirectory;
 use Biblio\Core\Notes\StrictPrivateNoteContentPolicy;
@@ -567,7 +570,25 @@ final class ProductionComposition
         $seriesMigrationWriter = new SeriesMigrationWriter(
             $migrationLedger,
             $seriesRepository,
-            $workRepository
+            $workRepository,
+            new SeriesPreservationPromotionPolicy(
+                "current_v1_contained_work_series",
+                "contained_work_series_deferred",
+                CurrentV1SourceAdapter::ADAPTER_ID,
+                CurrentV1SourceAdapter::SOURCE_FAMILY,
+                CurrentV1SourceAdapter::SOURCE_VERSION,
+                CurrentV1ReviewedSeriesContract::MANIFEST_SHA256,
+                (new CurrentV1ReviewedSeriesContract())->identity(),
+                "data/books.json",
+                "books",
+                "containedWorks"
+            )
+        );
+        $containmentMigrationWriter = new CatalogWorkContainmentMigrationWriter(
+            $migrationLedger,
+            $workRepository,
+            $bibliographicMetadataRepository,
+            $bibliographicMetadataRepository
         );
         $readingRoundMigrationWriter = new ReadingRoundMigrationWriter(
             $migrationLedger,
@@ -634,6 +655,11 @@ final class ProductionComposition
                 PreservedSourceEvidencePrivacy::OrdinarySource
             ),
             new PreservedSourceEvidenceAdmission(
+                "current_v1_contained_work_isbn",
+                "contained_work_isbn_deferred",
+                PreservedSourceEvidencePrivacy::OrdinarySource
+            ),
+            new PreservedSourceEvidenceAdmission(
                 "current_v1_wishlist_auxiliary",
                 "wishlist_auxiliary_evidence_preserved",
                 PreservedSourceEvidencePrivacy::RestrictedSource
@@ -652,6 +678,9 @@ final class ProductionComposition
         $migrationParticipants = new MigrationParticipantRegistry([
             new CatalogAuthorMigrationParticipant($authorMigrationWriter),
             new CatalogWorkMigrationParticipant($catalogMigrationWriter),
+            new CatalogWorkContainmentMigrationParticipant(
+                $containmentMigrationWriter
+            ),
             new CatalogSeriesMigrationParticipant($seriesMigrationWriter),
             new CatalogWorkSeriesMigrationParticipant($seriesMigrationWriter),
             new CatalogWorkContributorMigrationParticipant(
@@ -692,6 +721,7 @@ final class ProductionComposition
                 ),
                 assessmentMapper: new CurrentV1AssessmentMapper(),
                 seriesMapper: new CurrentV1SeriesMapper(),
+                containedWorkMapper: new CurrentV1ContainedWorkMapper(),
                 wishlistMapper: new CurrentV1WishlistMapper(),
                 readingGoalMapper: new CurrentV1ReadingGoalMapper()
             ),
@@ -714,7 +744,8 @@ final class ProductionComposition
                 $ratingRepository,
                 $reviewRepository,
                 $seriesRepository,
-                $wishlistRepository
+                $wishlistRepository,
+                $bibliographicMetadataRepository
             )
         );
         $libraryItemCreation = new AddLibraryItemService(

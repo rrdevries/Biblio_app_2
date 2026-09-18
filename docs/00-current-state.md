@@ -4179,3 +4179,27 @@ cross-run preflight/reconciliation reject a prior committed legacy
 Product remains `v2.001`, schema remains `1026`, Biblio Core is `2.48.0` and
 Biblio UI remains `0.20.0`. Exact closure evidence:
 `docs/138-mig-02-copy-excl-01-current-v1-erroneous-archived-copy-exclusion.md`.
+
+### MIG-02-CONTAINED-MAP-01 — CURRENT V1 contained works mapper
+
+Status: **IMPLEMENTED — FINAL ACCEPTANCE REQUIRES THE CLEAN EXACT-SHA
+ZERO-WRITE TRIAL; PRODUCTION APPLY NOT AUTHORIZED**.
+
+The exact 22 manifest-bound contained occurrences now produce 22
+occurrence-scoped provisional child Works and 22 ordered Work-containment
+relations. Seventeen non-empty Author observations produce occurrence-scoped
+Authors and `author` contributors without name reuse. Seventeen named Series
+observations reuse six exact approved base-Series identities and create no new
+Series; two nameless Series positions and five child ISBNs remain typed
+ordinary preservation.
+
+The fresh prepared stream replaces 19 former contained-Series preservations
+with 17 active memberships plus two remaining preservations and totals 6,675
+records. Compatible committed prior preservation can be marked processed only
+after exact evidence verification in the membership transaction; divergence
+rolls back without rewriting history. No child Edition, Item, Expression,
+classification or personal state is inherited.
+
+Product remains `v2.001`, schema remains `1026`, Biblio Core is `2.49.0` and
+Biblio UI remains `0.20.0`. Exact closure evidence:
+`docs/140-mig-02-contained-map-01-current-v1-contained-work-mapper.md`.

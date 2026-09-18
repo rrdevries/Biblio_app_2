@@ -12,6 +12,11 @@ use Biblio\Core\Application\Migration\{
     MigrationTargetMapping,
     SourceObservation
 };
+use Biblio\Core\Application\Migration\Preservation\{
+    PreservedSourceEvidenceMigrationParticipant,
+    PreservedSourceEvidencePlan
+};
+use Biblio\Core\Application\Migration\Runner\DeterministicJson;
 use Biblio\Core\Application\Migration\Catalog\CatalogWorkMigrationParticipant;
 use Biblio\Core\Catalog\{
     CatalogRecordAlreadyExists,
@@ -30,7 +35,8 @@ final readonly class SeriesMigrationWriter
     public function __construct(
         private MigrationLedgerRepository $ledger,
         private WritableSeriesRepository $series,
-        private WorkRepository $works
+        private WorkRepository $works,
+        private ?SeriesPreservationPromotionPolicy $promotionPolicy = null
     ) {}
 
     public function applySeries(SourceObservation $observation, CatalogSeriesPlan $plan): MigrationRecordOutcome
@@ -114,6 +120,7 @@ final readonly class SeriesMigrationWriter
                     "Mapped Work-Series membership no longer matches canonical state."
                 );
             }
+            $this->processPromotedPreservation($run, $observation, $plan);
             return MigrationRecordOutcome::mapped([
                 $this->mapping("work_series_membership", $edgeId, MappingDisposition::Reused),
             ]);
@@ -129,6 +136,7 @@ final readonly class SeriesMigrationWriter
                     "Existing Work-Series membership has an incompatible position."
                 );
             }
+            $this->processPromotedPreservation($run, $observation, $plan);
             return MigrationRecordOutcome::mapped([
                 $this->mapping("work_series_membership", $edgeId, MappingDisposition::Reused),
             ]);
@@ -147,9 +155,67 @@ final readonly class SeriesMigrationWriter
                 $exception
             );
         }
+        $this->processPromotedPreservation($run, $observation, $plan);
         return MigrationRecordOutcome::mapped([
             $this->mapping("work_series_membership", $edgeId, MappingDisposition::Created),
         ]);
+    }
+
+    private function processPromotedPreservation(
+        MigrationRun $run,
+        SourceObservation $observation,
+        CatalogWorkSeriesPlan $plan
+    ): void {
+        $expected = $plan->promotedPriorPreservation();
+        if (!$expected instanceof PreservedSourceEvidencePlan) {
+            return;
+        }
+        if (
+            $this->promotionPolicy === null
+            || !$this->promotionPolicy->admits($expected, $observation, $run)
+        ) {
+            throw $this->failure(
+                SeriesMigrationReason::DivergentReplay,
+                "Series preservation promotion is outside the admitted contract."
+            );
+        }
+        $matches = $this->ledger->priorPreservations(
+            $run->targetUserId()->value(),
+            $run->targetLibraryId()->value(),
+            $run->sourceFamily(),
+            PreservedSourceEvidenceMigrationParticipant::SOURCE_TYPE,
+            $expected->sourceIdentity(),
+            true
+        );
+        if ($matches === []) {
+            return;
+        }
+
+        $payload = DeterministicJson::encode($expected->canonicalPayload());
+        $evidence = \Biblio\Core\Application\Migration\MigrationEvidence::canonicalJson(
+            $expected->evidenceDescriptor()
+        );
+        foreach ($matches as $match) {
+            if (
+                !hash_equals($expected->manifestSha256(), $match->sourceSnapshot())
+                || $expected->sourceVersion() !== $match->sourceVersion()
+                || !hash_equals(hash("sha256", $payload), $match->payloadHash())
+                || !hash_equals($payload, $match->payloadJson())
+                || $expected->reasonCode() !== $match->reasonCode()
+                || $expected->reasonCode() !== $match->preservationReason()
+                || !hash_equals($evidence, $match->evidenceJson())
+                || $expected->locator() !== $match->evidenceReference()
+            ) {
+                throw $this->failure(
+                    SeriesMigrationReason::DivergentReplay,
+                    "Prior contained-Series preservation diverges from the approved promotion."
+                );
+            }
+        }
+        $this->ledger->markPreservationsProcessed(
+            $matches,
+            $observation->createdAt()
+        );
     }
 
     public static function targetSeriesId(string $sourceId): SeriesId

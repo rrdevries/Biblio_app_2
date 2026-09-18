@@ -11,6 +11,7 @@ use Biblio\Core\Application\Migration\Author\{
 use Biblio\Core\Application\Migration\Catalog\{
     CatalogEditionMigrationParticipant,
     CatalogItemMigrationParticipant,
+    CatalogWorkContainmentMigrationParticipant,
     CatalogWorkMigrationParticipant
 };
 use Biblio\Core\Application\Migration\Circulation\CirculationMigrationParticipant;
@@ -45,6 +46,10 @@ final class CurrentMigrationMappingContracts
             new MigrationMappingContract(
                 CatalogWorkMigrationParticipant::SOURCE_TYPE,
                 [new MigrationMappingRule("work", $entity, true)]
+            ),
+            new MigrationMappingContract(
+                CatalogWorkContainmentMigrationParticipant::SOURCE_TYPE,
+                [new MigrationMappingRule("work_containment", $relation, true)]
             ),
             new MigrationMappingContract(
                 CatalogSeriesMigrationParticipant::SOURCE_TYPE,

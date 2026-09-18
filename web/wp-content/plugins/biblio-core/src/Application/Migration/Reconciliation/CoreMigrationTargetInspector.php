@@ -16,6 +16,9 @@ use Biblio\Core\Application\Migration\Catalog\{
     CatalogEditionPlan,
     CatalogItemMigrationParticipant,
     CatalogItemPlan,
+    CatalogWorkContainmentMigrationParticipant,
+    CatalogWorkContainmentMigrationWriter,
+    CatalogWorkContainmentPlan,
     CatalogWorkMigrationParticipant,
     CatalogWorkPlan
 };
@@ -47,6 +50,7 @@ use Biblio\Core\Catalog\Classification\LibraryCatalogContextRepository;
 use Biblio\Core\Catalog\{
     AuthorId,
     AuthorRepository,
+    BibliographicMetadataRepository,
     CanonicalIsbnIdentity,
     EditionId,
     EditionIdentifierClaimRepository,
@@ -58,7 +62,8 @@ use Biblio\Core\Catalog\{
     SeriesId,
     SeriesRepository,
     WorkId,
-    WorkRepository
+    WorkRepository,
+    WorkTitleStatus
 };
 use Biblio\Core\Notes\{PrivateNoteId, PrivateNoteRepository};
 use Biblio\Core\Assessments\{
@@ -94,7 +99,8 @@ final readonly class CoreMigrationTargetInspector implements MigrationTargetInsp
         private ?WritableRatingRepository $ratings = null,
         private ?WritableReviewRepository $reviews = null,
         private ?SeriesRepository $series = null,
-        private ?WritableWishlistRepository $wishlist = null
+        private ?WritableWishlistRepository $wishlist = null,
+        private ?BibliographicMetadataRepository $bibliographicMetadata = null
     ) {
     }
 
@@ -108,6 +114,11 @@ final readonly class CoreMigrationTargetInspector implements MigrationTargetInsp
         try {
             return match ($mapping->targetType()) {
                 "work" => $this->workExists($record, $mapping->targetId()),
+                "work_containment" => $this->workContainmentExists(
+                    $record,
+                    $mapping->targetId(),
+                    $snapshot
+                ),
                 "series" => $this->seriesExists($record, $mapping->targetId()),
                 "work_series_membership" => $this->workSeriesMembershipExists(
                     $record,
@@ -193,10 +204,72 @@ final readonly class CoreMigrationTargetInspector implements MigrationTargetInsp
         string $targetId
     ): bool {
         $plan = $record->typedPlan();
-        return $plan instanceof CatalogWorkPlan
-            && ($plan->approvedExistingWorkId() === null
+        if (!$plan instanceof CatalogWorkPlan) {
+            return false;
+        }
+        $work = $this->works->find(new WorkId($targetId));
+        return ($plan->approvedExistingWorkId() === null
                 || $plan->approvedExistingWorkId()->value() === $targetId)
-            && $this->works->find(new WorkId($targetId)) !== null;
+            && $work !== null
+            && ($plan->approvedExistingWorkId() !== null
+                || $plan->aliasOfSourceId() !== null
+                || (
+                    $work->title() === $plan->title()
+                    && $work->titleStatus() === WorkTitleStatus::Provisional
+                ));
+    }
+
+    private function workContainmentExists(
+        MigrationSourceRecord $record,
+        string $targetId,
+        MigrationLedgerSnapshot $snapshot
+    ): bool {
+        $plan = $record->typedPlan();
+        if (
+            !$plan instanceof CatalogWorkContainmentPlan
+            || $this->bibliographicMetadata === null
+        ) {
+            return false;
+        }
+        $parentId = $this->dependencyMappingId(
+            $snapshot,
+            CatalogWorkMigrationParticipant::SOURCE_TYPE,
+            $plan->parentWorkSourceId(),
+            "work"
+        );
+        $childId = $this->dependencyMappingId(
+            $snapshot,
+            CatalogWorkMigrationParticipant::SOURCE_TYPE,
+            $plan->childWorkSourceId(),
+            "work"
+        );
+        if ($parentId === null || $childId === null) {
+            return false;
+        }
+        $parent = new WorkId($parentId);
+        $child = new WorkId($childId);
+        if (
+            $targetId
+                !== CatalogWorkContainmentMigrationWriter::targetId(
+                    $parent,
+                    $child
+                )
+        ) {
+            return false;
+        }
+        foreach (
+            $this->bibliographicMetadata
+                ->containedWorksForParents([$parent])[$parentId] ?? []
+            as $relation
+        ) {
+            if (
+                $relation->containedWorkId()->value() === $childId
+                && $relation->position()->value() === $plan->position()->value()
+            ) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private function seriesExists(MigrationSourceRecord $record, string $targetId): bool

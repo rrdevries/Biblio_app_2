@@ -43,7 +43,8 @@ final readonly class CurrentV1SeriesMapper
     public function map(
         MigrationSourceInspection $inspection,
         array $books,
-        array $workRepresentatives
+        array $workRepresentatives,
+        bool $includeContainedWorkPreservation = true
     ): MigrationSourceMappingResult {
         if (!hash_equals($this->contract->manifestSha256(), $inspection->package()->manifestDigest())) {
             throw new MigrationRunnerFailure(
@@ -63,7 +64,15 @@ final readonly class CurrentV1SeriesMapper
                 continue;
             }
 
-            $this->mapContainedWorks($inspection, $bookId, $payload["containedWorks"] ?? null, $records, $findings);
+            if ($includeContainedWorkPreservation) {
+                $this->mapContainedWorks(
+                    $inspection,
+                    $bookId,
+                    $payload["containedWorks"] ?? null,
+                    $records,
+                    $findings
+                );
+            }
 
             $flag = $payload["series"] ?? null;
             $name = $payload["seriesName"] ?? null;

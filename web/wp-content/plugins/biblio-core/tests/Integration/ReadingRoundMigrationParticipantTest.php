@@ -179,15 +179,23 @@ final readonly class ReadingRoundFailingOutcomeLedger implements
         string $targetLibraryId,
         string $sourceFamily,
         string $sourceType,
-        string $sourceId
+        string $sourceId,
+        bool $lockForUpdate = false
     ): array {
         return $this->inner->priorPreservations(
             $targetUserId,
             $targetLibraryId,
             $sourceFamily,
             $sourceType,
-            $sourceId
+            $sourceId,
+            $lockForUpdate
         );
+    }
+    public function markPreservationsProcessed(
+        array $preservations,
+        DateTimeImmutable $at
+    ): void {
+        $this->inner->markPreservationsProcessed($preservations, $at);
     }
     public function committedSourceTargets(
         string $targetUserId,

@@ -34,8 +34,15 @@ interface MigrationLedgerRepository
         string $targetLibraryId,
         string $sourceFamily,
         string $sourceType,
-        string $sourceId
+        string $sourceId,
+        bool $lockForUpdate = false
     ): array;
+
+    /** @param list<PriorPreservedEvidence> $preservations */
+    public function markPreservationsProcessed(
+        array $preservations,
+        DateTimeImmutable $at
+    ): void;
 
     /** @return list<MigrationTraceEntry> */
     public function committedSourceTargets(

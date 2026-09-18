@@ -43,7 +43,8 @@ final readonly class CurrentV1AuthorMapper
         MigrationSourceInspection $inspection,
         array $authorsByKey,
         array $booksByKey,
-        array $workRepresentativeByBookId
+        array $workRepresentativeByBookId,
+        bool $includeContainedWorkFindings = true
     ): CurrentV1AuthorMappingResult {
         if (!hash_equals(
             $this->contract->manifestSha256(),
@@ -124,7 +125,9 @@ final readonly class CurrentV1AuthorMapper
                     "CURRENT V1 Book source identity and payload disagree."
                 );
             }
-            $this->containedWorkFindings($book, $findings);
+            if ($includeContainedWorkFindings) {
+                $this->containedWorkFindings($book, $findings);
+            }
             $names = $payload["authors"] ?? [];
             $authorIds = $payload["authorIds"] ?? [];
             if (

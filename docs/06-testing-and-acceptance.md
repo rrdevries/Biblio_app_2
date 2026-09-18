@@ -5035,3 +5035,38 @@ Acceptance requires all of the following:
 
 Exact closure evidence is in
 `docs/138-mig-02-copy-excl-01-current-v1-erroneous-archived-copy-exclusion.md`.
+
+## MIG-02-CONTAINED-MAP-01 acceptance
+
+Acceptance requires all of the following:
+
+- the mapper is bound to docs/139, adapter `current-v1-json-29` and manifest
+  `35a18156490f103d4b6b610f524a1963e5be189d74c64637c49059396b1c7c67`;
+- exactly 22 occurrence-scoped provisional child Works and 22 ordered
+  containments are planned, using original one-based slots and no title/ISBN/
+  Author/Series target lookup;
+- exactly 17 occurrence-scoped Authors and contributors use role `author` and
+  position `1`, with no name reuse, parent inheritance or fake blank Author;
+- exactly 17 memberships reuse six approved exact-byte Series identities,
+  create zero Series and retain exact positions; two nameless Series slots and
+  five ISBN slots remain typed preservation;
+- a fresh plan has no active-plus-preserved duplicate for one Series slot;
+  compatible prior preservation is processed transactionally without rewriting
+  history and divergence rolls back;
+- no child Edition, Item, Expression, classification or personal downstream
+  state is created or inherited;
+- containment replay, self/cycle/edge/position conflicts, CAT alias conflict,
+  changed payload and missing dependencies fail closed;
+- CURRENT recomputation produces 6,675 executable records, zero contained-lane
+  quarantine/conflict/unmatched/planning error and the unchanged one global
+  circulation quarantine;
+- the clean detached implementation SHA passes the guarded exact CURRENT
+  zero-write trial with all 57 Biblio tables, MIG-FND counts and the normal
+  database unchanged, plus artifact checksum/privacy validation;
+- focused/full Core gates, syntax, PHPStan, Composer/platform, WordPress smoke,
+  manifest, whitespace and independent review pass; and
+- product remains `v2.001`, schema `1026`, Core `2.49.0`, UI `0.20.0`, with no
+  apply/import, schema, REST or UI work.
+
+Exact closure evidence is in
+`docs/140-mig-02-contained-map-01-current-v1-contained-work-mapper.md`.

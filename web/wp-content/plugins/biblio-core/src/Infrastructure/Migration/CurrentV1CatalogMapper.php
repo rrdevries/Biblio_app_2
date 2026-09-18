@@ -40,6 +40,7 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
         private ?CurrentV1NoteMapper $noteMapper = null,
         private ?CurrentV1AssessmentMapper $assessmentMapper = null,
         private ?CurrentV1SeriesMapper $seriesMapper = null,
+        private ?CurrentV1ContainedWorkMapper $containedWorkMapper = null,
         private ?CurrentV1WishlistMapper $wishlistMapper = null,
         private ?CurrentV1ReadingGoalMapper $readingGoalMapper = null
     ) {
@@ -132,7 +133,11 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
                     MigrationDisposition::Quarantined,
                     CurrentV1CatalogMappingReason::MissingRequiredCatalogField
                 );
-                $this->preservationFindings($book, $findings);
+                $this->preservationFindings(
+                    $book,
+                    $findings,
+                    $this->containedWorkMapper === null
+                );
                 continue;
             }
 
@@ -144,7 +149,11 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
                     MigrationDisposition::Quarantined,
                     CurrentV1CatalogMappingReason::InvalidIsbn
                 );
-                $this->preservationFindings($book, $findings);
+                $this->preservationFindings(
+                    $book,
+                    $findings,
+                    $this->containedWorkMapper === null
+                );
                 continue;
             }
             if ($isbnState["status"] === "conflict") {
@@ -154,7 +163,11 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
                     MigrationDisposition::Quarantined,
                     CurrentV1CatalogMappingReason::ConflictingIsbnEvidence
                 );
-                $this->preservationFindings($book, $findings);
+                $this->preservationFindings(
+                    $book,
+                    $findings,
+                    $this->containedWorkMapper === null
+                );
                 continue;
             }
 
@@ -192,7 +205,11 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
                         MigrationDisposition::Quarantined,
                         CurrentV1CatalogMappingReason::DuplicateIsbnWorkConflict
                     );
-                    $this->preservationFindings($books[$memberKey], $findings);
+                    $this->preservationFindings(
+                        $books[$memberKey],
+                        $findings,
+                        $this->containedWorkMapper === null
+                    );
                 }
                 continue;
             }
@@ -262,7 +279,11 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
                     ],
                 ]
             );
-            $this->preservationFindings($book, $findings);
+            $this->preservationFindings(
+                $book,
+                $findings,
+                $this->containedWorkMapper === null
+            );
             if ($state["invalid_evidence"] === true) {
                 $findings[] = $this->finding(
                     $book,
@@ -383,7 +404,8 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
                 $inspection,
                 $authors,
                 $books,
-                $workRepresentatives
+                $workRepresentatives,
+                $this->containedWorkMapper === null
             );
             array_push($records, ...$authorMapping->records());
             array_push($findings, ...$authorMapping->findings());
@@ -400,10 +422,29 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
             $seriesMapping = $this->seriesMapper->map(
                 $inspection,
                 $books,
-                $workRepresentatives
+                $workRepresentatives,
+                $this->containedWorkMapper === null
             );
             array_push($records, ...$seriesMapping->records());
             array_push($findings, ...$seriesMapping->findings());
+        }
+
+        if ($this->containedWorkMapper !== null) {
+            $workRepresentatives = [];
+            foreach ($books as $book) {
+                $state = $states[$this->sourceKey($book->sourceId())] ?? null;
+                if (($state["status"] ?? null) === "ready") {
+                    $workRepresentatives[$book->sourceId()] =
+                        $state["representative"];
+                }
+            }
+            $containedMapping = $this->containedWorkMapper->map(
+                $inspection,
+                $books,
+                $workRepresentatives
+            );
+            array_push($records, ...$containedMapping->records());
+            array_push($findings, ...$containedMapping->findings());
         }
 
         $classification = null;
@@ -621,7 +662,8 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
      */
     private function preservationFindings(
         MigrationSourceRecord $book,
-        array &$findings
+        array &$findings,
+        bool $includeContainedWorkFinding = true
     ): void {
         $payload = $book->payload();
         if ($this->nonEmpty($payload["variantOfBookId"] ?? null)) {
@@ -631,7 +673,11 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
                 CurrentV1CatalogMappingReason::DeferredVariantRelation
             );
         }
-        if (is_array($payload["containedWorks"] ?? null) && $payload["containedWorks"] !== []) {
+        if (
+            $includeContainedWorkFinding
+            && is_array($payload["containedWorks"] ?? null)
+            && $payload["containedWorks"] !== []
+        ) {
             $findings[] = $this->finding(
                 $book,
                 MigrationDisposition::PreservedDeferred,

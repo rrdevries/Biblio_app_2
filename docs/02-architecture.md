@@ -3021,3 +3021,27 @@ mapping identity. `MigrationPlanPreparer` rejects contradictions in one stream;
 mappings before run creation and during reconciliation. The repository lookup
 is exact on target User/Library and source family/type/ID, and deliberately has
 no payload-hash or run-status filter. Schema remains 1026; Core is 2.48.0.
+
+## CURRENT contained-work migration mapping
+
+`CurrentV1ContainedWorkMapper` is the manifest-bound interpretation layer for
+the ordered `containedWorks` source array. It consumes CAT parent
+representatives and emits source-neutral Work, containment, Author,
+contributor, Series-membership and preservation plans. Child Work and Author
+identity is occurrence-scoped; exact titles/names never trigger repository
+identity lookup. Existing Series are addressed only by the approved exact-byte
+Series source identity.
+
+`CatalogWorkContainmentMigrationParticipant` resolves two committed Work
+dependencies. Its writer joins the MIG-FND transaction and delegates cycle,
+self-link, edge and position integrity to the existing bibliographic
+repository. Reconciliation resolves both Work mappings and verifies exact
+parent, child, position and deterministic relation target ID.
+
+An active contained-Series membership can carry the exact previously deferred
+preservation descriptor. The Series writer locks and verifies all compatible
+historical rows before marking them processed inside the membership
+transaction. Observation, reason and evidence remain immutable; divergence
+fails closed and rolls back the relation. Fresh preparation never emits both
+the active membership and the old preservation for one atomic slot. Schema
+remains 1026; Core is 2.49.0.
