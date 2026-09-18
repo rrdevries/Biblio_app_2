@@ -595,7 +595,7 @@ single disposal and single exemplar-photo occurrence are already in A.
 | classification convergence conflicts | 7 groups / 14 members | C | quarantine | no | Quarantine boundary, not preservation. |
 | invalid-only ISBN Books | 2 | C | quarantine | no | Quarantine boundary; distinct valid Copy auxiliary evidence may still be B. |
 | Series profile | 164 `series=true`, 161 named, 108 positions | C | source profile only | no | No closed Series mapper or reviewed occurrence/position contract. Requires a separate Series lane; this design does not start it. |
-| Reading Goals | 2 stable records | C | source profile only | no | No reviewed mapper disposition/reason yet; requires a bounded mapping/admission slice. |
+| Reading Goals | 2 stable records | admitted after this design by MIG-02-READING-GOAL-MAP-01 | typed no-target preservation | no | Renée explicitly chose no V2.001 product projection; both records use `reading_goal_not_carried_forward_v2`. |
 | caches, reports, preferences and release state | package populations | C | retained source package | no | No reviewed semantic mapper/atomic identity; package retention is sufficient for now. |
 
 The listed counts overlap and must not be summed blindly. In particular,

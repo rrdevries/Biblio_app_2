@@ -4973,3 +4973,34 @@ Acceptance requires all of the following:
 
 Exact closure evidence is in
 `docs/135-mig-02-wishlist-map-01-current-v1-wishlist-mapper.md`.
+
+## MIG-02-READING-GOAL-MAP-01 acceptance
+
+Acceptance requires all of the following:
+
+- the mapper is bound to adapter `current-v1-json-29`, the exact CURRENT
+  manifest and Renée's explicit no-product-target decision;
+- both stable `v1.reading_goal` rows produce exactly one restricted no-target
+  preservation plan with reason `reading_goal_not_carried_forward_v2`;
+- the complete raw row is covered by the evidence hash, while title, type,
+  configuration, active state and timestamps remain absent from artifacts,
+  logs, exceptions and durable descriptors;
+- there are zero Reading Goal product records, dependencies and mappings and
+  no conversion to ReadingRound, Personal Reading Truth, Note or another V2
+  entity;
+- structurally malformed source evidence is quarantined, while the designated
+  CURRENT population yields two preserved observations and zero quarantine;
+- the restricted resolver accepts only the exact manifest, locator, identity
+  and row hash and returns no source content;
+- `v1.reading_goal` is absent from `unsupported_source_types`, with zero
+  planning errors and unmatched references;
+- the final clean implementation SHA is loaded in the guarded isolated trial,
+  all Biblio table and normal-environment fingerprints remain identical across
+  the exact CURRENT dry-run, and privacy/checksum verification passes;
+- focused/full Core gates, manifest, whitespace and independent second review
+  pass; and
+- product remains `v2.001`, schema remains `1026`, Core is `2.47.0`, UI remains
+  `0.20.0`, and no apply/import, product schema, REST or UI change occurs.
+
+Exact closure evidence is in
+`docs/136-mig-02-reading-goal-map-01-current-v1-preservation.md`.

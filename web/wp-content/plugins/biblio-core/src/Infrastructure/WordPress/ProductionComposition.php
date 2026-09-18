@@ -187,6 +187,7 @@ use Biblio\Core\Infrastructure\Migration\CurrentV1ClassificationMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ItemLocalMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1NoteMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ReadingMapper;
+use Biblio\Core\Infrastructure\Migration\CurrentV1ReadingGoalMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1SeriesMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1WishlistMapper;
 use Biblio\Core\Infrastructure\WordPress\Identity\WordPressPlatformUserDirectory;
@@ -637,6 +638,11 @@ final class ProductionComposition
                 "wishlist_auxiliary_evidence_preserved",
                 PreservedSourceEvidencePrivacy::RestrictedSource
             ),
+            new PreservedSourceEvidenceAdmission(
+                "current_v1_reading_goal",
+                "reading_goal_not_carried_forward_v2",
+                PreservedSourceEvidencePrivacy::RestrictedSource
+            ),
         ]);
         $migrationParticipants = new MigrationParticipantRegistry([
             new CatalogAuthorMigrationParticipant($authorMigrationWriter),
@@ -681,7 +687,8 @@ final class ProductionComposition
                 ),
                 assessmentMapper: new CurrentV1AssessmentMapper(),
                 seriesMapper: new CurrentV1SeriesMapper(),
-                wishlistMapper: new CurrentV1WishlistMapper()
+                wishlistMapper: new CurrentV1WishlistMapper(),
+                readingGoalMapper: new CurrentV1ReadingGoalMapper()
             ),
         ]);
         $migrationReconciliation = new MigrationReconciliationService(

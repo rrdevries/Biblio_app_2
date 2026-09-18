@@ -4103,6 +4103,29 @@ Edition and both historical timestamps.
 
 Product remains `v2.001`, schema remains `1026`, Biblio Core is `2.46.0` and
 Biblio UI remains `0.20.0`. No CURRENT apply/import, schema, REST or UI change
-is included. Reading Goals remain unsupported and Archive remains outside this
-slice. Closure evidence:
+is included. Reading Goals remain outside this slice and Archive remains
+outside this slice. Closure evidence:
 `docs/135-mig-02-wishlist-map-01-current-v1-wishlist-mapper.md`.
+
+### MIG-02-READING-GOAL-MAP-01 — CURRENT V1 Reading Goal preservation
+
+Status: **IMPLEMENTED — FINAL ACCEPTANCE REQUIRES THE POST-COMMIT EXACT-SHA
+ZERO-WRITE TRIAL; PRODUCTION APPLY NOT AUTHORIZED**.
+
+Renée explicitly decided that the two CURRENT Reading Goals have no V2.001
+product target. The manifest-bound mapper therefore emits exactly one
+restricted `PreservedSourceEvidencePlan` per stable `v1.reading_goal` with
+reason `reading_goal_not_carried_forward_v2`. It emits no product operation,
+dependency or target mapping and performs no content interpretation.
+
+The immutable CURRENT package remains authority for the restricted row. The
+durable descriptor retains only provenance, logical locator and deterministic
+hash. Structurally malformed evidence is quarantined; both designated records
+are structurally valid, so the accepted population is two preserved and zero
+quarantined observations. `v1.reading_goal` is no longer an unsupported lane.
+
+Product remains `v2.001`, schema remains `1026`, Biblio Core is `2.47.0` and
+Biblio UI remains `0.20.0`. No Reading Goal schema, participant/writer,
+ReadingRound, Personal Reading Truth, Note, REST/UI or apply/import behavior is
+included. Closure evidence:
+`docs/136-mig-02-reading-goal-map-01-current-v1-preservation.md`.

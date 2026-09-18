@@ -25,12 +25,7 @@ final class CurrentV1RestrictedSourceEvidenceResolver
             || $plan->sourceFamily() !== CurrentV1SourceAdapter::SOURCE_FAMILY
             || $plan->sourceVersion() !== CurrentV1SourceAdapter::SOURCE_VERSION
             || !hash_equals($package->manifestDigest(), $plan->manifestSha256())
-            || $plan->sourceFile() !== "data/books.json"
-            || !in_array(
-                $plan->sourceCollection(),
-                ["books", "wishlistItems"],
-                true
-            )
+            || !$this->supportedLocation($plan)
         ) {
             throw $this->failure();
         }
@@ -58,8 +53,8 @@ final class CurrentV1RestrictedSourceEvidenceResolver
         if (count($matches) !== 1) {
             throw $this->failure();
         }
-        $book = $matches[0];
-        $actual = $this->evidenceEnvelope($plan, $book);
+        $record = $matches[0];
+        $actual = $this->evidenceEnvelope($plan, $record);
         if ($actual === null) {
             throw $this->failure();
         }
@@ -74,6 +69,19 @@ final class CurrentV1RestrictedSourceEvidenceResolver
      */
     private function evidenceEnvelope(PreservedSourceEvidencePlan $plan, array $book): ?array
     {
+        if (
+            $plan->evidenceType() === "current_v1_reading_goal"
+            && $plan->reasonCode() === "reading_goal_not_carried_forward_v2"
+            && $plan->sourceFile() === "data/reading_goals.json"
+            && $plan->sourceCollection() === "goals"
+            && $plan->sourceField() === "record"
+            && $plan->sourceIdentity() === CurrentV1SourceAdapter::READING_GOAL
+                . "/" . $plan->sourceEntityId()
+            && ($book["id"] ?? null) === $plan->sourceEntityId()
+        ) {
+            return $book;
+        }
+
         if (
             $plan->evidenceType() === "current_v1_wishlist_auxiliary"
             && $plan->reasonCode() === "wishlist_auxiliary_evidence_preserved"
@@ -180,6 +188,14 @@ final class CurrentV1RestrictedSourceEvidenceResolver
             "series" => $contained["series"],
             "series_index" => $contained["seriesIndex"],
         ];
+    }
+
+    private function supportedLocation(PreservedSourceEvidencePlan $plan): bool
+    {
+        return ($plan->sourceFile() === "data/books.json"
+                && in_array($plan->sourceCollection(), ["books", "wishlistItems"], true))
+            || ($plan->sourceFile() === "data/reading_goals.json"
+                && $plan->sourceCollection() === "goals");
     }
 
     private function failure(): MigrationRunnerFailure

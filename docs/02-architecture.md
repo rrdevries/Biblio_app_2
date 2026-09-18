@@ -2979,3 +2979,28 @@ are not returned by the resolver or exposed in artifacts. Reconciliation
 classifies `wishlist_entry` as an entity and inspects owner, exact Work,
 Work-only form, null Edition and both timestamps. Schema remains 1026; Core is
 2.46.0. No REST/UI or production apply path is added.
+
+## CURRENT Reading Goal preservation mapping
+
+`CurrentV1ReadingGoalMapper` is a manifest-bound disposition layer, not a
+Reading Goal product implementation. It removes stable `v1.reading_goal`
+records from the unsupported stream and emits only:
+
+```text
+v1.reading_goal/<stable-id>
+  -> PreservedSourceEvidencePlan(no product target, no dependencies)
+```
+
+The plan uses evidence type `current_v1_reading_goal`, reason
+`reading_goal_not_carried_forward_v2`, restricted-source privacy and a hash of
+the complete raw source row. The durable locator identifies the exact goal in
+`data/reading_goals.json`; raw title, type, configuration, status and
+timestamps remain exclusively in the immutable package. The internal resolver
+reconstructs and hashes that row without returning its contents.
+
+The generic preservation participant owns the only durable write: one
+MIG-FND observation and one preservation row, with zero product mappings.
+Malformed source identity or structure is quarantined at the mapper boundary.
+No Reading Goal domain, schema, writer, read model, UI or REST route exists;
+no conversion to ReadingRound, Personal Reading Truth, Note or another V2
+entity is permitted. Schema remains 1026; Core is 2.47.0.
