@@ -4129,3 +4129,31 @@ Biblio UI remains `0.20.0`. No Reading Goal schema, participant/writer,
 ReadingRound, Personal Reading Truth, Note, REST/UI or apply/import behavior is
 included. Closure evidence:
 `docs/136-mig-02-reading-goal-map-01-current-v1-preservation.md`.
+
+### D-MIG-COPY-EXCL-01 — CURRENT V1 erroneous archived Copy exclusion
+
+Status: **DESIGN GO — correction contract closed; implementation not started**.
+
+Renée explicitly decided that all 23 manifest-bound CURRENT Copies with the
+legacy archive/correction state were erroneous registrations. They may not
+become V2 Items and receive no Archive lifecycle/reason/time, restore path,
+Item-local row, fulfillment, Wishlist, circulation, Reading or user-visible
+Copy target. Their only authorized result is restricted, reconciliation-safe
+no-target preservation with reason
+`erroneous_legacy_copy_not_carried_forward_v2`.
+
+The source recomputation proves that all 23 are currently CAT-eligible, ten are
+classification-ready and all 23 are Item-local-ready. Exactly ten therefore
+occur in the old 744 complete Item plans; the corrected total is 734, not 721.
+The other 13 are already classification-blocked but become terminal non-Items
+instead of future normal promotion candidates. Fifteen parent CAT identities
+are aliases, eight are unique and none is quarantined.
+
+There is zero circulation overlap. Two Work-only Wishlist plans and ten
+Work-level Reading plans remain unchanged because neither lane has an exact
+Copy target relation. The future bounded implementation must add 23 durable
+no-target observations, suppress the ten old Item plans and reject any prior
+committed mapping under the 23 legacy `catalog_item` identities before a new
+run write. It is explicitly not an Archive mapper and authorizes no
+apply/import. Exact design and audit evidence:
+`docs/137-d-mig-copy-excl-01-current-v1-erroneous-archived-copy-exclusion.md`.
