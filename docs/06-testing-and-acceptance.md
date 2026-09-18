@@ -5070,3 +5070,46 @@ Acceptance requires all of the following:
 
 Exact closure evidence is in
 `docs/140-mig-02-contained-map-01-current-v1-contained-work-mapper.md`.
+
+## MIG-CUTOVER-PREP-01A acceptance
+
+PREP-01A is accepted only when:
+
+- archive SHA-256 is verified before extraction and unsafe absolute,
+  traversal, duplicate and symlink members fail closed;
+- extraction uses a new dedicated intake location, the SOURCE-01 manifest is
+  deterministic and exact, accepted bytes become read-only and evidence never
+  enters source root;
+- durable identity excludes absolute developer paths and binds logical package
+  ID, archive/manifest hashes, source family/version and adapter;
+- a recovery check can reverify archive, extraction manifest and an allowlisted
+  non-returning restricted evidence locator;
+- all docs/141 migration domains have privacy-safe stable-ID/hash or structural
+  observations and every comparison result receives exactly one A-J category;
+- supported additions remain A-D, while new raw values/shapes, identity or
+  special-population changes, new conflicts, deletions, structural shifts and
+  unsupported source types yield E-J plus `CONTRACT_REVIEW_REQUIRED`;
+- same stable ID plus changed relevant payload is distinct from addition, and
+  Note/Review/Reflection/circulation private content never appears in report,
+  artifact, exception or committed fixture;
+- the complete typed mapper-contract inventory identifies reusable,
+  manifest-bound, regeneration and exact-reviewed-set classes;
+- the final population bundle binds the exact candidate, typed population
+  evidence, structural vectors, quarantine candidates and circulation profile,
+  replays to the same digest and changes for relevant evidence;
+- generated/mechanically compatible/review-required remain distinct from the
+  unavailable later `approved_for_rehearsal` state;
+- open circulation reports `CIRCULATION_CUTOVER_REVIEW_REQUIRED` and no loan is
+  closed, mapped or otherwise mutated;
+- evidence is no-overwrite, checksum-verified and provenance-bound to exact
+  Git/dirty state, Product/schema/Core/UI/runtime, candidate package, reference
+  manifest and bundle digest;
+- focused drift/intake/privacy/replay/artifact tests, full Core unit and
+  integration gates, syntax, PHPStan, Composer/platform, WordPress smoke,
+  manifest, whitespace and an independent second review pass; and
+- product remains `v2.001`, schema `1026`, Core `2.50.0`, UI `0.20.0`, with no
+  real final export, V1 freeze, MIG-FND/product write, apply/import, rehearsal,
+  REST or UI path.
+
+Exact closure evidence is in
+`docs/142-mig-cutover-prep-01a-final-source-intake-and-drift-tooling.md`.

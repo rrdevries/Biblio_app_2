@@ -4203,3 +4203,40 @@ classification or personal state is inherited.
 Product remains `v2.001`, schema remains `1026`, Biblio Core is `2.49.0` and
 Biblio UI remains `0.20.0`. Exact closure evidence:
 `docs/140-mig-02-contained-map-01-current-v1-contained-work-mapper.md`.
+
+### MIG-CUTOVER-PREP-01A — final source intake and drift tooling
+
+Status: **GO / FINAL SOURCE INTAKE / DRIFT TOOLING READY — PRODUCTION APPLY
+NOT AUTHORIZED**.
+
+Biblio Core `2.50.0` provides a zero-write cutover-preparation boundary for a
+future explicitly designated FINAL CURRENT SOURCE. Intake verifies archive
+SHA-256 before extraction, rejects absolute/traversal/duplicate and symlink
+members, extracts into a new package-scoped directory, reuses the SOURCE-01
+manifest factory and exact `current-v1-json-29` adapter, verifies the declared
+manifest and makes accepted source bytes read-only. Durable package identity
+binds logical ID, archive and manifest hashes, source family/version and
+adapter; workstation paths remain operational metadata only.
+
+The CURRENT snapshot builder emits privacy-safe stable-ID/hash observations
+for all migration domains, ordered structural vectors, exact-name Series
+groups, erroneous-Copy candidates, quarantine candidates and a fresh
+circulation profile. `FinalSourceDriftEngine` assigns every compared
+observation exactly one docs/141 A-J category. Only A-D can yield
+`MAPPING_CONTRACT_COMPATIBLE`; E-J yield `CONTRACT_REVIEW_REQUIRED`. Open
+circulation independently yields `CIRCULATION_CUTOVER_REVIEW_REQUIRED`.
+
+`FinalPopulationContractBundle` carries the complete typed A-D mapper-contract
+inventory and allowlisted population evidence, has a deterministic semantic
+digest and distinguishes `mechanically_compatible` from `review_required` and
+later `approved_for_rehearsal`. PREP-01A cannot create the latter state.
+No-overwrite artifacts bind Git/dirty state, Product/schema/Core/UI/runtime,
+candidate/archive/manifest/adapter, reference manifest and bundle digest.
+Private bodies, acquisition text and circulation counterparties remain only
+in immutable source and are represented by hashes/counts.
+
+No actual final V1 export was created or nominated; no V1 freeze, mapper
+approval, dry-run against a final source, rehearsal, MIG-FND/product write,
+apply/import, REST, UI or schema change occurred. PREP-01B and REHEARSAL remain
+separate. Exact closure evidence:
+`docs/142-mig-cutover-prep-01a-final-source-intake-and-drift-tooling.md`.

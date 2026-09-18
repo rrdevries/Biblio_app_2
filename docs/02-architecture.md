@@ -3045,3 +3045,44 @@ transaction. Observation, reason and evidence remain immutable; divergence
 fails closed and rolls back the relation. Fresh preparation never emits both
 the active membership and the old preservation for one atomic slot. Schema
 remains 1026; Core is 2.49.0.
+
+## 79. MIG-CUTOVER-PREP-01A final-source preparation boundary
+
+PREP-01A adds a zero-write boundary beside, not inside, migration apply:
+
+```text
+verified ZIP + typed export/retention provenance
+  -> dedicated read-only extraction + SOURCE-01 package manifest
+  -> exact current-v1-json-29 inspection
+  -> privacy-safe domain/structural snapshot
+  -> A-J drift report + circulation/quarantine profile
+  -> typed final population contract bundle
+  -> no-overwrite provenance-bound evidence attempt
+```
+
+`FinalSourcePackageIdentity` is location-independent and binds logical package
+ID, archive/manifest SHA-256, source family/version and adapter. Archive
+transport identity and extracted bytes identity remain separate. Intake fails
+before acceptance for hash mismatch, existing destination, traversal,
+absolute/duplicate paths, symlinks, unsupported adapter shape/version or
+manifest mismatch. `FinalSourceRecoveryVerifier` reuses the immutable package
+factory and existing non-returning restricted evidence resolver.
+
+`CurrentV1FinalSourceSnapshotBuilder` emits stable observations and hashes,
+not raw source payload. Parent-level vectors protect ID-less contributors,
+contained Works, Rating/Review/Reflection slots and Series memberships from
+insertion/reorder rebinding. Separate semantic-value observations make new raw
+enums visible without copying private values into evidence. The circulation
+profile retains safe source IDs and counts open borrowed/lent-out, closed,
+contradictory, dependency/counterparty presence and erroneous-Copy overlap.
+
+`MapperContractInventory` is the closed docs/141 A-D inventory. The final
+bundle exposes mapper-specific evidence only through `mapperContract()`; it is
+not an arbitrary configuration bag and does not replace code-owned semantics.
+Bundle canonicalization uses deterministic JSON and excludes run timestamps.
+Generated/mechanically compatible evidence is not approval. PREP-01A forbids
+constructing an `approved_for_rehearsal` bundle and exposes no apply command.
+
+Artifacts are append-only by caller-supplied attempt identity, refuse an
+existing path, stay outside source root and are owner-readable only. Product
+remains `v2.001`, schema `1026`, Core `2.50.0`, UI `0.20.0`.
