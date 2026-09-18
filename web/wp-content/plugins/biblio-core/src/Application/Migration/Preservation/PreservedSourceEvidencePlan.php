@@ -41,7 +41,7 @@ final readonly class PreservedSourceEvidencePlan implements TypedMigrationPlan
             || preg_match('/^[a-f0-9]{64}$/D', $this->manifestSha256) !== 1
             || preg_match('/^[a-f0-9]{64}$/D', $this->evidenceSha256) !== 1
             || preg_match('/^[a-z0-9][a-z0-9_\/-]{0,190}\.json$/D', $this->sourceFile) !== 1
-            || preg_match('/^[a-z][a-z0-9_]{0,63}$/D', $this->sourceCollection) !== 1
+            || preg_match('/^[a-z][A-Za-z0-9_]{0,63}$/D', $this->sourceCollection) !== 1
             || trim($this->sourceEntityId) === ""
             || mb_strlen($this->sourceEntityId) > 191
             || preg_match('/^[a-z][A-Za-z0-9_]{0,63}$/D', $this->sourceField) !== 1

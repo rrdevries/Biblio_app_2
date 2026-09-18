@@ -37,6 +37,7 @@ use Biblio\Core\Application\Migration\Series\{
     CatalogWorkSeriesPlan,
     SeriesMigrationWriter
 };
+use Biblio\Core\Application\Migration\Wishlist\WishlistPlan;
 use Biblio\Core\Application\Migration\MigrationLedgerObservation;
 use Biblio\Core\Application\Migration\MigrationLedgerSnapshot;
 use Biblio\Core\Application\Migration\MigrationRun;
@@ -73,6 +74,7 @@ use Biblio\Core\Reading\{
     ReadingRoundRepository,
     ReadingSource
 };
+use Biblio\Core\Wishlist\{WishlistEntryId,WishlistTargetType,WritableWishlistRepository};
 use Throwable;
 
 final readonly class CoreMigrationTargetInspector implements MigrationTargetInspector
@@ -91,7 +93,8 @@ final readonly class CoreMigrationTargetInspector implements MigrationTargetInsp
         private ?PersonalReadingTruthRepository $readingTruths = null,
         private ?WritableRatingRepository $ratings = null,
         private ?WritableReviewRepository $reviews = null,
-        private ?SeriesRepository $series = null
+        private ?SeriesRepository $series = null,
+        private ?WritableWishlistRepository $wishlist = null
     ) {
     }
 
@@ -155,6 +158,12 @@ final readonly class CoreMigrationTargetInspector implements MigrationTargetInsp
                     $snapshot
                 ),
                 "private_note" => $this->privateNoteExists(
+                    $run,
+                    $record,
+                    $mapping->targetId(),
+                    $snapshot
+                ),
+                "wishlist_entry" => $this->wishlistEntryExists(
                     $run,
                     $record,
                     $mapping->targetId(),
@@ -565,6 +574,42 @@ final readonly class CoreMigrationTargetInspector implements MigrationTargetInsp
             && $note->createdAt() == $plan->createdAt()
             && $note->updatedAt() == $plan->updatedAt()
             && $note->version()->value() === 1;
+    }
+
+    private function wishlistEntryExists(
+        MigrationRun $run,
+        MigrationSourceRecord $record,
+        string $targetId,
+        MigrationLedgerSnapshot $snapshot
+    ): bool {
+        $plan = $record->typedPlan();
+        if (
+            !$plan instanceof WishlistPlan
+            || !$plan->targetUserId()->equals($run->targetUserId())
+            || $this->wishlist === null
+        ) {
+            return false;
+        }
+        $workId = $this->dependencyMappingId(
+            $snapshot,
+            CatalogWorkMigrationParticipant::SOURCE_TYPE,
+            $plan->workSourceId(),
+            "work"
+        );
+        if ($workId === null) {
+            return false;
+        }
+        $entry = $this->wishlist->findForUser(
+            new WishlistEntryId($targetId),
+            $run->targetUserId()
+        );
+        return $entry !== null
+            && $entry->ownerUserId()->equals($run->targetUserId())
+            && $entry->workId()->value() === $workId
+            && $entry->targetType() === WishlistTargetType::WorkOnly
+            && $entry->editionId() === null
+            && $entry->createdAt() == $plan->createdAt()
+            && $entry->updatedAt() == $plan->updatedAt();
     }
 
     private function readingTruthExists(

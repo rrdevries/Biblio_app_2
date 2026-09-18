@@ -39,7 +39,8 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
         private ?CurrentV1ReadingMapper $readingMapper = null,
         private ?CurrentV1NoteMapper $noteMapper = null,
         private ?CurrentV1AssessmentMapper $assessmentMapper = null,
-        private ?CurrentV1SeriesMapper $seriesMapper = null
+        private ?CurrentV1SeriesMapper $seriesMapper = null,
+        private ?CurrentV1WishlistMapper $wishlistMapper = null
     ) {
         $this->isbn = $isbn ?? new IsbnCanonicalizer();
     }
@@ -59,6 +60,7 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
         $authors = [];
         $readingRounds = [];
         $notes = [];
+        $wishlist = [];
         foreach ($inspection->records() as $record) {
             if ($record->sourceType() === CurrentV1SourceAdapter::BOOK) {
                 $books[$this->sourceKey($record->sourceId())] = $record;
@@ -89,6 +91,13 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
                 $notes[$this->sourceKey($record->sourceId())] = $record;
                 continue;
             }
+            if (
+                $this->wishlistMapper !== null
+                && $record->sourceType() === CurrentV1SourceAdapter::WISHLIST_ITEM
+            ) {
+                $wishlist[$this->sourceKey($record->sourceId())] = $record;
+                continue;
+            }
             $records[] = $record;
         }
         ksort($books, SORT_STRING);
@@ -96,6 +105,7 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
         ksort($authors, SORT_STRING);
         ksort($readingRounds, SORT_STRING);
         ksort($notes, SORT_STRING);
+        ksort($wishlist, SORT_STRING);
 
         $findings = [];
         $states = [];
@@ -321,6 +331,25 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
             );
             array_push($records, ...$assessmentMapping->records());
             array_push($findings, ...$assessmentMapping->findings());
+        }
+
+        if ($this->wishlistMapper !== null) {
+            $workRepresentatives = [];
+            foreach ($books as $book) {
+                $state = $states[$this->sourceKey($book->sourceId())] ?? null;
+                if (($state["status"] ?? null) === "ready") {
+                    $workRepresentatives[$book->sourceId()] = $state["representative"];
+                }
+            }
+            $wishlistMapping = $this->wishlistMapper->map(
+                $inspection,
+                $target,
+                $books,
+                $wishlist,
+                $workRepresentatives
+            );
+            array_push($records, ...$wishlistMapping->records());
+            array_push($findings, ...$wishlistMapping->findings());
         }
 
         if ($this->authorMapper !== null) {

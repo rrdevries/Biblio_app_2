@@ -28,6 +28,7 @@ use Biblio\Core\Application\Migration\Series\{
     CatalogSeriesMigrationParticipant,
     CatalogWorkSeriesMigrationParticipant
 };
+use Biblio\Core\Application\Migration\Wishlist\WishlistMigrationParticipant;
 
 final class CurrentMigrationMappingContracts
 {
@@ -86,6 +87,10 @@ final class CurrentMigrationMappingContracts
             new MigrationMappingContract(
                 PrivateNoteMigrationParticipant::SOURCE_TYPE,
                 [new MigrationMappingRule("private_note", $entity, true)]
+            ),
+            new MigrationMappingContract(
+                WishlistMigrationParticipant::SOURCE_TYPE,
+                [new MigrationMappingRule("wishlist_entry", $entity, true)]
             ),
             new MigrationMappingContract(
                 HistoricalRatingMigrationParticipant::SOURCE_TYPE,
