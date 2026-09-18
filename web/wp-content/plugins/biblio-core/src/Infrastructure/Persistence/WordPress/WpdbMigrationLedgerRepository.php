@@ -416,6 +416,27 @@ final readonly class WpdbMigrationLedgerRepository implements MigrationLedgerRep
         return $result;
     }
 
+    public function committedSourceTargets(
+        string $targetUserId,
+        string $targetLibraryId,
+        string $sourceFamily,
+        string $sourceType,
+        string $sourceId
+    ): array {
+        return $this->traces($this->traceRows(
+            "r.target_user_id=%s AND r.target_library_id=%s "
+                . "AND o.source_family=%s AND o.source_type=%s AND o.source_id=%s "
+                . "AND o.processing_status='committed'",
+            [
+                $targetUserId,
+                $targetLibraryId,
+                $sourceFamily,
+                $sourceType,
+                $sourceId,
+            ]
+        ));
+    }
+
     public function preservationMatches(
         string $runId,
         string $observationId,

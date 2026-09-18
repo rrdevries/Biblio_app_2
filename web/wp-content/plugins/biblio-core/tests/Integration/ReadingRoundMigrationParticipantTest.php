@@ -189,6 +189,21 @@ final readonly class ReadingRoundFailingOutcomeLedger implements
             $sourceId
         );
     }
+    public function committedSourceTargets(
+        string $targetUserId,
+        string $targetLibraryId,
+        string $sourceFamily,
+        string $sourceType,
+        string $sourceId
+    ): array {
+        return $this->inner->committedSourceTargets(
+            $targetUserId,
+            $targetLibraryId,
+            $sourceFamily,
+            $sourceType,
+            $sourceId
+        );
+    }
 
     public function preservationMatches(
         string $runId,

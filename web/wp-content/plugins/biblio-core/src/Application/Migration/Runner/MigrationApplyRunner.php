@@ -88,6 +88,7 @@ final readonly class MigrationApplyRunner
                 "Apply preparation does not match the accepted dry-run plan."
             );
         }
+        $this->assertPreparedPreflight($prepared);
         $priorReplays = $this->priorReplays($prepared);
         $run = $this->runs->begin(
             $inspection->adapter()->sourceFamily(),
@@ -263,6 +264,20 @@ final readonly class MigrationApplyRunner
             }
         }
         return $replays;
+    }
+
+    private function assertPreparedPreflight(PreparedMigrationPlan $prepared): void
+    {
+        foreach ($prepared->records() as $item) {
+            $participant = $item->participant();
+            if ($participant instanceof PreparedMigrationPreflightParticipant) {
+                $participant->assertPreparedPreflight(
+                    $item->record(),
+                    $item->plan(),
+                    $prepared->target()
+                );
+            }
+        }
     }
 
     /**

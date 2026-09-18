@@ -231,6 +231,31 @@ final class CurrentV1RestrictedSourceEvidenceResolverTest extends TestCase
         );
     }
 
+    public function testReviewedErroneousCopyRecordVerifiesCompleteRestrictedHash(): void
+    {
+        $copy = [
+            "id" => "copy-1",
+            "bookId" => "book-1",
+            "archived" => true,
+            "archiveReason" => "duplicate_correction",
+            "notes" => "private-copy-sentinel",
+        ];
+        $directory = $this->copySource($copy);
+        $package = (new FilesystemMigrationSourcePackageFactory())->build($directory);
+        $resolver = new CurrentV1RestrictedSourceEvidenceResolver();
+        $resolver->verify(
+            $package,
+            $this->copyPlan($package->manifestDigest(), DeterministicJson::hash($copy))
+        );
+        self::addToAssertionCount(1);
+
+        $this->expectException(MigrationRunnerFailure::class);
+        $resolver->verify(
+            $package,
+            $this->copyPlan($package->manifestDigest(), str_repeat("f", 64))
+        );
+    }
+
     private function plan(
         string $manifest,
         string $sourceIdentity,
@@ -416,6 +441,44 @@ final class CurrentV1RestrictedSourceEvidenceResolverTest extends TestCase
         file_put_contents(
             $directory . "/data/reading_goals.json",
             json_encode(["goals" => [$goal]], JSON_THROW_ON_ERROR) . "\n"
+        );
+        return $directory;
+    }
+
+    private function copyPlan(
+        string $manifest,
+        string $evidenceHash
+    ): PreservedSourceEvidencePlan {
+        return new PreservedSourceEvidencePlan(
+            "v1.copy/copy-1/erroneous-legacy-copy",
+            "current_v1_erroneous_legacy_copy",
+            "erroneous_legacy_copy_not_carried_forward_v2",
+            CurrentV1SourceAdapter::ADAPTER_ID,
+            CurrentV1SourceAdapter::SOURCE_FAMILY,
+            CurrentV1SourceAdapter::SOURCE_VERSION,
+            $manifest,
+            "d-mig-copy-excl-01.2026-09-18:set:test",
+            "data/books.json",
+            "copies",
+            "copy-1",
+            "record",
+            $evidenceHash,
+            PreservedSourceEvidencePrivacy::RestrictedSource
+        );
+    }
+
+    /** @param array<string,mixed> $copy */
+    private function copySource(array $copy): string
+    {
+        $directory = sys_get_temp_dir()
+            . "/biblio-copy-exclusion-recovery-"
+            . bin2hex(random_bytes(8));
+        mkdir($directory . "/data", 0750, true);
+        $this->temporaryDirectories[] = $directory;
+        file_put_contents(
+            $directory . "/data/books.json",
+            json_encode(["books" => [], "copies" => [$copy]], JSON_THROW_ON_ERROR)
+                . "\n"
         );
         return $directory;
     }

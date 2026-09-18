@@ -65,6 +65,8 @@ final readonly class CurrentV1ItemLocalMapping
         return match ($this->eligibility) {
             CurrentV1ItemEligibility::NotLibraryItemExternalBorrowed =>
                 CurrentV1ItemLocalMappingReason::ExternalBorrowedCopyPreserved,
+            CurrentV1ItemEligibility::NotLibraryItemErroneousLegacyCopy =>
+                CurrentV1ItemLocalMappingReason::ErroneousLegacyCopyNotCarriedForward,
             CurrentV1ItemEligibility::InvalidItemLocalAcquisitionDate =>
                 CurrentV1ItemLocalMappingReason::InvalidAcquisitionDate,
             CurrentV1ItemEligibility::ItemEligible => null,

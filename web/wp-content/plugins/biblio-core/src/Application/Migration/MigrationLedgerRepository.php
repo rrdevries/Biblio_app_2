@@ -37,6 +37,15 @@ interface MigrationLedgerRepository
         string $sourceId
     ): array;
 
+    /** @return list<MigrationTraceEntry> */
+    public function committedSourceTargets(
+        string $targetUserId,
+        string $targetLibraryId,
+        string $sourceFamily,
+        string $sourceType,
+        string $sourceId
+    ): array;
+
     public function preservationMatches(
         string $runId,
         string $observationId,

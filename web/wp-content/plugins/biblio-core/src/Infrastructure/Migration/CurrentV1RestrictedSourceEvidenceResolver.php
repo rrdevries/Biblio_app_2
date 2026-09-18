@@ -103,6 +103,19 @@ final class CurrentV1RestrictedSourceEvidenceResolver
             ];
         }
 
+        if (
+            $plan->evidenceType() === "current_v1_erroneous_legacy_copy"
+            && $plan->reasonCode()
+                === "erroneous_legacy_copy_not_carried_forward_v2"
+            && $plan->sourceCollection() === "copies"
+            && $plan->sourceField() === "record"
+            && $plan->sourceIdentity() === CurrentV1SourceAdapter::COPY
+                . "/" . $plan->sourceEntityId() . "/erroneous-legacy-copy"
+            && ($book["id"] ?? null) === $plan->sourceEntityId()
+        ) {
+            return $book;
+        }
+
         if ($plan->sourceCollection() !== "books") {
             return null;
         }
@@ -193,7 +206,11 @@ final class CurrentV1RestrictedSourceEvidenceResolver
     private function supportedLocation(PreservedSourceEvidencePlan $plan): bool
     {
         return ($plan->sourceFile() === "data/books.json"
-                && in_array($plan->sourceCollection(), ["books", "wishlistItems"], true))
+                && in_array(
+                    $plan->sourceCollection(),
+                    ["books", "copies", "wishlistItems"],
+                    true
+                ))
             || ($plan->sourceFile() === "data/reading_goals.json"
                 && $plan->sourceCollection() === "goals");
     }

@@ -33,6 +33,7 @@ use Biblio\Core\Infrastructure\Migration\CurrentV1CatalogMappingReason;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedClassificationContract;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ItemLocalMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedItemLocalContract;
+use Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedCopyExclusionContract;
 use Biblio\Core\Infrastructure\Migration\CurrentV1CatalogSourceIds;
 use Biblio\Core\Infrastructure\Migration\CurrentV1SourceAdapter;
 use Biblio\Core\Library\LibraryId;
@@ -405,7 +406,8 @@ final class CurrentV1ClassificationMapperTest extends TestCase
         $result = (new CurrentV1CatalogMapper(
             classificationMapper: $this->classificationMapper(),
             itemLocalMapper: new CurrentV1ItemLocalMapper(
-                new CurrentV1ReviewedItemLocalContract(self::MANIFEST)
+                new CurrentV1ReviewedItemLocalContract(self::MANIFEST),
+                new CurrentV1ReviewedCopyExclusionContract(self::MANIFEST, [])
             )
         ))->map($inspection, $target);
         $items = array_values(array_filter(

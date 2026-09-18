@@ -442,6 +442,7 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
                 $copies,
                 $books
             );
+            array_push($records, ...$itemLocal->records());
             array_push($findings, ...$itemLocal->findings());
         }
 
@@ -469,12 +470,20 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
                 continue;
             }
 
+            $itemLocalMapping = $itemLocal?->forCopy($copyId);
+            if (
+                $itemLocalMapping !== null
+                && $itemLocalMapping->eligibility()
+                    !== CurrentV1ItemEligibility::ItemEligible
+            ) {
+                continue;
+            }
+
             $dependencies = $this->itemDependencies?->forCopy(
                 $copy,
                 $books[$bookKey],
                 $target
             ) ?? CurrentV1CatalogItemDependencies::unresolved();
-            $itemLocalMapping = $itemLocal?->forCopy($copyId);
             if ($itemLocalMapping !== null) {
                 $dependencies = $dependencies->withItemLocal($itemLocalMapping);
             }

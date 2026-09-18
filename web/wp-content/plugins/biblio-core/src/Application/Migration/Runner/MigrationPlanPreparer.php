@@ -24,6 +24,26 @@ final readonly class MigrationPlanPreparer
             ? MigrationSourceMappingResult::passthrough($inspection->records())
             : $mapper->map($inspection, $target);
 
+        $mappedIdentities = [];
+        foreach ($mapping->records() as $record) {
+            $mappedIdentities[$record->sourceType() . "\0" . $record->sourceId()] = true;
+        }
+        foreach ($mapping->records() as $record) {
+            $typed = $record->typedPlan();
+            if (!$typed instanceof SourceMappingExclusionPlan) {
+                continue;
+            }
+            foreach ($typed->forbiddenSourceIdentities() as $forbidden) {
+                $key = $forbidden["source_type"] . "\0" . $forbidden["source_id"];
+                if (isset($mappedIdentities[$key])) {
+                    throw new MigrationRunnerFailure(
+                        MigrationRunnerReason::PreparedPlanMismatch,
+                        "Prepared migration plan contains contradictory source outcomes."
+                    );
+                }
+            }
+        }
+
         $contracts = [];
         $safeFindings = [];
         foreach ($mapping->findings() as $finding) {
