@@ -60,6 +60,7 @@ use Biblio\Core\Application\Migration\Preservation\{
 };
 use Biblio\Core\Application\Migration\Reading\{ReadingRoundMigrationParticipant,ReadingRoundMigrationWriter,ReadingTruthMigrationParticipant,ReadingTruthMigrationWriter};
 use Biblio\Core\Application\Migration\Series\{CatalogSeriesMigrationParticipant,CatalogWorkSeriesMigrationParticipant,SeriesMigrationWriter};
+use Biblio\Core\Application\Migration\Wishlist\{HistoricalWishlistRecorder,WishlistMigrationParticipant,WishlistMigrationWriter};
 use Biblio\Core\Application\Migration\Reconciliation\{
     CoreMigrationTargetInspector,
     CurrentMigrationMappingContracts,
@@ -187,6 +188,7 @@ use Biblio\Core\Infrastructure\Migration\CurrentV1ItemLocalMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1NoteMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ReadingMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1SeriesMapper;
+use Biblio\Core\Infrastructure\Migration\CurrentV1WishlistMapper;
 use Biblio\Core\Infrastructure\WordPress\Identity\WordPressPlatformUserDirectory;
 use Biblio\Core\Notes\StrictPrivateNoteContentPolicy;
 use wpdb;
@@ -594,6 +596,15 @@ final class ProductionComposition
             $privateNoteCreation,
             $privateNoteContentPolicy
         );
+        $wishlistMigrationWriter = new WishlistMigrationWriter(
+            $migrationLedger,
+            new HistoricalWishlistRecorder(
+                $platformUsers,
+                $workRepository,
+                $wishlistRepository,
+                new OpaqueWishlistEntryIdGenerator()
+            )
+        );
         $assessmentMigrationWriter = new HistoricalAssessmentMigrationWriter(
             $migrationLedger,
             $historicalAssessmentRecorder,
@@ -621,6 +632,11 @@ final class ProductionComposition
                 "contained_work_series_deferred",
                 PreservedSourceEvidencePrivacy::OrdinarySource
             ),
+            new PreservedSourceEvidenceAdmission(
+                "current_v1_wishlist_auxiliary",
+                "wishlist_auxiliary_evidence_preserved",
+                PreservedSourceEvidencePrivacy::RestrictedSource
+            ),
         ]);
         $migrationParticipants = new MigrationParticipantRegistry([
             new CatalogAuthorMigrationParticipant($authorMigrationWriter),
@@ -642,6 +658,7 @@ final class ProductionComposition
                 $privateNoteMigrationWriter,
                 $privateNoteContentPolicy
             ),
+            new WishlistMigrationParticipant($wishlistMigrationWriter),
             new HistoricalRatingMigrationParticipant($assessmentMigrationWriter),
             new HistoricalWrittenReviewMigrationParticipant($assessmentMigrationWriter),
             new CirculationMigrationParticipant(),
@@ -663,7 +680,8 @@ final class ProductionComposition
                     contentPolicy: $privateNoteContentPolicy
                 ),
                 assessmentMapper: new CurrentV1AssessmentMapper(),
-                seriesMapper: new CurrentV1SeriesMapper()
+                seriesMapper: new CurrentV1SeriesMapper(),
+                wishlistMapper: new CurrentV1WishlistMapper()
             ),
         ]);
         $migrationReconciliation = new MigrationReconciliationService(
@@ -683,7 +701,8 @@ final class ProductionComposition
                 $personalReadingTruthRepository,
                 $ratingRepository,
                 $reviewRepository,
-                $seriesRepository
+                $seriesRepository,
+                $wishlistRepository
             )
         );
         $libraryItemCreation = new AddLibraryItemService(

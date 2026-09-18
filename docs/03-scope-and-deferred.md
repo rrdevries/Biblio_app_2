@@ -282,9 +282,11 @@ later bounded mapping slice; they are not inferred or bulk-converted here.
 
 Still explicitly out of scope are a Reflection product model, promotion or
 backfill, general source-package storage infrastructure, public/internal UI or
-REST exposure, rich Series Intelligence/UI, Wishlist, Archive, contained-work
-product migration, loan backfill and production apply/import. The separately
-closed MIG-02-SERIES-MAP-01 now uses this durable route for exactly five unsafe
-position components, three nameless base observations and 19 contained-work
-Series observations; that does not promote contained Works or authorize a
-production migration.
+REST exposure, rich Series Intelligence/UI, Archive, contained-work product
+migration, loan backfill and production apply/import. The separately closed
+MIG-02-SERIES-MAP-01 uses this durable route for exactly five unsafe position
+components, three nameless base observations and 19 contained-work Series
+observations. MIG-02-WISHLIST-MAP-01 uses it for exactly 41 reviewed Wishlist
+auxiliary envelopes while separately mapping 41 active Work-only personal
+Wishlist targets. Neither slice promotes contained Works, adds Wishlist
+Edition specificity or authorizes a production migration.

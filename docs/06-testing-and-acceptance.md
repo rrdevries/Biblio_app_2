@@ -4934,3 +4934,42 @@ Acceptance requires all of the following:
 
 Exact closure evidence is in
 `docs/133-mig-02-series-map-01-current-v1-series-mapper.md`.
+
+## MIG-02-WISHLIST-MAP-01 acceptance
+
+Acceptance requires all of the following:
+
+- the mapper is bound to docs/134, adapter `current-v1-json-29` and manifest
+  `35a18156490f103d4b6b610f524a1963e5be189d74c64637c49059396b1c7c67`;
+- all 41 reviewed active rows produce Work-only plans for the explicit target
+  User and exact CAT Work mapping, with zero Edition-specific plan or Edition,
+  Item, provider, title, ISBN, Author or Series lookup;
+- source `createdAt` and `updatedAt` are preserved exactly and current time is
+  absent from migration writes, while the ordinary interactive recorder and
+  clock behavior remain unchanged;
+- empty fulfillment evidence creates no acquisition, fulfillment, removal or
+  Item effect, and Library context never becomes Wishlist ownership;
+- cardinality, target locks and replay reuse the existing Wishlist model;
+  Edition-specific target state, changed payload, reverse conflict, mixed-mode
+  conflict and mutated target state fail closed;
+- each raw row produces exactly one admitted restricted auxiliary preservation
+  plan with the reviewed type, reason, logical locator and evidence hash, while
+  raw group/carrier values remain absent from artifacts and exceptions;
+- dry-run, apply preflight and reconciliation consume the same provenance-bound
+  prepared plans, and target inspection validates User, Work-only form, null
+  Edition and both historical instants;
+- the Wishlist lane is exactly 41 active + 41 preservation = 82 typed plans,
+  with zero quarantine, conflict, planning error or unmatched CAT dependency;
+- the final clean implementation SHA is loaded in the guarded isolated trial,
+  all 57 Biblio table fingerprints and the normal-environment guard are
+  identical before/after the exact CURRENT zero-write dry-run, and privacy and
+  checksum verification pass;
+- `v1.wishlist_item` is no longer unsupported while `v1.reading_goal` remains
+  outside this slice;
+- focused/full Core gates, PHP syntax, PHPStan, Composer/platform, WordPress
+  smoke, manifest, whitespace and independent second review pass; and
+- product remains `v2.001`, schema remains `1026`, Core is `2.46.0`, UI remains
+  `0.20.0`, and no CURRENT apply/import, schema, REST or UI change occurs.
+
+Exact closure evidence is in
+`docs/135-mig-02-wishlist-map-01-current-v1-wishlist-mapper.md`.

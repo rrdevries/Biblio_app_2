@@ -26,7 +26,11 @@ final class CurrentV1RestrictedSourceEvidenceResolver
             || $plan->sourceVersion() !== CurrentV1SourceAdapter::SOURCE_VERSION
             || !hash_equals($package->manifestDigest(), $plan->manifestSha256())
             || $plan->sourceFile() !== "data/books.json"
-            || $plan->sourceCollection() !== "books"
+            || !in_array(
+                $plan->sourceCollection(),
+                ["books", "wishlistItems"],
+                true
+            )
         ) {
             throw $this->failure();
         }
@@ -70,6 +74,31 @@ final class CurrentV1RestrictedSourceEvidenceResolver
      */
     private function evidenceEnvelope(PreservedSourceEvidencePlan $plan, array $book): ?array
     {
+        if (
+            $plan->evidenceType() === "current_v1_wishlist_auxiliary"
+            && $plan->reasonCode() === "wishlist_auxiliary_evidence_preserved"
+            && $plan->sourceCollection() === "wishlistItems"
+            && $plan->sourceField() === "auxiliaryEvidence"
+            && $plan->sourceIdentity() === CurrentV1SourceAdapter::WISHLIST_ITEM
+                . "/" . $plan->sourceEntityId() . "/auxiliary"
+            && ($book["id"] ?? null) === $plan->sourceEntityId()
+            && ($book["type"] ?? null) === "edition"
+            && is_string($book["titleGroupKey"] ?? null)
+            && $book["titleGroupKey"] !== ""
+            && is_string($book["desiredCarrier"] ?? null)
+        ) {
+            return [
+                "source_slot" => "wishlistItems",
+                "raw_type" => $book["type"],
+                "title_group_key" => $book["titleGroupKey"],
+                "desired_carrier" => $book["desiredCarrier"],
+            ];
+        }
+
+        if ($plan->sourceCollection() !== "books") {
+            return null;
+        }
+
         if (
             $plan->evidenceType() === "current_v1_reflection"
             && $plan->reasonCode() === "reflection_target_not_available"

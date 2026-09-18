@@ -4075,3 +4075,34 @@ preflight and reconciliation. Schema remains `1026`, Biblio Core is `2.45.0`
 and Biblio UI remains `0.20.0`. No CURRENT apply/import, REST, UI, provider or
 rich Series Intelligence work is included. Closure evidence:
 `docs/133-mig-02-series-map-01-current-v1-series-mapper.md`.
+
+### MIG-02-WISHLIST-MAP-01 — CURRENT V1 Wishlist mapper
+
+Status: **GO / CLOSED — PRODUCTION APPLY NOT AUTHORIZED**.
+
+The exact CURRENT `wishlistItems` population now maps through a dedicated
+manifest-bound layer to the existing personal Wishlist model. All 41 reviewed
+active rows create Work-only plans for the explicit migration target User and
+depend only on their exact CAT Work source mapping. Raw `type=edition` is
+retained as source evidence; it does not create an Edition dependency or
+Edition-specific Wishlist target.
+
+Each active plan carries the exact source `createdAt` and `updatedAt` instants.
+The migration-only historical recorder reuses the established User/Work
+validation, lock and cardinality rules while preserving both instants; the
+ordinary interactive Wishlist recorder and its current-time clock remain
+unchanged. Empty fulfillment fields create no Item, acquisition or fulfillment
+effect, and Library context never becomes Wishlist ownership.
+
+Every raw row also creates one admitted restricted auxiliary preservation
+plan. The 41 active plus 41 preservation plans form an 82-record prepared
+Wishlist lane with zero Edition-specific plan, quarantine, conflict or
+unmatched dependency. Dry-run, apply preflight and reconciliation use the same
+typed plan stream; target inspection validates owner, Work-only shape, null
+Edition and both historical timestamps.
+
+Product remains `v2.001`, schema remains `1026`, Biblio Core is `2.46.0` and
+Biblio UI remains `0.20.0`. No CURRENT apply/import, schema, REST or UI change
+is included. Reading Goals remain unsupported and Archive remains outside this
+slice. Closure evidence:
+`docs/135-mig-02-wishlist-map-01-current-v1-wishlist-mapper.md`.

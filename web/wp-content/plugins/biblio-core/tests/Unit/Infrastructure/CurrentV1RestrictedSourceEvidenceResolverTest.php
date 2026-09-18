@@ -178,6 +178,29 @@ final class CurrentV1RestrictedSourceEvidenceResolverTest extends TestCase
         ));
     }
 
+    public function testReviewedWishlistAuxiliaryEnvelopeVerifiesExactHash(): void
+    {
+        $directory = $this->wishlistSource();
+        $package = (new FilesystemMigrationSourcePackageFactory())->build($directory);
+        $resolver = new CurrentV1RestrictedSourceEvidenceResolver();
+        $resolver->verify($package, $this->wishlistPlan(
+            $package->manifestDigest(),
+            DeterministicJson::hash([
+                "source_slot" => "wishlistItems",
+                "raw_type" => "edition",
+                "title_group_key" => "private-group-sentinel",
+                "desired_carrier" => "Fysiek boek",
+            ])
+        ));
+        self::addToAssertionCount(1);
+
+        $this->expectException(MigrationRunnerFailure::class);
+        $resolver->verify($package, $this->wishlistPlan(
+            $package->manifestDigest(),
+            str_repeat("f", 64)
+        ));
+    }
+
     private function plan(
         string $manifest,
         string $sourceIdentity,
@@ -282,6 +305,50 @@ final class CurrentV1RestrictedSourceEvidenceResolverTest extends TestCase
                     ],
                 ],
             ]], JSON_THROW_ON_ERROR) . "\n"
+        );
+        return $directory;
+    }
+
+    private function wishlistPlan(
+        string $manifest,
+        string $evidenceHash
+    ): PreservedSourceEvidencePlan {
+        return new PreservedSourceEvidencePlan(
+            "v1.wishlist_item/wish-1/auxiliary",
+            "current_v1_wishlist_auxiliary",
+            "wishlist_auxiliary_evidence_preserved",
+            CurrentV1SourceAdapter::ADAPTER_ID,
+            CurrentV1SourceAdapter::SOURCE_FAMILY,
+            CurrentV1SourceAdapter::SOURCE_VERSION,
+            $manifest,
+            "d-mig-wishlist-map-01.2026-09-18:test",
+            "data/books.json",
+            "wishlistItems",
+            "wish-1",
+            "auxiliaryEvidence",
+            $evidenceHash,
+            PreservedSourceEvidencePrivacy::RestrictedSource
+        );
+    }
+
+    private function wishlistSource(): string
+    {
+        $directory = sys_get_temp_dir()
+            . "/biblio-wishlist-recovery-"
+            . bin2hex(random_bytes(8));
+        mkdir($directory . "/data", 0750, true);
+        $this->temporaryDirectories[] = $directory;
+        file_put_contents(
+            $directory . "/data/books.json",
+            json_encode([
+                "books" => [],
+                "wishlistItems" => [[
+                    "id" => "wish-1",
+                    "type" => "edition",
+                    "titleGroupKey" => "private-group-sentinel",
+                    "desiredCarrier" => "Fysiek boek",
+                ]],
+            ], JSON_THROW_ON_ERROR) . "\n"
         );
         return $directory;
     }

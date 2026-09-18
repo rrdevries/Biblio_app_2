@@ -2944,3 +2944,38 @@ work Series evidence. The CURRENT verifier reconstructs each exact typed hash
 envelope without returning source content. No role, type, confirmation,
 provider, rich lifecycle or schema field is added. Schema remains 1026; Core is
 2.45.0.
+
+## CURRENT Wishlist migration mapping
+
+`CurrentV1WishlistMapper` is the only layer that interprets CURRENT
+`wishlistItems`. It runs after raw adapter enumeration and CAT Work
+representative selection, is pinned to the exact reviewed manifest and emits
+two independent source-neutral records per valid source row:
+
+```text
+Wishlist row -> WishlistPlan(explicit User, exact CAT Work, work_only, active)
+Wishlist row -> PreservedSourceEvidencePlan(restricted auxiliary envelope)
+```
+
+The active plan declares only one `catalog_work` dependency. Raw
+`type=edition`, ISBN, title/group evidence, carrier and available CAT Edition
+identity never create an Edition dependency. `WishlistMigrationParticipant`
+validates prepared-plan provenance and delegates the transactional mutation to
+`WishlistMigrationWriter`. The writer resolves the exact committed Work
+mapping and uses `HistoricalWishlistRecorder`, which preserves source creation
+and update instants while reusing the normal User/Work validation, Work-state
+lock, target entities, repositories and cardinality constraints.
+
+Canonical replay binds target User, source Work, Work-only/active form, both
+timestamps and source provenance. A pre-existing Edition-specific state blocks
+the Work-only import. Multiple source records may converge on one Work-only
+target only when their complete canonical payloads are equivalent; changed
+source, reverse mapping or target mutation fails closed.
+
+The closed preservation admission and CURRENT restricted resolver accept only
+the reviewed Wishlist auxiliary type/reason/locator/hash contract. Raw type,
+title group key and desired carrier remain in the immutable source package and
+are not returned by the resolver or exposed in artifacts. Reconciliation
+classifies `wishlist_entry` as an entity and inspects owner, exact Work,
+Work-only form, null Edition and both timestamps. Schema remains 1026; Core is
+2.46.0. No REST/UI or production apply path is added.
