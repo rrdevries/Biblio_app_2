@@ -1,7 +1,6 @@
 # MIG-02-READING-GOAL-MAP-01 — CURRENT V1 Reading Goal preservation
 
-Status: **IMPLEMENTED — FINAL ACCEPTANCE REQUIRES THE POST-COMMIT EXACT-SHA
-ZERO-WRITE TRIAL; PRODUCTION APPLY NOT AUTHORIZED**
+Status: **GO / CLOSED — PRODUCTION APPLY NOT AUTHORIZED**
 
 Date: 2026-09-18
 
@@ -93,12 +92,72 @@ with 3,399 assertions, 598 integration tests with 6,758 assertions, WordPress
 smoke with active plugin and HTTP 200, manifest JSON and whitespace. The two
 pre-existing unit-suite notices remain unrelated to this slice.
 
-A supporting working-tree CURRENT dry-run produced 6,579 prepared records,
-including exactly two Reading Goal preservation plans, with zero unsupported
-source types, planning errors or unmatched references. Its checksum verified,
-11 restricted goal values produced zero artifact hits, and a repeated run after
-local Core-version synchronization left the stable normal database data,
-schema and Biblio-count fingerprints unchanged. Because build provenance
-correctly records `working_tree_dirty=true`, this evidence is not the final
-clean exact-SHA trial. Final closure still requires that post-commit isolated
-trial and its unchanged trial/normal fingerprints.
+## Implementation commit tested
+
+The executable implementation tested by the final accepted trial is exactly:
+
+```text
+f9785740c680309b2ac7c9dd48e9641c052232a6
+```
+
+## Final accepted trial
+
+The isolated trial was detached and clean at the implementation commit above.
+It used manifest
+`35a18156490f103d4b6b610f524a1963e5be189d74c64637c49059396b1c7c67`,
+schema `1026`, Biblio Core `2.47.0` and Biblio UI `0.20.0`.
+
+The zero-write prepared stream contained 6,579 records and proved:
+
+- exactly two `v1.reading_goal` source observations;
+- exactly two `preserved_deferred` records with reason
+  `reading_goal_not_carried_forward_v2`;
+- zero Reading Goal product operations, dependencies and mappings;
+- zero Reading Goal quarantine;
+- an empty `unsupported_source_types` list;
+- zero planning errors and zero unmatched references; and
+- zero MIG-FND database rows after dry-run, including runs, source
+  observations, preservations, target mappings and quarantine.
+
+The privacy scan checked 11 restricted Reading Goal values. It found zero hits
+in the artifact and zero hits in captured CLI output. Restricted source values
+remain authoritative only in the immutable CURRENT source.
+
+All 57 Biblio tables were unchanged. The exact before/after fingerprint was:
+
+```text
+86af6c01323dedda96d5a093391df3f2de9d8e16f1630bb436d2cc53c95b9d02
+```
+
+The normal database data, schema and Biblio-count fingerprints were also
+unchanged. No apply or import was executed.
+
+The accepted artifact SHA-256 is:
+
+```text
+c4b9f01694d49199e517e6dea57016daf447e648fdad5067368e58bbbef2e799
+```
+
+## Global reconciliation note
+
+The only remaining CURRENT quarantine candidate has source type
+`v1.circulation_round`. It is already known circulation evidence and falls
+outside this Reading Goal disposition. The Reading Goal scope itself has zero
+quarantine.
+
+## Trial helper drift
+
+The trial helper still expected Biblio Core `2.46.0`, while the validated
+runtime correctly reported Core `2.47.0`. The equivalent direct validation of
+project/database isolation, target User/Library, manifest, schema, Core/UI
+versions, empty-target state and normal-database guard is the accepted closure
+evidence. The helper was not changed in this docs-only closure.
+
+## Final verdict
+
+```text
+MIG-02-READGOAL-DISPOSITION-01
+GO / CLOSED
+```
+
+Production apply remains not authorized.
