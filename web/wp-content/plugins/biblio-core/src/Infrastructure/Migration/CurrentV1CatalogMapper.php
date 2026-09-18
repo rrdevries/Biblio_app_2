@@ -40,7 +40,8 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
         private ?CurrentV1NoteMapper $noteMapper = null,
         private ?CurrentV1AssessmentMapper $assessmentMapper = null,
         private ?CurrentV1SeriesMapper $seriesMapper = null,
-        private ?CurrentV1WishlistMapper $wishlistMapper = null
+        private ?CurrentV1WishlistMapper $wishlistMapper = null,
+        private ?CurrentV1ReadingGoalMapper $readingGoalMapper = null
     ) {
         $this->isbn = $isbn ?? new IsbnCanonicalizer();
     }
@@ -61,6 +62,7 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
         $readingRounds = [];
         $notes = [];
         $wishlist = [];
+        $readingGoals = [];
         foreach ($inspection->records() as $record) {
             if ($record->sourceType() === CurrentV1SourceAdapter::BOOK) {
                 $books[$this->sourceKey($record->sourceId())] = $record;
@@ -98,6 +100,13 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
                 $wishlist[$this->sourceKey($record->sourceId())] = $record;
                 continue;
             }
+            if (
+                $this->readingGoalMapper !== null
+                && $record->sourceType() === CurrentV1SourceAdapter::READING_GOAL
+            ) {
+                $readingGoals[$this->sourceKey($record->sourceId())] = $record;
+                continue;
+            }
             $records[] = $record;
         }
         ksort($books, SORT_STRING);
@@ -106,6 +115,7 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
         ksort($readingRounds, SORT_STRING);
         ksort($notes, SORT_STRING);
         ksort($wishlist, SORT_STRING);
+        ksort($readingGoals, SORT_STRING);
 
         $findings = [];
         $states = [];
@@ -350,6 +360,15 @@ final readonly class CurrentV1CatalogMapper implements MigrationSourceMapper
             );
             array_push($records, ...$wishlistMapping->records());
             array_push($findings, ...$wishlistMapping->findings());
+        }
+
+        if ($this->readingGoalMapper !== null) {
+            $readingGoalMapping = $this->readingGoalMapper->map(
+                $inspection,
+                $readingGoals
+            );
+            array_push($records, ...$readingGoalMapping->records());
+            array_push($findings, ...$readingGoalMapping->findings());
         }
 
         if ($this->authorMapper !== null) {

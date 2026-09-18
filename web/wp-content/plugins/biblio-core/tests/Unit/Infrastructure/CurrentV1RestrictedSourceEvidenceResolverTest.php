@@ -201,6 +201,36 @@ final class CurrentV1RestrictedSourceEvidenceResolverTest extends TestCase
         ));
     }
 
+    public function testReviewedReadingGoalRecordVerifiesExactRestrictedHash(): void
+    {
+        $goal = [
+            "active" => false,
+            "config" => ["targetBooks" => 12],
+            "createdAt" => "2026-01-01T10:00:00.000Z",
+            "id" => "goal-1",
+            "title" => "private-goal-sentinel",
+            "type" => "books_per_year",
+            "updatedAt" => "2026-02-01T10:00:00.000Z",
+        ];
+        $directory = $this->readingGoalSource($goal);
+        $package = (new FilesystemMigrationSourcePackageFactory())->build($directory);
+        $resolver = new CurrentV1RestrictedSourceEvidenceResolver();
+        $resolver->verify(
+            $package,
+            $this->readingGoalPlan(
+                $package->manifestDigest(),
+                DeterministicJson::hash($goal)
+            )
+        );
+        self::addToAssertionCount(1);
+
+        $this->expectException(MigrationRunnerFailure::class);
+        $resolver->verify(
+            $package,
+            $this->readingGoalPlan($package->manifestDigest(), str_repeat("f", 64))
+        );
+    }
+
     private function plan(
         string $manifest,
         string $sourceIdentity,
@@ -353,9 +383,51 @@ final class CurrentV1RestrictedSourceEvidenceResolverTest extends TestCase
         return $directory;
     }
 
+    private function readingGoalPlan(
+        string $manifest,
+        string $evidenceHash
+    ): PreservedSourceEvidencePlan {
+        return new PreservedSourceEvidencePlan(
+            "v1.reading_goal/goal-1",
+            "current_v1_reading_goal",
+            "reading_goal_not_carried_forward_v2",
+            CurrentV1SourceAdapter::ADAPTER_ID,
+            CurrentV1SourceAdapter::SOURCE_FAMILY,
+            CurrentV1SourceAdapter::SOURCE_VERSION,
+            $manifest,
+            "d-mig-reading-goal-map-01.2026-09-18:test",
+            "data/reading_goals.json",
+            "goals",
+            "goal-1",
+            "record",
+            $evidenceHash,
+            PreservedSourceEvidencePrivacy::RestrictedSource
+        );
+    }
+
+    /** @param array<string,mixed> $goal */
+    private function readingGoalSource(array $goal): string
+    {
+        $directory = sys_get_temp_dir()
+            . "/biblio-reading-goal-recovery-"
+            . bin2hex(random_bytes(8));
+        mkdir($directory . "/data", 0750, true);
+        $this->temporaryDirectories[] = $directory;
+        file_put_contents(
+            $directory . "/data/reading_goals.json",
+            json_encode(["goals" => [$goal]], JSON_THROW_ON_ERROR) . "\n"
+        );
+        return $directory;
+    }
+
     private function removeDirectory(string $directory): void
     {
-        $files = [$directory . "/data/books.json", $directory . "/data", $directory];
+        $files = [
+            $directory . "/data/books.json",
+            $directory . "/data/reading_goals.json",
+            $directory . "/data",
+            $directory,
+        ];
         foreach ($files as $path) {
             if (is_file($path)) {
                 unlink($path);
