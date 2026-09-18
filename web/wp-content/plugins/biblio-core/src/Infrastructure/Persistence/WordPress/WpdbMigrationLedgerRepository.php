@@ -365,7 +365,8 @@ final readonly class WpdbMigrationLedgerRepository implements MigrationLedgerRep
         string $targetLibraryId,
         string $sourceFamily,
         string $sourceType,
-        string $sourceId
+        string $sourceId,
+        bool $lockForUpdate = false
     ): array {
         $runs = $this->tables->migrationRuns();
         $observations = $this->tables->migrationSourceObservations();
@@ -381,7 +382,8 @@ final readonly class WpdbMigrationLedgerRepository implements MigrationLedgerRep
                 . "AND o.source_family=%s AND o.source_type=%s AND o.source_id=%s "
                 . "AND o.processing_status='committed' "
                 . "AND o.disposition='preserved_deferred' "
-                . "ORDER BY r.run_id,o.observation_id",
+                . "ORDER BY r.run_id,o.observation_id"
+                . ($lockForUpdate ? " FOR UPDATE" : ""),
             $targetUserId,
             $targetLibraryId,
             $sourceFamily,
@@ -435,6 +437,61 @@ final readonly class WpdbMigrationLedgerRepository implements MigrationLedgerRep
                 $sourceId,
             ]
         ));
+    }
+
+    public function markPreservationsProcessed(
+        array $preservations,
+        DateTimeImmutable $at
+    ): void {
+        $table = $this->tables->migrationPreservations();
+        foreach ($preservations as $preservation) {
+            $row = $this->database->get_row($this->database->prepare(
+                "SELECT processing_status,processed_at FROM " . $table
+                    . " WHERE run_id=%s AND observation_id=%s FOR UPDATE",
+                $preservation->runId(),
+                $preservation->observationId()
+            ), ARRAY_A);
+            if ($row === null) {
+                throw new ValidationException(
+                    "Prior preservation disappeared during promotion."
+                );
+            }
+            if ((string) $row["processing_status"] === "processed") {
+                if ($row["processed_at"] === null) {
+                    throw new ValidationException(
+                        "Processed prior preservation has no processing time."
+                    );
+                }
+                continue;
+            }
+            if ((string) $row["processing_status"] !== "awaiting_future_processing") {
+                throw new ValidationException(
+                    "Prior preservation has an unsupported processing state."
+                );
+            }
+            $updated = $this->withoutDatabaseErrorOutput(
+                fn (): int|false => $this->database->update(
+                    $table,
+                    [
+                        "processing_status" => "processed",
+                        "processed_at" => $this->date($at),
+                    ],
+                    [
+                        "run_id" => $preservation->runId(),
+                        "observation_id" => $preservation->observationId(),
+                        "processing_status" => "awaiting_future_processing",
+                    ],
+                    ["%s", "%s"],
+                    ["%s", "%s", "%s"]
+                )
+            );
+            if ($updated !== 1) {
+                throw WpdbErrorTranslator::writeFailure(
+                    "Could not mark prior migration preservation as processed.",
+                    $this->database->last_error
+                );
+            }
+        }
     }
 
     public function preservationMatches(

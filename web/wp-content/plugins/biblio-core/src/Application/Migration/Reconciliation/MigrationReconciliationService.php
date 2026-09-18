@@ -415,16 +415,21 @@ final readonly class MigrationReconciliationService
             ? $typedPlan->preservation()
             : null;
         if ($typedPlan instanceof PreservedSourceEvidencePlan) {
+            $preservationStatus = $observation->preservationStatus();
             if (
                 $observation->disposition() !== MigrationDisposition::PreservedDeferred
                 || $observation->reasonCode() !== $typedPlan->reasonCode()
                 || $observation->preservationReason() !== $typedPlan->reasonCode()
-                || $observation->preservationStatus() !== "awaiting_future_processing"
+                || !in_array(
+                    $preservationStatus,
+                    ["awaiting_future_processing", "processed"],
+                    true
+                )
                 || !$this->ledger->preservationMatches(
                     $run->id(),
                     $observation->id(),
                     $typedPlan->reasonCode(),
-                    "awaiting_future_processing",
+                    (string) $preservationStatus,
                     MigrationEvidence::canonicalJson(
                         $typedPlan->evidenceDescriptor()
                     ),

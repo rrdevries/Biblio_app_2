@@ -119,7 +119,7 @@ final class MigrationPlanPreparerTest extends TestCase
                 return new MigrationBuildProvenance(
                     "v2.001",
                     1026,
-                    "2.48.0",
+                    "2.49.0",
                     str_repeat("a", 40),
                     false
                 );
