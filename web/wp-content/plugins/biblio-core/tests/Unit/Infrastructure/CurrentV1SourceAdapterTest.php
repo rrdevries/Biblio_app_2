@@ -27,7 +27,9 @@ final class CurrentV1SourceAdapterTest extends TestCase
 
     public function testExactReviewedStructureProfilesAndEnumeratesDeterministically(): void
     {
-        $root = $this->source();
+        $root = $this->source(
+            archiveReason: "private-legacy-reason-sentinel"
+        );
         $package = (new FilesystemMigrationSourcePackageFactory())->build($root);
         $adapter = new CurrentV1SourceAdapter();
         $profile = $adapter->profile($package);
@@ -89,6 +91,19 @@ final class CurrentV1SourceAdapterTest extends TestCase
         self::assertStringNotContainsString("Private Author", $json);
         self::assertStringNotContainsString("private note body", $json);
         self::assertStringNotContainsString("Private Counterparty", $json);
+        self::assertStringNotContainsString("private-legacy-reason-sentinel", $json);
+        $archiveReasonFindings = array_values(array_filter(
+            $profile->findings(),
+            static fn ($finding): bool =>
+                $finding->toArray()["reason_code"] === "private_values_omitted"
+                && $finding->toArray()["location"]
+                    === "data/books.json#copies/*/archiveReason"
+        ));
+        self::assertCount(1, $archiveReasonFindings);
+        self::assertSame(
+            "nonempty=1; distinct=1; values omitted.",
+            $archiveReasonFindings[0]->toArray()["message"]
+        );
         self::assertStringContainsString("D-MIG-LOAN-01 required", $json);
         self::assertStringContainsString("divergent_groups=1", $json);
         self::assertStringContainsString("no source precedence applied", $json);
@@ -219,7 +234,8 @@ final class CurrentV1SourceAdapterTest extends TestCase
         ?array $authors = null,
         bool $extraBookField = false,
         bool $extraAcquisitionField = false,
-        ?array $aliasRules = null
+        ?array $aliasRules = null,
+        string $archiveReason = ""
     ): string {
         $root = $this->directory();
         mkdir($root . "/data", 0700, true);
@@ -286,8 +302,8 @@ final class CurrentV1SourceAdapterTest extends TestCase
             "status" => "owned",
             "ownershipStatus" => "owned",
             "condition" => "",
-            "archived" => false,
-            "archiveReason" => "",
+            "archived" => $archiveReason !== "",
+            "archiveReason" => $archiveReason,
             "notes" => "",
             "acquisition" => [
                 "type" => "bought",

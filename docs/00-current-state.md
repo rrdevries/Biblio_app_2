@@ -4157,3 +4157,25 @@ committed mapping under the 23 legacy `catalog_item` identities before a new
 run write. It is explicitly not an Archive mapper and authorizes no
 apply/import. Exact design and audit evidence:
 `docs/137-d-mig-copy-excl-01-current-v1-erroneous-archived-copy-exclusion.md`.
+
+### MIG-02-COPY-EXCL-01 — CURRENT V1 erroneous Copy exclusion
+
+Status: **IMPLEMENTED — FINAL ACCEPTANCE REQUIRES THE CLEAN EXACT-SHA
+ZERO-WRITE TRIAL; PRODUCTION APPLY NOT AUTHORIZED**.
+
+The exact manifest-bound set of 23 erroneous legacy Copy registrations is now
+a terminal CURRENT-only non-Item outcome. No excluded Copy produces an Item,
+Item-local target, Archive state, fulfillment, Wishlist, Reading or circulation
+mutation. Each produces one restricted durable no-target preservation with
+reason `erroneous_legacy_copy_not_carried_forward_v2`.
+
+The real prepared intersection contains 734 complete Item plans, 98 preservation
+plans and 6,592 executable records. Work/Edition CAT truth, the 41 Work-only
+Wishlist plans, 53 ReadingRounds, 1,064 Reading Truth plans and the existing
+circulation lane remain unchanged. Prepared-stream contradiction detection and
+cross-run preflight/reconciliation reject a prior committed legacy
+`catalog_item` mapping before a new run write.
+
+Product remains `v2.001`, schema remains `1026`, Biblio Core is `2.48.0` and
+Biblio UI remains `0.20.0`. Exact closure evidence:
+`docs/138-mig-02-copy-excl-01-current-v1-erroneous-archived-copy-exclusion.md`.

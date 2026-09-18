@@ -5004,3 +5004,34 @@ Acceptance requires all of the following:
 
 Exact closure evidence is in
 `docs/136-mig-02-reading-goal-map-01-current-v1-preservation.md`.
+
+## MIG-02-COPY-EXCL-01 acceptance
+
+Acceptance requires all of the following:
+
+- the exact 23-ID/full-row-hash set and manifest match docs/137, including set
+  digest `c1d54e96fd3330fa329a397fcc9f69c6556e6d4cd299c153be9c059145c9353e`;
+- all 23 receive the typed terminal erroneous-Copy outcome and no other Copy
+  does, independently from the existing external-borrowed terminal outcome;
+- zero excluded Copy produces an Item, Item-local target, Archive state,
+  fulfillment, Wishlist, Reading or circulation mutation;
+- each produces exactly one restricted preservation with reason
+  `erroneous_legacy_copy_not_carried_forward_v2` and zero target mapping;
+- Work/Edition CAT identity, legitimate siblings/aliases, Work-only Wishlist,
+  Work-level Reading and circulation results remain unchanged;
+- a contradictory same-stream `catalog_item` identity fails preparation and a
+  prior committed mapping in any compatible run status fails before a new run
+  write and during reconciliation;
+- exact CURRENT planning produces 734 Items, 26 details operations, 98
+  preservation plans and 6,592 executable records with zero exclusion
+  quarantine, unmatched reference or planning error;
+- the clean detached implementation SHA passes the guarded exact CURRENT
+  zero-write trial with all 57 Biblio tables, MIG-FND counts and the normal
+  database unchanged and with privacy/checksum validation;
+- focused/full Core gates, syntax, PHPStan, Composer/platform, WordPress smoke,
+  manifest, whitespace and independent review pass; and
+- product remains `v2.001`, schema `1026`, Core `2.48.0`, UI `0.20.0`, with no
+  apply/import, schema, REST, UI or Archive implementation.
+
+Exact closure evidence is in
+`docs/138-mig-02-copy-excl-01-current-v1-erroneous-archived-copy-exclusion.md`.

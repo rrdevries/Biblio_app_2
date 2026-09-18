@@ -28,6 +28,7 @@ use Biblio\Core\Infrastructure\Migration\CurrentV1CatalogSourceIds;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ItemLocalMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ItemLocalMappingReason;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedItemLocalContract;
+use Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedCopyExclusionContract;
 use Biblio\Core\Infrastructure\Migration\CurrentV1SourceAdapter;
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Library\LibraryName;
@@ -435,7 +436,8 @@ final class CurrentV1CatalogMapperTest extends TestCase
     private function itemLocalMapper(): CurrentV1ItemLocalMapper
     {
         return new CurrentV1ItemLocalMapper(
-            new CurrentV1ReviewedItemLocalContract(str_repeat("0", 64))
+            new CurrentV1ReviewedItemLocalContract(str_repeat("0", 64)),
+            new CurrentV1ReviewedCopyExclusionContract(str_repeat("0", 64), [])
         );
     }
 

@@ -14,6 +14,7 @@ use Biblio\Core\Application\Migration\{
 };
 use Biblio\Core\Application\Migration\Runner\{
     CrossRunMigrationReplayParticipant,
+    PreparedMigrationPreflightParticipant,
     DeterministicJson,
     MigrationParticipant,
     PreparedMigrationContextParticipant,
@@ -26,6 +27,7 @@ use Biblio\Core\Application\Migration\Runner\{
 final readonly class PreservedSourceEvidenceMigrationParticipant implements
     MigrationParticipant,
     CrossRunMigrationReplayParticipant,
+    PreparedMigrationPreflightParticipant,
     PreparedMigrationContextParticipant
 {
     public const SOURCE_TYPE = "preserved_source_evidence";
@@ -92,6 +94,7 @@ final readonly class PreservedSourceEvidenceMigrationParticipant implements
         PlannedMigrationRecord $plan,
         MigrationPlanningTarget $target
     ): bool {
+        $this->assertPreparedPreflight($record, $plan, $target);
         $typed = $this->guard->require($record, $target, $plan);
         $matches = $this->ledger->priorPreservations(
             $target->userId(),
@@ -123,6 +126,28 @@ final readonly class PreservedSourceEvidenceMigrationParticipant implements
             }
         }
         return true;
+    }
+
+    public function assertPreparedPreflight(
+        MigrationSourceRecord $record,
+        PlannedMigrationRecord $plan,
+        MigrationPlanningTarget $target
+    ): void {
+        $typed = $this->guard->require($record, $target, $plan);
+        foreach ($typed->forbiddenSourceIdentities() as $forbidden) {
+            if ($this->ledger->committedSourceTargets(
+                $target->userId(),
+                $target->libraryId(),
+                $typed->sourceFamily(),
+                $forbidden["source_type"],
+                $forbidden["source_id"]
+            ) !== []) {
+                throw new PreservedSourceEvidenceMigrationFailure(
+                    "prior_mapping_conflicts_with_terminal_preservation",
+                    "A committed migration mapping conflicts with terminal source preservation."
+                );
+            }
+        }
     }
 
     private function equivalent(

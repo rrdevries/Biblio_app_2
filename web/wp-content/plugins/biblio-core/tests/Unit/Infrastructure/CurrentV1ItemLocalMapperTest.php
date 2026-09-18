@@ -13,6 +13,7 @@ use Biblio\Core\Infrastructure\Migration\CurrentV1ItemEligibility;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ItemLocalMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ItemLocalMappingReason;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedItemLocalContract;
+use Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedCopyExclusionContract;
 use Biblio\Core\Infrastructure\Migration\CurrentV1SourceAdapter;
 use PHPUnit\Framework\TestCase;
 
@@ -239,7 +240,8 @@ final class CurrentV1ItemLocalMapperTest extends TestCase
             $byBook["source:" . $book->sourceId()] = $book;
         }
         return (new CurrentV1ItemLocalMapper(
-            new CurrentV1ReviewedItemLocalContract(self::MANIFEST)
+            new CurrentV1ReviewedItemLocalContract(self::MANIFEST),
+            new CurrentV1ReviewedCopyExclusionContract(self::MANIFEST, [])
         ))->map($inspection, $byCopy, $byBook);
     }
 

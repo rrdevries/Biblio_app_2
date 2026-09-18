@@ -1279,16 +1279,22 @@ final readonly class CurrentV1SourceAdapter implements MigrationSourceAdapter
             "type"
         );
 
-        $archiveReasons = [];
+        $archiveReasonCount = 0;
+        $archiveReasonHashes = [];
         foreach ($source["books"]["copies"] as $copy) {
-            if (is_array($copy) && ($copy["archived"] ?? null) === true) {
-                $archiveReasons[] = $copy["archiveReason"] ?? null;
+            $reason = is_array($copy) && ($copy["archived"] ?? null) === true
+                ? ($copy["archiveReason"] ?? null)
+                : null;
+            if (self::nonEmptyString($reason)) {
+                ++$archiveReasonCount;
+                $archiveReasonHashes[hash("sha256", $reason)] = true;
             }
         }
-        $this->appendCounts(
-            $findings,
+        $findings[] = new MigrationSourceFinding(
+            "private_values_omitted",
             "data/books.json#copies/*/archiveReason",
-            $archiveReasons
+            "nonempty={$archiveReasonCount}; distinct="
+                . count($archiveReasonHashes) . "; values omitted."
         );
 
         $ratings = [];

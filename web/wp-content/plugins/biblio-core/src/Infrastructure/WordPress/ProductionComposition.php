@@ -643,6 +643,11 @@ final class ProductionComposition
                 "reading_goal_not_carried_forward_v2",
                 PreservedSourceEvidencePrivacy::RestrictedSource
             ),
+            new PreservedSourceEvidenceAdmission(
+                "current_v1_erroneous_legacy_copy",
+                "erroneous_legacy_copy_not_carried_forward_v2",
+                PreservedSourceEvidencePrivacy::RestrictedSource
+            ),
         ]);
         $migrationParticipants = new MigrationParticipantRegistry([
             new CatalogAuthorMigrationParticipant($authorMigrationWriter),

@@ -3004,3 +3004,20 @@ Malformed source identity or structure is quarantined at the mapper boundary.
 No Reading Goal domain, schema, writer, read model, UI or REST route exists;
 no conversion to ReadingRound, Personal Reading Truth, Note or another V2
 entity is permitted. Schema remains 1026; Core is 2.47.0.
+
+## CURRENT erroneous Copy exclusion
+
+`CurrentV1ReviewedCopyExclusionContract` binds the exact D-MIG-COPY-EXCL-01
+manifest, stable Copy IDs and full-row hashes. `CurrentV1ItemLocalMapper` emits
+the typed terminal `NOT_LIBRARY_ITEM_ERRONEOUS_LEGACY_COPY` result before
+acquisition/details mapping plus one admitted restricted preservation plan.
+`CurrentV1CatalogMapper` short-circuits Item composition for that result while
+leaving all Work/Edition plans intact.
+
+No source-neutral component interprets legacy archive fields. Instead,
+`SourceMappingExclusionPlan` lets a typed plan declare a contradictory source
+mapping identity. `MigrationPlanPreparer` rejects contradictions in one stream;
+`PreparedMigrationPreflightParticipant` checks scope-compatible committed
+mappings before run creation and during reconciliation. The repository lookup
+is exact on target User/Library and source family/type/ID, and deliberately has
+no payload-hash or run-status filter. Schema remains 1026; Core is 2.48.0.

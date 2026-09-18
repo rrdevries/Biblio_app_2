@@ -2941,3 +2941,16 @@ identity with any changed evidence, reason, locator, contract or provenance
 fails closed. Restricted content stays in the retained immutable source
 package; ordinary artifacts, logs, exceptions, REST and the Biblio UI expose
 neither that content nor an internal recovery capability.
+
+## 21. CURRENT erroneous Copy migration exclusion
+
+For the exact 23 manifest-bound CURRENT V1 Copy registrations accepted in
+D-MIG-COPY-EXCL-01, V2.001 intentionally has no Item target. This terminal
+decision precedes classification and Item-local readiness and does not alter the
+parent Work/Edition, Work-only Wishlist or Work-level Reading truth.
+
+Each source Copy is durably accounted as restricted `preserved_deferred`
+evidence with reason `erroneous_legacy_copy_not_carried_forward_v2`. Legacy
+archive/correction fields remain source evidence only: they create no V2 Archive
+lifecycle, reason, time, restore path or deletion. Any prior committed Item
+mapping is a hard operator conflict, never an automatic cleanup instruction.

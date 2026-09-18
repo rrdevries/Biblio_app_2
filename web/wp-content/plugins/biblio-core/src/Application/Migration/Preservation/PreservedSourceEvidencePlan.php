@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Application\Migration\Preservation;
 
-use Biblio\Core\Application\Migration\Runner\TypedMigrationPlan;
+use Biblio\Core\Application\Migration\Runner\SourceMappingExclusionPlan;
 use Biblio\Core\Exception\ValidationException;
 
-final readonly class PreservedSourceEvidencePlan implements TypedMigrationPlan
+final readonly class PreservedSourceEvidencePlan implements SourceMappingExclusionPlan
 {
+    /** @var list<array{source_type:string,source_id:string}> */
+    private array $forbiddenSourceIdentities;
+
+    /** @param list<array<string,mixed>> $forbiddenSourceIdentities */
     public function __construct(
         private string $sourceIdentity,
         private string $evidenceType,
@@ -24,7 +28,8 @@ final readonly class PreservedSourceEvidencePlan implements TypedMigrationPlan
         private string $sourceField,
         private string $evidenceSha256,
         private PreservedSourceEvidencePrivacy $privacy,
-        private int $occurrenceCount = 1
+        private int $occurrenceCount = 1,
+        array $forbiddenSourceIdentities = []
     ) {
         foreach ([$this->evidenceType, $this->reasonCode, $this->adapterId, $this->sourceFamily] as $token) {
             if (preg_match('/^[a-z0-9][a-z0-9._-]{0,63}$/D', $token) !== 1) {
@@ -52,6 +57,32 @@ final readonly class PreservedSourceEvidencePlan implements TypedMigrationPlan
         if (mb_strlen($this->locator()) > 1024) {
             throw new ValidationException("Preserved source evidence locator is too long.");
         }
+        $seen = [];
+        $validated = [];
+        foreach ($forbiddenSourceIdentities as $identity) {
+            $sourceType = $identity["source_type"] ?? null;
+            $sourceId = $identity["source_id"] ?? null;
+            if (
+                !is_string($sourceType)
+                || preg_match('/^[a-z0-9][a-z0-9._-]{0,63}$/D', $sourceType) !== 1
+                || !is_string($sourceId)
+                || trim($sourceId) === ""
+                || mb_strlen($sourceId) > 191
+            ) {
+                throw new ValidationException(
+                    "Forbidden migration source identity is invalid."
+                );
+            }
+            $key = $sourceType . "\0" . $sourceId;
+            if (isset($seen[$key])) {
+                throw new ValidationException(
+                    "Forbidden migration source identity is invalid."
+                );
+            }
+            $seen[$key] = true;
+            $validated[] = ["source_type" => $sourceType, "source_id" => $sourceId];
+        }
+        $this->forbiddenSourceIdentities = $validated;
     }
 
     public function sourceIdentity(): string { return $this->sourceIdentity; }
@@ -69,6 +100,15 @@ final readonly class PreservedSourceEvidencePlan implements TypedMigrationPlan
     public function evidenceSha256(): string { return $this->evidenceSha256; }
     public function privacy(): PreservedSourceEvidencePrivacy { return $this->privacy; }
     public function occurrenceCount(): int { return $this->occurrenceCount; }
+    /** @return list<array{source_type:string,source_id:string}> */
+    public function forbiddenSourceIdentities(): array
+    {
+        $identities = $this->forbiddenSourceIdentities;
+        usort($identities, static fn (array $a, array $b): int =>
+            [$a["source_type"], $a["source_id"]]
+                <=> [$b["source_type"], $b["source_id"]]);
+        return $identities;
+    }
 
     public function locator(): string
     {
@@ -96,10 +136,15 @@ final readonly class PreservedSourceEvidencePlan implements TypedMigrationPlan
     /** @return array<string, mixed> */
     public function canonicalPayload(): array
     {
-        return array_merge($this->evidenceDescriptor(), [
+        $payload = array_merge($this->evidenceDescriptor(), [
             "disposition" => "preserved_deferred",
             "locator" => $this->locator(),
             "reason_code" => $this->reasonCode,
         ]);
+        if ($this->forbiddenSourceIdentities !== []) {
+            $payload["forbidden_source_identities"] =
+                $this->forbiddenSourceIdentities();
+        }
+        return $payload;
     }
 }

@@ -108,7 +108,9 @@ final readonly class SyntheticPreservationAdapter implements MigrationSourceAdap
         private ?string $planSourceFamily = null,
         private ?string $planSourceVersion = null,
         private ?string $planManifest = null,
-        private bool $includeActive = false
+        private bool $includeActive = false,
+        /** @var list<array{source_type:string,source_id:string}> */
+        private array $forbiddenSourceIdentities = []
     ) {
     }
 
@@ -149,7 +151,7 @@ final readonly class SyntheticPreservationAdapter implements MigrationSourceAdap
         if ($this->includeActive) {
             yield MigrationSourceRecord::typed(
                 SyntheticActiveParticipant::SOURCE_TYPE,
-                "synthetic:active:1",
+                "v1.copy/copy-1/item",
                 new SyntheticActivePlan("synthetic-target-1")
             );
         }
@@ -176,7 +178,8 @@ final readonly class SyntheticPreservationAdapter implements MigrationSourceAdap
                     "source_slot" => $sourceIdentity,
                     "body" => $body,
                 ]),
-                PreservedSourceEvidencePrivacy::RestrictedSource
+                PreservedSourceEvidencePrivacy::RestrictedSource,
+                forbiddenSourceIdentities: $this->forbiddenSourceIdentities
             );
             yield MigrationSourceRecord::typed(
                 PreservedSourceEvidenceMigrationParticipant::SOURCE_TYPE,
@@ -257,7 +260,7 @@ final readonly class SyntheticActivePlan implements TypedMigrationPlan
 
 final readonly class SyntheticActiveParticipant implements MigrationParticipant
 {
-    public const SOURCE_TYPE = "active_synthetic";
+    public const SOURCE_TYPE = "catalog_item";
 
     public function sourceType(): string { return self::SOURCE_TYPE; }
 
@@ -415,6 +418,112 @@ final class PreservedSourceEvidenceMigrationTest extends PersistenceIntegrationT
             );
             self::assertSame(1, $this->observationCount());
             self::assertSame(1, $this->preservationCount());
+        }
+    }
+
+    public function testCommittedForbiddenSourceMappingFailsBeforeNewRunWrite(): void
+    {
+        $application = (new ProductionComposition($this->database))->application();
+        [$user, $library] = $this->target($application, "preserve-forbidden");
+        $source = $this->source(["private-terminal-preservation-sentinel"]);
+        $initialAdapter = new SyntheticPreservationAdapter(includeActive: true);
+        $initialRunner = $this->runner(
+            $application,
+            $initialAdapter,
+            "preserve-forbidden-v1"
+        );
+        $initialArtifact = $initialRunner->dryRunArtifact(
+            $source,
+            SyntheticPreservationAdapter::ADAPTER_ID,
+            $user,
+            $library
+        );
+        $initial = $initialRunner->apply(
+            $source,
+            SyntheticPreservationAdapter::ADAPTER_ID,
+            $user,
+            $library,
+            $this->digest($initialArtifact->payload())
+        );
+        self::assertTrue($initial->reconciliation()->accepted());
+        self::assertSame(1, $this->mappingCount());
+
+        $correctedAdapter = new SyntheticPreservationAdapter(
+            forbiddenSourceIdentities: [[
+                "source_type" => "catalog_item",
+                "source_id" => "v1.copy/copy-1/item",
+            ]]
+        );
+        $counts = [
+            "runs" => $this->runCount(),
+            "observations" => $this->observationCount(),
+            "preservations" => $this->preservationCount(),
+            "mappings" => $this->mappingCount(),
+        ];
+
+        $ledger = new WpdbMigrationLedgerRepository($this->database, $this->tableNames);
+        $planning = $this->planning($application, $correctedAdapter, $ledger);
+        $inspection = $planning->inspectSource(
+            $source,
+            SyntheticPreservationAdapter::ADAPTER_ID
+        );
+        $prepared = $planning->prepare(
+            $inspection,
+            new MigrationPlanningTarget(
+                $application->personalMigrationTargets()->validate($user, $library)
+            )
+        );
+        try {
+            $application->migrationReconciliation()->reconcile(
+                $initial->run(),
+                $prepared
+            );
+            self::fail("Reconciliation must reject a committed forbidden mapping.");
+        } catch (PreservedSourceEvidenceMigrationFailure $failure) {
+            self::assertSame(
+                "prior_mapping_conflicts_with_terminal_preservation",
+                $failure->reasonCode()
+            );
+        }
+
+        foreach (["completed", "failed", "interrupted", "running"] as $status) {
+            $this->database->update(
+                $this->tableNames->migrationRuns(),
+                ["run_status" => $status],
+                ["run_id" => $initial->run()->id()],
+                ["%s"],
+                ["%s"]
+            );
+            $runner = $this->runner(
+                $application,
+                $correctedAdapter,
+                "preserve-forbidden-" . $status
+            );
+            $artifact = $runner->dryRunArtifact(
+                $source,
+                SyntheticPreservationAdapter::ADAPTER_ID,
+                $user,
+                $library
+            );
+            try {
+                $runner->apply(
+                    $source,
+                    SyntheticPreservationAdapter::ADAPTER_ID,
+                    $user,
+                    $library,
+                    $this->digest($artifact->payload())
+                );
+                self::fail("Committed forbidden mapping must stop apply preflight.");
+            } catch (PreservedSourceEvidenceMigrationFailure $failure) {
+                self::assertSame(
+                    "prior_mapping_conflicts_with_terminal_preservation",
+                    $failure->reasonCode()
+                );
+            }
+            self::assertSame($counts["runs"], $this->runCount());
+            self::assertSame($counts["observations"], $this->observationCount());
+            self::assertSame($counts["preservations"], $this->preservationCount());
+            self::assertSame($counts["mappings"], $this->mappingCount());
         }
     }
 

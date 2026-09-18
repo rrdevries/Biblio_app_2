@@ -43,6 +43,7 @@ use Biblio\Core\Infrastructure\Migration\CurrentV1ItemLocalMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1NoteMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedNoteContract;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedItemLocalContract;
+use Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedCopyExclusionContract;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ReadingMapper;
 use Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedReadingContract;
 use Biblio\Core\Infrastructure\Migration\FilesystemMigrationSourcePackageFactory;
@@ -464,7 +465,8 @@ final class MigrationRunnerShellTest extends PersistenceIntegrationTestCase
                     new CurrentV1ReviewedClassificationContract($manifest)
                 ),
                 itemLocalMapper: new CurrentV1ItemLocalMapper(
-                    new CurrentV1ReviewedItemLocalContract($manifest)
+                    new CurrentV1ReviewedItemLocalContract($manifest),
+                    new CurrentV1ReviewedCopyExclusionContract($manifest, [])
                 ),
                 authorMapper: new CurrentV1AuthorMapper(
                     new CurrentV1ReviewedAuthorContract(

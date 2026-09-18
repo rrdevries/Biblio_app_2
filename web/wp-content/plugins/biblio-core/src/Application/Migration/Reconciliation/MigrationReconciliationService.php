@@ -16,6 +16,7 @@ use Biblio\Core\Application\Migration\Catalog\CatalogItemPlan;
 use Biblio\Core\Application\Migration\Preservation\PreservedSourceEvidencePlan;
 use Biblio\Core\Application\Migration\Runner\{
     CrossRunMigrationReplayParticipant,
+    PreparedMigrationPreflightParticipant,
     MigrationSourceInspection,
     PreparedMigrationPlan,
     PreparedMigrationRecord,
@@ -49,6 +50,7 @@ final readonly class MigrationReconciliationService
     ): MigrationReconciliationReport {
         $inspection = $prepared->inspection();
         $this->assertProvenance($run, $inspection);
+        $this->assertPreparedPreflight($prepared);
         $snapshot = $this->ledger->snapshot($run->id());
         $authoritativeRun = $snapshot->run();
         $this->assertRunAuthority($run, $authoritativeRun);
@@ -571,6 +573,20 @@ final readonly class MigrationReconciliationService
                 $preparedRecord->plan(),
                 $prepared->target()
             );
+    }
+
+    private function assertPreparedPreflight(PreparedMigrationPlan $prepared): void
+    {
+        foreach ($prepared->records() as $item) {
+            $participant = $item->participant();
+            if ($participant instanceof PreparedMigrationPreflightParticipant) {
+                $participant->assertPreparedPreflight(
+                    $item->record(),
+                    $item->plan(),
+                    $prepared->target()
+                );
+            }
+        }
     }
 
     /**

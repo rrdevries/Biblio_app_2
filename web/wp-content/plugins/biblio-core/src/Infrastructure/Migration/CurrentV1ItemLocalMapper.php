@@ -5,9 +5,16 @@ declare(strict_types=1);
 namespace Biblio\Core\Infrastructure\Migration;
 
 use Biblio\Core\Application\Migration\Catalog\CatalogItemPreservationPlan;
+use Biblio\Core\Application\Migration\Catalog\CatalogItemMigrationParticipant;
 use Biblio\Core\Application\Migration\MigrationDisposition;
+use Biblio\Core\Application\Migration\Preservation\{
+    PreservedSourceEvidenceMigrationParticipant,
+    PreservedSourceEvidencePlan,
+    PreservedSourceEvidencePrivacy
+};
 use Biblio\Core\Application\Migration\Runner\MigrationRunnerFailure;
 use Biblio\Core\Application\Migration\Runner\MigrationRunnerReason;
+use Biblio\Core\Application\Migration\Runner\DeterministicJson;
 use Biblio\Core\Application\Migration\Runner\MigrationSourceInspection;
 use Biblio\Core\Application\Migration\Runner\MigrationSourceMappingFinding;
 use Biblio\Core\Application\Migration\Runner\MigrationSourceRecord;
@@ -24,7 +31,9 @@ final readonly class CurrentV1ItemLocalMapper
 {
     public function __construct(
         private CurrentV1ReviewedItemLocalContract $contract =
-            new CurrentV1ReviewedItemLocalContract()
+            new CurrentV1ReviewedItemLocalContract(),
+        private CurrentV1ReviewedCopyExclusionContract $copyExclusions =
+            new CurrentV1ReviewedCopyExclusionContract()
     ) {
     }
 
@@ -49,6 +58,8 @@ final readonly class CurrentV1ItemLocalMapper
 
         $mappings = [];
         $findings = [];
+        $records = [];
+        $this->copyExclusions->assertMatches($inspection, $copiesByKey);
         foreach ($booksByKey as $book) {
             if ($this->hasBookAcquisitionEvidence($book->payload())) {
                 $findings[] = $this->finding(
@@ -60,7 +71,7 @@ final readonly class CurrentV1ItemLocalMapper
         }
 
         foreach ($copiesByKey as $copy) {
-            $mapping = $this->mapCopy($copy, $findings);
+            $mapping = $this->mapCopy($inspection, $copy, $findings, $records);
             $mappings[$copy->sourceId()] = $mapping;
         }
 
@@ -71,15 +82,74 @@ final readonly class CurrentV1ItemLocalMapper
             CurrentV1ItemLocalMappingReason::MappingContractApplied->value
         );
 
-        return new CurrentV1ItemLocalMappingResult($mappings, $findings);
+        $findings[] = new MigrationSourceMappingFinding(
+            "v1.copy_exclusion",
+            "mapping_contract:" . $this->copyExclusions->identity(),
+            MigrationDisposition::Mapped,
+            CurrentV1ItemLocalMappingReason::CopyExclusionMappingContractApplied->value
+        );
+
+        return new CurrentV1ItemLocalMappingResult($mappings, $findings, $records);
     }
 
-    /** @param list<MigrationSourceMappingFinding> $findings */
+    /**
+     * @param list<MigrationSourceMappingFinding> $findings
+     * @param list<MigrationSourceRecord> $records
+     */
     private function mapCopy(
+        MigrationSourceInspection $inspection,
         MigrationSourceRecord $copy,
-        array &$findings
+        array &$findings,
+        array &$records
     ): CurrentV1ItemLocalMapping {
         $payload = $copy->payload();
+        if ($this->copyExclusions->excludes($copy)) {
+            $sourceIdentity = CurrentV1SourceAdapter::COPY . "/"
+                . $copy->sourceId() . "/erroneous-legacy-copy";
+            $preserved = MigrationSourceRecord::typed(
+                PreservedSourceEvidenceMigrationParticipant::SOURCE_TYPE,
+                $sourceIdentity,
+                new PreservedSourceEvidencePlan(
+                    $sourceIdentity,
+                    "current_v1_erroneous_legacy_copy",
+                    CurrentV1ItemLocalMappingReason::
+                        ErroneousLegacyCopyNotCarriedForward->value,
+                    $inspection->adapter()->adapterId(),
+                    $inspection->adapter()->sourceFamily(),
+                    $inspection->profile()->sourceVersion(),
+                    $inspection->package()->manifestDigest(),
+                    $this->copyExclusions->identity(),
+                    "data/books.json",
+                    "copies",
+                    $copy->sourceId(),
+                    "record",
+                    DeterministicJson::hash($payload),
+                    PreservedSourceEvidencePrivacy::RestrictedSource,
+                    forbiddenSourceIdentities: [[
+                        "source_type" => CatalogItemMigrationParticipant::SOURCE_TYPE,
+                        "source_id" => CurrentV1CatalogSourceIds::item(
+                            $copy->sourceId()
+                        ),
+                    ]]
+                )
+            );
+            $records[] = $preserved;
+            $findings[] = new MigrationSourceMappingFinding(
+                $copy->sourceType(),
+                $copy->sourceId(),
+                MigrationDisposition::PreservedDeferred,
+                CurrentV1ItemLocalMappingReason::
+                    ErroneousLegacyCopyNotCarriedForward->value,
+                [[
+                    "source_type" => $preserved->sourceType(),
+                    "source_id" => $preserved->sourceId(),
+                ]]
+            );
+            return new CurrentV1ItemLocalMapping(
+                CurrentV1ItemEligibility::NotLibraryItemErroneousLegacyCopy,
+                null
+            );
+        }
         $acquisition = $payload["acquisition"] ?? null;
         if ($acquisition !== null && (!is_array($acquisition) || array_is_list($acquisition))) {
             throw $this->unsupported("CURRENT V1 Copy acquisition structure is unsupported.");
