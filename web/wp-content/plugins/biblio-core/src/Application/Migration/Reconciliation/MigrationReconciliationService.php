@@ -283,9 +283,10 @@ final readonly class MigrationReconciliationService
         $findingTotal = array_sum($profile["finding_counts"]);
         [$categoryAccounting, $categoryStrategyErrors, $unassignedSourceTypes] =
             $this->categoryAccounting($inspection);
+        $profileReview = $prepared->profileReview();
+        $profileAdmitted = $profileReview !== null && $profileReview->matches($inspection, $prepared->finalPopulationBundleDigest());
         $strategiesComplete = $unsupportedTypes === []
-            && $profile["unknown_categories"] === []
-            && $findingTotal === 0
+            && (($profile["unknown_categories"] === [] && $findingTotal === 0) || $profileAdmitted)
             && $categoryStrategyErrors === [];
         $flags = [
             "source_accounting_exact" => $sourceEquationExact && $unexpected === [],
@@ -300,6 +301,7 @@ final readonly class MigrationReconciliationService
         $accepted = !in_array(false, $flags, true);
 
         $payload = [
+            "reviewed_source_profile" => $profileAdmitted ? $profileReview->toArray() : null,
             "accepted" => $accepted,
             "acceptance_flags" => $flags,
             "source" => [

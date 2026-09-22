@@ -7,6 +7,15 @@ if [ "${BIBLIO_DDEV_STARTED:-0}" != "1" ]; then
   ddev start >/dev/null
 fi
 
+SMOKE_URL="https://biblio-v2.ddev.site"
+if [ "${BIBLIO_ISOLATED_ACCEPTANCE:-0}" = "1" ]; then
+  SMOKE_PROJECT="$(ddev exec printenv DDEV_SITENAME)"
+  [[ "$SMOKE_PROJECT" =~ ^biblio-v2-cutover-[a-f0-9]{12}$ ]] || { echo "FOUT: geen disposable smoke-project." >&2; exit 1; }
+  test "$(ddev exec printenv BIBLIO_REHEARSAL)" = "1"
+  SMOKE_URL="$(ddev describe --json-output | jq -r 'if (.raw|type)=="array" then .raw[0].primary_url else .raw.primary_url end')"
+  test "$SMOKE_URL" = "https://$SMOKE_PROJECT.ddev.site"
+fi
+
 STATUS="$(ddev wp plugin get biblio-core --field=status)"
 if [ "$STATUS" != "active" ]; then
   echo "FOUT: Biblio Core is niet actief."
@@ -25,7 +34,7 @@ if [ "$HOOK_COUNT" -lt 1 ]; then
   exit 1
 fi
 
-HTTP_STATUS="$(curl -s -o /dev/null -w "%{http_code}" https://biblio-v2.ddev.site)"
+HTTP_STATUS="$(curl -s -o /dev/null -w "%{http_code}" "$SMOKE_URL")"
 if [ "$HTTP_STATUS" != "200" ]; then
   echo "FOUT: lokale Biblio-site geeft HTTP $HTTP_STATUS."
   exit 1

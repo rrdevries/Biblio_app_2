@@ -20,7 +20,8 @@ final readonly class MigrationRunner
         private MigrationParticipantRegistry $participants,
         private MigrationTargetValidator $targets,
         private MigrationEnvironment $environment,
-        private ?MigrationSourceMapperRegistry $mappers = null
+        private ?MigrationSourceMapperRegistry $mappers = null,
+        private ?string $finalPopulationBundleDigest = null
     ) {
     }
 
@@ -196,7 +197,8 @@ final readonly class MigrationRunner
         return (new MigrationPlanPreparer(
             $this->participants,
             $this->mappers,
-            $this->environment
+            $this->environment,
+            $this->finalPopulationBundleDigest
         ))->prepare($inspection, $target);
     }
 

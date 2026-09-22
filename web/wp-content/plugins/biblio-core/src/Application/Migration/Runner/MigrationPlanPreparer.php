@@ -11,7 +11,8 @@ final readonly class MigrationPlanPreparer
     public function __construct(
         private MigrationParticipantRegistry $participants,
         private ?MigrationSourceMapperRegistry $mappers,
-        private MigrationEnvironment $environment
+        private MigrationEnvironment $environment,
+        private ?string $finalPopulationBundleDigest = null
     ) {
     }
 
@@ -106,7 +107,7 @@ final readonly class MigrationPlanPreparer
             [$a["source_type"], $a["source_id"], $a["payload_hash"]]
                 <=> [$b["source_type"], $b["source_id"], $b["payload_hash"]]);
 
-        $digest = DeterministicJson::hash([
+        $digestInput = [
             "adapter_id" => $inspection->adapter()->adapterId(),
             "source_family" => $inspection->adapter()->sourceFamily(),
             "source_version" => $inspection->profile()->sourceVersion(),
@@ -117,7 +118,14 @@ final readonly class MigrationPlanPreparer
             "mapping_contracts" => $contracts,
             "records" => $digestRecords,
             "findings" => $safeFindings,
-        ]);
+        ];
+        if ($this->finalPopulationBundleDigest !== null) {
+            \Biblio\Core\Application\Migration\Cutover\RehearsalContract::hash($this->finalPopulationBundleDigest);
+            $digestInput["final_population_bundle_digest"] = $this->finalPopulationBundleDigest;
+            $digestInput["reviewed_source_profile"] = $mapping->profileReview()?->toArray();
+            $digestInput["participant_registry"] = $this->participants->inventory();
+        }
+        $digest = DeterministicJson::hash($digestInput);
 
         return new PreparedMigrationPlan(
             $inspection,
@@ -126,7 +134,10 @@ final readonly class MigrationPlanPreparer
             $failures,
             $mapping->findings(),
             $contracts,
-            $digest
+            $digest,
+            $this->finalPopulationBundleDigest,
+            $mapping->profileReview(),
+            DeterministicJson::hash($this->participants->inventory())
         );
     }
 }

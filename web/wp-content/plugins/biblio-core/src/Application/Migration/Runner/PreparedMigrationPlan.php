@@ -19,7 +19,10 @@ final readonly class PreparedMigrationPlan
         private array $failures,
         private array $findings,
         private array $mappingContracts,
-        private string $planSetDigest
+        private string $planSetDigest,
+        private ?string $finalPopulationBundleDigest = null,
+        private ?\Biblio\Core\Application\Migration\Cutover\ReviewedSourceProfile $profileReview = null,
+        private ?string $registryDigest = null
     ) {
     }
 
@@ -34,6 +37,9 @@ final readonly class PreparedMigrationPlan
     /** @return list<string> */
     public function mappingContracts(): array { return $this->mappingContracts; }
     public function planSetDigest(): string { return $this->planSetDigest; }
+    public function finalPopulationBundleDigest(): ?string { return $this->finalPopulationBundleDigest; }
+    public function profileReview(): ?\Biblio\Core\Application\Migration\Cutover\ReviewedSourceProfile { return $this->profileReview; }
+    public function registryDigest(): ?string { return $this->registryDigest; }
 
     /** @return list<MigrationSourceRecord> */
     public function executableRecords(): array
@@ -59,6 +65,7 @@ final readonly class PreparedMigrationPlan
     {
         return [
             "plan_set_digest" => $this->planSetDigest,
+            "final_population_bundle_digest" => $this->finalPopulationBundleDigest,
             "adapter_id" => $this->inspection->adapter()->adapterId(),
             "source_family" => $this->inspection->adapter()->sourceFamily(),
             "source_version" => $this->inspection->profile()->sourceVersion(),

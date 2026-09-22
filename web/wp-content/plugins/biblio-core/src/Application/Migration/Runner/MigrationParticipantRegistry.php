@@ -36,4 +36,10 @@ final readonly class MigrationParticipantRegistry
     {
         return $this->participants[$sourceType] ?? null;
     }
+
+    /** @return array<string,string> */
+    public function inventory(): array
+    {
+        return array_map(static fn (MigrationParticipant $participant): string => get_class($participant), $this->participants);
+    }
 }
