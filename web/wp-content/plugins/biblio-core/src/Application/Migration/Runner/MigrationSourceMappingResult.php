@@ -12,7 +12,8 @@ final readonly class MigrationSourceMappingResult
      * @param list<MigrationSourceRecord> $records
      * @param list<MigrationSourceMappingFinding> $findings
      */
-    public function __construct(private array $records, private array $findings)
+    public function __construct(private array $records, private array $findings,
+        private ?\Biblio\Core\Application\Migration\Cutover\ReviewedSourceProfile $profileReview = null)
     {
         $identities = [];
         foreach ($this->records as $record) {
@@ -25,6 +26,8 @@ final readonly class MigrationSourceMappingResult
             $identities[$key] = true;
         }
     }
+
+    public function profileReview(): ?\Biblio\Core\Application\Migration\Cutover\ReviewedSourceProfile { return $this->profileReview; }
 
     /** @return list<MigrationSourceRecord> */
     public function records(): array

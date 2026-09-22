@@ -4240,3 +4240,30 @@ approval, dry-run against a final source, rehearsal, MIG-FND/product write,
 apply/import, REST, UI or schema change occurred. PREP-01B and REHEARSAL remain
 separate. Exact closure evidence:
 `docs/142-mig-cutover-prep-01a-final-source-intake-and-drift-tooling.md`.
+
+### MIG-CUTOVER-PREP-01B — guarded rehearsal tooling
+
+Status: **FRESH PRECOMMIT ACCEPTANCE GO — EXACT-SHA CLOSURE PENDING**. The previous attempt is
+**INVALIDATED / INCONCLUSIVE**, retained only as forensic history. A newly
+authorized prospective read-only all-table baseline and isolated gate/smoke
+cycle replaces that acceptance attempt; no retrospective drift exception is
+accepted. The resumed isolated gate passed (815 unit / 613 integration tests,
+HTTP 200); all 73 normal-DB tables and schema match the retained prospective
+baseline exactly, without volatile exclusions. The single implementation commit
+stage is authorized; postcommit exact-SHA evidence remains external and pending
+at this documentation checkpoint. See docs/143 §24.
+
+Core `2.51.0` adds a positively identified disposable-only rehearsal composition
+around the real apply/participant/transaction path. It requires PREP-01A input,
+explicit source review and exact clean-code/runtime/target/plan authorization,
+all-57-table empty baseline, independently restored PRE backup, named
+interruptions, exact-checkpoint resume, zero-state replay, accepted Core
+reconciliation, verified POST backup and full-baseline rollback. Evidence is
+immutable and privacy-safe; no public/general production apply command exists.
+
+Acceptance is synthetic only, with external clean-SHA receipts after one local
+implementation commit. Product `v2.001`, schema `1026`, UI `0.20.0` unchanged.
+FINAL CURRENT SOURCE is not yet accepted; final rehearsal and Renée's QA are
+not performed; **PRODUCTION APPLY NOT AUTHORIZED**. See
+`docs/143-mig-cutover-prep-01b-guarded-rehearsal-tooling.md` for contracts,
+audit, verification and remaining exact-source rehearsal work.

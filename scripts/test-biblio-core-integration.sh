@@ -38,6 +38,8 @@ CREATE DATABASE \`biblio_core_test\` \
 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; \
 GRANT ALL PRIVILEGES ON \`biblio_core_test\`.* TO 'db'@'%';"
 
+test "$(ddev exec env DB_NAME="$TEST_DATABASE" wp --path=/var/www/html/web db query 'SELECT DATABASE()' --skip-column-names)" = "$TEST_DATABASE"
+
 ddev exec env DB_NAME="$TEST_DATABASE" wp \
   --path=/var/www/html/web core install \
   --url=https://biblio-core.test \

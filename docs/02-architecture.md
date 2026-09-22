@@ -3086,3 +3086,22 @@ constructing an `approved_for_rehearsal` bundle and exposes no apply command.
 Artifacts are append-only by caller-supplied attempt identity, refuse an
 existing path, stay outside source root and are owner-readable only. Product
 remains `v2.001`, schema `1026`, Core `2.50.0`, UI `0.20.0`.
+
+## 80. MIG-CUTOVER-PREP-01B guarded rehearsal boundary
+
+`GuardedRehearsal` coordinates, but never replaces, `MigrationApplyRunner` and
+MIG-FND transactional participants. Optional observer hooks validate exact
+intent immediately before begin, record committed phases, inject authorized
+named interruptions and require accepted reconciliation before completion.
+PREP-01A intake/bundle plus separate explicit source review are mandatory.
+Typed exact reviewed-profile admission handles only already approved auxiliary
+source evidence; unknown/malformed/failed/uncommitted evidence still rejects.
+
+Infrastructure ports separate positive runtime/DB identity, all-57-table
+emptiness, full relational fingerprint, protected-normal-DB read, native
+backup transport, independent restore probe and immutable filesystem evidence.
+No source mutation, provider lookup, new product schema or public apply surface
+is introduced. PRE backup is rollback authority; replay must preserve complete
+database state. Source/build/target intent and exact-backup authorization are
+separate deterministic bindings. Details and audit:
+`docs/143-mig-cutover-prep-01b-guarded-rehearsal-tooling.md`.

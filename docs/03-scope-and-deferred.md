@@ -294,3 +294,11 @@ observations. MIG-02-WISHLIST-MAP-01 uses it for exactly 41 reviewed Wishlist
 auxiliary envelopes while separately mapping 41 active Work-only personal
 Wishlist targets. Neither slice promotes contained Works, adds Wishlist
 Edition specificity or authorizes a production migration.
+
+## 12. Guarded rehearsal preparation is not cutover authorization
+
+MIG-CUTOVER-PREP-01B implements rehearsal-only apply/recovery tooling and
+synthetic disposable verification. It does not designate FINAL CURRENT SOURCE,
+freeze V1, approve source/exception populations, resolve fresh circulation,
+perform final rehearsal/human QA or grant production apply. These remain
+explicit later gates under docs/141; operational closure is in docs/143.

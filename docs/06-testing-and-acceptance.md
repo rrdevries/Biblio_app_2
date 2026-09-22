@@ -5113,3 +5113,25 @@ PREP-01A is accepted only when:
 
 Exact closure evidence is in
 `docs/142-mig-cutover-prep-01a-final-source-intake-and-drift-tooling.md`.
+
+## MIG-CUTOVER-PREP-01B acceptance
+
+Only synthetic/disposable targets may be mutated. Targeted rehearsal tests
+cover positive/negative environment identity, 57-table emptiness, source and
+runtime/plan/authorization drift, exact reviewed quarantine, immutable evidence,
+native endpoint identity and independent restore, real participant apply,
+both named fault/resume routes, zero-state replay and successful/interrupted
+full rollback. Existing target authorization and RUN/RECON regression suites
+remain mandatory. Counts derive from prepared intents, never CURRENT constants.
+
+The final Core gate includes Composer/platform, PHP syntax/PHPStan, full unit
+and integration, WP smoke, manifest and whitespace, with independent review.
+No browser/E2E is part of this slice. Following the single implementation commit,
+`scripts/test-migration-cutover-rehearsal.sh` proves clean-SHA execution in a
+new isolated DDEV project using synthetic PREP-01A input and explicit test
+approval. Native PRE/POST restore, interruption/resume, replay, rollback and
+normal database invariance receipts remain ignored local artifacts. The harness
+has no source argument and is not a real-source migration entrypoint.
+
+Full artifact and closure protocol: docs/143. Synthetic GO is neither final
+rehearsal acceptance nor production authorization; schema remains 1026.

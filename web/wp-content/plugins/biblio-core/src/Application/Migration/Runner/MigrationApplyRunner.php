@@ -55,13 +55,16 @@ final readonly class MigrationApplyRunner
         }
     }
 
+    public function migratorVersion(): string { return $this->migratorVersion; }
+
     public function apply(
         string $sourceRoot,
         string $adapterId,
         UserId $targetUserId,
         LibraryId $targetLibraryId,
         string $acceptedPlanSetDigest,
-        ?int $interruptAfter = null
+        ?int $interruptAfter = null,
+        ?MigrationApplyObserver $observer = null
     ): MigrationApplyResult {
         if ($interruptAfter !== null && $interruptAfter < 1) {
             throw new ValidationException("Interruption boundary must be positive.");
@@ -90,6 +93,7 @@ final readonly class MigrationApplyRunner
         }
         $this->assertPreparedPreflight($prepared);
         $priorReplays = $this->priorReplays($prepared);
+        $observer?->beforeBegin($prepared);
         $run = $this->runs->begin(
             $inspection->adapter()->sourceFamily(),
             $inspection->package()->manifestDigest(),
@@ -102,6 +106,14 @@ final readonly class MigrationApplyRunner
         );
 
         $execution = $this->executionCounts();
+        try {
+            $observer?->begun($run);
+        } catch (Throwable $exception) {
+            if ($run->status() === MigrationRunStatus::Running) {
+                $this->lifecycle->interrupt($run);
+            }
+            throw $exception;
+        }
         if ($run->status() === MigrationRunStatus::Completed) {
             $execution = $this->completedExecution($run, $prepared);
             return $this->result($run, $prepared, $execution);
@@ -197,7 +209,16 @@ final readonly class MigrationApplyRunner
             if ($this->resolvesDependencies($outcome)) {
                 $resolved[$key] = true;
             }
-            if ($this->shouldInterrupt($execution, $interruptAfter)) {
+            try {
+                $namedInterruption = $observer?->committed($run, $record, $outcome) === true;
+            } catch (Throwable $exception) {
+                $this->lifecycle->interrupt($run);
+                throw $exception;
+            }
+            if (
+                $namedInterruption
+                || $this->shouldInterrupt($execution, $interruptAfter)
+            ) {
                 return $this->result(
                     $this->lifecycle->interrupt($run),
                     $prepared,
@@ -207,6 +228,12 @@ final readonly class MigrationApplyRunner
         }
 
         $report = $this->reconciliation->reconcile($run, $prepared, $execution);
+        try {
+            $observer?->beforeCompletion($run, $prepared, $report);
+        } catch (Throwable $exception) {
+            $this->lifecycle->fail($run);
+            throw $exception;
+        }
         if ($report->accepted()) {
             $run = $this->lifecycle->complete($run);
         } else {
