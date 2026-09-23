@@ -96,11 +96,13 @@ final class GuardedRehearsal implements MigrationApplyObserver
                 $this->user, $this->library, $authorization->preflight["plan"]["plan_set_digest"],
                 observer: $this
             );
+            $this->phases[] = "post_apply_quarantine_verification";
             $classification = $result->reconciliation()->accepted() ? $this->classify($result->run()) : "rejected";
             $verification = [];
             $postBackup = null;
             if ($result->run()->status() === MigrationRunStatus::Completed) {
                 RehearsalContract::require($classification !== "rejected" && $this->prepared !== null, "reconciliation_rejected");
+                $this->phases[] = "post_apply_product_verification";
                 $verification = $this->products->verify($result->run(), $this->prepared);
                 $this->phases[] = "post_apply_verification";
                 if ($mode !== "replay") {
@@ -138,12 +140,14 @@ final class GuardedRehearsal implements MigrationApplyObserver
             $receipt["artifact"] = $this->evidence->append("rehearsal-" . $mode, $receipt);
             return $receipt;
         } catch (Throwable $failure) {
+            $reason = $failure instanceof RehearsalFailure ? $failure->reason : "apply_or_verification_failed";
             $this->evidence->append("rehearsal-failure", [
                 "intent_digest" => $authorization->intentDigest(), "mode" => $mode,
                 "phases" => $this->phases, "run_id" => $this->currentRunId(),
-                "reason" => $failure instanceof RehearsalFailure ? $failure->reason : "apply_or_verification_failed",
+                "reason" => $reason,
+                "failure" => RehearsalFailureEvidence::describe($failure, $this->phases),
             ]);
-            throw new RehearsalFailure($failure instanceof RehearsalFailure ? $failure->reason : "apply_or_verification_failed");
+            throw new RehearsalFailure($reason, $failure);
         } finally {
             $this->target->release();
             $this->authorization = null;

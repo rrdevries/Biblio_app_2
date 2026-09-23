@@ -11,6 +11,7 @@ use Biblio\Core\Application\Migration\Cutover\FinalSourceRetentionMetadata;
 use Biblio\Core\Application\Migration\Runner\MigrationRunnerFailure;
 use Biblio\Core\Application\Migration\Runner\MigrationRunnerReason;
 use Biblio\Core\Application\Migration\Runner\MigrationSourceAdapter;
+use Biblio\Core\Application\Migration\Runner\MigrationPackageMetadataProvider;
 use Biblio\Core\Application\Migration\Runner\MigrationSourcePackageFactory;
 use ZipArchive;
 
@@ -92,7 +93,10 @@ final readonly class FinalSourceIntakeService
                 $package,
                 basename($archivePath),
                 (int) filesize($archivePath),
-                $logicalPackageId . "/source"
+                $logicalPackageId . "/source",
+                $adapter instanceof MigrationPackageMetadataProvider
+                    ? $adapter->packageMetadata($package)
+                    : []
             );
         } catch (\Throwable $exception) {
             $this->removeCreatedDirectory($packageDirectory);

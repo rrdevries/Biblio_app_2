@@ -6,12 +6,17 @@ namespace Biblio\Core\Application\Migration\Cutover;
 
 use Biblio\Core\Application\Migration\Runner\{DeterministicJson, MigrationSourceInspection};
 
-/** Exact approved profile admission; raw diagnostics remain visible, never erased. */
+/** Exact reviewed planning profile admission; raw diagnostics remain visible, never erased. */
 final readonly class ReviewedSourceProfile
 {
-    private function __construct(private string $profileDigest, private string $bundleDigest, private string $approvalDigest) {}
+    private function __construct(private string $profileDigest, private string $bundleDigest, private string $planningReviewDigest) {}
 
     public static function forApprovedCandidate(ApprovedRehearsalSource $source, MigrationSourceInspection $inspection): self
+    {
+        return self::forPlanningContext($source->planningContext(), $inspection);
+    }
+
+    public static function forPlanningContext(FinalSourcePlanningContext $source, MigrationSourceInspection $inspection): self
     {
         RehearsalContract::equal($inspection->package()->manifestDigest(), $source->intake->identity()->manifestSha256(), "reviewed_profile_manifest_mismatch");
         RehearsalContract::equal($inspection->adapter()->adapterId(), $source->intake->identity()->adapterId(), "reviewed_profile_adapter_mismatch");
@@ -26,10 +31,10 @@ final readonly class ReviewedSourceProfile
         foreach ($inspection->profile()->findings() as $finding) {
             RehearsalContract::require(in_array($finding->toArray()["reason_code"], [
                 "field_inventory", "private_values_omitted", "observed_raw_value", "reference_integrity",
-                "idless_structure", "identity_profile", "product_decision_required", "source_representation_ambiguity", "source_profile",
+                "idless_structure", "identity_profile", "malformed_value", "product_decision_required", "source_representation_ambiguity", "source_profile",
             ], true), "unreviewed_source_finding");
         }
-        return new self(DeterministicJson::hash($inspection->sourcePayload()), $source->bundle->digest(), DeterministicJson::hash($source->review));
+        return new self(DeterministicJson::hash($inspection->sourcePayload()), $source->bundle->digest(), $source->reviewDigest());
     }
 
     public function matches(MigrationSourceInspection $inspection, ?string $bundleDigest): bool
@@ -40,7 +45,8 @@ final readonly class ReviewedSourceProfile
     /** @return array<string,string> */
     public function toArray(): array
     {
+        // Retain the established evidence key; its digest binds planning facts, not execution authority.
         return ["policy" => "reviewed-current-profile-v1", "profile_sha256" => $this->profileDigest,
-            "bundle_sha256" => $this->bundleDigest, "approval_sha256" => $this->approvalDigest];
+            "bundle_sha256" => $this->bundleDigest, "approval_sha256" => $this->planningReviewDigest];
     }
 }

@@ -167,6 +167,34 @@ final class CurrentV1RestrictedSourceEvidenceResolver
             ];
         }
 
+        if ($plan->evidenceType() === "current_v1_contained_work_isbn") {
+            if (
+                $plan->reasonCode() !== "contained_work_isbn_deferred"
+                || $plan->sourceFile() !== "data/books.json"
+                || $plan->sourceField() !== "containedWorks"
+                || $plan->mappingContract() !== (new CurrentV1ReviewedContainedWorkContract($plan->manifestSha256()))->identity()
+                || preg_match('/\/contained-work\/([1-9][0-9]*)\/isbn$/D', $plan->sourceIdentity(), $matches) !== 1
+            ) {
+                return null;
+            }
+            $slot = (int) $matches[1];
+            if ($plan->sourceIdentity() !== CurrentV1ContainedWorkSourceIds::isbn($plan->sourceEntityId(), $slot)) {
+                return null;
+            }
+            $containedWorks = $book["containedWorks"] ?? null;
+            $contained = is_array($containedWorks) && array_is_list($containedWorks)
+                ? ($containedWorks[$slot - 1] ?? null)
+                : null;
+            if (!is_array($contained) || !is_string($contained["isbn"] ?? null) || $contained["isbn"] === "") {
+                return null;
+            }
+            return [
+                "source_slot" => $plan->sourceIdentity(),
+                "one_based_slot" => $slot,
+                "isbn" => $contained["isbn"],
+            ];
+        }
+
         if (
             $plan->evidenceType() !== "current_v1_contained_work_series"
             || $plan->reasonCode() !== "contained_work_series_deferred"

@@ -24,6 +24,8 @@ use Biblio\Core\Infrastructure\Migration\FinalSourceIntakeService;
 use Biblio\Core\Infrastructure\Migration\FinalSourceInspector;
 use Biblio\Core\Infrastructure\Migration\FinalSourceRecoveryVerifier;
 use Biblio\Core\Infrastructure\Migration\CurrentV1RestrictedSourceEvidenceResolver;
+use Biblio\Core\Application\Migration\Runner as Runner;
+use Biblio\Core\Application\Migration\Preservation as Preservation;
 use PHPUnit\Framework\TestCase;
 use ZipArchive;
 
@@ -31,6 +33,215 @@ final class FinalSourcePreparationTest extends TestCase
 {
     /** @var list<string> */
     private array $directories = [];
+
+    public function testFinderMetadataAddsNoMappedPreparedPreservedOrQuarantinedPlans(): void
+    {
+        $root = $this->source(extraBook: true);
+        $books = json_decode(file_get_contents($root . "/data/books.json"), true, 512, JSON_THROW_ON_ERROR);
+        $books["books"][1]["title"] = ""; // Positive, unchanged quarantine control.
+        $this->write($root, "books.json", $books);
+        $this->write($root, "reading_goals.json", ["schemaVersion" => 2, "goals" => [[
+            "id" => "goal-1", "title" => "Synthetic goal", "type" => "books", "active" => false,
+            "config" => ["targetBooks" => 12], "createdAt" => "2026-01-01T00:00:00Z",
+            "updatedAt" => "2026-01-01T00:00:00Z",
+        ]]]);
+        $target = new Runner\MigrationPlanningTarget(new \Biblio\Core\Application\Identity\PersonalMigrationTarget(
+            new \Biblio\Core\Identity\UserId("synthetic-user"),
+            new \Biblio\Core\Library\LibraryId("synthetic-library"),
+            \Biblio\Core\Library\LibraryName::personalDefault(),
+            new \Biblio\Core\Application\Identity\PersonalMigrationTargetReadiness([])
+        ));
+        $environment = $this->createStub(Runner\MigrationEnvironment::class);
+        $environment->method("provenance")->willReturn(new Runner\MigrationBuildProvenance(
+            "v2.001", 1026, "2.51.1", str_repeat("a", 40), true
+        ));
+        $results = [];
+        foreach ([false, true] as $withMetadata) {
+            if ($withMetadata) { file_put_contents($root . "/data/.DS_Store", "synthetic metadata"); }
+            $inspection = (new FinalSourceInspector(new FilesystemMigrationSourcePackageFactory()))->inspect($root, new CurrentV1SourceAdapter());
+            $mapper = new \Biblio\Core\Infrastructure\Migration\CurrentV1CatalogMapper(
+                readingGoalMapper: new \Biblio\Core\Infrastructure\Migration\CurrentV1ReadingGoalMapper(
+                    new \Biblio\Core\Infrastructure\Migration\CurrentV1ReviewedReadingGoalContract($inspection->package()->manifestDigest())
+                )
+            );
+            $mapped = $mapper->map($inspection, $target);
+            $participants = [];
+            foreach ($mapped->records() as $record) {
+                $type = $record->sourceType();
+                if (isset($participants[$type])) { continue; }
+                // Synthetic target participants isolate package admission from target persistence.
+                // The real mapper and real plan preparer still run; apply must never run.
+                $participant = $this->createMock(Runner\MigrationParticipant::class);
+                $participant->method("sourceType")->willReturn($type);
+                $participant->expects(self::never())->method("apply");
+                $participant->method("plan")->willReturnCallback(static function (Runner\MigrationSourceRecord $record): Runner\PlannedMigrationRecord {
+                    $preserved = $record->typedPlan() instanceof Preservation\PreservedSourceEvidencePlan;
+                    return new Runner\PlannedMigrationRecord(
+                        $preserved ? \Biblio\Core\Application\Migration\MigrationDisposition::PreservedDeferred : \Biblio\Core\Application\Migration\MigrationDisposition::Mapped,
+                        $preserved ? [] : [["operation" => "synthetic_plan_only"]],
+                        $preserved ? $record->typedPlan()->reasonCode() : null,
+                        typedPlan: $record->typedPlan()
+                    );
+                });
+                $participants[$type] = $participant;
+            }
+            $prepared = (new Runner\MigrationPlanPreparer(
+                new Runner\MigrationParticipantRegistry(array_values($participants)),
+                new Runner\MigrationSourceMapperRegistry([$mapper]), $environment
+            ))->prepare($inspection, $target);
+            self::assertSame([], $prepared->failures());
+            $population = array_map(static fn ($item): array => [
+                "source_type" => $item->record()->sourceType(), "source_id" => $item->record()->sourceId(),
+                "plan" => $item->plan()->toArray(),
+            ], $prepared->records());
+            $findings = array_map(static fn ($finding): array => [
+                "disposition" => $finding->toArray()["disposition"], "reason" => $finding->reasonCode(),
+            ], $prepared->findings());
+            self::assertNotEmpty(array_filter($population, static fn ($p): bool => $p["plan"]["disposition"] === "preserved_deferred"));
+            self::assertNotEmpty(array_filter($population, static fn ($p): bool => $p["plan"]["disposition"] === "mapped"));
+            self::assertNotEmpty(array_filter($findings, static fn ($finding): bool => $finding["disposition"] === "quarantined"));
+            $results[] = ["population" => $population, "findings" => $findings, "digest" => $prepared->planSetDigest()];
+        }
+        self::assertSame($results[0]["population"], $results[1]["population"]);
+        self::assertSame($results[0]["findings"], $results[1]["findings"]);
+        // Full-package provenance changes, although no semantic plan is added or changed.
+        self::assertNotSame($results[0]["digest"], $results[1]["digest"]);
+    }
+
+    public function testExactFinderMetadataRemainsInFullManifestWithoutSemanticObservations(): void
+    {
+        $root = $this->source();
+        $factory = new FilesystemMigrationSourcePackageFactory();
+        $adapter = new CurrentV1SourceAdapter();
+        $before = $factory->build($root);
+        $profile = $adapter->profile($before);
+        $records = iterator_to_array($adapter->records($before, $profile));
+        $snapshot = $this->snapshot($root, "metadata-reference", str_repeat("1", 64));
+        $bytes = "\x00\xffFinder metadata sentinel; not JSON or source data";
+        file_put_contents($root . "/data/.DS_Store", $bytes);
+        $after = $factory->build($root);
+        $afterProfile = $adapter->profile($after);
+        $afterRecords = iterator_to_array($adapter->records($after, $afterProfile));
+
+        self::assertNotSame($before->manifestDigest(), $after->manifestDigest());
+        self::assertCount(count($before->files()) + 1, $after->files());
+        self::assertEquals($profile, $afterProfile);
+        self::assertEquals($records, $afterRecords);
+        $afterSnapshot = $this->snapshot($root, "metadata-candidate", str_repeat("2", 64));
+        self::assertEquals($snapshot->observations(), $afterSnapshot->observations());
+        self::assertSame($snapshot->sourceTypeCounts(), $afterSnapshot->sourceTypeCounts());
+        self::assertSame($snapshot->quarantineCandidates(), $afterSnapshot->quarantineCandidates());
+        self::assertSame($snapshot->circulationProfile(), $afterSnapshot->circulationProfile());
+        $report = (new FinalSourceDriftEngine())->compare($snapshot, $afterSnapshot);
+        self::assertSame("MAPPING_CONTRACT_COMPATIBLE", $report->compatibility());
+        self::assertSame([SourceDriftCategory::A], array_values(array_unique($this->categories($report->drift()), SORT_REGULAR)));
+        self::assertSame([], $adapter->packageMetadata($before));
+        self::assertSame([[
+            "relative_path" => "data/.DS_Store", "byte_size" => strlen($bytes),
+            "sha256" => hash("sha256", $bytes), "classification" => "NON_SOURCE_PACKAGE_METADATA",
+        ]], array_map(static fn ($file): array => $file->toArray(), $adapter->packageMetadata($after)));
+
+        $archive = $this->zip($root);
+        $archiveHash = hash_file("sha256", $archive);
+        $archiveBytes = filesize($archive);
+        $receipt = $this->metadataIntake($archive, $after->manifestDigest(), $this->directory());
+        self::assertSame($after->manifestDigest(), $receipt->identity()->manifestSha256());
+        self::assertSame($after->toArray(), $receipt->package()->toArray());
+        self::assertSame($adapter->packageMetadata($after)[0]->toArray(), $receipt->toArray()["package_metadata"][0]);
+        self::assertSame($bytes, file_get_contents($receipt->extractionRoot() . "/data/.DS_Store"));
+        self::assertSame(0400, fileperms($receipt->extractionRoot() . "/data/.DS_Store") & 0777);
+        self::assertSame($bytes, file_get_contents($root . "/data/.DS_Store"));
+        self::assertSame($after->manifestDigest(), $factory->build($root)->manifestDigest());
+        self::assertSame($archiveHash, hash_file("sha256", $archive));
+        self::assertSame($archiveBytes, filesize($archive));
+        self::assertStringNotContainsString("Finder metadata sentinel", json_encode($receipt->toArray(), JSON_THROW_ON_ERROR));
+    }
+
+    public function testFinderMetadataAdmissionDoesNotAdmitOtherUnexpectedPaths(): void
+    {
+        foreach ([".DS_Store", "data/foo/.DS_Store", "data/.hidden", "data/unknown.json", "data/.DS_Store.extra", "data/cover-cache/.DS_Store"] as $path) {
+            $root = $this->source();
+            if (!is_dir(dirname($root . "/" . $path))) { mkdir(dirname($root . "/" . $path), 0700, true); }
+            file_put_contents($root . "/data/.DS_Store", "approved metadata");
+            file_put_contents($root . "/" . $path, "unexpected");
+            $package = (new FilesystemMigrationSourcePackageFactory())->build($root);
+            try {
+                $this->metadataIntake($this->zip($root), $package->manifestDigest(), $this->directory());
+                self::fail("Unexpected package path must fail closed.");
+            } catch (MigrationRunnerFailure $failure) {
+                self::assertSame(MigrationRunnerReason::UnsupportedStructure, $failure->reason());
+            }
+        }
+    }
+
+    public function testMetadataCannotMaskMalformedOrUnreviewedDomainInput(): void
+    {
+        foreach (["malformed", "unreviewed"] as $case) {
+            $root = $this->source();
+            file_put_contents($root . "/data/.DS_Store", "metadata");
+            if ($case === "malformed") {
+                file_put_contents($root . "/data/books.json", "{");
+            } else {
+                $books = json_decode(file_get_contents($root . "/data/books.json"), true, 512, JSON_THROW_ON_ERROR);
+                $books["books"][0]["unreviewedField"] = true;
+                $this->write($root, "books.json", $books);
+            }
+            try {
+                (new CurrentV1SourceAdapter())->profile((new FilesystemMigrationSourcePackageFactory())->build($root));
+                self::fail("Domain input must still fail closed.");
+            } catch (MigrationRunnerFailure $failure) {
+                self::assertSame(MigrationRunnerReason::UnsupportedStructure, $failure->reason());
+            }
+        }
+    }
+
+    public function testMetadataAdmissionPreservesHardenedZipSecurityAndNoOverwrite(): void
+    {
+        foreach (["traversal", "absolute", "symlink", "fifo", "duplicate"] as $case) {
+            $archive = $this->directory() . "/unsafe.zip";
+            $zip = new ZipArchive();
+            self::assertTrue($zip->open($archive, ZipArchive::CREATE));
+            $member = match ($case) {
+                "traversal" => "data/../.DS_Store", "absolute" => "/data/.DS_Store",
+                default => "data/.DS_Store",
+            };
+            self::assertTrue($zip->addFromString($member, "synthetic metadata"));
+            if ($case === "symlink" || $case === "fifo") {
+                self::assertTrue($zip->setExternalAttributesName($member, ZipArchive::OPSYS_UNIX, ($case === "symlink" ? 0120777 : 0010600) << 16));
+            }
+            if ($case === "duplicate") { self::assertTrue($zip->addEmptyDir("data/.DS_Store")); }
+            self::assertTrue($zip->close());
+            try {
+                $this->metadataIntake($archive, str_repeat("0", 64), $this->directory());
+                self::fail("Unsafe archive must fail before manifest acceptance.");
+            } catch (MigrationRunnerFailure $failure) {
+                self::assertSame(MigrationRunnerReason::SourceUnsafe, $failure->reason());
+            }
+        }
+        $root = $this->source();
+        file_put_contents($root . "/data/.DS_Store", "metadata");
+        $archive = $this->zip($root);
+        $manifest = (new FilesystemMigrationSourcePackageFactory())->build($root)->manifestDigest();
+        $destination = $this->directory();
+        $receipt = $this->metadataIntake($archive, $manifest, $destination);
+        try {
+            $this->metadataIntake($archive, $manifest, $destination);
+            self::fail("Existing intake may not be overwritten.");
+        } catch (MigrationRunnerFailure $failure) {
+            self::assertSame(MigrationRunnerReason::SourceUnsafe, $failure->reason());
+        }
+        self::assertSame($manifest, (new FilesystemMigrationSourcePackageFactory())->build($receipt->extractionRoot())->manifestDigest());
+    }
+
+    private function metadataIntake(string $archive, string $manifest, string $destination): \Biblio\Core\Application\Migration\Cutover\FinalSourceIntakeReceipt
+    {
+        return (new FinalSourceIntakeService(new FilesystemMigrationSourcePackageFactory()))->intake(
+            $archive, hash_file("sha256", $archive), $manifest, "final-metadata-test", $destination,
+            new CurrentV1SourceAdapter(), CurrentV1SourceAdapter::SOURCE_VERSION,
+            new FinalSourceExportProvenance("2026-09-23T12:00:00Z", "synthetic", "synthetic", "1", str_repeat("a", 64), "synthetic", "php", "synthetic-freeze"),
+            new FinalSourceRetentionMetadata("synthetic-retained", "not_verified", "not_verified")
+        );
+    }
 
     protected function tearDown(): void
     {

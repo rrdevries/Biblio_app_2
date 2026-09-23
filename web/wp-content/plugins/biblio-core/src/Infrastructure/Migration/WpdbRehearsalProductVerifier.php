@@ -25,7 +25,7 @@ final readonly class WpdbRehearsalProductVerifier implements RehearsalProductVer
         $targets = [];
         foreach ($this->ledger->snapshot($run->id())->observations() as $observation) {
             foreach ($observation->mappings() as $mapping) {
-                $targets[$mapping->targetType()][$mapping->targetId()] = true;
+                $targets[$mapping->targetType()][] = $mapping->targetId();
             }
         }
         $domainTables = [
@@ -44,10 +44,11 @@ final readonly class WpdbRehearsalProductVerifier implements RehearsalProductVer
         $counts = [];
         $qa = [];
         foreach ($domainTables as $type => $table) {
+            // Several mappings may reference one product; count distinct string IDs.
+            $ids = array_values(array_unique($targets[$type] ?? [], SORT_STRING));
             $count = $this->db->get_var("SELECT COUNT(*) FROM `{$table}`");
-            RehearsalContract::require($count !== null && (int) $count === count($targets[$type] ?? []), "unexpected_product_count");
+            RehearsalContract::require($count !== null && (int) $count === count($ids), "unexpected_product_count");
             $counts[$type] = (int) $count;
-            $ids = array_keys($targets[$type] ?? []);
             sort($ids, SORT_STRING);
             $qa[$type] = $ids[0] ?? null;
         }
@@ -152,6 +153,25 @@ final readonly class WpdbRehearsalProductVerifier implements RehearsalProductVer
         }
         return ["counts" => $counts, "qa_candidates" => $qa, "restricted_evidence_verified" => $recovered,
             "application_smoke" => "passed", "network_requests" => 0,
-            "target_identity_set_sha256" => DeterministicJson::hash($targets)];
+            "target_identity_set_sha256" => DeterministicJson::hash(self::targetIdentityFingerprintInput($targets))];
+    }
+
+    /**
+     * @param array<string, list<string>> $targets
+     * @return list<array{target_type: string, target_id: string}>
+     */
+    private static function targetIdentityFingerprintInput(array $targets): array
+    {
+        $identities = [];
+        foreach ($targets as $type => $ids) {
+            foreach ($ids as $id) {
+                // IDs are values, never PHP array keys; retain repeated mappings.
+                $identities[] = ["target_type" => $type, "target_id" => $id];
+            }
+        }
+        usort($identities, static fn (array $left, array $right): int =>
+            strcmp($left["target_type"], $right["target_type"])
+                ?: strcmp($left["target_id"], $right["target_id"]));
+        return $identities;
     }
 }
