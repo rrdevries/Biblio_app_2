@@ -13,6 +13,16 @@ apply/import path.
 
 ## 1. Pre-coding audit
 
+FINAL-source addendum (2026-09-23): the historical counts below describe the
+reviewed reference, not a fixed FINAL population. Renée approved one exact
+newly registered completion for Book `1771014295306`, round
+`rr-1-20260915T133135697-na`. Existing mapper semantics yield one additional
+source-free ended/completed plan with day precision and migration_imported:
+53→54 plans, completed51→52, stopped2→2. All1,064 PRT plans remain exactly
+unchanged. Noon UTC in the raw source is not an authoritative reading-clock
+claim. No mapper/PRT code or docs/124 contract changes; exact package-bound
+disposition, evidence and separate circulation stop are in docs/144.
+
 The required read-only audit was completed before production changes against
 docs 00–03, 06, 63, 86, 105–107, 112, 117, 120, 124, ADR-007, current code and
 the immutable extraction. It established the exact adapter shapes, the

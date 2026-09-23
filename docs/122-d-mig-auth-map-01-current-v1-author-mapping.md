@@ -13,6 +13,29 @@ and its existing read-only extraction.
 
 ## 1. Decision inheritance
 
+### Approved FINAL-source author-shape disposition — 2026-09-23
+
+Renée approved only Book `1771014295306` on FINAL package
+`final-current-20260923t124538449z-89b2ba3e94f9`: `authorIds` ABSENT → EMPTY ARRAY
+and `authorsLocked` ABSENT → FALSE. These are representational/default
+materializations, with no new mapping or preservation requirement. The original
+mechanical E remains evidence; a separately recorded reviewed disposition
+allows effective C for this exact observation. This does not approve any other
+Book, NULL/TRUE transition, non-empty/changed IDs, changed author names/order/
+count/occurrence structure or additional author field.
+
+The immutable review report SHA is
+`7023ac1cad556f07de2f18152575b65c0287cd0fa2f4912862b9f92ea540273e`;
+Renée's approval-text SHA is
+`f275997ccbdf7e0074705e091bb2f448fb1c261a758ab94c78d3b7888bc1a176`.
+Exact package/manifest, raw payload/shape and unchanged contributor-vector
+bindings are documented in docs/144 and the closed tooling disposition.
+ABSENT/FALSE/TRUE remain distinct in immutable source evidence; an existing
+unchanged TRUE is not declared meaningless. No new preservation plan or reason
+code is introduced. All existing stable-ID, occurrence-scoped ID-less, no-name-
+merge, role `author`, original position and contributor-edge rules below remain
+unchanged. This disposition does not rebind or broaden the Author mapper.
+
 V1 is source evidence, not product authority. Accepted V2 Author and
 WorkContributor canon, current implementation and the closed MIG-02-AUTH-01
 participant contract remain authoritative.

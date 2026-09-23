@@ -19,6 +19,9 @@ final readonly class FinalPopulationContractBundle
         private MapperContractInventory $inventory,
         private FinalSourceApprovalState $approvalState
     ) {
+        if ($this->snapshot->digest() !== $this->report->candidateSnapshotDigest()) {
+            throw new ValidationException("Final population bundle snapshot does not match its report.");
+        }
         if ($this->approvalState === FinalSourceApprovalState::ApprovedForRehearsal) {
             throw new ValidationException(
                 "PREP-01A cannot create an approved-for-rehearsal bundle."
@@ -94,6 +97,7 @@ final readonly class FinalPopulationContractBundle
             "quarantine_candidates" => $this->snapshot->quarantineCandidates(),
             "circulation_profile" => $this->snapshot->circulationProfile(),
             "compatibility_report_digest" => $this->report->digest(),
+            "reviewed_dispositions" => $this->report->reviewedDispositions(),
             "approval_state" => $this->approvalState->value,
         ];
     }

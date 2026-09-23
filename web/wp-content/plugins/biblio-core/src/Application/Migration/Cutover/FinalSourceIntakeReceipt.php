@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Biblio\Core\Application\Migration\Cutover;
 
 use Biblio\Core\Application\Migration\Runner\MigrationSourcePackage;
+use Biblio\Core\Application\Migration\Runner\NonSourcePackageMetadata;
 
 final readonly class FinalSourceIntakeReceipt
 {
+    /** @param list<NonSourcePackageMetadata> $packageMetadata */
     public function __construct(
         private FinalSourcePackageIdentity $identity,
         private FinalSourceExportProvenance $export,
@@ -15,7 +17,8 @@ final readonly class FinalSourceIntakeReceipt
         private MigrationSourcePackage $package,
         private string $archiveFilename,
         private int $archiveBytes,
-        private string $extractionLocator
+        private string $extractionLocator,
+        private array $packageMetadata = []
     ) {
     }
 
@@ -35,6 +38,10 @@ final readonly class FinalSourceIntakeReceipt
                 "sha256" => $this->identity->archiveSha256(),
             ],
             "manifest" => $this->package->toArray(),
+            "package_metadata" => array_map(
+                static fn (NonSourcePackageMetadata $file): array => $file->toArray(),
+                $this->packageMetadata
+            ),
             "export_provenance" => $this->export->toArray(),
             "retention" => $this->retention->toArray(),
             "immutable_extraction_locator" => $this->extractionLocator,

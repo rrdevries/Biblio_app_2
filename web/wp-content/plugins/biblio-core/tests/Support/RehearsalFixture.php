@@ -11,7 +11,7 @@ use ZipArchive;
 /** Explicit synthetic approval fixture. Never discovers or reads CURRENT data. */
 final class RehearsalFixture
 {
-    public static function source(string $directory, bool $withQuarantine = false): ApprovedRehearsalSource
+    public static function source(string $directory, bool $withQuarantine = false, bool $withContainedSeries = false, bool $withContainedIsbn = false, bool $withCanonicalIsbn = false): ApprovedRehearsalSource
     {
         mkdir($directory . "/raw/data", 0700, true);
         $book = [
@@ -28,6 +28,10 @@ final class RehearsalFixture
         ];
         $copy = ["id" => "copy-1", "bookId" => "book-1", "status" => "owned", "ownershipStatus" => "owned", "condition" => "",
             "archived" => false, "archiveReason" => "", "notes" => "", "acquisition" => $book["acquisition"], "circulationRounds" => []];
+        if ($withContainedSeries) {
+            $book["containedWorks"][0]["series"] = "Synthetic Series";
+            $book["containedWorks"][0]["seriesIndex"] = "2";
+        }
         if ($withQuarantine) {
             $loan = ["id" => "loan-1", "type" => "borrowed", "counterparty" => "synthetic-private-counterparty-canary",
                 "startDate" => ["value" => "2020-01-02", "precision" => "day"], "endDate" => null, "notes" => "synthetic-private-loan-canary"];
@@ -37,6 +41,20 @@ final class RehearsalFixture
         }
         $second = array_replace($book, ["id" => "book-2", "title" => "Synthetic unread work", "readingRounds" => [], "notes" => [], "circulationRounds" => [], "containedWorks" => [],
             "rating" => 0, "reviews" => [], "reflection" => "", "readStatus" => "unread", "readMarker" => "no", "series" => false, "seriesName" => ""]);
+        if ($withCanonicalIsbn) {
+            $book["isbn"] = $book["isbn13"] = "9780306406157";
+        }
+        if ($withContainedIsbn) {
+            // Same structural population as the reviewed five: three + two
+            // occurrence slots. Repeated synthetic ISBN never supplies identity.
+            $children = [];
+            foreach (range(1, 3) as $slot) {
+                $children[] = ["title" => "Synthetic ISBN child " . $slot, "author" => "",
+                    "isbn" => "9780306406157", "series" => "", "seriesIndex" => ""];
+            }
+            $book["containedWorks"] = $children;
+            $second["containedWorks"] = array_slice($children, 0, 2);
+        }
         $wish = ["authorSnapshot" => "Synthetic Author", "bookId" => "book-2", "createdAt" => "2020-01-02T00:00:00.000Z", "updatedAt" => "2020-01-03T00:00:00.000Z",
             "desiredBinding" => "", "desiredCarrier" => "Fysiek boek", "desiredLanguage" => "", "fulfilledAt" => "", "fulfilledCopyId" => "", "id" => "wish-1", "notes" => "", "priority" => "",
             "status" => "active", "titleGroupKey" => "synthetic-unread", "titleSnapshot" => "Synthetic unread work", "type" => "edition"];

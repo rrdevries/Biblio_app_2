@@ -43,6 +43,9 @@ final readonly class FinalSourceDriftEngine
     ): FinalSourceCompatibilityReport {
         $before = $this->index($reference->observations());
         $after = $this->index($candidate->observations());
+        $review = ReviewedAuthorShapeDisposition::forSnapshots($reference, $candidate);
+        $queueReview = ReviewedClassificationQueueDisposition::forSnapshots($reference, $candidate);
+        $readingReview = ReviewedReadingRoundCompletionDisposition::forSnapshots($reference, $candidate);
         $knownTypes = array_fill_keys(array_keys($reference->sourceTypeCounts()), true);
         foreach (self::KNOWN_VIRTUAL_TYPES as $knownVirtualType) {
             $knownTypes[$knownVirtualType] = true;
@@ -87,12 +90,29 @@ final readonly class FinalSourceDriftEngine
                 continue;
             }
             [$category, $reason] = $this->changed($old, $new);
+            $disposition = $review !== null && $review->appliesTo(
+                $new->domain(), $new->sourceType(), $new->sourceId(), $category, $reason,
+                $old->payloadHash(), $new->payloadHash()
+            ) ? $review : null;
+            if ($queueReview !== null && $queueReview->appliesTo(
+                $new->domain(), $new->sourceType(), $new->sourceId(), $category, $reason,
+                $old->payloadHash(), $new->payloadHash()
+            )) {
+                $disposition = $queueReview;
+            }
+            if ($readingReview !== null && $readingReview->appliesTo(
+                $new->domain(), $new->sourceType(), $new->sourceId(), $category, $reason,
+                $old->payloadHash(), $new->payloadHash()
+            )) {
+                $disposition = $readingReview;
+            }
             $drift[] = $this->item(
                 $new,
                 $category,
                 $reason,
                 $old->payloadHash(),
-                $new->payloadHash()
+                $new->payloadHash(),
+                $disposition
             );
         }
 
@@ -193,7 +213,8 @@ final readonly class FinalSourceDriftEngine
         SourceDriftCategory $category,
         string $reason,
         ?string $before,
-        ?string $after
+        ?string $after,
+        ReviewedAuthorShapeDisposition|ReviewedClassificationQueueDisposition|ReviewedReadingRoundCompletionDisposition|null $review = null
     ): SourceDrift {
         return new SourceDrift(
             $observation->domain(),
@@ -202,7 +223,8 @@ final readonly class FinalSourceDriftEngine
             $category,
             $reason,
             $before,
-            $after
+            $after,
+            $review
         );
     }
 }

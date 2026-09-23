@@ -109,6 +109,16 @@ not the inner `data/` directory. Finder metadata, if present, is part of the
 manifest; it is never silently removed. A historical archive, partial export,
 fixture, old extraction or mixed file tree can never receive this designation.
 
+Renée's bounded 2026-09-23 correction admits **exactly** `data/.DS_Store` as
+`NON_SOURCE_PACKAGE_METADATA`. It stays in the full extracted-package manifest
+and is additionally inventoried by relative path, byte size, SHA-256 and that
+classification. There is no separate semantic manifest and no change to any
+existing manifest-hash definition. This file produces no adapter record,
+source category, finding, preservation, quarantine or mapper population.
+The exception is not a basename, hidden-file or unknown-file wildcard. Other
+unreviewed paths still fail closed; the pre-existing `__MACOSX/` policy is not
+broadened. Archive safety and no-overwrite guards still apply before admission.
+
 The archive hash identifies the transported object. The extracted-manifest
 hash identifies its source bytes independent of workstation path. Both are
 required and neither substitutes for the other.
@@ -238,6 +248,47 @@ bucket. Domain totals must reconcile to both source profiles.
 | H | source deletion/disappearance | `HOLD` until explained and approved |
 | I | previously reviewed stable identity changed in a way that changes a special approval or structural slot | `HOLD` |
 | J | unsupported source type | `HOLD` |
+
+#### Exact reviewed disposition, without erasing mechanical evidence
+
+Renée's 2026-09-23 approval covers only the two default materializations on
+Book `1771014295306` described in docs/122 and docs/144. The raw category,
+reason, old/new payload hashes and mechanical category counts remain E.
+A separate typed `ReviewedAuthorShapeDisposition` records the approved
+effective C, both field transitions and approval/review checksums. Its private
+construction is bound to both exact package identities (including archive and
+manifest), exact raw Book payload/shape observations and the unchanged ordered
+contributor vector. Any mismatch follows the ordinary unreviewed drift path.
+
+Only effective A–D may pass the drift gate; every remaining effective E–J
+blocks. Mechanical and effective counts are both reported. With an applied
+disposition and no remaining blocker, state is `reviewed_compatible`, not
+`mechanically_compatible` or `approved_for_rehearsal`. The latter authority and
+the existing rehearsal guard are unchanged. This is not a generic E waiver,
+field exclusion, raw snapshot normalization or permission to ignore another
+blocker. Report/bundle digests bind the disposition, and the bundle must bind
+the exact candidate snapshot used by its report.
+
+Renée separately approved the exact FINAL classification review-queue delta
+as **CONTRACT COMPATIBLE WITH PRESERVATION**. The closed
+`ReviewedClassificationQueueDisposition` uses the same report/bundle path:
+mechanical I and its original reason/hashes remain, with separate effective C.
+It binds the exact reference/FINAL package pair, both complete queue payloads
+and all 1,208 other classification observations (1,139 Book assignment vectors,
+65 classification definitions, three Carriers and one seven-rule alias
+aggregate), plus review/approval/evidence checksums. No future package or
+similar-looking queue receives automatic approval.
+
+The complete FINAL queue (450 entries versus historical 446), including raw
+context/timestamp/resolution/order evidence, remains in immutable restricted
+source and verified retention. Its existing aggregate preservation finding is
+not a Book assignment, new taxonomy or typed preservation plan. No context
+text may become identity evidence. The reviewed 419 position differences and
+`normalizedAt` observations do not introduce a generic sort/timestamp-ignore
+rule. At that classification-only checkpoint the separate ReadingRound
+`rr-1-20260915T133135697-na` remained unreviewed
+E; this disposition does not authorize its review or a FINAL dry-run. Exact
+bindings, tests and the refreshed gate stop are tracked in docs/144.
 
 An added ordinary Book/Copy/Reading Truth/Note is not automatically low risk:
 it is B/D only after the adapter, mapper, identity, enum, dependency and
@@ -376,6 +427,14 @@ cutover layer adds the three-state verdict without changing MIG-FND product
 semantics.
 
 ## 15. Circulation quarantine and cutover
+
+The 2026-09-23 owner-approved ReadingRound completion disposition in docs/144
+does not alter this gate. It covers only the exact reviewed Book/round and
+both full packages: original mechanical E is retained, reviewed effective C
+records genuine newly registered completion with DAY precision. Raw noon UTC
+and derived history remain restricted source evidence, not exact-clock truth
+or extra rounds. No Reading/PRT semantics change; a different identity,
+start/pause/end/precision/lifecycle/population/package remains unapproved.
 
 The final export decides the circulation population:
 

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Infrastructure\Migration;
 
-use Biblio\Core\Application\Migration\Cutover\{ApprovedRehearsalSource, MapperContractInventory, RehearsalContract};
+use Biblio\Core\Application\Migration\Cutover\{FinalSourcePlanningContext, MapperContractInventory, RehearsalContract};
 use Biblio\Core\Application\Migration\Runner\{MigrationPlanningTarget, MigrationSourceInspection, MigrationSourceMapper, MigrationSourceMappingResult};
 use Biblio\Core\Catalog\Classification\{LibraryBookTypeRepository, LibraryGenreRepository};
 use Biblio\Core\Notes\StrictPrivateNoteContentPolicy;
@@ -13,7 +13,7 @@ use Biblio\Core\Notes\StrictPrivateNoteContentPolicy;
 final readonly class CurrentV1RehearsalMapper implements MigrationSourceMapper
 {
     public function __construct(
-        private ApprovedRehearsalSource $source,
+        private FinalSourcePlanningContext $source,
         private LibraryBookTypeRepository $bookTypes,
         private LibraryGenreRepository $genres
     ) {}
@@ -70,6 +70,6 @@ final readonly class CurrentV1RehearsalMapper implements MigrationSourceMapper
         );
         $mapping = $mapper->map($inspection, $target);
         return new MigrationSourceMappingResult($mapping->records(), $mapping->findings(),
-            \Biblio\Core\Application\Migration\Cutover\ReviewedSourceProfile::forApprovedCandidate($this->source, $inspection));
+            \Biblio\Core\Application\Migration\Cutover\ReviewedSourceProfile::forPlanningContext($this->source, $inspection));
     }
 }

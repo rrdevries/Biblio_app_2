@@ -34,6 +34,24 @@ final class CurrentV1AuthorMapperTest extends TestCase
     private const MANIFEST =
         "0000000000000000000000000000000000000000000000000000000000000000";
 
+    public function testDefaultMaterializationDoesNotChangeAuthorPlansOrFindings(): void
+    {
+        $before = ["id" => "book-a", "authors" => ["Synthetic author"], "containedWorks" => []];
+        $after = [...$before, "authorIds" => [], "authorsLocked" => false];
+        $old = $this->map([], [new MigrationSourceRecord(CurrentV1SourceAdapter::BOOK, "book-a", $before)]);
+        $new = $this->map([], [new MigrationSourceRecord(CurrentV1SourceAdapter::BOOK, "book-a", $after)]);
+        self::assertCount(1, $new->authorPlans());
+        self::assertCount(1, $new->contributorPlans());
+        self::assertEquals($old->records(), $new->records());
+        self::assertEquals($old->findings(), $new->findings());
+        self::assertSame([], $new->preservationFindings());
+        self::assertSame([], $new->quarantineFindings());
+        $plan = $new->contributorPlans()[0]->typedPlan();
+        self::assertInstanceOf(CatalogWorkContributorPlan::class, $plan);
+        self::assertSame("author", $plan->role()->value);
+        self::assertSame(1, $plan->position()->value());
+    }
+
     public function testStableAuthorIsOnePlanAcrossSeveralBooks(): void
     {
         $result = $this->map(

@@ -43,6 +43,34 @@ relative path/byte-size/SHA-256 manifest and post-read byte verification. The
 exact adapter revalidates source version/shape. Declared and calculated
 manifest digests must match before the extraction becomes read-only.
 
+### Bounded package-metadata correction — 2026-09-23
+
+Core `2.51.1` admits the exact `data/.DS_Store` file solely as typed
+`NonSourcePackageMetadata`, through the optional
+`MigrationPackageMetadataProvider` boundary implemented by the CURRENT adapter.
+The intake receipt has a separate `package_metadata` inventory with its exact
+relative path, size, hash and `NON_SOURCE_PACKAGE_METADATA` classification.
+Neither adapter profiling/enumeration nor snapshot/mapper logic interprets its
+contents. This is package accounting, not a source finding or preserved record.
+
+Manifest choice is **A**: the existing factory still hashes every package file,
+including this one. There is no separate semantic/source manifest. The factory,
+deterministic serialization and ZIP member validation are unchanged; existing
+manifest hashes retain their precise meaning. Recomputing the FINAL manifest
+from identical bytes is expected to reproduce its existing hash, not invent a
+different hash. Fresh downstream bundles must bind that recomputed FINAL
+manifest; the reviewed reference manifest is not rewritten.
+
+The rule is exact-path only. Root `.DS_Store`, nested `data/foo/.DS_Store`,
+arbitrary hidden/unknown files and malformed canonical inputs remain rejected.
+The existing `__MACOSX/` behavior is unchanged. Symlink/special-member,
+traversal, absolute-path, duplicate-path and overwrite protections apply before
+metadata admission. No filtering, export rebuilding or source mutation.
+
+Product `v2.001`, schema `1026` and UI `0.20.0` are unchanged. This patch is an
+intake tooling correction, not rehearsal/apply authorization. Actual FINAL
+validation and evidence status are tracked separately in docs/144.
+
 ## 4. Immutable package identity
 
 `FinalSourcePackageIdentity` binds:
@@ -79,7 +107,7 @@ bounded domain projections. `FinalSourceDriftEngine` compares stable identity
 and payload hash first. Added, removed and same-ID-changed evidence are
 therefore distinct. Every union identity receives exactly one drift entry.
 
-Only A-D can yield `MAPPING_CONTRACT_COMPATIBLE`. E-J yield
+Only effective A-D can yield `MAPPING_CONTRACT_COMPATIBLE`. Unreviewed E-J yield
 `CONTRACT_REVIEW_REQUIRED`. Generated compatibility never authorizes dry-run,
 rehearsal or apply.
 
@@ -101,6 +129,44 @@ The exact docs/141 names are implemented as `SourceDriftCategory::A` through
 
 No review-required category is collapsed into generic `changed`.
 
+The closed 2026-09-23 `ReviewedAuthorShapeDisposition` covers only the exact
+docs/122/144 approved Book and checksum-bound reference/FINAL pair. It retains
+the mechanical E and reason in `SourceDrift.category()`/`category` and retains
+`contract_review_required=true` as the original finding. Separate
+`reviewed_disposition`, `effective_category=C` and
+`effective_contract_review_required=false` expose the explicit resolution.
+`category_counts`/`domain_category_counts` remain mechanical; separate
+`effective_category_counts`/`effective_domain_category_counts` drive current
+compatibility. No mapper, raw payload, shape hash or source manifest is changed.
+
+Report gating first rejects any effective E–J, then returns `reviewed_compatible`
+if an exact disposition was applied, otherwise the existing
+`mechanically_compatible`. No new rehearsal approval path is added:
+`ApprovedRehearsalSource` remains unchanged and rejects `reviewed_compatible`.
+The review/approval/population/mapper-evidence hashes and both raw observations
+are serialized with the two field-state transitions, without private contents.
+
+The separately approved `ReviewedClassificationQueueDisposition` was the next
+closed type admitted by `SourceDrift`; there is no configurable
+decision registry. Each report revalidates a disposition through its own
+snapshot-bound factory. It retains the queue's mechanical I, original reason
+and payload hashes, while exposing effective C and the exact text
+`CONTRACT COMPATIBLE WITH PRESERVATION`. The existing bundle already binds the
+reviewed-disposition list and full candidate/report digest; no parallel bundle
+or mapper contract is introduced.
+
+The queue matcher requires exact package identities, old/new queue observations
+and the count/hash of **all** remaining classification observations. Unknown,
+removed or changed classification observations cannot be filtered away. Exact
+queue payload and package manifest bind the reviewed counts/file hashes; those
+facts are not independently inferred from observation hashes. Book vectors
+contain assignments, not `taxonomyMeta`; the complete manifest and separately
+checksum-bound review cover that metadata. No generic timestamp exclusion or
+source normalization is performed. Complete raw queue preservation remains
+the existing source/aggregate-finding route; private content is absent from
+ordinary artifacts. See docs/144 for the historical classification checkpoint
+and the subsequently approved, separately bound ReadingRound disposition.
+
 ## 8. Contract inventory
 
 `MapperContractInventory` contains all 16 docs/141 lanes: adapter; CAT/ISBN;
@@ -119,6 +185,13 @@ manually drifting prose-only inventory.
 inventory, source-type counts, stable observation IDs/hashes, structural
 vectors, candidate quarantine evidence and circulation profile. It exposes a
 closed `mapperContract(domain)` seam rather than arbitrary metadata.
+
+The bundle additionally exposes `reviewed_dispositions` and includes them in
+its deterministic digest, alongside the compatibility-report digest. Its
+candidate snapshot digest must equal the report candidate; a disposition
+cannot be repackaged under a different package or population. Old evidence
+artifacts are not rewritten; newly generated report/bundle digests reflect the
+new explicit review evidence, even while source/archive bytes stay unchanged.
 
 The bundle intentionally does not rewrite existing CURRENT mappers or accept
 generic configuration. Existing manifest-bound mapper tests keep using their
@@ -256,6 +329,25 @@ One local implementation commit is created only after all final gates and the
 independent second review pass. Nothing is pushed.
 
 ## 21. Remaining PREP-01B dependencies
+
+### FINAL ReadingRound disposition addendum — 2026-09-23
+
+`ReviewedReadingRoundCompletionDisposition` is a third closed readonly value
+in the existing SourceDrift union, not a configurable rule framework. Both
+package digests, exact full wrapped target payload/shape/state and all53
+ReadingRound observations (count and deterministic hash) must match. The
+wrapper binds Book identity; package manifests bind raw Book/history/PRT
+inputs. Additional/unknown/missing domain observations fail closed. Report
+snapshot revalidation and bundle digests use the existing implementation.
+
+Only the approved completion remains mechanical E while becoming effective C,
+with CURRENT USER DATA semantics, DAY precision, restricted raw preservation,
+review/closure/approval checksums and explicit negative boundaries. No mapper,
+PRT implementation or preservation reason changes. The recorded review-user
+planhash is diagnostic only, never production/rehearsal plan-set authority.
+PRT source vectors need not be equal: the approved source Book summary changed,
+but all1,064 operational PRT output plans must remain equal. Circulation is
+independently gated; see docs/144 for exact evidence and execution status.
 
 PREP-01B remains responsible for the rehearsal-only apply composition,
 positive environment guard, exhaustive empty-target guard, phase-aware

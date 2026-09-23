@@ -24,6 +24,18 @@ product decision remained. Docs/122 was implemented without reinterpretation.
 
 ## 2. Immutable mapping contract and architecture
 
+FINAL-source addendum (2026-09-23): the exact docs/122 default-field disposition
+for Book `1771014295306` changes only drift review support, not this mapper.
+The bounded zero-write comparison found identical 928 Author plans, 1,139
+contributor plans, 1,128 unique edges, 278 preservation findings and three
+quarantine findings. The Author collaborator emits no typed preservation plans;
+this is not a whole-run preservation/reconciliation acceptance claim. Raw
+ABSENT → [] and ABSENT → FALSE remain recoverable in source retention.
+No new preservation reason/plan, name identity, role or position rule is added.
+Diagnostic per-snapshot constructor binding in that comparison was not approval
+to loosen the mapper's production manifest guard. Actual final preparation and
+all other contract gates remain separately required; see docs/144.
+
 | Provenance fact | Exact value |
 |---|---|
 | Source family | `biblio-v1` |

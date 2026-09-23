@@ -225,3 +225,28 @@ classifier or source cleanup was used.
 The slice started from clean `main` at `5026bbf`. Exactly one local
 implementation commit is created after final gates and independent review.
 Nothing is pushed.
+
+## 19. Exact FINAL review-queue disposition — 2026-09-23
+
+The historical mapper closure above remains source-bound history. Renée
+approved only the separately reviewed FINAL queue change as **CONTRACT
+COMPATIBLE WITH PRESERVATION**: 446→450 entries, 442 existing unchanged,
+four updated, four added, none removed and no existing status/resolution
+change. All 65 definitions, seven aliases and 1,139 ordered Book assignment
+vectors remain equal. The focused diagnostic retains 745 selections and the
+same 1,137 Work/1,137 Edition plan rows; changed finding IDs bind updated
+manifest/payload/preservation evidence, not new mapping semantics.
+
+No classification mapper or reviewed term mapping changes. Queue context never
+identifies a Book or creates assignments. The complete new queue, including
+contexts/timestamps/resolutions/provider observations and reconstruction
+structure, remains durably recoverable alongside the historical reference;
+the existing `taxonomy_review_queue_preserved` finding binds the new filehash
+and count. No new typed preservation plan or taxonomy term is added.
+
+Only the exact checksum-bound pair in docs/144 receives a closed PREP-01A
+disposition; mechanical I remains recorded. Renames/IDs, definitions, aliases,
+taxonomy values, Book assignments/order, status/resolutions, queue deletion or
+any different source package are not generically admitted. No source
+normalization, timestamp-ignore rule, apply or FINAL dry-run is authorized.
+The independent ReadingRound E remains a mandatory stop.

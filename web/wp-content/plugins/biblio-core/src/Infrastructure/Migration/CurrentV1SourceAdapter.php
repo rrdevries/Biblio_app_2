@@ -8,6 +8,8 @@ use Biblio\Core\Application\Migration\Circulation\CirculationPlan;
 use Biblio\Core\Application\Migration\MigrationEvidence;
 use Biblio\Core\Application\Migration\Runner\MigrationRunnerFailure;
 use Biblio\Core\Application\Migration\Runner\MigrationRunnerReason;
+use Biblio\Core\Application\Migration\Runner\MigrationPackageMetadataProvider;
+use Biblio\Core\Application\Migration\Runner\NonSourcePackageMetadata;
 use Biblio\Core\Application\Migration\Runner\MigrationSourceAdapter;
 use Biblio\Core\Application\Migration\Runner\MigrationSourceCategoryStrategy;
 use Biblio\Core\Application\Migration\Runner\MigrationSourceFinding;
@@ -16,7 +18,7 @@ use Biblio\Core\Application\Migration\Runner\MigrationSourceProfile;
 use Biblio\Core\Application\Migration\Runner\MigrationSourceRecord;
 use JsonException;
 
-final readonly class CurrentV1SourceAdapter implements MigrationSourceAdapter
+final readonly class CurrentV1SourceAdapter implements MigrationSourceAdapter, MigrationPackageMetadataProvider
 {
     public const ADAPTER_ID = "current-v1-json-29";
     public const SOURCE_FAMILY = "biblio-v1";
@@ -30,6 +32,21 @@ final readonly class CurrentV1SourceAdapter implements MigrationSourceAdapter
     public const NOTE = "v1.note";
     public const CIRCULATION_ROUND = "v1.circulation_round";
     public const READING_GOAL = "v1.reading_goal";
+
+    // Exact owner-approved package metadata; no basename/dotfile wildcard.
+    private const PACKAGE_METADATA_PATH = "data/.DS_Store";
+
+    /** @return list<NonSourcePackageMetadata> */
+    public function packageMetadata(MigrationSourcePackage $package): array
+    {
+        $metadata = [];
+        foreach ($package->files() as $file) {
+            if ($file->relativePath() === self::PACKAGE_METADATA_PATH) {
+                $metadata[] = new NonSourcePackageMetadata($file);
+            }
+        }
+        return $metadata;
+    }
 
     /** @var list<string> */
     private const DATA_FILES = [
@@ -704,6 +721,9 @@ final readonly class CurrentV1SourceAdapter implements MigrationSourceAdapter
         foreach ($package->files() as $file) {
             $path = $file->relativePath();
             $paths[$path] = true;
+            if ($path === self::PACKAGE_METADATA_PATH) {
+                continue;
+            }
             if (
                 in_array($path, self::DATA_FILES, true)
                 || preg_match('#^data/cover-cache/[^/]+\.(?:gif|img|jpg|json|png|webp)$#', $path) === 1

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Biblio\Core\Application\Migration\Cutover;
 
 use Biblio\Core\Application\Migration\Runner\DeterministicJson;
+use Biblio\Core\Exception\ValidationException;
 
 final readonly class FinalSourceCompatibilityReport
 {
@@ -14,19 +15,42 @@ final readonly class FinalSourceCompatibilityReport
         private FinalSourceSnapshot $candidate,
         private array $drift
     ) {
+        foreach ($drift as $item) {
+            $review = $item->reviewedDisposition();
+            if ($review !== null
+                && $review::forSnapshots($reference, $candidate) === null
+            ) {
+                throw new ValidationException("Reviewed disposition does not match report snapshots.");
+            }
+        }
     }
 
     /** @return list<SourceDrift> */
     public function drift(): array { return $this->drift; }
+    public function candidateSnapshotDigest(): string { return $this->candidate->digest(); }
 
     public function approvalState(): FinalSourceApprovalState
     {
         foreach ($this->drift as $item) {
-            if ($item->category()->requiresContractReview()) {
+            if ($item->effectiveCategory()->requiresContractReview()) {
                 return FinalSourceApprovalState::ReviewRequired;
             }
         }
-        return FinalSourceApprovalState::MechanicallyCompatible;
+        return $this->reviewedDispositions() === []
+            ? FinalSourceApprovalState::MechanicallyCompatible
+            : FinalSourceApprovalState::ReviewedCompatible;
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function reviewedDispositions(): array
+    {
+        $reviews = [];
+        foreach ($this->drift as $item) {
+            if ($item->reviewedDisposition() !== null) {
+                $reviews[] = $item->reviewedDisposition()->toArray();
+            }
+        }
+        return $reviews;
     }
 
     public function compatibility(): string
@@ -43,13 +67,19 @@ final readonly class FinalSourceCompatibilityReport
             static fn (SourceDriftCategory $category): string => $category->value,
             SourceDriftCategory::cases()
         ), 0);
+        $effectiveCategories = $categories;
         $domains = [];
+        $effectiveDomains = [];
         foreach ($this->drift as $item) {
             $categories[$item->category()->value]++;
             $domains[$item->domain()] ??= array_fill_keys(array_keys($categories), 0);
             $domains[$item->domain()][$item->category()->value]++;
+            $effectiveCategories[$item->effectiveCategory()->value]++;
+            $effectiveDomains[$item->domain()] ??= array_fill_keys(array_keys($categories), 0);
+            $effectiveDomains[$item->domain()][$item->effectiveCategory()->value]++;
         }
         ksort($domains, SORT_STRING);
+        ksort($effectiveDomains, SORT_STRING);
 
         return [
             "reference_package" => $this->reference->package()->toArray(),
@@ -58,6 +88,9 @@ final readonly class FinalSourceCompatibilityReport
             "approval_state" => $this->approvalState()->value,
             "category_counts" => $categories,
             "domain_category_counts" => $domains,
+            "effective_category_counts" => $effectiveCategories,
+            "effective_domain_category_counts" => $effectiveDomains,
+            "reviewed_dispositions" => $this->reviewedDispositions(),
             "circulation_profile" => $this->candidate->circulationProfile(),
             "circulation_cutover_gate" => ($this->candidate->circulationProfile()["open_total"] ?? 0) > 0
                 ? "CIRCULATION_CUTOVER_REVIEW_REQUIRED"

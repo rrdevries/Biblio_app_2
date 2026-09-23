@@ -33,9 +33,24 @@ final class RehearsalPlanEvidence
         $neutralRecords = [];
         $registry = [];
         foreach ($prepared->findings() as $finding) {
-            // A mapper-only conflict cannot disappear simply because no executable
-            // record was produced. Typed participant quarantine is handled below.
-            RehearsalContract::require(!in_array($finding->disposition(), [MigrationDisposition::Failed, MigrationDisposition::Quarantined], true), "unresolved_mapping_finding");
+            RehearsalContract::require($finding->disposition() !== MigrationDisposition::Failed, "unresolved_mapping_finding");
+            if ($finding->disposition() === MigrationDisposition::Quarantined) {
+                // Closed, reviewed mapper diagnostics (CAT/AUTH/CLASS/READ), not
+                // executable quarantine. Retain them unchanged in the intent hash.
+                // Use wire semantics here without importing infrastructure mappers.
+                $reasons = match ($finding->sourceType()) {
+                    "v1.copy" => ["catalog_book_quarantined"],
+                    "v1.author_occurrence" => ["compound_author_scalar", "invalid_author_placeholder", "malformed_author_scalar"],
+                    "v1.book" => ["converged_classification_conflict", "invalid_isbn", "unresolved_work_identity"],
+                    "v1.classification_conflict_member" => ["converged_classification_conflict_member"],
+                    default => [],
+                };
+                RehearsalContract::require(
+                    in_array($finding->reasonCode(), $reasons, true)
+                    && $finding->toArray()["planned_identities"] === [],
+                    "unresolved_mapping_finding"
+                );
+            }
         }
         foreach ($prepared->records() as $item) {
             $record = $item->record();

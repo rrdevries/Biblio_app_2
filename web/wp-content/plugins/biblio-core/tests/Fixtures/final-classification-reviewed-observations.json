@@ -1,0 +1,3357 @@
+{
+  "groups": [
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "68a89e961cd5662d0e4a95b7ec253bfbd8c150c876122d7328605427e8de76b0",
+        "shape_hash": "f288306980fd2f234adeed08ed8aa2315192b1d80dae6f05388f92ead9afba54",
+        "semantic_class": "classification_definition_book_type",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/book_type/0096fd82892292f74d426d4ed1a4803ecc34d8edead18018375a996191b175f3"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "f587a7d6d3354ee444bc01a6b8c8ed861cdd6151b99ba6dbc477af5f1f4ff78c",
+        "shape_hash": "f288306980fd2f234adeed08ed8aa2315192b1d80dae6f05388f92ead9afba54",
+        "semantic_class": "classification_definition_book_type",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/book_type/39d6434487e47914276cc693e3ccbb073958f8c22117ff2ce8bb51a60a5081ff"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "1d2bbd7f2bfd479a1a7cd5dba0ac8d1ec244574d864d6ff003ace94a9a526a80",
+        "shape_hash": "f288306980fd2f234adeed08ed8aa2315192b1d80dae6f05388f92ead9afba54",
+        "semantic_class": "classification_definition_book_type",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/book_type/6774c59c99acd440f38634faef4cc047a2a289a7daf7c681ac8f8f91fa37e3df"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "e1788b3c60fda21091611584eb8537965ef792e8c8e397f3781b1f3707c2ed4d",
+        "shape_hash": "f288306980fd2f234adeed08ed8aa2315192b1d80dae6f05388f92ead9afba54",
+        "semantic_class": "classification_definition_book_type",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/book_type/7aa5685a3e52108fe23f33733af86f423a8e48d2374b9198955275064093405a"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "088ca788e9856a4e9d84a1a5006974b7b84b49461efeb6002a6763eb9208785d",
+        "shape_hash": "f288306980fd2f234adeed08ed8aa2315192b1d80dae6f05388f92ead9afba54",
+        "semantic_class": "classification_definition_book_type",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/book_type/854fafd9846e9913fc2df39748b511d5ae4b188ce7b57a156e303a4873c5c498"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "7105ab8f899984a1ec0202b4eb4a6fd7cad14875de0a60dbb7b6400e973456d1",
+        "shape_hash": "f288306980fd2f234adeed08ed8aa2315192b1d80dae6f05388f92ead9afba54",
+        "semantic_class": "classification_definition_book_type",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/book_type/8ce06a2153dda4d1b44e0cd417767ef4a34f03a2c61a4ca982bd9c4eb3c23229"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "0caeae2c99c8b7a9667331ad009ba126b03cc728fa30006f3a5a3f8eee2225b6",
+        "shape_hash": "f288306980fd2f234adeed08ed8aa2315192b1d80dae6f05388f92ead9afba54",
+        "semantic_class": "classification_definition_book_type",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/book_type/b4963f981ffa385e8d52210e78d9f69ee87a3d92275ea73c3bd2c48de3ea6912"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "0772161d9b4112576a66fbd23631e950f0d9eaf9a13f0f92b36a3f042455a197",
+        "shape_hash": "f288306980fd2f234adeed08ed8aa2315192b1d80dae6f05388f92ead9afba54",
+        "semantic_class": "classification_definition_carrier",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/carrier/17c8b1319ba7bf346916aaa21b342b6ad5d0dab9cf6f2df7e6ae3ea0e18e01b6"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "bfa7a4b1f19a8872648c34de2a4f11a42c51c55220969a822a85fb665e1cd1e8",
+        "shape_hash": "f288306980fd2f234adeed08ed8aa2315192b1d80dae6f05388f92ead9afba54",
+        "semantic_class": "classification_definition_carrier",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/carrier/1bd1c4281a3f47ec3fbd1d637258740f252b813f5de2c1fda3b3ca5605c7c5fc"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "eb01018613e33b5cb5937a9c7dd96fe1d2bfe4e8d84a8cbee8d3813a1e0c399c",
+        "shape_hash": "f288306980fd2f234adeed08ed8aa2315192b1d80dae6f05388f92ead9afba54",
+        "semantic_class": "classification_definition_carrier",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/carrier/4769bbc88deea51ec18f5596d1eb3d387d3c55d531058b9cbbeb0dca0cb2e34a"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "3dcc8c17cf12341e7a5557a5849fbe14c0d6c88687ace80ec4f821d98f3ec5e0",
+        "shape_hash": "f288306980fd2f234adeed08ed8aa2315192b1d80dae6f05388f92ead9afba54",
+        "semantic_class": "classification_definition_category",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/category/2504425e5c71636e32af557dc4d2006f61ea1f68e2b26758d518bfc11fc109a6"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "cb1d6562fa1456e7c015ac849c0a48e67a8ecc9410ffc0fc6fae3706efe300a4",
+        "shape_hash": "f288306980fd2f234adeed08ed8aa2315192b1d80dae6f05388f92ead9afba54",
+        "semantic_class": "classification_definition_category",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/category/2f5e917fd5d3e710a8620a97e3f71baa9993429a1c15cddeb812d3b1de99440f"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "5b4a57a9d3a040accee8107319fe385b0acfa1f23fa52fa7c1e5b72889f7b91d",
+        "shape_hash": "f288306980fd2f234adeed08ed8aa2315192b1d80dae6f05388f92ead9afba54",
+        "semantic_class": "classification_definition_category",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/category/42a091107c189960508015ddfb4808b1d48ac1771834a29865d86a6c9aa4c818"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "8be00159f69fedd5064ba972941526b738c0c33f8101762cf88d76461fbd0daf",
+        "shape_hash": "7852d45b32af5375166d545bcbe8cdd48558ef312243b54fab8edd83cd120122",
+        "semantic_class": "classification_definition_category",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/category/87fc81693287791acefee7161e50d65042cc3549b2a99ecb817c78d56f35f013"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "713abb94b8f760b459c44ce4e11ca6673d3f5b86f5942e5e7d8eed7ead44f282",
+        "shape_hash": "f288306980fd2f234adeed08ed8aa2315192b1d80dae6f05388f92ead9afba54",
+        "semantic_class": "classification_definition_category",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/category/892bff5005fb3a1aadd665cdae828cb83b30e74d7a6dee65f034912ba8e38e9b"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "b793adb1c3ada6226c6e591286c11b8a643f0bffc8936e2a74e0838f7886125b",
+        "shape_hash": "7852d45b32af5375166d545bcbe8cdd48558ef312243b54fab8edd83cd120122",
+        "semantic_class": "classification_definition_category",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/category/b06f3a1d180cfdf81deb5e197111ea23d188bfd93d910187db73376653c3e918"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "27724eff979ba936c29644c597a1860caf4bdcbfead1f71fb16e93e347cea5d3",
+        "shape_hash": "f288306980fd2f234adeed08ed8aa2315192b1d80dae6f05388f92ead9afba54",
+        "semantic_class": "classification_definition_category",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/category/b22aa1baf3c147479ab5390315bd220ea5894740649aa601aeafbd3dec987002"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "414e4857fb75cee92978a99e4e66adea27c7e43ead5716331a1559c084f0b063",
+        "shape_hash": "7852d45b32af5375166d545bcbe8cdd48558ef312243b54fab8edd83cd120122",
+        "semantic_class": "classification_definition_category",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/category/b5ad27813c7555f4ba754ca30f902503180ccd6906108992e3b0dcb5811d3493"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "4f42de6379e517d9f3e239b2046f01c14939cf8453a9c56c6e9e6ea4953bd360",
+        "shape_hash": "f288306980fd2f234adeed08ed8aa2315192b1d80dae6f05388f92ead9afba54",
+        "semantic_class": "classification_definition_category",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/category/bf58faead964a3a3061628034c9c8c5224d489d32c727bfbb1a7112aca0f678c"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "10a4714748ba81de0406b5231e4e5b74fe5ccb838b68dbb8dc491e4d3d836b38",
+        "shape_hash": "7852d45b32af5375166d545bcbe8cdd48558ef312243b54fab8edd83cd120122",
+        "semantic_class": "classification_definition_category",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/category/d055985942f48ca3e89990a01caf5626bbe85df2095ecb26cda7b3f279a62f49"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "6d3529e345d4d9c4bd28860cf4dd573ec8e8280fc5b559a9f6db7156d3aadc8c",
+        "shape_hash": "f288306980fd2f234adeed08ed8aa2315192b1d80dae6f05388f92ead9afba54",
+        "semantic_class": "classification_definition_category",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/category/dcbf3d774ec34bbab16707cbf85b05874d4607969a087c9a4e3f1d042009c39d"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "e76b0dae6a8c911de304739650fd61c7d8573b80d72c1a68b86954ab3645ac16",
+        "shape_hash": "f288306980fd2f234adeed08ed8aa2315192b1d80dae6f05388f92ead9afba54",
+        "semantic_class": "classification_definition_category",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/category/e04761c38117f3ef8fb37280b20ebdbdc1ad270b06f6eb1df26170fd0568739c"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "4d3405787200691ac7594e40a98ba9a59b4d97fa284f7b701c793bae713036a0",
+        "shape_hash": "f288306980fd2f234adeed08ed8aa2315192b1d80dae6f05388f92ead9afba54",
+        "semantic_class": "classification_definition_category",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/category/e8ec3b5da253160adfa90be3af1d11b43ff464d2b967abe2171ee8ff168a49a4"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "b48317aca5710a21b57459ef74e65c010c74b6112dd7c6ab163c5b71c1bed50f",
+        "shape_hash": "f288306980fd2f234adeed08ed8aa2315192b1d80dae6f05388f92ead9afba54",
+        "semantic_class": "classification_definition_category",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/category/feebaee7341ccdd4409a3e0d59d2c96a7dd3f3b8e731c4bd1fd1555f6e98df56"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "38f3e3c24331d4050b09301260ecb596e91a77f51abaa218a36c63aa5c3ecf42",
+        "shape_hash": "5f412247a909f54110c543960c46632b22eddefb9e1630d3ba8f3b4c83655c9b",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/01ad284775476ce3659ac8102429925888796b43f780265a93290cb830d3610f"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "c0cdd0a7f0ba08f9ef703b2dda0ba7dcab3d130626b62b3be12e9676c48c697f",
+        "shape_hash": "5f412247a909f54110c543960c46632b22eddefb9e1630d3ba8f3b4c83655c9b",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/04d60db7ad982c0b153e502b24591cecba398e3a3e5f4b59ddcc381aca67c7bf"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "d892b175284a8e1796f8f43f2cbe6cd4abd73f4f77817e5dc902ff8aeea9b770",
+        "shape_hash": "5f412247a909f54110c543960c46632b22eddefb9e1630d3ba8f3b4c83655c9b",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/09ba5964cea334bb0004b3bb8af26baa3063f76048cea6d0d225b735954d66fa"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "66c956eaf15fdf0669495ef6c181465b1926976fb50e89e3cd2f58d9fb2efe0b",
+        "shape_hash": "5f412247a909f54110c543960c46632b22eddefb9e1630d3ba8f3b4c83655c9b",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/0df12156d0c5a01fa21879cd10084b45659cbb15a803b3bb2eb4bd28ccb8ae4d"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "434ef6712be997c8a940d245e6bbdbb267dffd971f8c76cc55ea9554767a6b2e",
+        "shape_hash": "5f412247a909f54110c543960c46632b22eddefb9e1630d3ba8f3b4c83655c9b",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/0dfda4dcb3fc32d07a2acd5c54cc73006200b2ff9d10fe983ba07c3af5a22e36"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "a463701b9e6c028e13e676783d416286f493873ed3a3f11f5fd86b97dbd601d3",
+        "shape_hash": "5f412247a909f54110c543960c46632b22eddefb9e1630d3ba8f3b4c83655c9b",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/1be82dbe4645196305c6957e1a8f2e7354b59987c9f8cbd7e06c95839971973c"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "142a24b717ca52d57bfe30e5b51249ac153acc9c07dfeb185a601c993140b184",
+        "shape_hash": "eb64d21966371a565a036b2347863b5447b1d796d01a1900c13306e675c75d3c",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/2b25149cc0cb84195771815fd092006b2263273f0093f8490eee564b7b8bd8eb"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "569f6d6100c4c0b9ce820a3588eac3e66917793d7089be9d6638531dc47d369a",
+        "shape_hash": "5f412247a909f54110c543960c46632b22eddefb9e1630d3ba8f3b4c83655c9b",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/368a2b6a66542738527ad070c64597dce27997329317c5e47f52d8357accddcc"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "8fb47e4662d6e992de59d01d72eeb89c5859d0c5451997a5559686933ac83ab4",
+        "shape_hash": "5f412247a909f54110c543960c46632b22eddefb9e1630d3ba8f3b4c83655c9b",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/3b035529933e0f1ec8bddecca94fbfc1dcb4463700f6ce0e837827d4b4e638ef"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "2a32c9240e500d5469823a3f352ee5ba75d07d0f63fd678f216a70d9bfb516e2",
+        "shape_hash": "5f412247a909f54110c543960c46632b22eddefb9e1630d3ba8f3b4c83655c9b",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/43a4c178f6fed50da58f33ad82fd2fa89eaf20d5fb17637535fd0b722d4082fd"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "18e65fc37df3d6ddb3bb6621006d2b136b8f16186a116b73456472e8a9e80364",
+        "shape_hash": "5f412247a909f54110c543960c46632b22eddefb9e1630d3ba8f3b4c83655c9b",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/4bbb9de9bed450a41330952d2ef3fc9f0ea493c96345c92f60d10a03466f5b3d"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "6f6cfc3ed5cf3c7f1d9eaa234da98064762de46be60c44e3ab7e081668449647",
+        "shape_hash": "5f412247a909f54110c543960c46632b22eddefb9e1630d3ba8f3b4c83655c9b",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/5081a8aeeef9a08b39ba3cbf7d62f7639da6632d13ae1b216c7844e4720c0bac"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "47b0c6bc0d63e80990dcb3ef541547edf36f2c05a548a31bca849807b3f089db",
+        "shape_hash": "5f412247a909f54110c543960c46632b22eddefb9e1630d3ba8f3b4c83655c9b",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/561bd3faf52028465b43a57dd5775fcaa1c0809c6108fdfca06b3f37877561ca"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "24ffc5cdd848d9ada05742ed200a23aa80a375271868457745790465145f2913",
+        "shape_hash": "5f412247a909f54110c543960c46632b22eddefb9e1630d3ba8f3b4c83655c9b",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/5861bdc8a86e1e254bbdf84c035e409dd714f95b15176d88d9fead2f263b7c9b"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "f2afc02b1314c1021fd5ce261652ff5b725a150093beb6415bb2cfad79572fa1",
+        "shape_hash": "5f412247a909f54110c543960c46632b22eddefb9e1630d3ba8f3b4c83655c9b",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/6264cc439b3b4af86003a56f7d2cc39f88fb5386fb30747baa661627a9366744"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "04c17a390d42efd2f912e433a660567135e523d74ee1eab3dae6322e0fc0a0a4",
+        "shape_hash": "5f412247a909f54110c543960c46632b22eddefb9e1630d3ba8f3b4c83655c9b",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/644e8d2af15be5ed06d72e0e1b690e0c7ea84e0e27586b56b03eefe9b1ecc1dd"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "7e84e07d4dd356bbd37c13182f8fe29c4378c663514ed7aca130d0d8ac87f8d3",
+        "shape_hash": "eb64d21966371a565a036b2347863b5447b1d796d01a1900c13306e675c75d3c",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/695984c9bc44dfa7e2665af6ad28717d4e5ceef0d05fd0aaad7723dfb5e29c62"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "ee77e1e3ab7cf3533aa3f554645b8c37eaeb26375b3f5444fa1f565a1863f0b9",
+        "shape_hash": "5f412247a909f54110c543960c46632b22eddefb9e1630d3ba8f3b4c83655c9b",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/6dd5738330d019c94162278919e1e427469dbce0e0903c4ca75b8be053104cf3"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "ecfa74c03eb0d2d519bf2224e9bc091e28287832f7458e8bb22356df29d9995a",
+        "shape_hash": "5f412247a909f54110c543960c46632b22eddefb9e1630d3ba8f3b4c83655c9b",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/721e7ee7f69e2d8906c99ff199d1cbcb0ff9584c72b704a9a4f14e9fdf16332c"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "9df99c642db839dfc8b1ea953a40c5fb09232d1d1a454cd0eba0cf6ba5f74385",
+        "shape_hash": "eb64d21966371a565a036b2347863b5447b1d796d01a1900c13306e675c75d3c",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/75734b1f4f498f9493e4fd6d17836b5032026192fd299c71c70024d59721d924"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "715fa83b798c616d5bffb85b800d9f9d8c894725d816f4ba2974b36db260a938",
+        "shape_hash": "eb64d21966371a565a036b2347863b5447b1d796d01a1900c13306e675c75d3c",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/7674b7c76201597d213c841d9a94311dd60549cf3d128be148b007e83175cfa5"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "7397b5c000846dd518ee227cf171cd702621fbb6e4b58e8da336bb0fdc45f345",
+        "shape_hash": "5f412247a909f54110c543960c46632b22eddefb9e1630d3ba8f3b4c83655c9b",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/7f0ddc70fe94b233f05f314d33ed2c1c842bdcc096b84acfee928b2991e715a4"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "1a8d9d3224b3ea3c6f8cd36d58a89c88ead850adb4f224829f2e532c0ff715cd",
+        "shape_hash": "5f412247a909f54110c543960c46632b22eddefb9e1630d3ba8f3b4c83655c9b",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/86e06371f03b1b1ed34df69c3a12c36b944760f88684d4f4750ac0af167fb3d6"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "61f8f6b04161ceb53f0669d61f734c6e873d05dd1e7223dff2b42e82b8bc89b2",
+        "shape_hash": "eb64d21966371a565a036b2347863b5447b1d796d01a1900c13306e675c75d3c",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/8c4566f1df8ea40e9a23cfbbc517b77dacd5dc69b16d769d7c0080b39d24f27d"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "081885cbbda8cd0a4c75839b77214e4706070563ce3fa3f737e7da835d1d728a",
+        "shape_hash": "5f412247a909f54110c543960c46632b22eddefb9e1630d3ba8f3b4c83655c9b",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/8d03b2f2523c915d58a3c056052f5ae08706eae793b0c5b945145b68369e9948"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "96162cf0404554858c36eba7b0621bb5a0cd05154ff332b549def958dc20e6ce",
+        "shape_hash": "eb64d21966371a565a036b2347863b5447b1d796d01a1900c13306e675c75d3c",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/93d3ce675ba77563b62864f9b44b9cb24fa15b0d0fd01031496e2698f1858dff"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "bb957f8d294fabc621f99652cd1912144a1554cda50ac908dce4d0971b1b87a9",
+        "shape_hash": "eb64d21966371a565a036b2347863b5447b1d796d01a1900c13306e675c75d3c",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/9af23b999e9e7775112509c9ac52a00859118ecf5329e3f3f90bebd4051204d7"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "4a11f6fc7160fbae7c98071161cd43de3266ccef7184eecd312413105fe13140",
+        "shape_hash": "5f412247a909f54110c543960c46632b22eddefb9e1630d3ba8f3b4c83655c9b",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/9e7cd9c676b5cf500d21a4d6f736636e4a3724fea713de63ec6d96e3e05ab5a4"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "ace6549d5b4f938dd28c31e8382123334ef7948cbf433eda7bffb08b086e8bd2",
+        "shape_hash": "eb64d21966371a565a036b2347863b5447b1d796d01a1900c13306e675c75d3c",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/a8248723a0f938c1606913e59ac3d39e19b8a56b7b61c10a737c3005869b339a"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "40fe98f434db3e0476207d9e69e40bda5c9db9a349fa251c041a4f840ae6e9b9",
+        "shape_hash": "5f412247a909f54110c543960c46632b22eddefb9e1630d3ba8f3b4c83655c9b",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/aa03c36302da688f904d8746d354fd23775fe0bda7ae269e998f27ff02451502"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "b0acec614c7937d3e358c1922e0c72d1e1fd68c0a52896493ccd0bdc9c957f7f",
+        "shape_hash": "5f412247a909f54110c543960c46632b22eddefb9e1630d3ba8f3b4c83655c9b",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/ae55647c81529faea658df6db6e0c31eea298c01279e98d9422e0f0a54eafc9a"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "0755b693002086c11d86fe0caf0cbcf3e97a3201a7941914a50ddb69aebc52dd",
+        "shape_hash": "5f412247a909f54110c543960c46632b22eddefb9e1630d3ba8f3b4c83655c9b",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/b2c44bee548a4fe19831c348ada2f9d98a287ed53c605804f123299928401f4e"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "54e4fcbd627a75896864ac2163958a00066118d800ba9c7104183e516533a96d",
+        "shape_hash": "5f412247a909f54110c543960c46632b22eddefb9e1630d3ba8f3b4c83655c9b",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/b5dd45a112baf2ff866805029f6a131292b9a712283e7c038448d86553097526"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "6cdbb5757bcb5eb17843aa4ee91d0a41b85651afcb9a3cd7279f3a870f5ae3d2",
+        "shape_hash": "eb64d21966371a565a036b2347863b5447b1d796d01a1900c13306e675c75d3c",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/b92c33d48a6dcff038fa2192dcb0822f3cb16dcaa0af1a34ec0f337e0e89c5dd"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "c5680553f1c621036fdfebaee14e6cffc38fc80533bc43bbb7002fc2393e1f97",
+        "shape_hash": "5f412247a909f54110c543960c46632b22eddefb9e1630d3ba8f3b4c83655c9b",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/bb34725f678f23e0d1bcd1029e934ff6434fe3e6a40d758ffbe7f6fde4c9044e"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "3c7037b20636b8f9a5747d24717dbb5cbd4bbcb02e6d029f7f593fadb0131a1a",
+        "shape_hash": "eb64d21966371a565a036b2347863b5447b1d796d01a1900c13306e675c75d3c",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/bbe7b41a77c171142012fc86d49cadb6f3a1f72ffed9ebe835d5ec37c7ef5451"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "5afeb455292c8984e81d10b64cd6ab2b1928af5b887a29102eb42683aa67b656",
+        "shape_hash": "eb64d21966371a565a036b2347863b5447b1d796d01a1900c13306e675c75d3c",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/bc917ae20ab965074a82a46b411ed28c69eba5e747e699d1e846b22b4069c02d"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "a6c2223c72b8d9f1a1a2b7da5525398bad46a67ce354fa5968013e742cea4438",
+        "shape_hash": "5f412247a909f54110c543960c46632b22eddefb9e1630d3ba8f3b4c83655c9b",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/c0aaf78d2f49d8c62cab96d374736a9cca2d10b50fd35ab4733f205551900e03"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "aaa8694ea0204cc6d9402d3bfc1c2aa9717fe77000d26a623d07282194a2a015",
+        "shape_hash": "eb64d21966371a565a036b2347863b5447b1d796d01a1900c13306e675c75d3c",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/c6c4531a1311f0ca37742fd1942121b7409257e03a889053cf91442d53e7ad00"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "3bc560cdfc87e062fc6624f9c925e614655102f71ec1436d015d31d3fa45188e",
+        "shape_hash": "5f412247a909f54110c543960c46632b22eddefb9e1630d3ba8f3b4c83655c9b",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/c6cdfdaf74a89fbfcfaf5cfbb037087cfa7795de3401e29ede7fea1adfcf2afa"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "7c96eae10c31bcc64bb465c618c4598378894377ec4577c694dd668e30f3c5f2",
+        "shape_hash": "eb64d21966371a565a036b2347863b5447b1d796d01a1900c13306e675c75d3c",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/cbb8228b6f816ece1cd90239d1c1f30ec9f40115785c1fa2be879860b4af85fd"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "9ad59c113a2233fbd1b58b51a1d0f7f53571c50a508451f65a5ebdbd88bdcc81",
+        "shape_hash": "eb64d21966371a565a036b2347863b5447b1d796d01a1900c13306e675c75d3c",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/d24b534b501fcedc0b96d83e083bf57b9ada51d3f8262ee4c0c98534172a1d80"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "c2b05eb2cc92ca69bd80bdaaa4a10109688fab67bd456393364b8e1e86e15a26",
+        "shape_hash": "5f412247a909f54110c543960c46632b22eddefb9e1630d3ba8f3b4c83655c9b",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/f33bc65daa7f2c30242f94170119563fae3804dafb975094f79751ec3d05affa"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_definition",
+        "payload_hash": "494478a9dd609819f00671125a36a3f969d6518fc03844e17096ca1acc7de2cf",
+        "shape_hash": "eb64d21966371a565a036b2347863b5447b1d796d01a1900c13306e675c75d3c",
+        "semantic_class": "classification_definition_genre",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-definition/genre/f483555f27ff3e6c25ba9699f639422efa9a69557977a44b715a25c1a2d37eac"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_review_vector",
+        "payload_hash": "8b48f1b45ffcea7ab0e3db61882bbffe7a543c61b79b3f8cf41082e0438900d2",
+        "shape_hash": "31eec1b0064a6a89ef0d743b669b3dfcd090d25472606f4ef10a69ca05d7c05b",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": true,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "classification-alias-rules"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "fc892db9dda23ffd3fe0b57c1afa9500c8a8a568d5bfb4b8bce5e45a885587c6",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1769798279407/classifications",
+        "v1.book/1769798875126/classifications",
+        "v1.book/1769798943571/classifications",
+        "v1.book/1769799112561/classifications",
+        "v1.book/1769799399480/classifications",
+        "v1.book/1769799482921/classifications",
+        "v1.book/1769799529162/classifications",
+        "v1.book/1769799581097/classifications",
+        "v1.book/1769799618750/classifications",
+        "v1.book/1769799644037/classifications",
+        "v1.book/1769799689846/classifications",
+        "v1.book/1769799715602/classifications",
+        "v1.book/1769799737360/classifications",
+        "v1.book/1769799758115/classifications",
+        "v1.book/1769799808927/classifications",
+        "v1.book/1769799894048/classifications",
+        "v1.book/1769800021055/classifications",
+        "v1.book/1769800047025/classifications",
+        "v1.book/1769800069326/classifications",
+        "v1.book/1769800102291/classifications",
+        "v1.book/1769800125735/classifications",
+        "v1.book/1769800143053/classifications",
+        "v1.book/1769800167738/classifications",
+        "v1.book/1769808528777/classifications",
+        "v1.book/1769808559090/classifications",
+        "v1.book/1769854990194/classifications",
+        "v1.book/1769855038735/classifications",
+        "v1.book/1769855110243/classifications",
+        "v1.book/1769855173649/classifications",
+        "v1.book/1769855240057/classifications",
+        "v1.book/1769855309161/classifications",
+        "v1.book/1769855362971/classifications",
+        "v1.book/1769855402223/classifications",
+        "v1.book/1769855425585/classifications",
+        "v1.book/1769855485243/classifications",
+        "v1.book/1769855533767/classifications",
+        "v1.book/1769855579712/classifications",
+        "v1.book/1769855616562/classifications",
+        "v1.book/1769855663444/classifications",
+        "v1.book/1769855827160/classifications",
+        "v1.book/1769855934220/classifications",
+        "v1.book/1769855968574/classifications",
+        "v1.book/1769856006704/classifications",
+        "v1.book/1769857418317/classifications",
+        "v1.book/1769857474431/classifications",
+        "v1.book/1769857589111/classifications",
+        "v1.book/1769858135119/classifications",
+        "v1.book/1769858236700/classifications",
+        "v1.book/1769858304696/classifications",
+        "v1.book/1769858328614/classifications",
+        "v1.book/1769863539149/classifications",
+        "v1.book/1769863711788/classifications",
+        "v1.book/1769864041313/classifications",
+        "v1.book/1769864288819/classifications",
+        "v1.book/1769864318010/classifications",
+        "v1.book/1769864501668/classifications",
+        "v1.book/1769864538476/classifications",
+        "v1.book/1769864708261/classifications",
+        "v1.book/1769864779635/classifications",
+        "v1.book/1769864818265/classifications",
+        "v1.book/1769864883809/classifications",
+        "v1.book/1769864910837/classifications",
+        "v1.book/1769864985172/classifications",
+        "v1.book/1769865011169/classifications",
+        "v1.book/1769865054804/classifications",
+        "v1.book/1770132189369/classifications",
+        "v1.book/1770132240197/classifications",
+        "v1.book/1770132271658/classifications",
+        "v1.book/1770132344794/classifications",
+        "v1.book/1770132378966/classifications",
+        "v1.book/1770132685978/classifications",
+        "v1.book/1770132716656/classifications",
+        "v1.book/1770132744325/classifications",
+        "v1.book/1770133166579/classifications",
+        "v1.book/1770133993453/classifications",
+        "v1.book/1770134163998/classifications",
+        "v1.book/1770134301342/classifications",
+        "v1.book/1770134367638/classifications",
+        "v1.book/1770136905155/classifications",
+        "v1.book/1770563314670/classifications",
+        "v1.book/1770563672521/classifications",
+        "v1.book/1770563699409/classifications",
+        "v1.book/1770563715154/classifications",
+        "v1.book/1770563733658/classifications",
+        "v1.book/1770563793213/classifications",
+        "v1.book/1770563808498/classifications",
+        "v1.book/1770563852041/classifications",
+        "v1.book/1770563908275/classifications",
+        "v1.book/1770563970941/classifications",
+        "v1.book/1770563991283/classifications",
+        "v1.book/1770564018785/classifications",
+        "v1.book/1770564106459/classifications",
+        "v1.book/1770564383340/classifications",
+        "v1.book/1770564406480/classifications",
+        "v1.book/1770564524456/classifications",
+        "v1.book/1770564541917/classifications",
+        "v1.book/1770564560056/classifications",
+        "v1.book/1770564635105/classifications",
+        "v1.book/1770564651768/classifications",
+        "v1.book/1770570136276/classifications",
+        "v1.book/1770570189557/classifications",
+        "v1.book/1770570210046/classifications",
+        "v1.book/1770570230642/classifications",
+        "v1.book/1770570354243/classifications",
+        "v1.book/1770570398226/classifications",
+        "v1.book/1770570837370/classifications",
+        "v1.book/1770570908864/classifications",
+        "v1.book/1770571024765/classifications",
+        "v1.book/1770571043760/classifications",
+        "v1.book/1770571247141/classifications",
+        "v1.book/1770571549971/classifications",
+        "v1.book/1770571572521/classifications",
+        "v1.book/1770571597920/classifications",
+        "v1.book/1770571616712/classifications",
+        "v1.book/1770571634188/classifications",
+        "v1.book/1770571653406/classifications",
+        "v1.book/1770571669558/classifications",
+        "v1.book/1770572369034/classifications",
+        "v1.book/1770572388447/classifications",
+        "v1.book/1770572422888/classifications",
+        "v1.book/1770572440611/classifications",
+        "v1.book/1770572464287/classifications",
+        "v1.book/1770572532466/classifications",
+        "v1.book/1770572579037/classifications",
+        "v1.book/1770572890992/classifications",
+        "v1.book/1770573107356/classifications",
+        "v1.book/1770573397121/classifications",
+        "v1.book/1770573430470/classifications",
+        "v1.book/1770573505811/classifications",
+        "v1.book/1770573546469/classifications",
+        "v1.book/1770573577102/classifications",
+        "v1.book/1770573603920/classifications",
+        "v1.book/1770573667069/classifications",
+        "v1.book/1770573697106/classifications",
+        "v1.book/1770573734397/classifications",
+        "v1.book/1770573770189/classifications",
+        "v1.book/1770573792052/classifications",
+        "v1.book/1770573855005/classifications",
+        "v1.book/1770573893820/classifications",
+        "v1.book/1770573923978/classifications",
+        "v1.book/1770573970760/classifications",
+        "v1.book/1770573997154/classifications",
+        "v1.book/1770574370384/classifications",
+        "v1.book/1770574583933/classifications",
+        "v1.book/1770574609656/classifications",
+        "v1.book/1770574632218/classifications",
+        "v1.book/1770574651532/classifications",
+        "v1.book/1770574674941/classifications",
+        "v1.book/1770577854414/classifications",
+        "v1.book/1770577892603/classifications",
+        "v1.book/1770579650149/classifications",
+        "v1.book/1770579667379/classifications",
+        "v1.book/1770579684483/classifications",
+        "v1.book/1770579697984/classifications",
+        "v1.book/1770579759278/classifications",
+        "v1.book/1770579776681/classifications",
+        "v1.book/1770579797770/classifications",
+        "v1.book/1770579807333/classifications",
+        "v1.book/1770579836704/classifications",
+        "v1.book/1770579848094/classifications",
+        "v1.book/1770579855343/classifications",
+        "v1.book/1770579871878/classifications",
+        "v1.book/1770579891594/classifications",
+        "v1.book/1770579901793/classifications",
+        "v1.book/1770579908864/classifications",
+        "v1.book/1770579916818/classifications",
+        "v1.book/1770579942166/classifications",
+        "v1.book/1770579949230/classifications",
+        "v1.book/1770580011871/classifications",
+        "v1.book/1770580384840/classifications",
+        "v1.book/1770580395846/classifications",
+        "v1.book/1770580404535/classifications",
+        "v1.book/1770580413790/classifications",
+        "v1.book/1770580425732/classifications",
+        "v1.book/1770580438547/classifications",
+        "v1.book/1770580447291/classifications",
+        "v1.book/1770580455693/classifications",
+        "v1.book/1770580463778/classifications",
+        "v1.book/1770580489198/classifications",
+        "v1.book/1770580504310/classifications",
+        "v1.book/1770580518825/classifications",
+        "v1.book/1770580533210/classifications",
+        "v1.book/1770580545872/classifications",
+        "v1.book/1770580557823/classifications",
+        "v1.book/1770580569869/classifications",
+        "v1.book/1770580579272/classifications",
+        "v1.book/1770580586405/classifications",
+        "v1.book/1770582022457/classifications",
+        "v1.book/1770582036521/classifications",
+        "v1.book/1770582064238/classifications",
+        "v1.book/1770582214952/classifications",
+        "v1.book/1770582240889/classifications",
+        "v1.book/1770582252085/classifications",
+        "v1.book/1770582264223/classifications",
+        "v1.book/1770582274047/classifications",
+        "v1.book/1770583052842/classifications",
+        "v1.book/1770583154345/classifications",
+        "v1.book/1770585280056/classifications",
+        "v1.book/1770585431807/classifications",
+        "v1.book/1770586875872/classifications",
+        "v1.book/1770933193144/classifications",
+        "v1.book/1770933209550/classifications",
+        "v1.book/1770934530510/classifications",
+        "v1.book/1770935356758/classifications",
+        "v1.book/1770935385701/classifications",
+        "v1.book/1770935393599/classifications",
+        "v1.book/1770935404645/classifications",
+        "v1.book/1770935632931/classifications",
+        "v1.book/1770935647569/classifications",
+        "v1.book/1770935688716/classifications",
+        "v1.book/1770935858047/classifications",
+        "v1.book/1770936309945/classifications",
+        "v1.book/1770936686162/classifications",
+        "v1.book/1770936705310/classifications",
+        "v1.book/1771009734711/classifications",
+        "v1.book/1771009922344/classifications",
+        "v1.book/1771010027624/classifications",
+        "v1.book/1771010496545/classifications",
+        "v1.book/1771010600678/classifications",
+        "v1.book/1771010608362/classifications",
+        "v1.book/1771010618458/classifications",
+        "v1.book/1771010632796/classifications",
+        "v1.book/1771010639836/classifications",
+        "v1.book/1771010714306/classifications",
+        "v1.book/1771010726456/classifications",
+        "v1.book/1771012772112/classifications",
+        "v1.book/1771012886383/classifications",
+        "v1.book/1771013263168/classifications",
+        "v1.book/1771013284900/classifications",
+        "v1.book/1771013366263/classifications",
+        "v1.book/1771013432722/classifications",
+        "v1.book/1771013740835/classifications",
+        "v1.book/1771014324716/classifications",
+        "v1.book/1771063067549/classifications",
+        "v1.book/1771063686854/classifications",
+        "v1.book/1771264357697/classifications",
+        "v1.book/1771264417158/classifications",
+        "v1.book/1771264567325/classifications",
+        "v1.book/1771264583366/classifications",
+        "v1.book/1771264659067/classifications",
+        "v1.book/1771264996621/classifications",
+        "v1.book/1771265002281/classifications",
+        "v1.book/1771265013351/classifications",
+        "v1.book/1771265292225/classifications",
+        "v1.book/1771265328050/classifications",
+        "v1.book/1771265385162/classifications",
+        "v1.book/1771265466377/classifications",
+        "v1.book/1771265512167/classifications",
+        "v1.book/1771265560621/classifications",
+        "v1.book/1771265569776/classifications",
+        "v1.book/1771265630379/classifications",
+        "v1.book/1771265688993/classifications",
+        "v1.book/1771265740495/classifications",
+        "v1.book/1771265795977/classifications",
+        "v1.book/1771265864229/classifications",
+        "v1.book/1771265903664/classifications",
+        "v1.book/1771266003307/classifications",
+        "v1.book/1771266036446/classifications",
+        "v1.book/1771266096218/classifications",
+        "v1.book/1771269159222/classifications",
+        "v1.book/1771330218631/classifications",
+        "v1.book/1771330256174/classifications",
+        "v1.book/1771330325475/classifications",
+        "v1.book/1771330554133/classifications",
+        "v1.book/1771330800306/classifications",
+        "v1.book/1771330870187/classifications",
+        "v1.book/1771331026709/classifications",
+        "v1.book/1771331036624/classifications",
+        "v1.book/1771331068056/classifications",
+        "v1.book/1771331112347/classifications",
+        "v1.book/1771331249224/classifications",
+        "v1.book/1771331258683/classifications",
+        "v1.book/1771331331010/classifications",
+        "v1.book/1771331376214/classifications",
+        "v1.book/1771331405261/classifications",
+        "v1.book/1771331420145/classifications",
+        "v1.book/1771331440574/classifications",
+        "v1.book/1771331721240/classifications",
+        "v1.book/1771331795312/classifications",
+        "v1.book/1771331811574/classifications",
+        "v1.book/1771331819284/classifications",
+        "v1.book/1771331826424/classifications",
+        "v1.book/1771331833963/classifications",
+        "v1.book/1771331856594/classifications",
+        "v1.book/1771332054068/classifications",
+        "v1.book/1771332075184/classifications",
+        "v1.book/1771332168676/classifications",
+        "v1.book/1771501189050/classifications",
+        "v1.book/1771501252833/classifications",
+        "v1.book/1771501264604/classifications",
+        "v1.book/1771501373475/classifications",
+        "v1.book/1771501658626/classifications",
+        "v1.book/1771501693887/classifications",
+        "v1.book/1771501727200/classifications",
+        "v1.book/1771501966158/classifications",
+        "v1.book/1771502145310/classifications",
+        "v1.book/1771502152527/classifications",
+        "v1.book/1771502160916/classifications",
+        "v1.book/1771502545073/classifications",
+        "v1.book/1771502650816/classifications",
+        "v1.book/1771502698329/classifications",
+        "v1.book/1771502706316/classifications",
+        "v1.book/1771502961616/classifications",
+        "v1.book/1771502981123/classifications",
+        "v1.book/1771502999893/classifications",
+        "v1.book/1771503041944/classifications",
+        "v1.book/1771503169986/classifications",
+        "v1.book/1772658455432/classifications",
+        "v1.book/1772963499007/classifications",
+        "v1.book/1773310501077/classifications",
+        "v1.book/1773310710280/classifications",
+        "v1.book/1773311071877/classifications",
+        "v1.book/1773311175385/classifications",
+        "v1.book/1773311289767/classifications",
+        "v1.book/1773311393749/classifications",
+        "v1.book/1773342015461/classifications",
+        "v1.book/1773395288916/classifications",
+        "v1.book/1773395309881/classifications",
+        "v1.book/1774261358949/classifications",
+        "v1.book/1774261500209/classifications",
+        "v1.book/1774261933458/classifications",
+        "v1.book/1774262131184/classifications",
+        "v1.book/1774262260957/classifications",
+        "v1.book/1774262510173/classifications",
+        "v1.book/1774262570018/classifications",
+        "v1.book/1774262648702/classifications",
+        "v1.book/1774262697408/classifications",
+        "v1.book/1774262741577/classifications",
+        "v1.book/1774262787306/classifications",
+        "v1.book/1774262828824/classifications",
+        "v1.book/1774262872610/classifications",
+        "v1.book/1774262902633/classifications",
+        "v1.book/1774262985632/classifications",
+        "v1.book/1774263038459/classifications",
+        "v1.book/1774263079410/classifications",
+        "v1.book/1774263118892/classifications",
+        "v1.book/1774263355014/classifications",
+        "v1.book/1774263409376/classifications",
+        "v1.book/1778098085998/classifications",
+        "v1.book/1778140170613/classifications",
+        "v1.book/1780059708708/classifications",
+        "v1.book/1780059710211/classifications",
+        "v1.book/1780059711571/classifications",
+        "v1.book/1780059712345/classifications",
+        "v1.book/1780059719939/classifications",
+        "v1.book/1780406725060/classifications",
+        "v1.book/1780488422252/classifications",
+        "v1.book/1780498855190/classifications",
+        "v1.book/1780566464124/classifications",
+        "v1.book/1780741573994/classifications",
+        "v1.book/1782247727207/classifications",
+        "v1.book/1782247868010/classifications",
+        "v1.book/1785595679156/classifications",
+        "v1.book/1786129044856/classifications",
+        "v1.book/1786957348513/classifications",
+        "v1.book/1787234876328/classifications",
+        "v1.book/1787235396427/classifications",
+        "v1.book/1787235626921/classifications",
+        "v1.book/1787236034782/classifications",
+        "v1.book/1787236166645/classifications",
+        "v1.book/1787236376931/classifications",
+        "v1.book/1787236556187/classifications",
+        "v1.book/1787236730306/classifications",
+        "v1.book/1787248537538/classifications",
+        "v1.book/1787248576663/classifications",
+        "v1.book/1787297305994/classifications",
+        "v1.book/1787298212403/classifications",
+        "v1.book/1787298249701/classifications",
+        "v1.book/1787298271902/classifications",
+        "v1.book/1787298359070/classifications",
+        "v1.book/1787298611139/classifications",
+        "v1.book/1787298643201/classifications",
+        "v1.book/1787394352187/classifications",
+        "v1.book/1787394391831/classifications",
+        "v1.book/1787394415870/classifications",
+        "v1.book/1787395144798/classifications",
+        "v1.book/1787395164228/classifications",
+        "v1.book/1787395208336/classifications",
+        "v1.book/1787395245400/classifications",
+        "v1.book/1787395267614/classifications",
+        "v1.book/1787395287881/classifications",
+        "v1.book/1787395312052/classifications",
+        "v1.book/1787395331798/classifications",
+        "v1.book/1787395352415/classifications",
+        "v1.book/1787395388530/classifications",
+        "v1.book/1787395416352/classifications",
+        "v1.book/1787395436775/classifications",
+        "v1.book/1787395458177/classifications",
+        "v1.book/1787395477945/classifications",
+        "v1.book/1787395506640/classifications",
+        "v1.book/1787397137746/classifications",
+        "v1.book/1787397148972/classifications",
+        "v1.book/1787397152418/classifications",
+        "v1.book/1787472964861/classifications",
+        "v1.book/1787473084475/classifications",
+        "v1.book/1787481383931/classifications",
+        "v1.book/1787491541644/classifications",
+        "v1.book/1787491711090/classifications",
+        "v1.book/1787945777590/classifications",
+        "v1.book/1788428550342/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "a55f92786a417e5d21a98e952794c743af7ac2060389adbed4d1899c73ff6ebe",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1770132103065/classifications",
+        "v1.book/1771536346977/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "5ae81dade0a5705768a7c9982745a7bcc4620262f9ea736b395a369e790fc4c6",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1770933500943/classifications",
+        "v1.book/1770934417006/classifications",
+        "v1.book/1770934920693/classifications",
+        "v1.book/1770935234099/classifications",
+        "v1.book/1770935263162/classifications",
+        "v1.book/1770935277740/classifications",
+        "v1.book/1770935301371/classifications",
+        "v1.book/1771009668253/classifications",
+        "v1.book/1771010514424/classifications",
+        "v1.book/1771013032172/classifications",
+        "v1.book/1771013692958/classifications",
+        "v1.book/1771013808494/classifications",
+        "v1.book/1771013906260/classifications",
+        "v1.book/1771264681945/classifications",
+        "v1.book/1771264891281/classifications",
+        "v1.book/1771265248748/classifications",
+        "v1.book/1771265358542/classifications",
+        "v1.book/1771269232848/classifications",
+        "v1.book/1771270089858/classifications",
+        "v1.book/1771329973381/classifications",
+        "v1.book/1771330987186/classifications",
+        "v1.book/1771331537658/classifications",
+        "v1.book/1771331615096/classifications",
+        "v1.book/1771331626740/classifications",
+        "v1.book/1771331712738/classifications",
+        "v1.book/1771335910620/classifications",
+        "v1.book/1771335944323/classifications",
+        "v1.book/1771335982137/classifications",
+        "v1.book/1771337009497/classifications",
+        "v1.book/1771501033498/classifications",
+        "v1.book/1771501329569/classifications",
+        "v1.book/1771501339359/classifications",
+        "v1.book/1771501362360/classifications",
+        "v1.book/1773311581977/classifications",
+        "v1.book/1773395513371/classifications",
+        "v1.book/1774261038716/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "8f499dcbbc51c986f1a1e5a82af581192040310cb0a2f5f68f718539f52e1bfb",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1770933964782/classifications",
+        "v1.book/1771014016265/classifications",
+        "v1.book/1773342155842/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "b4ce7b29434fd55bfa1fd6c237f6903258483db293f1d80e031b118c38179c7b",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1770934366206/classifications",
+        "v1.book/1770934597037/classifications",
+        "v1.book/1770934733290/classifications",
+        "v1.book/1770936529684/classifications",
+        "v1.book/1771009692884/classifications",
+        "v1.book/1771010012194/classifications",
+        "v1.book/1771010050741/classifications",
+        "v1.book/1771010148365/classifications",
+        "v1.book/1771010276113/classifications",
+        "v1.book/1771010732129/classifications",
+        "v1.book/1771013540549/classifications",
+        "v1.book/1771014135500/classifications",
+        "v1.book/1771014252299/classifications",
+        "v1.book/1771063057317/classifications",
+        "v1.book/1771063271418/classifications",
+        "v1.book/1771063340784/classifications",
+        "v1.book/1771063390419/classifications",
+        "v1.book/1771063484617/classifications",
+        "v1.book/1771063533487/classifications",
+        "v1.book/1771063593685/classifications",
+        "v1.book/1771063625858/classifications",
+        "v1.book/1771063650796/classifications",
+        "v1.book/1771063666718/classifications",
+        "v1.book/1771082729585/classifications",
+        "v1.book/1771264457773/classifications",
+        "v1.book/1771264924006/classifications",
+        "v1.book/1771265502547/classifications",
+        "v1.book/1771265753299/classifications",
+        "v1.book/1771265782319/classifications",
+        "v1.book/1771265830271/classifications",
+        "v1.book/1771265912157/classifications",
+        "v1.book/1771266126554/classifications",
+        "v1.book/1771268187698/classifications",
+        "v1.book/1771269075015/classifications",
+        "v1.book/1771269119237/classifications",
+        "v1.book/1771269581945/classifications",
+        "v1.book/1771329982340/classifications",
+        "v1.book/1771330132008/classifications",
+        "v1.book/1771330170951/classifications",
+        "v1.book/1771330207918/classifications",
+        "v1.book/1771330455444/classifications",
+        "v1.book/1771330463377/classifications",
+        "v1.book/1771330475840/classifications",
+        "v1.book/1771330725352/classifications",
+        "v1.book/1771330835599/classifications",
+        "v1.book/1771330843591/classifications",
+        "v1.book/1771330885582/classifications",
+        "v1.book/1771331105067/classifications",
+        "v1.book/1771331122622/classifications",
+        "v1.book/1771331145984/classifications",
+        "v1.book/1771331214831/classifications",
+        "v1.book/1771331558034/classifications",
+        "v1.book/1771331701345/classifications",
+        "v1.book/1771332018525/classifications",
+        "v1.book/1771335813021/classifications",
+        "v1.book/1771337037245/classifications",
+        "v1.book/1771337207487/classifications",
+        "v1.book/1771337971174/classifications",
+        "v1.book/1771338345151/classifications",
+        "v1.book/1771502068663/classifications",
+        "v1.book/1771503059892/classifications",
+        "v1.book/1771503069721/classifications",
+        "v1.book/1771503107760/classifications",
+        "v1.book/1771503113918/classifications",
+        "v1.book/1771503137129/classifications",
+        "v1.book/1771536616039/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "292931e4729f2e181f1a7be81fed456ce7d57d270e61d6106bc579db4d332023",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1770934395177/classifications",
+        "v1.book/1771010397693/classifications",
+        "v1.book/1771012865768/classifications",
+        "v1.book/1771063136634/classifications",
+        "v1.book/1771063770682/classifications",
+        "v1.book/1771265258722/classifications",
+        "v1.book/1771265767541/classifications",
+        "v1.book/1771265814214/classifications",
+        "v1.book/1771330372614/classifications",
+        "v1.book/1771330542771/classifications",
+        "v1.book/1771330821108/classifications",
+        "v1.book/1771331363003/classifications",
+        "v1.book/1771331456772/classifications",
+        "v1.book/1771331641742/classifications",
+        "v1.book/1771331677423/classifications",
+        "v1.book/1771331690116/classifications",
+        "v1.book/1771331729257/classifications",
+        "v1.book/1771331950584/classifications",
+        "v1.book/1771332186265/classifications",
+        "v1.book/1771502524497/classifications",
+        "v1.book/1771502533621/classifications",
+        "v1.book/1771502950703/classifications",
+        "v1.book/1773395526252/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "23aba8a9405927035757dd2a48f6f74fcc7d7acc41cc98f8db101ea2a1df154b",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1770934446089/classifications",
+        "v1.book/1770934564920/classifications",
+        "v1.book/1771010418316/classifications",
+        "v1.book/1771014311255/classifications",
+        "v1.book/1771264641725/classifications",
+        "v1.book/1771265129011/classifications",
+        "v1.book/1771330143894/classifications",
+        "v1.book/1771330970080/classifications",
+        "v1.book/1771502625026/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "fca4b26222b91ad113b2a1051470b840804d469aeb43dc98926f288b155ad024",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1770934509523/classifications",
+        "v1.book/1771336040630/classifications",
+        "v1.book/1771500937814/classifications",
+        "v1.book/1771501043245/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "d773584fe251be5d34a2ca8a5b5323e223558922236ebf9e4766f3c37b2899ae",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1770934547329/classifications",
+        "v1.book/1770934745810/classifications",
+        "v1.book/1770934847989/classifications",
+        "v1.book/1770935807334/classifications",
+        "v1.book/1770936163625/classifications",
+        "v1.book/1770936290684/classifications",
+        "v1.book/1770936302086/classifications",
+        "v1.book/1770936364034/classifications",
+        "v1.book/1770936601384/classifications",
+        "v1.book/1771009962743/classifications",
+        "v1.book/1771010650130/classifications",
+        "v1.book/1771013274378/classifications",
+        "v1.book/1771013637954/classifications",
+        "v1.book/1771013921034/classifications",
+        "v1.book/1771013985003/classifications",
+        "v1.book/1771014227423/classifications",
+        "v1.book/1771063167139/classifications",
+        "v1.book/1771063405939/classifications",
+        "v1.book/1771064855663/classifications",
+        "v1.book/1771264433616/classifications",
+        "v1.book/1771264468540/classifications",
+        "v1.book/1771264591749/classifications",
+        "v1.book/1771264601267/classifications",
+        "v1.book/1771264623548/classifications",
+        "v1.book/1771264762527/classifications",
+        "v1.book/1771264793732/classifications",
+        "v1.book/1771264966235/classifications",
+        "v1.book/1771265026708/classifications",
+        "v1.book/1771265983788/classifications",
+        "v1.book/1771266045745/classifications",
+        "v1.book/1771266104242/classifications",
+        "v1.book/1771268059855/classifications",
+        "v1.book/1771269464620/classifications",
+        "v1.book/1771269603516/classifications",
+        "v1.book/1771269819520/classifications",
+        "v1.book/1771269891376/classifications",
+        "v1.book/1771270128184/classifications",
+        "v1.book/1771270167416/classifications",
+        "v1.book/1771330380349/classifications",
+        "v1.book/1771330450051/classifications",
+        "v1.book/1771330575944/classifications",
+        "v1.book/1771330597462/classifications",
+        "v1.book/1771330741153/classifications",
+        "v1.book/1771330752521/classifications",
+        "v1.book/1771330917358/classifications",
+        "v1.book/1771331087003/classifications",
+        "v1.book/1771331234065/classifications",
+        "v1.book/1771331348694/classifications",
+        "v1.book/1771331389753/classifications",
+        "v1.book/1771331465886/classifications",
+        "v1.book/1771331590054/classifications",
+        "v1.book/1771331660990/classifications",
+        "v1.book/1771331738080/classifications",
+        "v1.book/1771332235381/classifications",
+        "v1.book/1771336149236/classifications",
+        "v1.book/1771337185800/classifications",
+        "v1.book/1771338117429/classifications",
+        "v1.book/1771338208263/classifications",
+        "v1.book/1771500877810/classifications",
+        "v1.book/1771501290993/classifications",
+        "v1.book/1771501303606/classifications",
+        "v1.book/1771501385026/classifications",
+        "v1.book/1771501741986/classifications",
+        "v1.book/1771502078545/classifications",
+        "v1.book/1771502481153/classifications",
+        "v1.book/1771502502716/classifications",
+        "v1.book/1771502560651/classifications",
+        "v1.book/1771502597554/classifications",
+        "v1.book/1771502669927/classifications",
+        "v1.book/1771502689526/classifications",
+        "v1.book/1773395321999/classifications",
+        "v1.book/1773395385774/classifications",
+        "v1.book/1774260619807/classifications",
+        "v1.book/1774260934574/classifications",
+        "v1.book/1774261197541/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "568b6a4ce33a51f15c360cb0f62b3fb9826b51a280617097954843094c41458c",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1770934631838/classifications",
+        "v1.book/1770935488724/classifications",
+        "v1.book/1770935541874/classifications",
+        "v1.book/1770936121118/classifications",
+        "v1.book/1770936206837/classifications",
+        "v1.book/1770936741143/classifications",
+        "v1.book/1771010488104/classifications",
+        "v1.book/1771010560187/classifications",
+        "v1.book/1771013006467/classifications",
+        "v1.book/1771013232110/classifications",
+        "v1.book/1771013343859/classifications",
+        "v1.book/1771064735843/classifications",
+        "v1.book/1771064778673/classifications",
+        "v1.book/1771082836652/classifications",
+        "v1.book/1771083041028/classifications",
+        "v1.book/1771268014149/classifications",
+        "v1.book/1771268152533/classifications",
+        "v1.book/1771268242172/classifications",
+        "v1.book/1771268907486/classifications",
+        "v1.book/1771269308838/classifications",
+        "v1.book/1771269865861/classifications",
+        "v1.book/1771336010021/classifications",
+        "v1.book/1771336758967/classifications",
+        "v1.book/1771336784366/classifications",
+        "v1.book/1771336821170/classifications",
+        "v1.book/1771336855060/classifications",
+        "v1.book/1771336918819/classifications",
+        "v1.book/1771336991072/classifications",
+        "v1.book/1771337237745/classifications",
+        "v1.book/1771337824485/classifications",
+        "v1.book/1771338045674/classifications",
+        "v1.book/1771338075976/classifications",
+        "v1.book/1771338286803/classifications",
+        "v1.book/1771502012881/classifications",
+        "v1.book/1771536297694/classifications",
+        "v1.book/1771536387096/classifications",
+        "v1.book/1771536422447/classifications",
+        "v1.book/1787235579766/classifications",
+        "v1.book/1787236101679/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "cd1a122a74dcedf6e5614fe990ee1208816be103bb92447c850dd6d349b804fc",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1770934958001/classifications",
+        "v1.book/1771010183404/classifications",
+        "v1.book/1771268109871/classifications",
+        "v1.book/1771331575854/classifications",
+        "v1.book/1771336523170/classifications",
+        "v1.book/1771501647478/classifications",
+        "v1.book/1771501681196/classifications",
+        "v1.book/1771501709057/classifications",
+        "v1.book/1773310755956/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "dea5b2b5f13c979744e3b94bab1bac16c2b5d77dc05c89fd6497e0471c025d86",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1770935245100/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "9309e2754948a7fd7c7a5dfe5857ec23db44edcfddd2a9a70510977ce1e8ba2c",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1770935284354/classifications",
+        "v1.book/1771010659667/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "bf549168c46bd012fb1634fa32bbceea778e542a7c23b421545d755214731ac0",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1770935306929/classifications",
+        "v1.book/1770936251125/classifications",
+        "v1.book/1771063081211/classifications",
+        "v1.book/1771063725794/classifications",
+        "v1.book/1771331997474/classifications",
+        "v1.book/1771502445320/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "d42ff8ef757b37eb6e2a4752ebb668d7e9999dfaad0fe505b8a00bee89329de7",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1770935622876/classifications",
+        "v1.book/1771330431494/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "708d9df422fff9aa606982fbe84c0b334c1e1fdfc8c36bcccbd632a9bec59ac9",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1770936351317/classifications",
+        "v1.book/1771265431531/classifications",
+        "v1.book/1771265747626/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "999c8c3689bfedded74f8f6351d08e6b03fd56df85fd18d1a809776468047873",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1770936483895/classifications",
+        "v1.book/1771063675018/classifications",
+        "v1.book/1771264377692/classifications",
+        "v1.book/1771264914743/classifications",
+        "v1.book/1771265049681/classifications",
+        "v1.book/1771265313692/classifications",
+        "v1.book/1771330505597/classifications",
+        "v1.book/1771330530747/classifications",
+        "v1.book/1771330654090/classifications",
+        "v1.book/1771330978752/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "6a1d90c02af00f79df846089526b6789d8d2ce2dac54b7ffc64c3f46af9f911e",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771009720425/classifications",
+        "v1.book/1771013714964/classifications",
+        "v1.book/1771331984089/classifications",
+        "v1.book/1771337115099/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "5246d567cf0ba18d7e28d53ededb6565794b2fef6fd31f80bb07e19cc6a6ca35",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771010324748/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "e72bdfafa0dd4c00940ef84fc095bb66537f8651c115388e8c40586b5c60bef5",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771010370952/classifications",
+        "v1.book/1771265697078/classifications",
+        "v1.book/1771330485503/classifications",
+        "v1.book/1771331157968/classifications",
+        "v1.book/1771331225743/classifications",
+        "v1.book/1771501174431/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "ae6ccced330146aa92aa8bdc652aeb1e46cbe709d23b00da714f83ff7ecddfc9",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771010455492/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "b03e80c50f9cc5ca698b0ceee5d7a9937000532609884cc08794b44da1ea5123",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771010590710/classifications",
+        "v1.book/1771010689594/classifications",
+        "v1.book/1771013873556/classifications",
+        "v1.book/1771014411203/classifications",
+        "v1.book/1771064538318/classifications",
+        "v1.book/1771264576774/classifications",
+        "v1.book/1771264606752/classifications",
+        "v1.book/1771264633679/classifications",
+        "v1.book/1771265021271/classifications",
+        "v1.book/1771265160401/classifications",
+        "v1.book/1771265395707/classifications",
+        "v1.book/1771330268401/classifications",
+        "v1.book/1771330293038/classifications",
+        "v1.book/1771330440693/classifications",
+        "v1.book/1771330787453/classifications",
+        "v1.book/1771330958995/classifications",
+        "v1.book/1771331926380/classifications",
+        "v1.book/1771336059667/classifications",
+        "v1.book/1771338161761/classifications",
+        "v1.book/1771502616316/classifications",
+        "v1.book/1773342212691/classifications",
+        "v1.book/1773342293771/classifications",
+        "v1.book/1773342379552/classifications",
+        "v1.book/1773395231043/classifications",
+        "v1.book/1773395260662/classifications",
+        "v1.book/1773395397236/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "3fe513f2eb5ec5c5e7d912c205e7b6247dc7af2da35e1dc7338b46c87e2a8158",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771010764361/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "d76e021a142aa2bb2519ce9652ef25c0b719c6d28589ae03f554b4a017c9b6c0",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771010770086/classifications",
+        "v1.book/1771013313478/classifications",
+        "v1.book/1771264674311/classifications",
+        "v1.book/1771329965512/classifications",
+        "v1.book/1771331898889/classifications",
+        "v1.book/1771331977167/classifications",
+        "v1.book/1771502168978/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "818a1a65d7cf2dd5938a3d6009b99d7c6a9c94c001d76ea889d2e2909080ab90",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771012819440/classifications",
+        "v1.book/1787235155016/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "7ac4430fe15f6087183db217c90e88e2fe4f6b2b5f1d0797bd6bd1be3d821ae5",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771013386018/classifications",
+        "v1.book/1771265878643/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "d44f4ea10867ee629035d0bfe2b770f66cef644d3bf14d711e548e1e8481d518",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771013412012/classifications",
+        "v1.book/1771064428453/classifications",
+        "v1.book/1771082950631/classifications",
+        "v1.book/1771331683641/classifications",
+        "v1.book/1771331920317/classifications",
+        "v1.book/1771336260279/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "eb60970afa7c8a985d2726fbaedfc72a5e2911096d8b044ebc86a9a759dc56a7",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771013758163/classifications",
+        "v1.book/1771264777603/classifications",
+        "v1.book/1771331491494/classifications",
+        "v1.book/1773395246426/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "262a23407f6d5b3ebe855db67c5a49c6f605db032120366798fec5d5fa54a82f",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771013867749/classifications",
+        "v1.book/1773311668774/classifications",
+        "v1.book/1773342086536/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "22dd64a8555ce422d9923541fdc1962f0a434a4b455109a4d590bfbdb2686328",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771014204502/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "a91103cb9486fa5043581efa843d02c43de754eb30eaa524d3e39987b831d4ce",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771014295306/classifications",
+        "v1.book/1771264669769/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "e1a0223a7405527fe18464e67cb4793554c0264af0478c4930a450305409ebe9",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771014454591/classifications",
+        "v1.book/1771337143372/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "4c3b18a2d0eb94e32a6aeeaccc565b71e8818a69f5f8aa6bb9c9b35818f3c0f3",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771063362854/classifications",
+        "v1.book/1771330698853/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "87c47bbe9ee2222a7dc88acb72816ff2cc68a63124c0f09815740f7c386cf98c",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771063656643/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "d0623e106a6135308a629346b7198e7746c7648bbaa6e59b69d542487ff82a36",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771064831657/classifications",
+        "v1.book/1771501145775/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "54abf56d5e5683f4f471f19a4c53026762099e4b2958c90063c7b728e3da6f0c",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771082777494/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "b117c056aefcc9d55ed354c1cd1d40b7348ca6a8ad0a296f0284fa1f68084b23",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771264826165/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "974876c575181f4908686376fcbd4b347d9dd3e68156a355f72bdde84f2da139",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771264934037/classifications",
+        "v1.book/1771331175107/classifications",
+        "v1.book/1771501719056/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "6ea36198bc657c199e3c021e92336897cc590cbe8d6c387ffc4cb267449076a4",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771265097875/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "0b83974ddb1a61aff1e4fe53c18044206667cbe5d2c7c53dbb7a42d9787b32d3",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771265121196/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "2003fdbc23de171092ec8dbec7cf352c5efc323c7be39ee65e4090d2daaf2db7",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771265339359/classifications",
+        "v1.book/1772962357422/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "1115c1459f2f4ac9b63141637b1efe42f326b2dc5fa746abce6f4af72cdc7443",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771265350383/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "91d35e44ed4b9d49de1442f6108e0cf74c405cb97bbdc8310c000a4c2d3a47b1",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771265373629/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "d3281c6ad14fc36c4de219767de2613507aba1bbab995de9446c1964d4f9ba03",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771265583309/classifications",
+        "v1.book/1771501347894/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "898bce4b3e98b8f9036805458c200b5554b851b9434b46ee14f469ebf8d2f180",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771265721473/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "a0de7a6c5d0c0c64847b376c1b7f0f5fadbc5402b8a83d73349531612f97684d",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771265851222/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "2b70ebd551a159624138ea525a2baef6a701f3734d8276d771ddd6f5bb50ef62",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771265920255/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "8474bf11fca391fddc4385ecf64f2ac4bfe885f430a28dd2b04b01d346eb8d97",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771265928817/classifications",
+        "v1.book/1771265976032/classifications",
+        "v1.book/1771502632366/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "322826777891bbbe00807117c330254d729e2e554a71fb2cf6671acfea8dd1e8",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771266085119/classifications",
+        "v1.book/1773342751942/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "4e60a7fa67b6512ba597ca0a5b23b63d329df0546b582c27479b179e1fb9953f",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771268218010/classifications",
+        "v1.book/1771337058146/classifications",
+        "v1.book/1771337620389/classifications",
+        "v1.book/1771337876395/classifications",
+        "v1.book/1771501234134/classifications",
+        "v1.book/1771501315684/classifications",
+        "v1.book/1773395235194/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "71a79147f0f0dd82d3e4dab58392de4f6c5aca5b70e3c7c57c31c598faa4d45c",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771268282443/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "8bbc94062505d7d06c2905e5d89cb978fbde51ebe09fc3c3fee1055db9d9a8c5",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771330153345/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "105f57e0a4029469fdcba34267b35069122777a95a02a702ee83b9a67e4f2d34",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771330855024/classifications",
+        "v1.book/1771332010481/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "22f2cfd5f7a2d98f2d14d1bb8a2cc036ff6dac42a696ae32f05ece1dcc8416f3",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771331002709/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "18c48ee453222983b2cc5706ec277b125214caaf2fac5f5216631135f0190c72",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771331182783/classifications",
+        "v1.book/1774262019452/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "ceb5a71ef66e9722b2779a2f18e18f2e1b476c8e5716d50b511865740c74f4ea",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771331199595/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "88a080426e0238860e057b346141a6295c78c36fd7265090f2600b32583b49c4",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771331481656/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "01896f35096fb5fc09abbcfc6fbb5203f73808e1d1ae83e9ed0b1a2942d65a3e",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771331772342/classifications",
+        "v1.book/1773395501786/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "1caf89e96b5ec67aa0e008093a98ac9d5ca70cfe810e0c86d40405095d2ec829",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771331804790/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "3f6e590eb97b8608542d716e9be6a826c0ed53c1c372a3c5ba6181d5324bee9b",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771331880950/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "1bf608328d9e5bc43468b78c7f7ad0f856b8ad7caa94d676ab29a49ea8916295",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771332089713/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "71217ddcf34b8cfe7e17dbd305292172b6327177e351e23b99d61bbfa2849dfc",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771336722830/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "427c7954d8b51ca75abb6d99d8de5ea655b844833c7bfd0ffa21be90dc55642d",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771336970185/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "70db16ba16f78e1a9237b4c281775a1b255643f3964a6e6e04a25014d510a6ab",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771337499496/classifications",
+        "v1.book/1771536551417/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "48699241cbbe99caf0ce2cb69bf0defda52c3f74c42f0fa45798383073c87f97",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771338005381/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "33dc538f8a6f21e080ba07ef0baf8d6d3f56d771b941fc49fc157d643d34c350",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771338315585/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "ff2e3d6869682138b61686dd6a863a225571e6e5f8aed9e40062a735fd38984c",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771500973716/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "73bf8d5e3ee2d1b1bee30609e8666367716e25488befc981987832c2efaf1441",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771502487651/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "4cda93e1f17b7cbdfacf9b2b9197cc4c5bcff51db0fd8fb6f6ff723e81a535f8",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771502934174/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "f7d54432eb4901d6d0df82d1b33c4edf56c462f27bc0703a11cbae7219ebf22a",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771502970767/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "cb55a5f1a713f2d4e5138270d0c9d4de463da3710933bc99f1dc99b8b0684007",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1771536257234/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "1c6f1b6cfa5d5c0fb83c37f72ea372b1406c88988e340d16201e1b3be5cf6867",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1774261298323/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "2b988668b1863286290788f49f3b040accc0836b2be4ba0143f4c5ba556c07f7",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1774261570561/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "6e4417934fb145986c782c04d033cb158bcb98aa3e0050d0549106b3c7f4a2db",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1774261831439/classifications",
+        "v1.book/1774262226047/classifications",
+        "v1.book/1780077684153/classifications",
+        "v1.book/1780498687274/classifications",
+        "v1.book/1780566311743/classifications",
+        "v1.book/1780571512078/classifications",
+        "v1.book/1780571599173/classifications",
+        "v1.book/1780571773860/classifications",
+        "v1.book/1781519475630/classifications",
+        "v1.book/1782247779252/classifications",
+        "v1.book/1786710970785/classifications",
+        "v1.book/1787397114734/classifications",
+        "v1.book/1787397123791/classifications",
+        "v1.book/1787397144926/classifications",
+        "v1.book/1787479315150/classifications",
+        "v1.book/1787910650361/classifications",
+        "v1.book/1787910703636/classifications",
+        "v1.book/1787910769526/classifications",
+        "v1.book/1787910824189/classifications",
+        "v1.book/1788423017659/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "e368d3b752c0a9c1d179ac9a89bea64553f59094c7a7d7d0efaa7b85f8185cba",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1774262183980/classifications",
+        "v1.book/1787298141601/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "7178c49ad7335b04b10076ff36908fc441418c27665aa3550a93a3b7ea8eb690",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1774262320167/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "81ba64957161beff9a8690642312ec39b5fd0e3b1e8bb96b1fba9984b5d1899c",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1774262374502/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "1d315a966e02ccb46a051c53a173c5299b5eb1404a404cf6f084963352c700ec",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1780488283702/classifications",
+        "v1.book/1786132764143/classifications",
+        "v1.book/1787235236925/classifications",
+        "v1.book/1787235445556/classifications",
+        "v1.book/1787236784109/classifications",
+        "v1.book/1787248458443/classifications",
+        "v1.book/1787393439324/classifications",
+        "v1.book/1787393660906/classifications",
+        "v1.book/1787394253059/classifications",
+        "v1.book/1787471672997/classifications",
+        "v1.book/1787472684169/classifications",
+        "v1.book/1787472757408/classifications",
+        "v1.book/1788426328551/classifications",
+        "v1.book/1788426875111/classifications",
+        "v1.book/1788426933043/classifications",
+        "v1.book/1788427484401/classifications",
+        "v1.book/1788427533479/classifications",
+        "v1.book/1788431716107/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "35903a44c810c699a9b4639a969c5aa0bb6f99770c9f92d11a99b6ccd0fa5072",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1780488516683/classifications",
+        "v1.book/1780488596091/classifications",
+        "v1.book/1787393402210/classifications",
+        "v1.book/1788506727204/classifications",
+        "v1.book/1788506808738/classifications",
+        "v1.book/1788506829956/classifications",
+        "v1.book/1788506846048/classifications",
+        "v1.book/1788506919567/classifications",
+        "v1.book/1788506953016/classifications",
+        "v1.book/1788506983912/classifications",
+        "v1.book/1788507015220/classifications",
+        "v1.book/1788507034670/classifications",
+        "v1.book/1788507054748/classifications",
+        "v1.book/1788507097599/classifications",
+        "v1.book/1788507152055/classifications",
+        "v1.book/1788507182089/classifications",
+        "v1.book/1788507224396/classifications",
+        "v1.book/1788507341893/classifications",
+        "v1.book/1788507500459/classifications",
+        "v1.book/1788507522556/classifications",
+        "v1.book/1788507743323/classifications",
+        "v1.book/1788507773454/classifications",
+        "v1.book/1788507827083/classifications",
+        "v1.book/1788507897789/classifications",
+        "v1.book/1788508126236/classifications",
+        "v1.book/1788508148180/classifications",
+        "v1.book/1788508287495/classifications",
+        "v1.book/1788508318842/classifications",
+        "v1.book/1788508361419/classifications",
+        "v1.book/1788508393495/classifications",
+        "v1.book/1788508434865/classifications",
+        "v1.book/1788508537422/classifications",
+        "v1.book/1788508585399/classifications",
+        "v1.book/1788508605671/classifications",
+        "v1.book/1788508733497/classifications",
+        "v1.book/1788509000444/classifications",
+        "v1.book/1788509018996/classifications",
+        "v1.book/1788509041081/classifications",
+        "v1.book/1788509150041/classifications",
+        "v1.book/1788509178760/classifications",
+        "v1.book/1788509299475/classifications",
+        "v1.book/1788509353465/classifications",
+        "v1.book/1788509388039/classifications",
+        "v1.book/1788509422095/classifications",
+        "v1.book/1788509453700/classifications",
+        "v1.book/1788509481811/classifications",
+        "v1.book/1788509505642/classifications",
+        "v1.book/1788509528101/classifications",
+        "v1.book/1788509544493/classifications",
+        "v1.book/1788509557611/classifications",
+        "v1.book/1788509574711/classifications",
+        "v1.book/1788510879543/classifications",
+        "v1.book/1788511012136/classifications",
+        "v1.book/1788511029405/classifications",
+        "v1.book/1788511049968/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "069f1aa4390b121ababc0374954939464824bbf4b66d5431186ee9041d5fe796",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1780571702838/classifications",
+        "v1.book/1786132642795/classifications",
+        "v1.book/1788423705396/classifications",
+        "v1.book/1788423855983/classifications",
+        "v1.book/1788423995405/classifications",
+        "v1.book/1788424392896/classifications",
+        "v1.book/1788428848887/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "f071201f1c45511b2e38ac32bae5930519b55039f408fdc3bf1d72458b1cb2d7",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1787224929401/classifications",
+        "v1.book/1787235346859/classifications",
+        "v1.book/1787235681004/classifications",
+        "v1.book/1787235731572/classifications",
+        "v1.book/1787235783917/classifications",
+        "v1.book/1787236222811/classifications",
+        "v1.book/1787236444613/classifications",
+        "v1.book/1787236669745/classifications",
+        "v1.book/1787236911772/classifications",
+        "v1.book/1787247471737/classifications",
+        "v1.book/1787247502850/classifications",
+        "v1.book/1787247548824/classifications",
+        "v1.book/1787247774074/classifications",
+        "v1.book/1787247825408/classifications",
+        "v1.book/1787247868623/classifications",
+        "v1.book/1787247931146/classifications",
+        "v1.book/1787248044263/classifications",
+        "v1.book/1787248079741/classifications",
+        "v1.book/1787248118408/classifications",
+        "v1.book/1787248159762/classifications",
+        "v1.book/1787248224607/classifications",
+        "v1.book/1787248256397/classifications",
+        "v1.book/1787248290004/classifications",
+        "v1.book/1787248314243/classifications",
+        "v1.book/1787248382069/classifications",
+        "v1.book/1787248423272/classifications",
+        "v1.book/1787248497400/classifications",
+        "v1.book/1787248619659/classifications",
+        "v1.book/1787248664080/classifications",
+        "v1.book/1787248727095/classifications",
+        "v1.book/1787248781130/classifications",
+        "v1.book/1787248839295/classifications",
+        "v1.book/1787248872361/classifications",
+        "v1.book/1787249588122/classifications",
+        "v1.book/1787297191678/classifications",
+        "v1.book/1787297249902/classifications",
+        "v1.book/1787297335283/classifications",
+        "v1.book/1787297360168/classifications",
+        "v1.book/1787297506954/classifications",
+        "v1.book/1787297576121/classifications",
+        "v1.book/1787297736335/classifications",
+        "v1.book/1787297779661/classifications",
+        "v1.book/1787297833926/classifications",
+        "v1.book/1787297960813/classifications",
+        "v1.book/1787298088159/classifications",
+        "v1.book/1787298329990/classifications",
+        "v1.book/1787298460157/classifications",
+        "v1.book/1787298485832/classifications",
+        "v1.book/1787298542224/classifications",
+        "v1.book/1787298567646/classifications",
+        "v1.book/1787298704646/classifications",
+        "v1.book/1787298733085/classifications",
+        "v1.book/1787298774575/classifications",
+        "v1.book/1787298813476/classifications",
+        "v1.book/1787392769940/classifications",
+        "v1.book/1787392888866/classifications",
+        "v1.book/1787392964456/classifications",
+        "v1.book/1787393082180/classifications",
+        "v1.book/1787393125332/classifications",
+        "v1.book/1787393218802/classifications",
+        "v1.book/1787393260884/classifications",
+        "v1.book/1787393280680/classifications",
+        "v1.book/1787393303041/classifications",
+        "v1.book/1787393334729/classifications",
+        "v1.book/1787393359266/classifications",
+        "v1.book/1787393473256/classifications",
+        "v1.book/1787393502046/classifications",
+        "v1.book/1787393627342/classifications",
+        "v1.book/1787393701531/classifications",
+        "v1.book/1787394030850/classifications",
+        "v1.book/1787394217246/classifications",
+        "v1.book/1787394298968/classifications",
+        "v1.book/1787394448692/classifications",
+        "v1.book/1787394567933/classifications",
+        "v1.book/1787394611103/classifications",
+        "v1.book/1787394736319/classifications",
+        "v1.book/1787394809694/classifications",
+        "v1.book/1787394843923/classifications",
+        "v1.book/1787394881505/classifications",
+        "v1.book/1787394904785/classifications",
+        "v1.book/1787394950723/classifications",
+        "v1.book/1787395033818/classifications",
+        "v1.book/1787395122093/classifications",
+        "v1.book/1787395187340/classifications",
+        "v1.book/1787395228197/classifications",
+        "v1.book/1787471564792/classifications",
+        "v1.book/1787471614334/classifications",
+        "v1.book/1787471743479/classifications",
+        "v1.book/1787471774685/classifications",
+        "v1.book/1787471848779/classifications",
+        "v1.book/1787471945857/classifications",
+        "v1.book/1787471995671/classifications",
+        "v1.book/1787472027999/classifications",
+        "v1.book/1787472097823/classifications",
+        "v1.book/1787472138758/classifications",
+        "v1.book/1787472264357/classifications",
+        "v1.book/1787472352695/classifications",
+        "v1.book/1787472421109/classifications",
+        "v1.book/1787472451815/classifications",
+        "v1.book/1787472537821/classifications",
+        "v1.book/1787472566150/classifications",
+        "v1.book/1787472620515/classifications",
+        "v1.book/1787472808294/classifications",
+        "v1.book/1787472950597/classifications",
+        "v1.book/1787472995364/classifications",
+        "v1.book/1787473019154/classifications",
+        "v1.book/1787473122928/classifications",
+        "v1.book/1787473149331/classifications",
+        "v1.book/1787473212101/classifications",
+        "v1.book/1787473242757/classifications",
+        "v1.book/1787473289623/classifications",
+        "v1.book/1787473316895/classifications",
+        "v1.book/1787945671158/classifications",
+        "v1.book/1788422928842/classifications",
+        "v1.book/1788423084017/classifications",
+        "v1.book/1788423149105/classifications",
+        "v1.book/1788423268648/classifications",
+        "v1.book/1788426535900/classifications",
+        "v1.book/1788427282352/classifications",
+        "v1.book/1788427342675/classifications",
+        "v1.book/1788427381869/classifications",
+        "v1.book/1788427502506/classifications",
+        "v1.book/1788431667593/classifications",
+        "v1.book/1788431693088/classifications",
+        "v1.book/1788507679772/classifications",
+        "v1.book/1788508507563/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "59b93b356a1d257f4afecca7672773f5e4a7be58c5d62ba4fb776245feb57807",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1787234941551/classifications",
+        "v1.book/1788423550423/classifications",
+        "v1.book/1788423662309/classifications",
+        "v1.book/1788423742268/classifications",
+        "v1.book/1788423899610/classifications",
+        "v1.book/1788423957463/classifications",
+        "v1.book/1788424094705/classifications",
+        "v1.book/1788424153132/classifications",
+        "v1.book/1788424208312/classifications",
+        "v1.book/1788424321845/classifications",
+        "v1.book/1788424357145/classifications",
+        "v1.book/1788424784675/classifications",
+        "v1.book/1788424838918/classifications",
+        "v1.book/1788424941747/classifications",
+        "v1.book/1788425115597/classifications",
+        "v1.book/1788425170785/classifications",
+        "v1.book/1788425322333/classifications",
+        "v1.book/1788425617516/classifications",
+        "v1.book/1788425643440/classifications",
+        "v1.book/1788425723457/classifications",
+        "v1.book/1788425780121/classifications",
+        "v1.book/1788425831441/classifications",
+        "v1.book/1788427851114/classifications",
+        "v1.book/1788427898705/classifications",
+        "v1.book/1788427945728/classifications",
+        "v1.book/1788427981524/classifications",
+        "v1.book/1788428018999/classifications",
+        "v1.book/1788428615470/classifications",
+        "v1.book/1788428669796/classifications",
+        "v1.book/1788428962338/classifications",
+        "v1.book/1788428986308/classifications",
+        "v1.book/1788429022170/classifications",
+        "v1.book/1788429050479/classifications",
+        "v1.book/1788430546731/classifications",
+        "v1.book/1788430697404/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "dfcc18ce248b0b9afd9c4767e5dbc04cd6b5a03816eb9e167d4cc8d909efe593",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1787235509688/classifications",
+        "v1.book/1787236879388/classifications",
+        "v1.book/1787297445968/classifications",
+        "v1.book/1787297548723/classifications",
+        "v1.book/1787479756134/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "284805e9d4bd5486651d4e22308f57c5295349bc93cacc8de5b3a127efb5dc7d",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1787247703061/classifications",
+        "v1.book/1787247719117/classifications",
+        "v1.book/1788426153131/classifications",
+        "v1.book/1788426446919/classifications",
+        "v1.book/1788426592823/classifications",
+        "v1.book/1788426647132/classifications",
+        "v1.book/1788426705461/classifications",
+        "v1.book/1788426851322/classifications",
+        "v1.book/1788427148828/classifications",
+        "v1.book/1788431602351/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "a955e4a56a06af22cd508b850e39836dfdacf33bb239a5d9f9666dbe23c67a85",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1787247994817/classifications",
+        "v1.book/1787471821450/classifications",
+        "v1.book/1788507264340/classifications",
+        "v1.book/1788507796265/classifications",
+        "v1.book/1788508716541/classifications",
+        "v1.book/1788509198449/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "97125c541c6d2ad58927b4c6ea7d2ef292f7a380c1fe6ea9ea490e6af9e316f2",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1787297625590/classifications",
+        "v1.book/1788426566525/classifications",
+        "v1.book/1788427002746/classifications",
+        "v1.book/1788427410758/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "4e42d96bf0b308e69474be39f22e4923568a1456f1b3c1530b7aa5612a206054",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1787297657262/classifications",
+        "v1.book/1788430923448/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "d531d3b936a26004f72f0bf39e27ac256a7f518986785f3ac6d0f57d29aca7e0",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1787297994967/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "5d1ee04ae06fc78ccd5ed7b37bb157344eba18c54886c0341f002f99d02fa1b8",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1787472390865/classifications",
+        "v1.book/1788424975649/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "10a7794bf4ccc12a94f3c854f89240ae2394c45941461a4abd1764126d99bed3",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1787492463136/classifications",
+        "v1.book/1788431515615/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "eb36e588233c46480fe9aff0aa7b7438d2efd32c9354004c2a65b27891cd96ff",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1788423320654/classifications",
+        "v1.book/1788423349571/classifications",
+        "v1.book/1788429937800/classifications",
+        "v1.book/1788430175864/classifications",
+        "v1.book/1788430501047/classifications",
+        "v1.book/1788430841863/classifications",
+        "v1.book/1788430898213/classifications",
+        "v1.book/1788430957214/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "72bda736cfc39b8853b34c4b3dd309d69bd273198c492248cd28653e41e2a9dc",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1788425756238/classifications",
+        "v1.book/1788428336633/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "742650eee53e6b17098473012486c73827555e837d7a74c08d1c919f82206a2d",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1788428199853/classifications",
+        "v1.book/1788428430156/classifications",
+        "v1.book/1788428778245/classifications",
+        "v1.book/1788429817939/classifications",
+        "v1.book/1788429874751/classifications",
+        "v1.book/1788430068789/classifications",
+        "v1.book/1788430262470/classifications",
+        "v1.book/1788430315393/classifications",
+        "v1.book/1788430721400/classifications",
+        "v1.book/1788430786858/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "5caf6c6a8f0124186dac48f7a92079e020f2abda3ab2e7b1f1b794bf6f2bff5f",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1788430472216/classifications",
+        "v1.book/1788430820076/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "60fd583cefbd9a6bd73243cc09c4024bb72611ffe9df065430c2761e6141d3ca",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1788431647487/classifications"
+      ]
+    },
+    {
+      "observation": {
+        "domain": "classifications",
+        "source_type": "v1.classification_vector",
+        "payload_hash": "011496052a95e83cdb64a37a75d16c82957c38a8da1f2363810fb4dcbc8a4719",
+        "shape_hash": "f07e56f2649c01e2ca1e657dce65a9da57209272134d8faadf1347c9c35c675a",
+        "semantic_class": "reviewed_current_v1_shape",
+        "structural": false,
+        "state": "ordinary"
+      },
+      "source_ids": [
+        "v1.book/1789023646116/classifications"
+      ]
+    }
+  ]
+}

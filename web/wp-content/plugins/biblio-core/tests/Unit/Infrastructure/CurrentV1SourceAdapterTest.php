@@ -110,6 +110,33 @@ final class CurrentV1SourceAdapterTest extends TestCase
         self::assertStringContainsString("no name merge permitted", $json);
     }
 
+    public function testQueueContextNeverBecomesBookIdentityOrAssignmentEvidence(): void
+    {
+        $root = $this->source();
+        $queue = [[
+            "term" => "Synthetic provider term", "normalizedTerm" => "synthetic provider term",
+            "source" => "open_library", "frequency" => 3,
+            "contexts" => ["book-1", "queue-only-book-sentinel", "Private queue context sentinel"],
+            "status" => "pending", "firstSeenAt" => "", "lastSeenAt" => "",
+            "resolvedAt" => "", "resolution" => null,
+        ]];
+        $factory = new FilesystemMigrationSourcePackageFactory();
+        $adapter = new CurrentV1SourceAdapter();
+        $before = $factory->build($root);
+        $oldRecords = iterator_to_array($adapter->records($before, $adapter->profile($before)));
+        file_put_contents($root . "/data/taxonomy_review_queue.json", json_encode($queue, JSON_THROW_ON_ERROR));
+        $after = $factory->build($root);
+        $newRecords = iterator_to_array($adapter->records($after, $adapter->profile($after)));
+        self::assertSame(array_map(fn ($r) => $r->identityArray(), $oldRecords), array_map(fn ($r) => $r->identityArray(), $newRecords));
+        $evidence = $adapter->classificationEvidence($after);
+        self::assertSame(1, $evidence->reviewQueue()["count"]);
+        self::assertSame(hash_file("sha256", $root . "/data/taxonomy_review_queue.json"), $evidence->reviewQueue()["sha256"]);
+        $json = json_encode($evidence->reviewQueue(), JSON_THROW_ON_ERROR);
+        self::assertStringNotContainsString("queue-only-book-sentinel", $json);
+        self::assertStringNotContainsString("Private queue context sentinel", $json);
+        self::assertSame($queue, json_decode(file_get_contents($root . "/data/taxonomy_review_queue.json"), true, 512, JSON_THROW_ON_ERROR));
+    }
+
     public function testMalformedStableRecordIsReportedAndAccountedWithoutInventedId(): void
     {
         $root = $this->source(authors: [["displayName" => "Private ID-less Author"]]);
