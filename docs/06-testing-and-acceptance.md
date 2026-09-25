@@ -1,5 +1,10 @@
 # 06 — Testing and acceptance
 
+Production cutover tooling acceptance additionally requires the isolated tests
+and controls in `docs/145-mig-cutover-production-tooling-01.md`. Native mutation
+tests must run on a positively identified disposable DDEV server, never the
+normal DB. Tooling GO cannot override a nonempty real-target preflight HOLD.
+
 This file converts canonical product rules into a baseline for domain, integration and end-to-end acceptance.
 
 It is not a complete test-case catalogue yet.

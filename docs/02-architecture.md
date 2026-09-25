@@ -1,5 +1,11 @@
 # 02 — Architecture
 
+Production cutover's bounded operator capability is documented in
+`docs/145-mig-cutover-production-tooling-01.md`: separate positive identity and
+owner authorization, shared planner/participants/apply/reconciliation, native
+PRE recovery, database-enforced application write blocking. This does not
+change domain, schema or mapper semantics or broaden rehearsal guards.
+
 Status: canonical architecture direction with accepted Fase-0 persistence baseline and completed Fase-1 Core stabilization.
 
 ## 1. Deployment model

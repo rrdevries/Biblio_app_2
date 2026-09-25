@@ -1,5 +1,11 @@
 # 00 — Current state
 
+Production cutover tooling candidate: see
+`docs/145-mig-cutover-production-tooling-01.md`. A separate explicit production
+capability reuses the proven migration engine without weakening rehearsal
+guards. Actual normal-target preflight is blocked by existing product data;
+no production authorization/apply or target cleanup has been performed.
+
 Status: canonical working state for Biblio V2 / v2.001.
 
 Release boundary: V2.001 is a reliable, migratable replacement for Biblio V1
