@@ -42,6 +42,19 @@ final readonly class MigrationReconciliationService
     ) {
     }
 
+    /** Explicit Item-only repair capability; ordinary reconciliation is unchanged. */
+    public function reconcileItemRepair(MigrationRun $run, PreparedMigrationPlan $prepared, string $completedDependencyRunId): MigrationReconciliationReport
+    {
+        foreach ($prepared->records() as $record) {
+            if ($record->record()->sourceType() !== 'catalog_item' || !$record->record()->typedPlan() instanceof CatalogItemPlan) {
+                throw new ValidationException('Item repair reconciliation accepts only Item records.');
+            }
+        }
+        $scoped = new self($this->ledger, $this->contracts,
+            new CommittedItemDependencyInspector($this->targets, $this->ledger->snapshot($completedDependencyRunId)));
+        return $scoped->reconcile($run, $prepared);
+    }
+
     /** @param array<string, int> $execution */
     public function reconcile(
         MigrationRun $run,

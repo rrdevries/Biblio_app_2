@@ -164,7 +164,18 @@ final readonly class CurrentV1ClassificationMapper
                 $groups[$representative][] = $bookId;
             }
         }
+        $this->contract->assertConvergedGroupCoverage(array_map(strval(...), array_keys($groups)));
         foreach ($groups as $representative => $memberIds) {
+            $bindings = [];
+            foreach ($memberIds as $memberId) { $bindings[$memberId] = $recordsById[$memberId]->payloadHash(); }
+            if ($this->contract->hasApprovedConvergedGroup((string) $representative, $bindings)) {
+                foreach ($memberIds as $memberId) {
+                    $proposed[$memberId] = new LibraryCatalogSelection($bookTypeIds['book_type.reading_book']);
+                    $ready[$memberId] = true;
+                    $findings[] = $this->finding($recordsById[$memberId], MigrationDisposition::Transformed,
+                        CurrentV1ClassificationMappingReason::ConvergedGroupReviewed);
+                }
+            }
             if (count($memberIds) < 2) {
                 continue;
             }

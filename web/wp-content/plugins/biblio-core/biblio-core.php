@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Biblio Core
  * Description: Core application layer for Biblio V2.
- * Version: 2.51.1
+ * Version: 2.51.2
  * Requires PHP: 8.3
  * Text Domain: biblio-core
  */

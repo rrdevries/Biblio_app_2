@@ -107,6 +107,68 @@ final class CatalogMigrationTestIds implements CatalogMigrationRecordIdGenerator
 
 final class CatalogMigrationParticipantTest extends PersistenceIntegrationTestCase
 {
+    public function testBoundedLaterItemRepairReusesCatalogAndKeepsCopiesDistinct(): void
+    {
+        $fixture = $this->fixture('bounded-repair');
+        $this->apply($fixture, $fixture['work_participant'], MigrationSourceRecord::typed(
+            CatalogWorkMigrationParticipant::SOURCE_TYPE, 'work/repair', new CatalogWorkPlan('Existing catalog Work')
+        ));
+        $this->apply($fixture, $fixture['edition_participant'], MigrationSourceRecord::typed(
+            CatalogEditionMigrationParticipant::SOURCE_TYPE, 'edition/repair',
+            new CatalogEditionPlan('work/repair', 'Existing Edition', EditionIsbnMetadata::unknown())
+        ));
+        $works = $this->database->get_results('SELECT * FROM ' . $this->tableNames->works(), ARRAY_A);
+        $editions = $this->database->get_results('SELECT * FROM ' . $this->tableNames->editions(), ARRAY_A);
+        $oldObservations = $this->database->get_results('SELECT * FROM ' . $this->tableNames->migrationSourceObservations(), ARRAY_A);
+        $oldRun = $fixture['run']->withStatus(\Biblio\Core\Application\Migration\MigrationRunStatus::Completed, (new CatalogMigrationTestClock())->now());
+        $fixture['ledger']->saveRun($oldRun);
+        $fixture['ledger']->releaseRunLock($oldRun->id());
+        $fixture['run'] = $fixture['ledger']->beginOrResume(MigrationRun::start('bounded-repair-run', $oldRun->sourceFamily(),
+            $oldRun->sourceSnapshot(), $oldRun->sourceFingerprint(), $oldRun->sourceVersion(), 'post-cutover-fix-01',
+            $oldRun->targetUserId(), $oldRun->targetLibraryId(), MigrationMode::Apply, (new CatalogMigrationTestClock())->now()));
+        $ids = []; $records = [];
+        foreach (['copy-a', 'copy-b'] as $copy) {
+            $record = MigrationSourceRecord::typed(
+                CatalogItemMigrationParticipant::SOURCE_TYPE, $copy,
+                new CatalogItemPlan('edition/repair', $fixture['library'], $fixture['selection'])
+            );
+            $records[$copy] = $record;
+            $result = $this->apply($fixture, $fixture['item_participant'], $record);
+            $ids[] = $result['outcome']->mappings()[0]->targetId();
+        }
+        self::assertCount(2, array_unique($ids));
+        self::assertSame($works, $this->database->get_results('SELECT * FROM ' . $this->tableNames->works(), ARRAY_A));
+        self::assertSame($editions, $this->database->get_results('SELECT * FROM ' . $this->tableNames->editions(), ARRAY_A));
+        foreach ($oldObservations as $row) {
+            self::assertSame($row, $this->database->get_row($this->database->prepare(
+                'SELECT * FROM ' . $this->tableNames->migrationSourceObservations() . ' WHERE observation_id=%s', $row['observation_id']
+            ), ARRAY_A));
+        }
+        self::assertSame(2, $this->countRows($this->tableNames->items()));
+        self::assertSame(1, $this->countRows($this->tableNames->libraryCatalogContexts()));
+        $normal = new \Biblio\Core\Application\Migration\Reconciliation\CoreMigrationTargetInspector(
+            $fixture['works'], $fixture['editions'], $fixture['items'], $fixture['claims'],
+            new WpdbLibraryCatalogContextRepository($this->database, $this->tableNames),
+            new WpdbItemLocalDetailsRepository($this->database, $this->tableNames),
+            $this->createStub(\Biblio\Core\Catalog\AuthorRepository::class),
+            $this->createStub(\Biblio\Core\Application\Metadata\Author\AuthorContributorCreditRepository::class),
+            $this->createStub(\Biblio\Core\Reading\ReadingRoundRepository::class),
+            $this->createStub(\Biblio\Core\Notes\PrivateNoteRepository::class)
+        );
+        $dependencies = $fixture['ledger']->snapshot($oldRun->id());
+        $scoped = new \Biblio\Core\Application\Migration\Reconciliation\CommittedItemDependencyInspector($normal, $dependencies);
+        $missing = new \Biblio\Core\Application\Migration\Reconciliation\CommittedItemDependencyInspector($normal,
+            new \Biblio\Core\Application\Migration\MigrationLedgerSnapshot($oldRun, []));
+        $repairSnapshot = $fixture['ledger']->snapshot($fixture['run']->id());
+        foreach ($repairSnapshot->observations() as $observation) {
+            foreach ($observation->mappings() as $mapping) {
+                self::assertFalse($normal->exists($fixture['run'], $records[$observation->sourceId()], $observation, $mapping, $repairSnapshot));
+                self::assertTrue($scoped->exists($fixture['run'], $records[$observation->sourceId()], $observation, $mapping, $repairSnapshot));
+                self::assertFalse($missing->exists($fixture['run'], $records[$observation->sourceId()], $observation, $mapping, $repairSnapshot));
+            }
+        }
+    }
+
     public function testExactSourceAliasesMapBothIdentitiesToOneWorkAndEdition(): void
     {
         $fixture = $this->fixture("source-alias");

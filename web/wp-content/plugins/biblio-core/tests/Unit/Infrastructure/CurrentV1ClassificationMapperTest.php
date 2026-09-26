@@ -44,6 +44,91 @@ final class CurrentV1ClassificationMapperTest extends TestCase
 {
     private const MANIFEST = "0000000000000000000000000000000000000000000000000000000000000000";
 
+    public function testExactReviewedConvergedPairResolvesWithoutApprovingOtherGroups(): void
+    {
+        $a = $this->book('a', 'Leesboek', [], 'no_signal');
+        $b = $this->book('b', 'Kennisboek', ['Thriller'], 'migrate');
+        $other = $this->book('other', 'Leesboek', [], 'no_signal');
+        $groups = ['book:a' => ['members' => ['book:a' => $a->payloadHash(), 'book:b' => $b->payloadHash()],
+            'book_type_seed_key' => 'book_type.reading_book', 'genre_seed_keys' => [],
+            'decision_provenance' => 'POST-CUTOVER-FIX-01:seven-exact-converged-pairs']];
+        $contract = new CurrentV1ReviewedClassificationContract(self::MANIFEST, [], $groups);
+        $result = $this->map([$a, $b, $other], ['a' => 'a', 'b' => 'a'], contract: $contract);
+        foreach (['a', 'b'] as $id) {
+            self::assertSame('book-reading', $result->selection($id)?->bookTypeId()->value());
+            self::assertSame([], $result->selection($id)?->genreIds());
+        }
+        self::assertNull($result->selection('other'));
+        self::assertNotSame((new CurrentV1ReviewedClassificationContract(self::MANIFEST))->identity(), $contract->identity());
+        $this->expectException(ValidationException::class);
+        $this->map([$a, $this->book('b', 'Kennisboek', [], 'migrate')], ['a' => 'a', 'b' => 'a'], contract: $contract);
+    }
+
+    public function testConvergedDecisionRejectsAdditionalUnreviewedPeer(): void
+    {
+        $a = $this->book('a', 'Leesboek', [], 'no_signal');
+        $b = $this->book('b', 'Kennisboek', [], 'migrate');
+        $contract = new CurrentV1ReviewedClassificationContract(self::MANIFEST, [], ['book:a' => [
+            'members' => ['book:a' => $a->payloadHash(), 'book:b' => $b->payloadHash()],
+            'book_type_seed_key' => 'book_type.reading_book', 'genre_seed_keys' => [],
+            'decision_provenance' => 'POST-CUTOVER-FIX-01:seven-exact-converged-pairs',
+        ]]);
+        $this->expectException(ValidationException::class);
+        $this->map([$a, $b, $this->book('c', 'Leesboek')], ['a' => 'a', 'b' => 'a', 'c' => 'a'], contract: $contract);
+    }
+
+    public function testRepairGroupDecisionsUseExactMembersAndPreserveUnsupportedTaxonomy(): void
+    {
+        $shapes = [
+            ['Leesboek', ['Fictie'], [], 'no_signal', 'book-reading'],
+            ['Leesboek', ['Non-fictie', 'Fictie'], [], 'review', 'book-reading'],
+            ['Leesboek', ['Fictie', 'Non-fictie'], [], 'review', 'book-reading'],
+            ['Kookboek', ['Koken & Voeding'], ['Recepten'], 'no_signal', 'book-cook'],
+        ];
+        $records = []; $members = []; $books = [];
+        foreach ($shapes as $i => [$type, $categories, $genres, $state, $target]) {
+            $payload = $this->book('approved-' . $i, $type, $genres, $state)->payload();
+            $payload['categories'] = $categories;
+            $book = new MigrationSourceRecord(CurrentV1SourceAdapter::BOOK, 'approved-' . $i, $payload);
+            $copy = new MigrationSourceRecord(CurrentV1SourceAdapter::COPY, 'copy-' . $i, ['bookId' => $book->sourceId()]);
+            array_push($records, $book, $copy); $books[] = $book;
+            $members[] = ['book_id' => $book->sourceId(), 'copy_id' => $copy->sourceId(),
+                'book_payload_hash' => $book->payloadHash(), 'copy_payload_hash' => $copy->payloadHash(),
+                'shape' => ['book_type' => $type, 'categories' => $categories, 'genres' => $genres, 'review_state' => $state]];
+        }
+        $approvals = new \Biblio\Core\Infrastructure\Migration\CurrentV1ClassificationRepairApprovals(
+            $members, \Biblio\Core\Application\Migration\Runner\DeterministicJson::hash($members)
+        );
+        $contract = $approvals->contract(self::MANIFEST, $records);
+        $books[] = $this->book('outside-no-signal', 'Leesboek', [], 'no_signal');
+        $books[] = $this->book('outside-review', 'Leesboek', [], 'review');
+        $result = $this->map($books, contract: $contract);
+        foreach ($shapes as $i => $shape) {
+            $selection = $result->selection('approved-' . $i);
+            self::assertSame($shape[4], $selection?->bookTypeId()->value());
+            self::assertSame([], $selection?->genreIds());
+            self::assertSame([], $selection?->subjectIds());
+        }
+        self::assertNull($result->selection('outside-no-signal'));
+        self::assertNull($result->selection('outside-review'));
+        self::assertContains(CurrentV1ClassificationMappingReason::CategoryAssignmentPreserved->value, $this->reasons($result->findings()));
+        self::assertContains(CurrentV1ClassificationMappingReason::GenreAssignmentPreserved->value, $this->reasons($result->findings()));
+        $changed = $records;
+        $payload = $books[1]->payload(); $payload['categories'] = ['Fictie', 'Non-fictie'];
+        $changed[2] = new MigrationSourceRecord(CurrentV1SourceAdapter::BOOK, 'approved-1', $payload);
+        $this->expectException(\Biblio\Core\Application\Migration\Cutover\RehearsalFailure::class);
+        $approvals->contract(self::MANIFEST, $changed);
+    }
+
+    public function testRepairRejectsPopulationReplacementDespiteSameCount(): void
+    {
+        $this->expectException(\Biblio\Core\Application\Migration\Cutover\RehearsalFailure::class);
+        new \Biblio\Core\Infrastructure\Migration\CurrentV1ClassificationRepairApprovals(
+            [['book_id' => 'replacement']],
+            \Biblio\Core\Application\Migration\Runner\DeterministicJson::hash([['book_id' => 'approved']])
+        );
+    }
+
     public function testAllSevenReviewedBookTypeMappingsAreExplicit(): void
     {
         $values = [
