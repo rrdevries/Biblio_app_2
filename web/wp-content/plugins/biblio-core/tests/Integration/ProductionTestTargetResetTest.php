@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Tests\Integration;
 
-use Biblio\Core\Application\Migration\Cutover\{ProductionAuthorization, ProductionTestResetAuthorization, RehearsalFailure};
+use Biblio\Core\Application\Migration\Cutover\{ProductionAuthorization, ProductionTestResetAuthorization, RehearsalContract, RehearsalDatabaseTransport, RehearsalFailure};
 use Biblio\Core\Application\Migration\Runner\{MigrationBuildProvenance, MigrationEnvironment};
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Migration\{MariaDbProductionTransport, ProductionBackupDirectory, ProductionEvidenceDirectory, WpdbProductionMigrationTarget, WpdbProductionTestTargetReset};
@@ -43,7 +43,8 @@ final class ProductionTestTargetResetTest extends PersistenceIntegrationTestCase
             self::assertSame(1, $this->database->insert($this->tableNames->works(), ['work_id' => 'reset-work', 'work_title' => 'synthetic-private-reset']));
             self::assertSame(1, $this->database->insert($this->tableNames->editions(), ['edition_id' => 'reset-edition', 'work_id' => 'reset-work', 'edition_title' => 'synthetic-private-edition']));
             foreach ([$primaryName, $probeName] as $name) {
-                self::assertNotFalse($admin->query("CREATE DATABASE `{$name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"));
+                $collation = $name === $primaryName ? 'utf8mb4_general_ci' : 'utf8mb4_unicode_ci';
+                self::assertNotFalse($admin->query("CREATE DATABASE `{$name}` CHARACTER SET utf8mb4 COLLATE {$collation}"));
             }
             $primary = new \wpdb('root', 'root', $primaryName, 'db');
             $primary->set_prefix($this->database->prefix);
@@ -74,11 +75,15 @@ final class ProductionTestTargetResetTest extends PersistenceIntegrationTestCase
             $evidence = new ProductionEvidenceDirectory($directory . '/evidence');
             $probe = new \wpdb('root', 'root', $probeName, 'db');
             $probe->set_prefix($primary->prefix);
+            $probe->suppress_errors(true);
+            self::assertSame('utf8mb4_unicode_ci', $probe->get_var("SELECT DEFAULT_COLLATION_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME=DATABASE()"));
+            $probeTransport = new MariaDbProductionTransport($probe, $probeName, 'db', 'root', 'root', $target, true);
             $backups = new ProductionBackupDirectory($directory . '/backups', $target,
                 new MariaDbProductionTransport($primary, $primaryName, 'db', 'root', 'root', $target),
-                new MariaDbProductionTransport($probe, $probeName, 'db', 'root', 'root', $target, true), $evidence);
+                $probeTransport, $evidence);
             $reset = new WpdbProductionTestTargetReset($primary, $target, $backups, $evidence);
             $before = $target->fingerprint();
+            self::assertSame(['charset' => 'utf8mb4', 'collation' => 'utf8mb4_general_ci'], $before['database_metadata']);
             $wrong = $before['tables'];
             $wrong[$this->tableNames->works()]['rows']++;
             try { $reset->prepare($wrong, $scope); self::fail('Unreviewed population accepted'); }
@@ -87,6 +92,26 @@ final class ProductionTestTargetResetTest extends PersistenceIntegrationTestCase
             self::assertSame($before, $target->fingerprint());
             self::assertTrue($packet['backup']['independent_restore_verified']);
             self::assertSame('PRE_RESET', $packet['backup']['phase']);
+            self::assertSame('utf8mb4_general_ci', $probe->get_var("SELECT DEFAULT_COLLATION_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME=DATABASE()"));
+            self::assertSame($before['database_metadata'], $probeTransport->fingerprint()['database_metadata']);
+            self::assertSame($before['trigger_sha256'], $probeTransport->fingerprint()['trigger_sha256']);
+            self::assertSame($before, $probeTransport->fingerprint());
+            $mismatchingProbe = new class($probeTransport, $probe, $probeName) implements RehearsalDatabaseTransport {
+                public function __construct(private RehearsalDatabaseTransport $transport, private \wpdb $db, private string $database) {}
+                public function databaseId(): string { return $this->transport->databaseId(); }
+                public function fingerprint(): array { return $this->transport->fingerprint(); }
+                public function export(string $path): void { $this->transport->export($path); }
+                public function import(string $path): void
+                {
+                    $this->transport->import($path);
+                    RehearsalContract::require($this->db->query("ALTER DATABASE `{$this->database}` COLLATE utf8mb4_unicode_ci") !== false, 'synthetic_probe_change_failed');
+                }
+            };
+            $mismatchBackups = new ProductionBackupDirectory($directory . '/backups', $target,
+                new MariaDbProductionTransport($primary, $primaryName, 'db', 'root', 'root', $target), $mismatchingProbe, $evidence);
+            try { $mismatchBackups->create('PRE_RESET', $packet['binding']); self::fail('Changed probe collation accepted'); }
+            catch (RehearsalFailure $e) { self::assertSame('backup_restore_proof_failed', $e->reason); }
+            self::assertSame($before, $target->fingerprint());
             try { $backups->restore($packet['backup'], $packet['binding']); self::fail('PRE_RESET accepted as cutover rollback'); }
             catch (RehearsalFailure $e) { self::assertSame('rollback_requires_pre_apply', $e->reason); }
             try { new ProductionAuthorization($packet, ['purpose'=>'production-cutover', 'packet_digest'=>ProductionAuthorization::digest($packet), 'confirmation'=>'AUTHORIZE PRODUCTION ' . ProductionAuthorization::digest($packet)]); self::fail('PRE_RESET grants FINAL authority'); }
