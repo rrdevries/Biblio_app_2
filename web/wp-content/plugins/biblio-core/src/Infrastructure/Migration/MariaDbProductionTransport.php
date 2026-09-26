@@ -110,7 +110,11 @@ final readonly class MariaDbProductionTransport implements RehearsalDatabaseTran
         $process = proc_open(["mariadb", "--no-defaults", "--protocol=TCP", "--port=3306", "--host=" . $this->host, "--user=" . $this->username, "--binary-mode"],
             [0 => ["pipe", "r"], 1 => ["file", "/dev/null", "w"], 2 => ["file", "/dev/null", "w"]], $pipes, null, $this->childEnvironment());
         RehearsalContract::require(is_resource($process), "restore_process_failed");
-        $schema = $this->db->get_row("SELECT DEFAULT_CHARACTER_SET_NAME AS charset,DEFAULT_COLLATION_NAME AS collation FROM information_schema.SCHEMATA WHERE SCHEMA_NAME=DATABASE()", ARRAY_A);
+        // A probe may start with a different default. Recreate it with the
+        // actual source metadata so database and trigger fingerprints survive.
+        $schema = $this->restoreProbe
+            ? $this->target->fingerprint()["database_metadata"]
+            : $this->db->get_row("SELECT DEFAULT_CHARACTER_SET_NAME AS charset,DEFAULT_COLLATION_NAME AS collation FROM information_schema.SCHEMATA WHERE SCHEMA_NAME=DATABASE()", ARRAY_A);
         if ($this->recovery !== null && !$this->restoreProbe) {
             $schema = $this->recovery->packet["binding"]["baseline"]["database_metadata"];
         }
