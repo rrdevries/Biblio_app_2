@@ -9,12 +9,14 @@ use Biblio\Core\Application\Catalog\Read\CatalogDataState;
 use Biblio\Core\Application\Catalog\Read\CatalogItemNotAvailable;
 use Biblio\Core\Application\Catalog\Read\CatalogOverviewPageSize;
 use Biblio\Core\Application\Catalog\Read\CatalogUiReadService;
+use Biblio\Core\Application\Catalog\Read\BibliographicRelationshipQueryService;
 use Biblio\Core\Application\Catalog\Read\{LibraryItemLocalDetailsQueryService,LibraryItemLocationQueryService,LibraryItemMetadataQueryService};
 use Biblio\Core\Application\Catalog\Classification\Read\LibraryClassificationQueryService;
 use Biblio\Core\Application\Collections\Read\LibraryCollectionQueryService;
 use Biblio\Core\Application\Library\LibraryContextQueryService;
 use Biblio\Core\Authorization\LibraryAuthorizationPolicy;
 use Biblio\Core\Catalog\ItemId;
+use Biblio\Core\Catalog\{Author,AuthorId,ContributorPosition,ContributorRole,Series,SeriesId,SeriesPosition,WorkContributor,WorkId,WorkSeriesMembership};
 use Biblio\Core\Exception\AuthorizationException;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbActorLibraryContextRepository;
@@ -24,6 +26,7 @@ use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbLibraryClassificationRe
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbPublicationRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\WpdbOwnAssessmentReadRepository;
 use Biblio\Core\Infrastructure\Persistence\WordPress\{WpdbItemLocalDetailsRepository,WpdbItemRepository,WpdbLocationRepository};
+use Biblio\Core\Infrastructure\Persistence\WordPress\{WpdbAuthorRepository,WpdbSeriesRepository};
 use Biblio\Core\Library\LibraryId;
 use Biblio\Core\Reading\PersonalWorkReadingStatus;
 use Biblio\Core\Tests\Support\ControllableAuthenticatedUser;
@@ -118,6 +121,8 @@ final class CatalogUiReadModelsTest extends PersistenceIntegrationTestCase
         self::assertSame(CatalogDataState::Unknown, $detail->publisher()->state());
         self::assertSame(CatalogDataState::Unknown, $detail->publicationDate()->state());
         self::assertSame(CatalogDataState::Unknown, $detail->series()->state());
+        self::assertSame(CatalogDataState::Unknown, $detail->authors()->state());
+        self::assertSame([], $detail->authors()->values());
         self::assertSame(CatalogDataState::Unknown, $detail->location()->state());
         self::assertSame(CatalogDataState::Unknown, $detail->condition()->state());
         self::assertSame(CatalogDataState::Unknown, $detail->acquisition()->state());
@@ -126,6 +131,64 @@ final class CatalogUiReadModelsTest extends PersistenceIntegrationTestCase
         self::assertTrue($detail->capabilities()->canStartReading());
         self::assertFalse($detail->capabilities()->canEndReading());
         self::assertNull($detail->activeReadingRound());
+    }
+
+    public function testDetailProjectsOrderedAuthorsAndSeriesFromExactWork(): void
+    {
+        $actor = new UserId("530");
+        $library = new LibraryId("bibliographic-detail-library");
+        $this->seedLibrary($library->value(), "Bibliographic detail", $actor, "direct");
+        $this->seedItem("mackade-detail-item", $library->value(), "mackade-detail-work", "The MacKade brothers: Rafe & Jared");
+        $this->seedItem("multi-detail-item", $library->value(), "multi-detail-work", "Multiple relations");
+        $this->seedItem("other-detail-item", $library->value(), "other-detail-work", "Other Work");
+        $authors = new WpdbAuthorRepository($this->database, $this->tableNames);
+        $series = new WpdbSeriesRepository($this->database, $this->tableNames);
+        $authors->add(new Author(new AuthorId("nora-detail"), "Nora Roberts"));
+        $authors->add(new Author(new AuthorId("coauthor-detail"), "Second Author"));
+        $authors->add(new Author(new AuthorId("same-name-detail"), "Nora Roberts"));
+        $authors->addContributor(new WorkContributor(new WorkId("mackade-detail-work"), new AuthorId("nora-detail"), ContributorRole::Author, new ContributorPosition(1)));
+        $authors->addContributor(new WorkContributor(new WorkId("multi-detail-work"), new AuthorId("coauthor-detail"), ContributorRole::CoAuthor, new ContributorPosition(2)));
+        $authors->addContributor(new WorkContributor(new WorkId("multi-detail-work"), new AuthorId("nora-detail"), ContributorRole::Author, new ContributorPosition(1)));
+        $authors->addContributor(new WorkContributor(new WorkId("multi-detail-work"), new AuthorId("same-name-detail"), ContributorRole::CoAuthor, new ContributorPosition(3)));
+        $series->save(new Series(new SeriesId("mackade-series"), "MacKade Brothers"));
+        $series->save(new Series(new SeriesId("other-series"), "Second Series"));
+        $series->addMembership(new WorkSeriesMembership(new WorkId("mackade-detail-work"), new SeriesId("mackade-series"), SeriesPosition::known("1")));
+        $series->addMembership(new WorkSeriesMembership(new WorkId("multi-detail-work"), new SeriesId("mackade-series"), SeriesPosition::known("2")));
+        $series->addMembership(new WorkSeriesMembership(new WorkId("multi-detail-work"), new SeriesId("other-series"), SeriesPosition::unknown()));
+
+        $service = $this->service($actor);
+        $detail = $service->itemDetail($library, new ItemId("mackade-detail-item"));
+        self::assertSame(CatalogDataState::Known, $detail->authors()->state());
+        self::assertSame(["Nora Roberts"], $detail->authors()->values());
+        self::assertSame(CatalogDataState::Known, $detail->series()->state());
+        self::assertSame("MacKade Brothers · deel 1", $detail->series()->value());
+
+        $multi = $service->itemDetail($library, new ItemId("multi-detail-item"));
+        self::assertSame(["Nora Roberts", "Second Author", "Nora Roberts"], $multi->authors()->values());
+        self::assertSame("MacKade Brothers · deel 2, Second Series", $multi->series()->value());
+
+        $other = $service->itemDetail($library, new ItemId("other-detail-item"));
+        self::assertSame(CatalogDataState::Unknown, $other->authors()->state());
+        self::assertSame(CatalogDataState::Unknown, $other->series()->state());
+        self::assertSame(CatalogDataState::Unknown, $service->activeOverview($library)->items()[0]->authors()->state());
+    }
+
+    public function testDetailProjectsSingleAuthorAndSeriesWithoutPosition(): void
+    {
+        $actor = new UserId("531");
+        $library = new LibraryId("bibliographic-single-library");
+        $this->seedLibrary($library->value(), "Single detail", $actor, "direct");
+        $this->seedItem("single-detail-item", $library->value(), "single-detail-work", "Single Work");
+        $authors = new WpdbAuthorRepository($this->database, $this->tableNames);
+        $series = new WpdbSeriesRepository($this->database, $this->tableNames);
+        $authors->add(new Author(new AuthorId("single-author"), "Single Author"));
+        $authors->addContributor(new WorkContributor(new WorkId("single-detail-work"), new AuthorId("single-author"), ContributorRole::Author, new ContributorPosition(1)));
+        $series->save(new Series(new SeriesId("single-series"), "Unnumbered Series"));
+        $series->addMembership(new WorkSeriesMembership(new WorkId("single-detail-work"), new SeriesId("single-series"), SeriesPosition::unknown()));
+
+        $detail = $this->service($actor)->itemDetail($library, new ItemId("single-detail-item"));
+        self::assertSame(["Single Author"], $detail->authors()->values());
+        self::assertSame("Unnumbered Series", $detail->series()->value());
     }
 
     public function testOverviewAndDetailProjectOnlyTheActorsTruthWithDateQualifier(): void
@@ -635,6 +698,10 @@ final class CatalogUiReadModelsTest extends PersistenceIntegrationTestCase
                 $contexts,
                 new WpdbItemRepository($this->database, $this->tableNames),
                 new WpdbItemLocalDetailsRepository($this->database, $this->tableNames)
+            ),
+            new BibliographicRelationshipQueryService(
+                new WpdbAuthorRepository($this->database, $this->tableNames),
+                new WpdbSeriesRepository($this->database, $this->tableNames)
             )
         );
     }

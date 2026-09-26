@@ -2735,6 +2735,51 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         );
     }
 
+    public function testDetailRestProjectsExistingAuthorAndNumberedSeries(): void
+    {
+        $this->seedLibrary("mackade-rest-library", "Mijn bibliotheek", $this->actorId, "owner");
+        $this->seedItem(
+            "mackade-rest-item",
+            "mackade-rest-library",
+            "mackade-rest-work",
+            "The MacKade brothers: Rafe & Jared"
+        );
+        self::assertSame(1, $this->database->insert($this->tableNames->authors(), [
+            "author_id" => "mackade-rest-author",
+            "display_name" => "Nora Roberts",
+        ]));
+        self::assertSame(1, $this->database->insert($this->tableNames->workContributors(), [
+            "work_id" => "mackade-rest-work",
+            "author_id" => "mackade-rest-author",
+            "contributor_role" => "author",
+            "contributor_position" => 1,
+        ]));
+        self::assertSame(1, $this->database->insert($this->tableNames->series(), [
+            "series_id" => "mackade-rest-series",
+            "display_name" => "MacKade Brothers",
+        ]));
+        self::assertSame(1, $this->database->insert($this->tableNames->workSeries(), [
+            "work_id" => "mackade-rest-work",
+            "series_id" => "mackade-rest-series",
+            "series_position" => "1.000000",
+        ]));
+
+        $response = $this->dispatchAsActor(new WP_REST_Request(
+            "GET",
+            "/biblio/v1/libraries/mackade-rest-library/items/mackade-rest-item"
+        ));
+        self::assertSame(200, $response->get_status());
+        $detail = $this->successData($response);
+        self::assertSame(
+            ["state" => "known", "values" => ["Nora Roberts"]],
+            $detail["authors"]
+        );
+        self::assertSame(
+            ["state" => "known", "value" => "MacKade Brothers · deel 1"],
+            $detail["series"]
+        );
+    }
+
     public function testDetailProjectsOnlyAssignedClassificationFromItsLibrary(): void
     {
         $this->seedLibrary("detail-class-a", "Bibliotheek A", $this->actorId, "owner");

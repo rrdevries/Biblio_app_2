@@ -27,7 +27,8 @@ final readonly class CatalogUiReadService
         private GetOwnAssessmentsForWorkService $ownAssessments,
         private LibraryItemMetadataQueryService $itemMetadata,
         private LibraryItemLocationQueryService $itemLocations,
-        private LibraryItemLocalDetailsQueryService $itemLocalDetails
+        private LibraryItemLocalDetailsQueryService $itemLocalDetails,
+        private BibliographicRelationshipQueryService $relationships
     ) {
     }
 
@@ -66,6 +67,33 @@ final readonly class CatalogUiReadService
 
         if ($record === null) {
             throw new CatalogItemNotAvailable();
+        }
+
+        $contributors = $this->relationships->contributorsForWorks([$record->workId()])[$record->workId()->value()] ?? [];
+        $authorsById = $this->relationships->authors(array_map(
+            static fn ($contributor) => $contributor->authorId(),
+            $contributors
+        ));
+        $authorNames = [];
+        foreach ($contributors as $contributor) {
+            $author = $authorsById[$contributor->authorId()->value()] ?? null;
+            if ($author !== null) {
+                $authorNames[] = $author->displayName();
+            }
+        }
+        $memberships = $this->relationships->seriesForWorks([$record->workId()])[$record->workId()->value()] ?? [];
+        $seriesById = $this->relationships->series(array_map(
+            static fn ($membership) => $membership->seriesId(),
+            $memberships
+        ));
+        $seriesNames = [];
+        foreach ($memberships as $membership) {
+            $series = $seriesById[$membership->seriesId()->value()] ?? null;
+            if ($series !== null) {
+                $position = $membership->position()->value();
+                $seriesNames[] = $series->displayName()
+                    . ($position === null ? '' : ' · deel ' . $position);
+            }
         }
 
         $classification = $this->classifications->assignedClassificationsForWorks(
@@ -124,13 +152,17 @@ final readonly class CatalogUiReadService
             $record->workId(),
             $record->editionId(),
             $record->title(),
-            CatalogTextListValue::unknown(),
+            $authorNames === []
+                ? CatalogTextListValue::unknown()
+                : CatalogTextListValue::known($authorNames),
             $unknown,
             $unknown,
             $unknown,
             $unknown,
             $unknown,
-            $unknown,
+            $seriesNames === []
+                ? $unknown
+                : CatalogTextValue::known(implode(', ', $seriesNames)),
             CatalogTextValue::known("physical_book"),
             $inventoryNumber === null
                 ? $unknown
