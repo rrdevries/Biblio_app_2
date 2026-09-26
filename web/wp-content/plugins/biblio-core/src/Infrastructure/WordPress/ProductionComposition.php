@@ -467,6 +467,10 @@ final class ProductionComposition
             $itemRepository,
             $itemLocalDetailsRepository
         );
+        $bibliographicRelationships = new BibliographicRelationshipQueryService(
+            $authorRepository,
+            $seriesRepository
+        );
         $catalogUiReads = new CatalogUiReadService(
             $authenticatedUser,
             $libraryContexts,
@@ -477,11 +481,8 @@ final class ProductionComposition
             $ownAssessments,
             $libraryItemMetadata,
             $libraryItemLocations,
-            $libraryItemLocalDetails
-        );
-        $bibliographicRelationships = new BibliographicRelationshipQueryService(
-            $authorRepository,
-            $seriesRepository
+            $libraryItemLocalDetails,
+            $bibliographicRelationships
         );
         $bibliographicMetadata = new BibliographicMetadataQueryService(
             $bibliographicMetadataRepository

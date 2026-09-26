@@ -329,6 +329,21 @@ test("detail renders the allowlisted known contract and canonical back link", ()
     assert.equal(backCalls, 1);
 });
 
+test("Book Detail shows existing author and numbered Series values", () => {
+    const { root, view } = setup();
+    view.render({
+        state: "detail",
+        detail: detail({
+            title: "The MacKade brothers: Rafe & Jared",
+            authors: { state: "known", values: ["Nora Roberts"] },
+            series: known("MacKade Brothers · deel 1"),
+        }),
+        backUrl: "https://example.test/mijn-bibliotheek/?library_id=library-1",
+    });
+    assert.match(text(root), /Nora Roberts/);
+    assert.match(text(root), /Serie MacKade Brothers · deel 1/);
+});
+
 test("unknown, missing and not-applicable values omit labels and sections", () => {
     const { root, view } = setup();
     const omittedDetail = detail({
