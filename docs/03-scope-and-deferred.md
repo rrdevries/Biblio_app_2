@@ -24,8 +24,11 @@ A capability is not automatically MUST merely because it was previously named
 for V2.001, has an approved functional design, has backend foundation, is
 attractive, or was once architecturally planned.
 
-V1 remains the source of truth until final cutover. General end-user import is
-still deferred; the controlled V1-to-V2 migration required for cutover is not.
+The V1 → V2 production cutover completed on 2026-09-26. V2 production is the
+active operational truth; the V1 snapshot remains frozen pending a separate
+retirement decision. General end-user import remains deferred. The migration
+exceptions and retained evidence are indexed in
+`docs/147-mig-v1-v2-final-exception-inventory.md`.
 
 ## 2. Release classes
 
@@ -44,7 +47,7 @@ Only these release classes are used:
 
 | Domain | Old status | New release class | Reason | Migration impact |
 |---|---|---|---|---|
-| Controlled V1 → V2 migration, dry-run, reconciliation, retry and cutover | Later controlled technical activity | V2.001 MUST | A reliable V1 replacement cannot cut over without a reproducible and explainable migration | Inventory, map, dry-run, reconcile, rehearse, cut over and prove no unexplained loss; V1 remains authoritative until cutover |
+| Controlled V1 → V2 migration, dry-run, reconciliation, retry and cutover | Later controlled technical activity | V2.001 MUST | A reliable V1 replacement cannot cut over without a reproducible and explainable migration | Completed on 2026-09-26; V2 production is authoritative and the accounted exceptions remain in docs/147 |
 | Work, Edition, Item and canonical ISBN identity | V2.001 primary scope | V2.001 MUST | Core catalog identity is required for migrated and newly added physical books | Map every relevant V1 book/copy without silently collapsing identity |
 | Add Book via ISBN, manual/no-ISBN and extra copy | V2.001 primary scope | V2.001 MUST | Everyday catalog growth must continue and provider failure may not block it | Reuse migrated identities safely; manual fallback remains operational |
 | Metadata Hub minimum for Add Book | Broad V2.001 Metadata Hub target | V2.001 MUST | Normal ISBN Add Book needs one operational provider path or safe manual fallback | Provider evidence is not canonical truth; migration must not depend on live provider success |
@@ -73,7 +76,7 @@ Only these release classes are used:
 | Existing CURRENT V1 goal data | Implicitly active feature data | PRESERVE DATA ONLY | The two designated-source goals do not become a V2.001 product concept, but their source observations may not disappear | Preserve both stable records explicitly and reconciliation-safe with reason `reading_goal_not_carried_forward_v2`; create no Reading Goal, ReadingRound, Personal Reading Truth, Note or other product target; quarantine only malformed source evidence |
 | Full internal/external lending module | V2.001 primary scope | V2.002+ | Full lending is larger than first replacement needs | Inventory all circulation data and preserve lifecycle/history |
 | CURRENT rehearsal circulation | Previously not separately bounded | PRESERVE DATA ONLY | D-MIG-LOAN-01 chooses deferred circulation promotion rather than a temporary V2.001 loan model | Preserve eight unambiguously open IDs as explicitly open `PRESERVED_DEFERRED`, quarantine the one Book/Copy end-state conflict and create zero product loans |
-| Final production-cutover circulation | Previously one combined open-loan decision | DECISION REQUIRED | CURRENT rehearsal disposition does not prove a later production cutover operationally safe; the decision is conditional on fresh final-export evidence | Re-profile a fresh explicitly designated final export; if open circulation remains without a usable V2 loan model, stop for a separate transition decision rather than artificially closing source records |
+| Final production-cutover circulation | Previously one combined open-loan decision | PRESERVE DATA ONLY | The separate final-source transition decision was closed for the exact production run | Eight open relationships remain `PRESERVED_DEFERRED`, one Book/Copy conflict is `QUARANTINED`, and no operational V2 loan was invented; see docs/147 |
 | Biblio-owned cover acquisition/management | Part of broad V2.001 Metadata Hub target | V2.002+ | Truthful no-cover treatment is sufficient for V2.001 | Inventory V1 cover URLs/assets and preserve them without promising active management |
 | Existing V1 cover information/assets without active cover management | Implicitly active cover target | PRESERVE DATA ONLY | Deferral may not silently lose assets or references | MIG-01 records source, ownership/licensing where known, storage and recovery path |
 | Full Librarian queue, correction UI and merge tooling | Lightweight correction proposal in primary scope; rich queue deferred | V2.002+ | Data integrity/provenance can remain without a half-finished management UI | Preserve implemented provenance/foundation and provisional records |
@@ -220,9 +223,9 @@ The scope reset does not weaken these rules:
 - provider failure never blocks manual Add Book;
 - Elementor remains a thin page shell.
 
-## 9. Direct next release-risk slice
+## 9. Historical direct next release-risk slice
 
-After D-SCOPE-01, the next major release-risk-reducing task is:
+At the time of D-SCOPE-01, the next major release-risk-reducing task was:
 
 > MIG-01 — V1 Mapping & Reconciliation Design
 

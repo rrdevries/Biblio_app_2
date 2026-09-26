@@ -1,13 +1,17 @@
 # 06 — Testing and acceptance
 
-POST-CUTOVER-FIX-01 acceptance is bounded by
-`docs/146-post-cutover-fix-01-classification-items.md`: exact population and
+POST-CUTOVER-FIX-01 is closed: 342 Items were materialized and the post-repair
+product state was verified. Renée's functional checks and the final migration
+exception inventory are recorded in
+`docs/147-mig-v1-v2-final-exception-inventory.md`. The historical acceptance
+boundary in `docs/146-post-cutover-fix-01-classification-items.md` required an
+exact population and
 seven-group approvals, independently restored nonempty PRE-repair backup,
 Item-only execution with proven prior catalog dependencies, unchanged old
 rows/exclusions, source-bound Nora reconciliation and authenticated catalog
-reads. A successful original cutover does not substitute for these repair
-checks or subsequent human QA.
-The authorized verifier correction additionally requires Copy-level regression
+reads. The original cutover did not substitute for those repair checks; the
+recorded functional checks now close migration acceptance.
+The authorized verifier correction required Copy-level regression
 coverage: eligible and excluded siblings on one Book, exact one-Item cardinality,
 missing/duplicate/unexpected Items and authenticated visibility. A title or Book
 match cannot make an excluded Copy Item-required. The exact restored backup is

@@ -1,25 +1,25 @@
 # 00 — Current state
 
-Current operational update, 2026-09-26: the production cutover has completed
-successfully as run `migration-run-4058ab2b14dec369eeec6b6214e8ce00`.
-Its exact execution/backup/fingerprint evidence is retained privately. Renée
-has authorized POST-CUTOVER-FIX-01 for 342 classification-blocked owned Copies,
-including a subsequent explicit decision for seven exact converged pairs.
-The repair candidate and safety boundaries are in
-`docs/146-post-cutover-fix-01-classification-items.md`; its final execution
-result remains external and SHA-bound. Older preparation statuses below are
-historical checkpoints, not the current production-cutover status.
+Current operational update, 2026-09-26: **V1 → V2 PRODUCTION MIGRATION
+COMPLETE**. Run `migration-run-4058ab2b14dec369eeec6b6214e8ce00` closed
+at 5,847 mapped / 828 preserved_deferred / 1 quarantined / 0 errors.
+POST-CUTOVER-FIX-01 subsequently materialized 342 classification-blocked
+Items. Read-only production counts are 1,142 Works, 1,120 Editions, 1,076
+Items and 1,070 unique catalog Works with an Item. Renée's functional
+post-repair acceptance and the complete exception/retention inventory are in
+`docs/147-mig-v1-v2-final-exception-inventory.md`. Classification repair and
+Book Detail author/Series projection are closed post-cutover fixes.
 
-Production cutover tooling candidate: see
-`docs/145-mig-cutover-production-tooling-01.md`. A separate explicit production
-capability reuses the proven migration engine without weakening rehearsal
-guards. Actual normal-target preflight is blocked by existing product data;
-no FINAL production authorization/apply or target cleanup has been performed.
-Renée has since authorized a fingerprint-bound reset of the inventoried test
-population, including User 1's test Library structure, only after a verified
-PRE-RESET backup. Both WordPress accounts and User 227's complete structural
-target must remain intact. The bounded reset candidate is documented in docs/145;
-this authorization is not FINAL migration authority or evidence of execution.
+The active macro phase is **normal V2 product development and daily-use
+acceptance**. V2 production is operational truth. V1 is retired as an active
+migration source and remains frozen pending a separate V1-RETIREMENT decision.
+Migration program blockers: none. The immediate recommended bounded product
+outcome is a cover-runtime contract and implementation from preserved Edition
+cover evidence, with normal product acceptance. The existing roadmap and
+release boundary in docs/26 and docs/03 remain the product-planning basis.
+Earlier migration preparation and authorization statuses below record their
+historical checkpoints; they are not the current phase or authorization for
+another apply.
 
 Status: canonical working state for Biblio V2 / v2.001.
 

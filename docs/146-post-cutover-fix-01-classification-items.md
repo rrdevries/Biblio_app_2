@@ -1,7 +1,9 @@
 # POST-CUTOVER-FIX-01 — bounded classification and Item repair
 
-Status: owner-authorized implementation candidate; production outcome and exact
-candidate/backup/checksums are retained in private external execution evidence.
+Status: **CLOSED**. The accepted repair materialized 342 Items, resulting in
+1,076 Items and 1,070 unique visible catalog Works. The exact candidate,
+backup, checksums and execution result remain in private external evidence;
+see `docs/147-mig-v1-v2-final-exception-inventory.md` for migration closure.
 Severity: High; primary implementation and independent review are separate.
 
 The successful production run `migration-run-4058ab2b14dec369eeec6b6214e8ce00`
