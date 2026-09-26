@@ -87,6 +87,12 @@ final class WpdbProductionMigrationTarget implements ProductionMigrationTarget
         RehearsalContract::equal($this->identity(), $authorization->packet["binding"]["environment"], "production_restore_identity_changed");
     }
 
+    public function prepareTestResetRestore(\Biblio\Core\Application\Migration\Cutover\ProductionTestResetAuthorization $authorization): void
+    {
+        $this->restoring = true;
+        RehearsalContract::equal($this->identity(), $authorization->packet["binding"]["environment"], "test_reset_restore_identity_changed");
+    }
+
     public function blockWrites(): void
     {
         $this->identity();

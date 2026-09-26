@@ -27,7 +27,7 @@ final readonly class ProductionBackupDirectory implements RehearsalBackupStore
     public function create(string $phase, array $binding): array
     {
         if ($this->restoreProbe === null) { throw new \Biblio\Core\Application\Migration\Cutover\RehearsalFailure("independent_restore_target_required"); }
-        RehearsalContract::require(in_array($phase, ["PRE_APPLY", "POST_APPLY"], true), "backup_phase_invalid");
+        RehearsalContract::require(in_array($phase, ["PRE_RESET", "PRE_APPLY", "POST_APPLY"], true), "backup_phase_invalid");
         $identity = $this->target->identity();
         RehearsalContract::equal($identity, $binding["environment"], "backup_environment_changed");
         RehearsalContract::equal($this->database->databaseId(), $identity["database"], "backup_database_mismatch");
@@ -48,7 +48,11 @@ final readonly class ProductionBackupDirectory implements RehearsalBackupStore
         RehearsalContract::equal($this->target->fingerprint(), $baseline, "backup_target_changed");
         $receipt = [
             "backup_id" => $id, "phase" => $phase, "filename" => basename($path),
-            "purpose" => $phase === "PRE_APPLY" ? "cutover-production-pre-apply" : "cutover-production-post-apply",
+            "purpose" => match ($phase) {
+                "PRE_RESET" => "production-test-target-pre-reset",
+                "PRE_APPLY" => "cutover-production-pre-apply",
+                default => "cutover-production-post-apply",
+            },
             "completed_run_id" => $binding["completed_run_id"] ?? null,
             "reconciliation_sha256" => $binding["reconciliation_sha256"] ?? null,
             "bytes" => filesize($path), "sha256" => $hash,
@@ -82,7 +86,7 @@ final readonly class ProductionBackupDirectory implements RehearsalBackupStore
         RehearsalContract::require(($receipt["independent_restore_verified"] ?? null) === true, "backup_not_restore_verified");
         RehearsalContract::equal($receipt["database"] ?? null, $this->database->databaseId(), "backup_database_mismatch");
         $filename = $receipt["filename"] ?? null;
-        RehearsalContract::require(is_string($filename) && preg_match('/^(pre_apply|post_apply)-[0-9TZ]+-[a-f0-9]{24}\.sql\.gz$/D', $filename) === 1, "backup_filename_invalid");
+        RehearsalContract::require(is_string($filename) && preg_match('/^(pre_reset|pre_apply|post_apply)-[0-9TZ]+-[a-f0-9]{24}\.sql\.gz$/D', $filename) === 1, "backup_filename_invalid");
         $path = $this->directory . "/" . $filename;
         RehearsalContract::require(is_file($path) && !is_link($path) && !is_link($path . ".sha256")
             && (fileperms($path) & 0077) === 0, "backup_file_invalid");
@@ -99,5 +103,15 @@ final readonly class ProductionBackupDirectory implements RehearsalBackupStore
         $this->target->identity();
         RehearsalContract::equal($this->target->fingerprint(), $receipt["baseline"], "rollback_baseline_mismatch");
         $this->target->assertEmpty();
+    }
+
+    public function restoreTestReset(\Biblio\Core\Application\Migration\Cutover\ProductionTestResetAuthorization $authorization, string $confirmation): void
+    {
+        $authorization->assertRestoreConfirmation($confirmation);
+        $receipt = $authorization->packet["backup"];
+        $this->verify($receipt, $authorization->packet["binding"]);
+        $this->target->assertWritesBlocked();
+        $this->database->import($this->directory . "/" . $receipt["filename"]);
+        RehearsalContract::equal($this->target->fingerprint(), $receipt["baseline"], "reset_restore_baseline_mismatch");
     }
 }

@@ -19,7 +19,7 @@ final readonly class MariaDbProductionTransport implements RehearsalDatabaseTran
         private string $password,
         private ProductionMigrationTarget $target,
         private bool $restoreProbe = false,
-        private ?ProductionAuthorization $recovery = null
+        private ProductionAuthorization|\Biblio\Core\Application\Migration\Cutover\ProductionTestResetAuthorization|null $recovery = null
     ) {
         $this->assertPhysicalTarget();
     }

@@ -4,12 +4,33 @@ declare(strict_types=1);
 
 namespace Biblio\Core\Tests\Unit\Infrastructure;
 
-use Biblio\Core\Application\Migration\Cutover\{ProductionAuthorization, RehearsalFailure};
+use Biblio\Core\Application\Migration\Cutover\{ProductionAuthorization, ProductionTestResetAuthorization, RehearsalFailure};
 use Biblio\Core\Infrastructure\Migration\WpdbProductionMigrationTarget;
 use PHPUnit\Framework\TestCase;
 
 final class ProductionCutoverGuardsTest extends TestCase
 {
+    public function testResetHasNoDefaultActionAndCannotUseFinalAuthority(): void
+    {
+        $path = dirname(__DIR__, 7) . '/scripts/migration-test-target-reset.php';
+        exec(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($path) . ' 2>&1', $output, $status);
+        self::assertSame(2, $status);
+        $packet = ['binding' => ['scope' => 'synthetic-only'], 'backup' => ['phase' => 'PRE_RESET']];
+        $digest = ProductionTestResetAuthorization::digest($packet);
+        $approval = ['purpose' => 'production-test-target-reset', 'packet_digest' => $digest, 'confirmation' => 'RESET TEST TARGET ' . $digest];
+        self::assertSame($packet, (new ProductionTestResetAuthorization($packet, $approval))->packet);
+        foreach (['purpose' => 'production-cutover', 'packet_digest' => str_repeat('f', 64), 'confirmation' => 'yes'] as $key => $value) {
+            try { new ProductionTestResetAuthorization($packet, array_replace($approval, [$key => $value])); self::fail('Reset authority weakened'); }
+            catch (RehearsalFailure) { self::assertTrue(true); }
+        }
+        foreach (['PRE_APPLY', 'POST_APPLY', null] as $phase) {
+            $other = array_replace($packet, ['backup' => ['phase' => $phase]]);
+            $hash = ProductionTestResetAuthorization::digest($other);
+            try { new ProductionTestResetAuthorization($other, ['purpose'=>'production-test-target-reset', 'packet_digest'=>$hash, 'confirmation'=>'RESET TEST TARGET ' . $hash]); self::fail('Wrong reset backup accepted'); }
+            catch (RehearsalFailure $e) { self::assertSame('pre_reset_backup_required', $e->reason); }
+        }
+    }
+
     public function testNoDefaultCommandCanApply(): void
     {
         $path = dirname(__DIR__, 7) . '/scripts/migration-production.php';
