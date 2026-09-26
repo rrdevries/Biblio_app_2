@@ -4,7 +4,12 @@ Production cutover tooling candidate: see
 `docs/145-mig-cutover-production-tooling-01.md`. A separate explicit production
 capability reuses the proven migration engine without weakening rehearsal
 guards. Actual normal-target preflight is blocked by existing product data;
-no production authorization/apply or target cleanup has been performed.
+no FINAL production authorization/apply or target cleanup has been performed.
+Renée has since authorized a fingerprint-bound reset of the inventoried test
+population, including User 1's test Library structure, only after a verified
+PRE-RESET backup. Both WordPress accounts and User 227's complete structural
+target must remain intact. The bounded reset candidate is documented in docs/145;
+this authorization is not FINAL migration authority or evidence of execution.
 
 Status: canonical working state for Biblio V2 / v2.001.
 

@@ -41,7 +41,7 @@ $wpdb->set_prefix('wp_');
 $wpdb->suppress_errors(true);
 $GLOBALS['wpdb'] = $wpdb;
 $GLOBALS['table_prefix'] = 'wp_';
-if (!in_array($mode ?? '', ['apply', 'restore'], true)) {
+if (!in_array($mode ?? '', ['apply', 'restore', 'test-reset', 'test-reset-restore'], true)) {
     add_filter('query', static function (string $sql): string {
         if (preg_match('/^\s*(SELECT|SHOW|DESCRIBE|SET SESSION)\b/i', $sql) !== 1
             && preg_match('/^CREATE DATABASE `biblio_prod_probe_[a-f0-9]{12}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci$/D', $sql) !== 1) {

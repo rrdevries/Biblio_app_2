@@ -138,3 +138,61 @@ This slice does not decide deletion, merge, adoption, reuse or migration into
 that existing population. Therefore tooling acceptance cannot establish real
 production readiness. Keep the actual production preflight on HOLD; do not
 relax empty-target or post-apply semantics to make that check pass.
+
+## Subsequent owner-authorized test-target reset
+
+Renée has declared the complete inventoried product population disposable test
+data, including both users' Wishlist activity. She separately authorized removal
+of User 1's exact test Library, membership, personal designation and default
+BookType/Genre seeds. User 227's structural target and **all WordPress tables**
+remain byte-identical. This supersedes the unresolved deletion decision above,
+not the immutable inventory or FINAL migration authorization boundary.
+
+The bounded `scripts/migration-test-target-reset.php` command supports only:
+
+```text
+ddev exec php /var/www/html/scripts/migration-test-target-reset.php prepare CONFIG.json
+ddev exec php /var/www/html/scripts/migration-test-target-reset.php test-reset CONFIG.json PACKET.json APPROVAL.json
+ddev exec php /var/www/html/scripts/migration-test-target-reset.php test-reset-restore CONFIG.json PACKET.json APPROVAL.json 'RESTORE TEST TARGET <packet-digest>'
+```
+
+There is no approval generator or generic table list. `prepare` requires the
+checksum-bound normal-DB observer snapshot, exact per-table content/schema/count
+equality, and the explicit preserve/discard identities. The production scope is
+fixed to the reviewed User 227/User 1 Libraries; only the positively identified
+disposable simulation supports synthetic identities. PRE_RESET uses the existing
+native guarded backup and an independent restore probe. Unlike PRE_APPLY, it
+must preserve the nonempty test population and can never authorize FINAL apply.
+
+Reset approval has exactly `purpose: production-test-target-reset`,
+`packet_digest` and `confirmation: RESET TEST TARGET <packet-digest>`.
+Its digest binds the environment/build, complete before fingerprint, reviewed
+scope, expected retained fingerprints, deletion order and verified PRE_RESET.
+Preparation creates no authority and changes no normal database rows.
+
+Execution revalidates the exact population, takes the existing application write
+block and repeats the fingerprint check before and inside a transaction. All
+57 tables remain guarded: MIG-FND must be empty; only reviewed product data and
+the exact discarded Library structure are deleted. FK-derived child-first
+ordering keeps FK checks enabled. Nontransactional tables, DELETE triggers,
+cross-boundary FKs and cycles fail closed. No TRUNCATE, DDL, cascade workaround,
+seed normalization or automatic restore is performed. The unchanged pristine
+guard and exact expected per-table content/count/schema, trigger and database
+metadata checks must pass **before COMMIT**. Failure rolls back the transaction;
+write access is never automatically reopened.
+
+PRE_RESET recovery has separate reset authority and can connect through
+information_schema when options, target structure or the database itself is
+absent. It does not require a retained restore-probe database. Restore verifies
+the full original nonempty fingerprint, not the pristine-target guard.
+After inspected reset success or exact restoration, access release remains the
+separate deliberate operator step described above; an unknown maintenance file
+must never be removed. PRE_RESET remains separate from the subsequent pristine
+PRE_APPLY / PRE-CUTOVER rollback point.
+
+Native regression tests run only in reserved disposable databases on the
+cutover-test DDEV server. They cover independent nonempty restore verification,
+wrong scope/authority, population drift, mid-delete failure rollback, exact
+WP/target preservation, pristine guard, deliberate PRE_RESET restore, cold
+absent-table/database recovery and privacy-safe evidence. Operational execution
+and exact candidate checksums are recorded in private external evidence.
