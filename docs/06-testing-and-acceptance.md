@@ -1,5 +1,18 @@
 # 06 — Testing and acceptance
 
+POST-CUTOVER-FIX-01 acceptance is bounded by
+`docs/146-post-cutover-fix-01-classification-items.md`: exact population and
+seven-group approvals, independently restored nonempty PRE-repair backup,
+Item-only execution with proven prior catalog dependencies, unchanged old
+rows/exclusions, source-bound Nora reconciliation and authenticated catalog
+reads. A successful original cutover does not substitute for these repair
+checks or subsequent human QA.
+The authorized verifier correction additionally requires Copy-level regression
+coverage: eligible and excluded siblings on one Book, exact one-Item cardinality,
+missing/duplicate/unexpected Items and authenticated visibility. A title or Book
+match cannot make an excluded Copy Item-required. The exact restored backup is
+reused only after fingerprint and checksum/readability revalidation.
+
 Production cutover tooling acceptance additionally requires the isolated tests
 and controls in `docs/145-mig-cutover-production-tooling-01.md`. Native mutation
 tests must run on a positively identified disposable DDEV server, never the

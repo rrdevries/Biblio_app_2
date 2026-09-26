@@ -51,15 +51,20 @@ final readonly class CurrentV1ReviewedClassificationContract
 
     private string $identity;
 
+    /** @var array<string,array{members:array<string,string>,book_type_seed_key:string,genre_seed_keys:list<string>,decision_provenance:string}> */
+    private array $convergedGroupApprovals;
+
     /**
      * No per-Book approvals exist in docs/118, so production passes the empty
      * default. Any reviewed row must bind stable ID and exact payload hash.
      *
      * @param array<array-key,mixed> $perBookApprovals
+     * @param array<string,array{members:array<string,string>,book_type_seed_key:string,genre_seed_keys:list<string>,decision_provenance:string}> $convergedGroupApprovals
      */
     public function __construct(
         string $manifestSha256 = self::MANIFEST_SHA256,
-        array $perBookApprovals = []
+        array $perBookApprovals = [],
+        array $convergedGroupApprovals = []
     ) {
         if (preg_match('/^[a-f0-9]{64}$/', $manifestSha256) !== 1) {
             throw new ValidationException(
@@ -161,12 +166,30 @@ final readonly class CurrentV1ReviewedClassificationContract
             ];
         }
         ksort($normalized, SORT_STRING);
+        $groupMembers = [];
+        foreach ($convergedGroupApprovals as $representative => &$group) {
+            if (count($group['members']) < 2 || !isset($group['members'][$representative])
+                || $group['book_type_seed_key'] !== 'book_type.reading_book' || $group['genre_seed_keys'] !== []
+                || $group['decision_provenance'] !== 'POST-CUTOVER-FIX-01:seven-exact-converged-pairs') {
+                throw new ValidationException('Reviewed converged classification decision is invalid.');
+            }
+            foreach ($group['members'] as $id => $hash) {
+                if (isset($groupMembers[$id]) || trim((string) $id) === '' || preg_match('/^[a-f0-9]{64}$/D', $hash) !== 1) {
+                    throw new ValidationException('Reviewed converged classification member is invalid.');
+                }
+                $groupMembers[$id] = true;
+            }
+            ksort($group['members'], SORT_STRING);
+        }
+        unset($group);
+        ksort($convergedGroupApprovals, SORT_STRING);
         $encoded = json_encode(
-            $normalized,
+            $convergedGroupApprovals === [] ? $normalized : ['books' => $normalized, 'groups' => $convergedGroupApprovals],
             JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR
         );
         $this->manifestSha256 = $manifestSha256;
         $this->perBookApprovals = $normalized;
+        $this->convergedGroupApprovals = $convergedGroupApprovals;
         $this->identity = self::VERSION . ":approvals:"
             . substr(hash("sha256", $encoded), 0, 24);
     }
@@ -190,6 +213,27 @@ final readonly class CurrentV1ReviewedClassificationContract
 
     /** @return array<string,string> */
     public function genres(): array { return self::GENRES; }
+
+    /** @param list<string> $representatives */
+    public function assertConvergedGroupCoverage(array $representatives): void
+    {
+        if (array_diff(array_keys($this->convergedGroupApprovals), array_map(static fn(string $id): string => 'book:' . $id, $representatives)) !== []) {
+            throw new ValidationException('Reviewed converged classification group is missing.');
+        }
+    }
+
+    /** @param array<string,string> $members */
+    public function hasApprovedConvergedGroup(string $representative, array $members): bool
+    {
+        $approval = $this->convergedGroupApprovals['book:' . $representative] ?? null;
+        if ($approval === null) { return false; }
+        $keys = []; foreach ($members as $id => $hash) { $keys['book:' . $id] = $hash; }
+        ksort($keys, SORT_STRING);
+        if ($keys !== $approval['members']) {
+            throw new ValidationException('Reviewed converged classification population changed.');
+        }
+        return true;
+    }
 
     /**
      * @return null|array{

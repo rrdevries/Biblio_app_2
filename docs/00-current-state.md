@@ -1,5 +1,15 @@
 # 00 — Current state
 
+Current operational update, 2026-09-26: the production cutover has completed
+successfully as run `migration-run-4058ab2b14dec369eeec6b6214e8ce00`.
+Its exact execution/backup/fingerprint evidence is retained privately. Renée
+has authorized POST-CUTOVER-FIX-01 for 342 classification-blocked owned Copies,
+including a subsequent explicit decision for seven exact converged pairs.
+The repair candidate and safety boundaries are in
+`docs/146-post-cutover-fix-01-classification-items.md`; its final execution
+result remains external and SHA-bound. Older preparation statuses below are
+historical checkpoints, not the current production-cutover status.
+
 Production cutover tooling candidate: see
 `docs/145-mig-cutover-production-tooling-01.md`. A separate explicit production
 capability reuses the proven migration engine without weakening rehearsal

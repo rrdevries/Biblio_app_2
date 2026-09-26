@@ -28,5 +28,6 @@ enum CurrentV1ClassificationMappingReason: string
     case UnknownBookTypeBlocked = "classification_unknown_book_type_blocked";
     case ConvergedConflict = "converged_classification_conflict";
     case ConvergedConflictMember = "converged_classification_conflict_member";
+    case ConvergedGroupReviewed = "converged_classification_group_reviewed";
     case ClassificationReady = "classification_ready";
 }

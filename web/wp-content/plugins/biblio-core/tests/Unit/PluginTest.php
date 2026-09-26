@@ -11,6 +11,6 @@ final class PluginTest extends TestCase
 {
     public function testCoreVersionIsDefined(): void
     {
-        self::assertSame("2.51.1", Plugin::VERSION);
+        self::assertSame("2.51.2", Plugin::VERSION);
     }
 }
