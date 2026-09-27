@@ -2,9 +2,18 @@
 
 Status: **DECISION CANONICALIZED / AUTHOR-WORK + WORKS-BY-AUTHOR + LAZY EDITION APPLICATION CONTRACTS IMPLEMENTED**
 
-Post-closure note: MH-EDITION-API-01 now exposes the lazy selected-Work Edition
+Current-status pointer (2026-09-27): SEARCH-UI-01A and SEARCH-UI-01B later
+built the full-page Search and Author→Works→Editions drill-down (docs/83 and
+docs/85). SEARCH-AUTH-UI-01 later completed the Author REST/UI cutover
+technically (docs/96–97), with human visual/interaction and responsive
+acceptance still pending. The Wishlist and Add Book consumer cutovers remain
+separate. Implementation-delta and recommended-slice text below describes
+the state when this decision was written; see docs/00-product-decision-index.md
+for the cross-domain status.
+
+Historical post-closure note: MH-EDITION-API-01 exposed the lazy selected-Work Edition
 application contract through its own authenticated strict REST boundary. This
-does not implement SEARCH-UI-01 or any Wishlist/Add Book consumer cutover; see
+did not itself implement SEARCH-UI-01 or any Wishlist/Add Book consumer cutover; see
 `docs/82-mh-edition-api-01-selected-work-editions-rest.md`.
 
 Date: 2026-09-11

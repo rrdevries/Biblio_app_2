@@ -38,6 +38,19 @@ The canonical living visual and UI baseline is maintained in
 architecture is accepted in
 `docs/decisions/ADR-009-biblio-ui-theming-and-atmosphere-architecture.md`.
 
+For decisions across product areas, first use
+`docs/00-product-decision-index.md` to locate the canonical source. The index
+does not replace that source.
+
+## Historical migration-preparation checkpoint
+
+The DATA-01, CURRENT V1 intake and MIG-FND/MIG-02 paragraphs below record the
+pre-cutover state at the time of those slices. In particular, their statements
+about outstanding mapping, rehearsal or apply work are **historical**, not the
+current phase. The production result and retained exceptions are in
+`docs/147-mig-v1-v2-final-exception-inventory.md` and the opening operational
+update above. No old checkpoint authorizes a new migration run.
+
 The tracked `testdata/data-01-v1/` directory contains DATA-01: a compact,
 representative V1 build/regression source dataset of 47 approved V1
 `books[].bookNumber` cases and their necessary direct V1 relations. It is

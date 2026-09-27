@@ -6,14 +6,32 @@ Dit document is het operationele uitvoeringscontract voor coding-agents binnen d
 
 Before changing Biblio behavior, read:
 
-1. `docs/00-current-state.md`
-2. the relevant part of `docs/01-functional-design.md`
-3. `docs/02-architecture.md`
-4. applicable ADRs
-5. `docs/03-scope-and-deferred.md`
-6. `docs/06-testing-and-acceptance.md`
+1. `docs/00-product-decision-index.md` as a route to the sources, not as a substitute for them
+2. `docs/00-current-state.md`
+3. the relevant part of `docs/01-functional-design.md`
+4. `docs/02-architecture.md`
+5. applicable ADRs
+6. `docs/03-scope-and-deferred.md`
+7. `docs/06-testing-and-acceptance.md`
 
 Do not infer current product behavior from historical source files when the canonical docs contain a later decision.
+
+## Product and UX decision preflight for Work
+
+Vóór ieder substantieel product-, functioneel of UX-besluit: raadpleeg eerst
+`docs/00-product-decision-index.md`, lees daarna de gelinkte canonieke bronnen
+zelf, benoem kort wat al `SETTLED`, `DEFERRED` of `SUPERSEDED` is, en leg alleen
+echte `OPEN` keuzes aan Renée voor. Benoem bronconflicten voordat een besluit
+wordt genomen. Verifieer implementatieclaims tegen actuele code en evidence.
+Chatgeschiedenis mag ondersteunende context zijn, maar vervangt geen canonieke
+repositorybeslissing.
+
+Na een afgeronde product- of designuitkomst volgt een korte decision delta:
+**Nieuw**, **Gewijzigd**, **Open**. Werk de juiste canonieke documenteigenaar
+bij, pas release/scope alleen aan indien nodig, werk de decision index bij en
+actualiseer acceptance-evidence indien van toepassing. Pas daarna is de
+uitkomst duurzaam afgerond; maak geen los handoffdocument als een bestaand
+canoniek document eigenaar is.
 
 ## Preflight
 

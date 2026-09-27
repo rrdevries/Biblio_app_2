@@ -56,19 +56,23 @@ integriteits-, scope-, transactie- en concurrencygevoelige Core-data.
 Persistence blijft per domein beoordeeld volgens ADR-004.
 
 De formeel ondersteunde Core-schemahistorie begint op schema baseline `1000`.
-Productversie `v2.001`, plugin/packageversie `2.2.0` en schemaversie zijn
-onafhankelijk. Zie ADR-005. Pluginactivation voert de formele migration en
-schema-healthcheck uit. Tijdens normale runtime controleert Core vroeg de
+Productversie `v2.001`, de huidige Core-pluginversie `2.51.2`, UI-pluginversie
+`0.20.0` en huidige schemaversie `1026` zijn onafhankelijke dimensies
+(repositorycheck 2026-09-27). Zie ADR-005. Pluginactivation voert de formele
+migration en schema-healthcheck uit. Tijdens normale runtime controleert Core vroeg de
 schemaversie en gebruikt het een kortlevende health-cache; alleen een gezonde
 runtime publiceert de getypeerde application-serviceboundary.
 
-F1.4 laat de bestaande production application services hun actor uitsluitend
-server-side via WordPress bepalen. Caller-input kan wel een Library als target
-selecteren, maar nooit de actor of een vertrouwde `LibraryContext` leveren.
+Historisch F1.4-checkpoint: de toen bestaande production application services
+bepaalden hun actor uitsluitend server-side via WordPress. Caller-input kan
+wel een Library als target selecteren, maar nooit de actor of een vertrouwde
+`LibraryContext` leveren.
 User-owned en Library-scoped reads en Reading-startflows gebruiken daardoor
 dezelfde authenticated identity; concrete repositories blijven intern aan de
-composition root. REST, Abilities, Elementor, JetEngine en UI-adapters zijn nog
-niet gebouwd.
+composition root. Destijds waren REST- en UI-adapters nog niet gebouwd.
+In de huidige checkout zijn Biblio Core REST-adapters en de afzonderlijke
+`biblio-ui`-plugin wel aanwezig; zie `docs/00-current-state.md`. F1.4 is
+historisch implementatiebewijs, geen actuele adapterinventaris.
 
 F1.5 laat een ReadingRound uitsluitend via een gevalideerde concrete bron
 starten. Voor een Library Item wordt Work via Item → Edition → Work afgeleid;
@@ -78,13 +82,15 @@ ReadingSource. De database behoudt de ADR-004-baseline met XOR, foreign keys en
 uniekheid per gebruiker + concrete bron; de repository controleert aanvullend
 dat de bron werkelijk bij het afgeleide Work hoort.
 
-F1.6 laat publiek geldige domainstate aansluiten op de huidige persistence:
+Historisch F1.6-checkpoint: deze slice liet publiek geldige domainstate
+aansluiten op de toenmalige persistence:
 persistente Core-ID's zijn niet leeg, geldige UTF-8 en maximaal 191 tekens;
-ExternalLoan, Item, Library en ReadingRound zijn in de huidige technische scope
+ExternalLoan, Item, Library en ReadingRound waren in die technische scope
 active-only; en aanvullende membershippermissions zijn een geordende lijst van
 unieke, niet-lege UTF-8-identifiers die zonder normalisatie roundtrippen.
-Productversie `v2.001`, plugin/packageversie `2.2.0` en schemabaseline `1000`
-blijven onafhankelijke versiedimensies.
+De destijds geldende pluginversie `2.2.0` en schemabaseline `1000` in deze
+Fase-1-beschrijving zijn historische checkpointwaarden. De actuele versies
+staan hierboven en in de pluginheaders en Core-schemamigrator.
 
 F1.7 sluit Fase 1 af met één reproduceerbare root-quality-gate, gelockte
 PHPStan/WordPress-analysisdependencies en expliciete Fase-1-exit-evidence. De

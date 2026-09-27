@@ -30,6 +30,14 @@ retirement decision. General end-user import remains deferred. The migration
 exceptions and retained evidence are indexed in
 `docs/147-mig-v1-v2-final-exception-inventory.md`.
 
+This document preserves the V2.001 release classification and its historical
+acceptance gate; it is not a current migration worklist. Sections 9, 11 and 12
+record earlier preparation checkpoints. For current product phase and
+cross-domain decision routing, read `docs/00-current-state.md` and
+`docs/00-product-decision-index.md`.
+The completed production cutover does not by itself prove that every V2.001
+product journey or human acceptance gate below is complete.
+
 ## 2. Release classes
 
 Only these release classes are used:
@@ -249,15 +257,12 @@ The following remains deferred independently of D-SCOPE-01:
 - e-books, audiobooks, digital files, licenses and other media;
 - generic `Andere fysieke bron` outside approved source types;
 - smart Hierna-lezen availability or automatic source preference;
-- D-SEARCH-AUTH-01 REST/UI disambiguation cutover and bounded progressive
-  presentation after SEARCH-AUTH-01A closed final Author ranking, mapped
-  duplicate suppression and source-progress pagination, SEARCH-AUTH-01B closed
-  local context and SEARCH-AUTH-01C closed external context; selected-Author
-  Works and selected-Work Editions interaction is
-  already closed through SEARCH-UI-01B, while ISBN routing, real totals,
+- ISBN routing, real totals,
   cross-entity Best Match, Series/Collections results, functional filter/sort
   controls, advanced search, URL/history state and consumer actions remain
-  follow-up work;
+  follow-up work; D-SEARCH-AUTH-01 REST/UI disambiguation is implemented by
+  SEARCH-AUTH-UI-01, with Renée's visual/interaction acceptance and the
+  responsive recheck still pending in docs/96–97;
 - popularity/collaborative filtering and black-box ranking; shared search and
   MH-DISC-01/WISH-DISC-01 keep provider order presentation-only;
 - automatic central Work/Author/Series merge, broad bibliographic editing,
@@ -299,6 +304,10 @@ Wishlist targets. Neither slice promotes contained Works, adds Wishlist
 Edition specificity or authorizes a production migration.
 
 ## 12. Guarded rehearsal preparation is not cutover authorization
+
+Historical preparation checkpoint; production cutover and its separate
+classification repair subsequently closed under docs/147. The following
+describes what PREP-01B itself did and did not authorize at that time.
 
 MIG-CUTOVER-PREP-01B implements rehearsal-only apply/recovery tooling and
 synthetic disposable verification. It does not designate FINAL CURRENT SOURCE,

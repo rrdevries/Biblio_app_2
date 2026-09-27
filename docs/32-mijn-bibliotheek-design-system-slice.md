@@ -2,6 +2,13 @@
 
 Status: **implemented — GO WITH EXPLICIT DEFERRED CAPABILITIES**.
 
+Current-status pointer (2026-09-27): the disabled Search/Sort and explanatory
+Filters below describe this presentation slice at its original date. Later
+CAT-UI-01 implemented server-backed Mijn Bibliotheek Search, Filter and Sort;
+see `docs/59-cat-ui-01-mijn-bibliotheek-search-filter-sort-integration.md`.
+The Design System in docs/31 remains the visual owner, and the cross-domain
+status is indexed in docs/00-product-decision-index.md.
+
 This record covers the presentation-only implementation slice that applies
 [`docs/31-biblio-design-system.md`](31-biblio-design-system.md) and
 [`ADR-009`](decisions/ADR-009-biblio-ui-theming-and-atmosphere-architecture.md)

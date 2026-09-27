@@ -2,6 +2,14 @@
 
 Status: **DECISION CANONICALIZED / IMPLEMENTED BY ADD-UI-01**
 
+Current-status pointer (2026-09-27): the single wizard and its approved
+ISBN/manual/local-first paths are implemented, while ADD-UI-01 still records
+provider configuration and human QA as pending. Shared Author/Work Search now
+has a full-page UI and selected-entity drill-down in docs/83 and docs/85;
+`ADD-SEARCH-01` consumer integration is still separate. D-ADD-02's Book
+Detail continuation is not implemented by this wizard. See
+`docs/00-product-decision-index.md` for the split status.
+
 Date: 2026-09-06
 
 ## Purpose and boundary
@@ -16,11 +24,13 @@ selection/fusion, Work-match behavior, collector-detail design or Book Detail.
 ADR-014 and MH-B5A/MH-B5B remain the authoritative server-side contracts. This
 document supplies their user-facing wizard design only.
 
-Post-decision note: D-SEARCH-01 defines a later shared Author/Work-first text
-entry with lazy Edition discovery. That target is not implemented and does not
-change this wizard's current ISBN/manual start, Edition review, Library Context
-or Item commit. A later `ADD-SEARCH-01` consumer slice must integrate the shared
-selection contract without replacing these boundaries. See
+Historical post-decision note: D-SEARCH-01 defined a later shared
+Author/Work-first text entry with lazy Edition discovery. At this document's
+original decision date that target was not implemented; later shared Search
+slices are recorded above. The decision does not change this wizard's current
+ISBN/manual start, Edition review, Library Context or Item commit. A later
+`ADD-SEARCH-01` consumer slice must integrate the shared selection contract
+without replacing these boundaries. See
 `docs/73-d-search-01-shared-bibliographic-search-model.md`.
 
 ## 1. One wizard and its start

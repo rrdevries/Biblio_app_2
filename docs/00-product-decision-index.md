@@ -1,0 +1,90 @@
+# 00 — Product decision index
+
+**Autoriteit:** deze index wijst naar canonieke product-, UX-, scope- en
+architectuurbronnen; hij vervangt die bronnen niet. Lees de gelinkte bron zelf
+voordat een besluit wordt genomen. Een sliceverslag bewijst uitsluitend zijn
+eigen implementatie- en acceptatiegrens. Chatgeschiedenis is werkcontext, geen
+canonieke productbeslissing.
+
+- **Last verified against Git SHA:** `772b9c44a5b4fcc0e798fcc0281800922297803f`
+  (broncheckout vóór deze documentatiewijziging).
+- **Last reviewed date:** 2026-09-27.
+- **Bekende bronconflicten:** geen onbeslecht inhoudelijk productbesluit gevonden
+  in de hieronder geïndexeerde bronnen. De afgeronde productiecutover in
+  [147](147-mig-v1-v2-final-exception-inventory.md) en de V2.001-Definition
+  of Done in [03](03-scope-and-deferred.md) zijn verschillende
+  acceptatiestaten; de cutover bewijst niet elk productjourney. De historische
+  pre-cutoverpassages in
+  [00](00-current-state.md), [03](03-scope-and-deferred.md) en
+  [26](26-future-roadmap-decisions.md) zijn als checkpoint of afgesloten item
+  gemarkeerd. Nieuwe tegenstrijdigheden worden hier benoemd met de betrokken
+  bronnen; zij worden niet stilzwijgend opgelost.
+
+## Gebruik en statussen
+
+**Decision status** beschrijft uitsluitend de besluitvorming: `SETTLED`
+(huidige grens vast), `PARTIAL` (vaste grens met afzonderlijke open delen),
+`OPEN` (expliciete keuze ontbreekt), `DEFERRED` (actieve productuitwerking
+later) of `SUPERSEDED` (vervangen door een aangewezen latere bron). Een
+`DEFERRED` feature kan dus een vastgesteld ontwerp hebben.
+
+**Implementation status** beschrijft de in de rij genoemde actuele
+capability: `NOT IMPLEMENTED`, `CORE`, `CORE + REST`, `CORE + REST + UI` of
+`IMPLEMENTED`. `IMPLEMENTED` is alleen passend wanneer de afgebakende
+capability volledig is geleverd; een onderliggende foundation maakt een
+grotere feature niet compleet. Een UI-only presentatie zoals de App Shell kan
+voor haar eigen afgebakende doel `IMPLEMENTED` zijn.
+
+**Human acceptance** staat los van beide voorgaande velden:
+`NOT APPLICABLE`, `NOT REVIEWED`, `TECHNICALLY ACCEPTED`, `PRODUCT ACCEPTED`
+of `VISUALLY ACCEPTED`. `TECHNICALLY ACCEPTED` registreert alleen een
+technische GO en impliceert geen menselijke product- of visuele GO. Waar een
+menselijke GO slechts een deeltje betreft, benoemt de evidencekolom dat bereik.
+
+Releaseposities hieronder zijn pointers naar [03](03-scope-and-deferred.md),
+geen nieuwe releaseclassificatie. `—` bij open productbesluiten betekent dat
+de gelinkte bron voor de huidige grens geen onbesliste productkeuze noemt;
+implementatiewerk kan nog bestaan.
+
+## Productgebieden
+
+| Onderwerp | Decision status | Canonieke bron(nen) | Releasepositie | Implementation status | Human acceptance | Echte open productbesluiten | Actuele evidence / begrenzing |
+|---|---|---|---|---|---|---|---|
+| App shell / navigatie | PARTIAL | [31 §8](31-biblio-design-system.md#8-page-shell-en-navigatie), [ADR-009](decisions/ADR-009-biblio-ui-theming-and-atmosphere-architecture.md) | Veilige bereikbare shell V2.001 MUST; rijke Home en aparte modules V2.002+ | IMPLEMENTED | VISUALLY ACCEPTED | — | [54](54-ui-found-01-app-shell-and-mijn-bibliotheek-visual-baseline.md) accepteert de minimale shell visueel; conceptuele navigatie in 31 is breder. |
+| Themes / kleuren / Appearance | PARTIAL | [ADR-009](decisions/ADR-009-biblio-ui-theming-and-atmosphere-architecture.md), [31 §§3–4 en 18](31-biblio-design-system.md#3-design-systemarchitectuur) | Volledige Theme/Appearance-uitwerking na de V2.001-baseline | NOT IMPLEMENTED | NOT REVIEWED | Exacte paletten, contrast per combinatie, productiefonts en volledige keuze-UX. | [32](32-mijn-bibliotheek-design-system-slice.md) bewijst alleen Ink/Light en semantische tokens. |
+| Atmosphere Packs | DEFERRED | [ADR-009](decisions/ADR-009-biblio-ui-theming-and-atmosphere-architecture.md), [31 §15](31-biblio-design-system.md#15-book-atmosphere) | V2.002+ totdat afzonderlijk releaseklaar | NOT IMPLEMENTED | NOT APPLICABLE | Assets, exact matching-algoritme en Custom/Seasonal-uitwerking; packgrenzen en governance staan vast. | [55](55-ui-book-01-book-detail-visual-baseline.md) bewijst alleen neutrale hero. |
+| Mijn Bibliotheek | PARTIAL | [01 §5](01-functional-design.md#5-library), [31 §9](31-biblio-design-system.md#9-mijn-bibliotheek-en-views), [ADR-006](decisions/ADR-006-f2-5-library-catalog-context-and-classification.md) | Dagelijks catalogusgebruik V2.001 MUST; Bookshelf en extra optionroutes V2.002+ | CORE + REST + UI | TECHNICALLY ACCEPTED | Uniforme versus oorspronkelijke coverratio blijft open; Bookshelf is deferred. | [54](54-ui-found-01-app-shell-and-mijn-bibliotheek-visual-baseline.md) heeft visuele GO voor de baseline; [59](59-cat-ui-01-mijn-bibliotheek-search-filter-sort-integration.md) heeft technische GO en menselijke visuele acceptatie pending. |
+| Book Detail | PARTIAL | [31 §14.1](31-biblio-design-system.md#141-boekdetail), [01 §4](01-functional-design.md#4-catalog-and-bibliographic-data) | Essentieel detail V2.001 MUST; rijke velden/edituitwerking apart | CORE + REST + UI | VISUALLY ACCEPTED | Exacte Book Detail-editmode en collector-fieldpresentatie voor D-ADD-02 zijn nog niet ontworpen. | [55](55-ui-book-01-book-detail-visual-baseline.md) heeft visuele GO voor D-BOOK-01; [56](56-book-api-01-book-detail-classification-projection.md), [57](57-book-api-02-book-detail-collection-membership-projection.md) en [58](58-book-api-03-book-detail-ratings-reviews-projection.md) leveren latere projecties. |
+| Add Book | PARTIAL | [48](48-add-book-wizard-ux-canonical-design.md), [ADR-014](decisions/ADR-014-mh-b5-add-book-metadata-integration.md), [01 §4](01-functional-design.md#4-catalog-and-bibliographic-data) | ISBN, manual/no-ISBN en extra copy V2.001 MUST | CORE + REST + UI | TECHNICALLY ACCEPTED | — | [52](52-add-ui-01-add-book-wizard-exit-evidence.md) heeft technische GO; providerconfiguratie en menselijke QA pending. Gedeelde Search-consumercutover en D-ADD-02 zijn afzonderlijke implementatiedelta’s. |
+| Search | PARTIAL | [73](73-d-search-01-shared-bibliographic-search-model.md), [01 §4](01-functional-design.md#shared-bibliographic-search), [92](92-d-search-auth-01-author-search-presentation-disambiguation.md) | Basisdiscovery actief; aanvullende Search-capabilities volgens 03/26 later | CORE + REST + UI | TECHNICALLY ACCEPTED | — | [83](83-search-ui-01a-full-page-bibliographic-search.md) en [85](85-search-ui-01b-author-work-edition-drilldown.md) hebben menselijke GO voor hun scope; [96](96-search-auth-ui-01-author-search-rest-ui-cutover.md) en [97](97-search-auth-ui-01-f1-responsive-search-layout.md) wachten op menselijke recheck. Wishlist/Add Book-consumercutover ontbreekt; [73 §19](73-d-search-01-shared-bibliographic-search-model.md#19-open-decisions) reserveert implementatiedetails per slice. |
+| Covers | PARTIAL | [01 §4](01-functional-design.md#covers), [31 §11.1](31-biblio-design-system.md#111-bookcoverpresentation), [03](03-scope-and-deferred.md) | Onafhankelijk coverbeheer V2.002+; behouden evidence kan apart runtimecontract krijgen | NOT IMPLEMENTED | NOT APPLICABLE | Contract voor het tonen van behouden Edition-coverbewijs en later beheer; geen automatische Primary-vervanging. | [147 §6](147-mig-v1-v2-final-exception-inventory.md#6-development-backlog-not-migration-blockers) bevestigt behoud, nog geen actieve runtime. |
+| Reading / ReadingRounds | SETTLED | [01 §6](01-functional-design.md#6-reading-and-readingrounds), [ADR-007](decisions/ADR-007-f2-6-reading-round-lifecycle-and-historical-truth.md) | Kernlezen en geschiedenis V2.001 MUST | CORE + REST + UI | TECHNICALLY ACCEPTED | Eventueel toekomstig stopredenveld: [26 C-06](26-future-roadmap-decisions.md#4-c--open-ontwerpvragen). | [24](24-elementor-vertical-slice-1c-exit-evidence.md); een globale Reading History-pagina is nog ontwikkelachterstand in [147](147-mig-v1-v2-final-exception-inventory.md). |
+| Wishlist / Verlanglijst | PARTIAL | [01 §7](01-functional-design.md#verlanglijst), [03](03-scope-and-deferred.md) | Basis V2.001 MUST; groepering V2.002+ | CORE + REST + UI | TECHNICALLY ACCEPTED | — | [68](68-wish-ui-01-personal-wishlist-ui.md) en [70](70-wish-disc-01-wishlist-discovery-integration.md): technische GO, menselijke visuele acceptatie pending. Prioriteit/notitie, groepering en gedeelde Search-consumer zijn niet afgerond. |
+| Hierna lezen | SETTLED | [ADR-008](decisions/ADR-008-next-reading-intent-model-and-transactional-consumption.md), [28](28-next-reading-contract-correction.md), [01 §7](01-functional-design.md#hierna-lezen) | Handmatige lijst V2.001 MUST; slim gedrag V2.002+ | CORE + REST + UI | TECHNICALLY ACCEPTED | — | [29](29-c7-next-reading-exit-evidence.md); oud F2.9-contract in [14](14-f2-9a-next-reading-analysis.md)/[15](15-f2-9b-exit-evidence.md) is SUPERSEDED. Slim gedrag is deferred. |
+| Collections | PARTIAL | [01 §10](01-functional-design.md#10-collections), [26 A-02–A-05/C-02](26-future-roadmap-decisions.md), [31 §14.2](31-biblio-design-system.md#142-collectie-detail) | Basis V2.001 MUST; smart/rich en Gewenste toevoegingen V2.002+ | CORE | TECHNICALLY ACCEPTED | Alleen C-02: lifecycle, koppeling, autorisatie, proposal/fulfilment en UI van optionele Gewenste toevoegingen. | [38](38-library-collection-membership-foundation-exit-evidence.md) bewijst beheer-Core; [57](57-book-api-02-book-detail-collection-membership-projection.md) alleen readprojectie, geen normale beheer-REST/UI. |
+| Authors | PARTIAL | [01 §11](01-functional-design.md#11-authors-and-series), [ADR-010](decisions/ADR-010-provider-neutral-metadata-hub-and-evidence-governance.md) | Relaties/search/detailprojectie V2.001 MUST; apart module V2.002+ | CORE + REST + UI | TECHNICALLY ACCEPTED | — | [34](34-author-series-relationship-foundation-exit-evidence.md), [87](87-author-mat-01a-author-identity-persistence-foundation.md) en [96](96-search-auth-ui-01-author-search-rest-ui-cutover.md) bewijzen foundations/Search; geen aparte Library-index/detail. Gelijke naam bewijst geen identiteit. |
+| Series | PARTIAL | [01 §11](01-functional-design.md#11-authors-and-series), [26 C-01/C-07–C-10](26-future-roadmap-decisions.md#4-c--open-ontwerpvragen) | Relaties V2.001 MUST; rich intelligence/module V2.002+ | CORE | TECHNICALLY ACCEPTED | Canonical verification, promotie, community, multi-order-runtime en Nederlandse doel-namen volgens 26. | [34](34-author-series-relationship-foundation-exit-evidence.md) bewijst foundation; Book Detail-projectie is geen dedicated Series-module. |
+| Metadata Hub | PARTIAL | [ADR-010](decisions/ADR-010-provider-neutral-metadata-hub-and-evidence-governance.md), [ADR-011](decisions/ADR-011-field-level-metadata-confirmation-and-provenance.md), [ADR-012](decisions/ADR-012-provisional-catalog-and-librarian-review-governance.md), [ADR-014](decisions/ADR-014-mh-b5-add-book-metadata-integration.md) | Minimale Add Book-hub V2.001 MUST; brede governance/feeds later | CORE + REST + UI | TECHNICALLY ACCEPTED | Commerciële opvolgprovider, partnerships, communitygraph en vision: [26 C-11–C-14](26-future-roadmap-decisions.md#4-c--open-ontwerpvragen). | [44–49](44-metadata-hub-mh-b1-isbn-identity-exit-evidence.md) en [52](52-add-ui-01-add-book-wizard-exit-evidence.md) bewijzen de begrensde basis. |
+| Loans | DEFERRED | [01 §8](01-functional-design.md#8-borrowed-and-lent), [ADR-004](decisions/ADR-004-fase-0-persistence-and-reading-sources.md), [03](03-scope-and-deferred.md) | Volledige module V2.002+; V1-bronbewijs behouden | CORE | NOT APPLICABLE | InternalLoan als derde ReadingRound-bron vraagt [26 C-03](26-future-roadmap-decisions.md#4-c--open-ontwerpvragen). | [147 §§3–4](147-mig-v1-v2-final-exception-inventory.md#3-ambiguous-circulation-quarantine-1) sluit cutover zonder operationele V2-loans. |
+| Reading Goals | DEFERRED | [01 §13](01-functional-design.md#13-reading-goals), [03](03-scope-and-deferred.md) | Actieve feature V2.002+; V1-doelen PRESERVE DATA ONLY | NOT IMPLEMENTED | NOT APPLICABLE | Nederlandse namen voor twee toekomstige Series-doelen: [26 C-10](26-future-roadmap-decisions.md#4-c--open-ontwerpvragen). | [136](136-mig-02-reading-goal-map-01-current-v1-preservation.md) en [147](147-mig-v1-v2-final-exception-inventory.md) bewijzen behoud, geen Goals-engine. |
+| Wat zal ik lezen? | DEFERRED | [40](40-what-shall-i-read-functional-design.md), [01 §7](01-functional-design.md#wat-zal-ik-lezen) | V2.002+ | NOT IMPLEMENTED | NOT APPLICABLE | Aantal resultaten per modus, ranking, drempels, voorkeuren en UI/API volgens [40 §14](40-what-shall-i-read-functional-design.md#14-open-ontwerp--en-implementatiepunten). | [39](39-existing-source-filter-read-foundation-exit-evidence.md) is alleen kandidatenbronfoundation. |
+| Gewenste aanwinsten | DEFERRED | [01 §7](01-functional-design.md#gewenste-aanwinsten), [26 A-03/A-04/C-02](26-future-roadmap-decisions.md) | V2.002+; V1-data behouden | NOT IMPLEMENTED | NOT APPLICABLE | Collection-Gewenste-toevoegingen kent alleen de in C-02 genoemde open uitwerking. | [03](03-scope-and-deferred.md) onderscheidt dit van Verlanglijst en Collection members. |
+| Ratings / Reviews | PARTIAL | [01 §12](01-functional-design.md#12-ratings-reviews-and-notes), [03](03-scope-and-deferred.md) | Bestaande beoordelingen lezen V2.001 MUST; nieuwe write/publicationflows V2.002+ | CORE + REST + UI | TECHNICALLY ACCEPTED | — | [65](65-assess-mig-01-historical-assessments.md) bewijst private owner-read en onbekende datum; [58](58-book-api-03-book-detail-ratings-reviews-projection.md) publieke projectie. Nieuwe UX/moderation is deferred. |
+| Private Notes | SETTLED | [01 §12](01-functional-design.md#notes), [03](03-scope-and-deferred.md) | V2.001 MUST | CORE + REST + UI | TECHNICALLY ACCEPTED | — | [27](27-elementor-vertical-slice-1d-private-notes-exit-evidence.md) legt slicegrens en acceptatie vast. |
+| V1→V2 productiecutover | SETTLED | [03](03-scope-and-deferred.md), [147](147-mig-v1-v2-final-exception-inventory.md) | Afgesloten V2.001-overgang; geen herstartautorisatie | IMPLEMENTED | PRODUCT ACCEPTED | Alleen een afzonderlijk toekomstig V1-RETIREMENT-besluit blijft buiten deze cutover open. | [147](147-mig-v1-v2-final-exception-inventory.md) bewaart Renées functionele post-repairacceptatie en de exacte exception/retention-inventaris. |
+
+## Work-preflight en write-back
+
+Voor ieder substantieel product-, functioneel of UX-besluit: raadpleeg deze
+index, lees daarna de gelinkte canonieke bronnen, benoem kort wat `SETTLED`,
+`DEFERRED` en `SUPERSEDED` is, leg alleen echte `OPEN` keuzes aan Renée voor,
+benoem bronconflicten vóór een besluit, en verifieer implementatieclaims tegen
+actuele code en evidence. Chatgeschiedenis mag context geven maar vervangt
+geen canonieke repositorybeslissing.
+
+Na een afgeronde uitkomst maak je een korte **decision delta**: **Nieuw**,
+**Gewijzigd**, **Open**. Werk daarna de juiste canonieke documenteigenaar bij,
+pas release/scope alleen aan wanneer dat besluit dit vereist, werk deze index
+bij en actualiseer acceptance-evidence indien van toepassing. Pas daarna is
+de uitkomst duurzaam afgerond. Maak geen los handoffdocument wanneer een
+bestaand canoniek document eigenaar is.

@@ -22,7 +22,7 @@ v2.001 supports only physical books. Digital books, audiobooks, digital files, l
 
 Biblio runs as one platform. A `Bibliotheek` is an internal tenant/domain entity, not a separate WordPress site.
 
-Historical sources remain preserved as design history. Current truth is determined by the conflict order documented in `README.md`.
+Historical sources remain preserved as design history. Current truth is determined by the conflict order documented in `docs/05-source-register.md` under "Authority rule".
 
 Persistence choices such as CPT, CCT or custom tables are technical implementation decisions. Fase 0 established Biblio-owned custom tables as the baseline for integrity-, scope-, transaction- and concurrency-sensitive Core-data; selection remains open per domain as specified in `docs/decisions/ADR-004-fase-0-persistence-and-reading-sources.md`.
 
@@ -1621,6 +1621,19 @@ Not allowed:
 - archived Items.
 
 An Item may belong to multiple Collections.
+
+Een toekomstige Collection-detailpagina mag een afzonderlijke laag
+**Gewenste toevoegingen** tonen voor een Work, voorkeurseditie of exacte
+Edition die later aan de Collection moet worden toegevoegd. Deze records
+zijn nooit Collection members en tellen niet als aanwezige Items.
+
+Verlanglijst en Collection-Gewenste-toevoegingen blijven verschillende
+concepten, maar mogen expliciet gekoppeld worden. Bij aanschaf mag Biblio
+voorstellen het nieuwe Item aan de betreffende Collection toe te voegen; er
+vindt geen stille toevoeging of vervulling plaats. Dit zijn de reeds
+goedgekeurde grenzen uit het toekomstregister; lifecycle, autorisatie,
+cardinaliteit van de koppeling en proposal-/fulfilmentflow blijven open in
+`docs/26-future-roadmap-decisions.md` C-02.
 
 In the Mijn Bibliotheek Collection filter:
 
