@@ -97,6 +97,12 @@ class FakeElement {
 
     showModal() {
         this.open = true;
+        this.modal = true;
+    }
+
+    show() {
+        this.open = true;
+        this.modal = false;
     }
 
     close() {
@@ -235,8 +241,13 @@ function overviewModel(overrides = {}) {
     };
 }
 
-function setup() {
+function setup({ mobile = false } = {}) {
     documentImpl.activeElement = null;
+    documentImpl.defaultView = {
+        matchMedia() {
+            return { matches: mobile, addEventListener() {} };
+        },
+    };
     const root = new FakeElement("div");
     const itemUrls = [];
     const view = createOverviewView(root, {
@@ -579,6 +590,51 @@ test("live query rerenders preserve search focus and caret", () => {
     assert.equal(nextSearch.focused, true);
     assert.equal(nextSearch.selectionStart, 2);
     assert.equal(nextSearch.selectionEnd, 2);
+});
+
+test("desktop rail keeps active chips with results and expands only long groups", () => {
+    const { root, view } = setup();
+    const options = Array.from({ length: 7 }, (_, index) => ({
+        id: `genre-${index}`,
+        label: `Genre ${index}`,
+    }));
+    const model = overviewModel({
+        filterOptions: { bookTypes: [], genres: options, subjects: [] },
+        query: { ...overviewModel().query, genreIds: ["genre-6"] },
+    });
+    view.render(model, { setFilter() {}, clearFilters() {} });
+    byTag(root, "button").find((button) => button.textContent === "Filters (1)").click();
+
+    const layout = byClass(root, "biblio-ui__catalog-layout")[0];
+    const main = byClass(root, "biblio-ui__catalog-main")[0];
+    const panel = byClass(root, "biblio-ui__filter-panel")[0];
+    assert.equal(layout.children[0], main);
+    assert.equal(layout.children[1], panel);
+    assert.equal(panel.tagName, "DIALOG");
+    assert.equal(panel.modal, false);
+    assert.equal(byClass(main, "biblio-ui__filter-chips").length, 1);
+    assert.equal(byClass(panel, "biblio-ui__filter-chips").length, 0);
+    assert.equal(byTag(panel, "input").filter((node) => node.getAttribute("type") === "checkbox").length, 11);
+    assert.equal(byTag(panel, "input").find((node) => node.getAttribute("data-biblio-focus-key") === "filter:genreIds:genre-6").checked, true);
+
+    byTag(panel, "button").find((button) => button.textContent === "Meer lezen").click();
+    const expanded = byClass(root, "biblio-ui__filter-panel")[0];
+    assert.equal(byTag(expanded, "input").filter((node) => node.getAttribute("type") === "checkbox").length, 12);
+    assert.ok(byTag(expanded, "button").some((button) => button.textContent === "Minder tonen"));
+});
+
+test("mobile filters use a modal sheet and return focus to the toggle", () => {
+    const { root, view } = setup({ mobile: true });
+    view.render(overviewModel());
+    const toggle = byTag(root, "button").find((button) => button.textContent === "Filters");
+    toggle.focus();
+    toggle.click();
+    const sheet = byClass(root, "biblio-ui__filter-panel")[0];
+    assert.equal(sheet.modal, true);
+    assert.equal(sheet.getAttribute("aria-labelledby"), "biblio-filter-heading");
+    byTag(sheet, "button").find((button) => button.textContent === "Sluiten").click();
+    assert.equal(byClass(root, "biblio-ui__filter-panel").length, 0);
+    assert.equal(byTag(root, "button").find((button) => button.textContent === "Filters").focused, true);
 });
 
 test("filter and sort rerenders preserve the active keyboard control", () => {

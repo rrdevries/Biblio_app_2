@@ -1,5 +1,11 @@
 # CAT-UI-01 — Mijn Bibliotheek Search, Filter & Sort integration
 
+Current-status pointer (2026-09-28): UI-MYLIB-01 reconcilieert de presentatie
+met het goedgekeurde doelbeeld in `docs/31` §9. De query-, URL-, autorisatie-
+en cursorsemantiek van CAT-UI-01 blijft ongewijzigd. Zie
+`docs/148-ui-mylib-01-implementation-evidence.md` voor de nieuwe technische
+toets; menselijke visuele acceptatie van de nieuwe weergave staat nog open.
+
 Status: **TECHNICAL GO / HUMAN VISUAL ACCEPTANCE PENDING**
 Date: 2026-09-08
 Schema: `1017` unchanged
