@@ -296,7 +296,16 @@ function checkbox(documentImpl, label, checked, listener, focusKey = null) {
     return wrapper;
 }
 
-function filterGroup(documentImpl, legend, property, options, query, actions) {
+function filterGroup(
+    documentImpl,
+    legend,
+    property,
+    options,
+    query,
+    actions,
+    expandedGroups,
+    toggleGroup
+) {
     if (options.length === 0) {
         return null;
     }
@@ -304,7 +313,11 @@ function filterGroup(documentImpl, legend, property, options, query, actions) {
         className: "biblio-ui__filter-group",
     });
     fieldset.append(element(documentImpl, "legend", { text: legend }));
-    for (const option of options) {
+    const expanded = expandedGroups.has(property);
+    for (const [index, option] of options.entries()) {
+        if (!expanded && index >= 5 && !query[property].includes(option.id)) {
+            continue;
+        }
         fieldset.append(checkbox(
             documentImpl,
             option.label,
@@ -312,6 +325,18 @@ function filterGroup(documentImpl, legend, property, options, query, actions) {
             (selected) => actions.setFilter(property, option.id, selected),
             `filter:${property}:${option.id}`
         ));
+    }
+    if (options.length > 5) {
+        const more = actionButton(
+            documentImpl,
+            expanded ? "Minder tonen" : "Meer lezen",
+            () => toggleGroup(property),
+            "tertiary"
+        );
+        more.className += " biblio-ui__filter-more";
+        more.setAttribute("aria-expanded", expanded ? "true" : "false");
+        more.setAttribute("data-biblio-focus-key", `filter-more:${property}`);
+        fieldset.append(more);
     }
     return fieldset;
 }
@@ -321,6 +346,10 @@ function renderToolbar(documentImpl, model, actions, {
     selectedView,
     setFiltersOpen,
     setView,
+    expandedGroups,
+    toggleGroup,
+    closeFilters,
+    filterClosed,
 }) {
     const query = model.query;
     const count = activeFilterCount(query);
@@ -453,25 +482,43 @@ function renderToolbar(documentImpl, model, actions, {
         attributes: { id: "biblio-toolbar-contract-note" },
     }));
 
+    let filterPanel = null;
     if (filtersOpen) {
-        const filterPanel = element(documentImpl, "div", {
+        filterPanel = element(documentImpl, "dialog", {
             className: "biblio-ui__filter-panel",
-            attributes: { id: "biblio-filter-panel" },
+            attributes: {
+                id: "biblio-filter-panel",
+                "aria-labelledby": "biblio-filter-heading",
+            },
         });
+        filterPanel.addEventListener("close", filterClosed);
         const readingOptions = [
             { id: "reading", label: "Aan het lezen" },
             { id: "read", label: "Uitgelezen" },
             { id: "not_read", label: "Niet gelezen" },
         ];
-        filterPanel.append(element(documentImpl, "p", {
+        const panelHeader = element(documentImpl, "div", {
+            className: "biblio-ui__filter-panel-header",
+        });
+        panelHeader.append(element(documentImpl, "h2", {
             className: "biblio-ui__filter-heading",
             text: "Filters",
+            attributes: { id: "biblio-filter-heading" },
         }));
+        const close = actionButton(documentImpl, "Sluiten", closeFilters, "tertiary");
+        close.className += " biblio-ui__filter-close";
+        close.setAttribute("aria-label", "Filters sluiten");
+        panelHeader.append(close);
+        filterPanel.append(panelHeader);
         for (const group of [
-            filterGroup(documentImpl, "Leesstatus", "readingStatuses", readingOptions, query, actions),
-            filterGroup(documentImpl, "Boeksoort", "bookTypeIds", model.filterOptions.bookTypes, query, actions),
-            filterGroup(documentImpl, "Genre", "genreIds", model.filterOptions.genres, query, actions),
-            filterGroup(documentImpl, "Onderwerp", "subjectIds", model.filterOptions.subjects, query, actions),
+            filterGroup(documentImpl, "Leesstatus", "readingStatuses", readingOptions,
+                query, actions, expandedGroups, toggleGroup),
+            filterGroup(documentImpl, "Boeksoort", "bookTypeIds", model.filterOptions.bookTypes,
+                query, actions, expandedGroups, toggleGroup),
+            filterGroup(documentImpl, "Genre", "genreIds", model.filterOptions.genres,
+                query, actions, expandedGroups, toggleGroup),
+            filterGroup(documentImpl, "Onderwerp", "subjectIds", model.filterOptions.subjects,
+                query, actions, expandedGroups, toggleGroup),
         ]) {
             if (group !== null) {
                 filterPanel.append(group);
@@ -491,9 +538,9 @@ function renderToolbar(documentImpl, model, actions, {
             actions.setArchiveScope,
             "filter:archive"
         ));
-        region.append(filterPanel);
     }
 
+    let chips = null;
     if (count > 0) {
         const labels = {
             readingStatuses: new Map([
@@ -515,7 +562,7 @@ function renderToolbar(documentImpl, model, actions, {
             locationIds: "Locatie",
             collectionIds: "Collectie",
         };
-        const chips = element(documentImpl, "div", {
+        chips = element(documentImpl, "div", {
             className: "biblio-ui__filter-chips",
             attributes: { "aria-label": "Actieve filters" },
         });
@@ -565,9 +612,8 @@ function renderToolbar(documentImpl, model, actions, {
         );
         clearFilters.setAttribute("data-biblio-focus-key", "clear-filters");
         chips.append(clearFilters);
-        region.append(chips);
     }
-    return region;
+    return { region, filterPanel, chips };
 }
 
 function quickViewDetail(
@@ -849,27 +895,63 @@ function renderOverview(documentImpl, model, actions, itemUrl, uiState) {
     view.append(header);
 
     const rerender = () => uiState.render(model, actions);
-    view.append(renderToolbar(documentImpl, model, actions, {
+    const closeFilters = () => {
+        uiState.filtersOpen = false;
+        uiState.returnFilterFocus = true;
+        rerender();
+    };
+    const toolbar = renderToolbar(documentImpl, model, actions, {
         filtersOpen: uiState.filtersOpen,
         selectedView: uiState.selectedView,
+        expandedGroups: uiState.expandedGroups,
+        closeFilters,
+        filterClosed: closeFilters,
+        toggleGroup(property) {
+            if (uiState.expandedGroups.has(property)) {
+                uiState.expandedGroups.delete(property);
+            } else {
+                uiState.expandedGroups.add(property);
+            }
+            rerender();
+        },
         setFiltersOpen(value) {
             uiState.filtersOpen = value;
+            if (!value) {
+                uiState.returnFilterFocus = true;
+            }
             rerender();
         },
         setView(value) {
             uiState.selectedView = value;
             rerender();
         },
-    }));
+    });
+    view.append(toolbar.region);
 
-    view.append(element(documentImpl, "p", {
+    const layout = element(documentImpl, "div", {
+        className: "biblio-ui__catalog-layout",
+    });
+    const main = element(documentImpl, "div", {
+        className: "biblio-ui__catalog-main",
+    });
+    layout.append(main);
+    if (toolbar.filterPanel !== null) {
+        layout.append(toolbar.filterPanel);
+    }
+    uiState.filterDialog = toolbar.filterPanel;
+    view.append(layout);
+    if (toolbar.chips !== null) {
+        main.append(toolbar.chips);
+    }
+
+    main.append(element(documentImpl, "p", {
         className: "biblio-ui__result-status biblio-ui__visually-hidden",
         text: model.resultAnnouncement,
         attributes: { "aria-live": "polite", role: "status" },
     }));
 
     if (model.refreshing === true) {
-        view.append(element(documentImpl, "p", {
+        main.append(element(documentImpl, "p", {
             className: "biblio-ui__query-loading",
             text: "Boeken zoeken…",
             attributes: { role: "status" },
@@ -890,7 +972,7 @@ function renderOverview(documentImpl, model, actions, itemUrl, uiState) {
             }),
             actionButton(documentImpl, "Opnieuw proberen", actions.retryQuery, "primary")
         );
-        view.append(error);
+        main.append(error);
         return view;
     }
 
@@ -920,7 +1002,7 @@ function renderOverview(documentImpl, model, actions, itemUrl, uiState) {
         if (activeFilterCount(model.query) > 0) {
             empty.append(actionButton(documentImpl, "Alle filters wissen", actions.clearFilters));
         }
-        view.append(empty);
+        main.append(empty);
         return view;
     }
 
@@ -946,11 +1028,11 @@ function renderOverview(documentImpl, model, actions, itemUrl, uiState) {
             actions
         ));
     }
-    view.append(heading, list);
+    main.append(heading, list);
 
     const loadMore = renderLoadMore(documentImpl, model, actions);
     if (loadMore !== null) {
-        view.append(loadMore);
+        main.append(loadMore);
     }
 
     if (model.quickView !== null && model.quickView !== undefined) {
@@ -970,6 +1052,7 @@ function renderOverview(documentImpl, model, actions, itemUrl, uiState) {
                 }
             }
         );
+        uiState.quickViewDialog = dialog;
         view.append(dialog);
     }
     return view;
@@ -996,10 +1079,20 @@ export function createOverviewView(root, {
     const uiState = {
         filtersOpen: false,
         selectedView: "grid",
+        expandedGroups: new Set(),
+        filterDialog: null,
+        quickViewDialog: null,
+        returnFilterFocus: false,
+        lastModel: null,
+        lastActions: null,
         render: null,
     };
 
     function render(model, actions = {}) {
+        uiState.lastModel = model;
+        uiState.lastActions = actions;
+        uiState.filterDialog = null;
+        uiState.quickViewDialog = null;
         const activeElement = documentImpl.activeElement;
         const focusKey = activeElement?.getAttribute?.("data-biblio-focus-key");
         const restoreSearchFocus = focusKey === "search";
@@ -1036,14 +1129,28 @@ export function createOverviewView(root, {
         root.replaceChildren(view);
         root.setAttribute?.("aria-busy", view.getAttribute("aria-busy"));
 
-        const quickView = view.querySelector?.("dialog");
-        quickView?.showModal?.();
+        const mobileFilters = documentImpl.defaultView
+            ?.matchMedia?.("(max-width: 767px)").matches === true;
+        if (uiState.filterDialog !== null) {
+            if (mobileFilters) {
+                uiState.filterDialog.showModal?.();
+            } else {
+                uiState.filterDialog.show?.();
+            }
+        }
 
-        if (model.focusHeading === true) {
+        uiState.quickViewDialog?.showModal?.();
+
+        if (uiState.returnFilterFocus) {
+            uiState.returnFilterFocus = false;
+            const controls = view.querySelectorAll?.("[data-biblio-focus-key]") ?? [];
+            [...controls].find((candidate) => candidate.getAttribute("data-biblio-focus-key") === "filter-toggle")?.focus?.();
+        } else if (model.focusHeading === true) {
             const heading = view.querySelector("h1");
             heading?.setAttribute("tabindex", "-1");
             heading?.focus();
-        } else if (typeof focusKey === "string") {
+        } else if (typeof focusKey === "string"
+            && !(mobileFilters && uiState.filtersOpen && focusKey === "filter-toggle")) {
             const focusTargets = view.querySelectorAll?.("[data-biblio-focus-key]") ?? [];
             let nextFocus = [...focusTargets].find((candidate) => (
                 candidate.getAttribute("data-biblio-focus-key") === focusKey
@@ -1072,6 +1179,13 @@ export function createOverviewView(root, {
         }
         return view;
     }
+
+    documentImpl.defaultView?.matchMedia?.("(max-width: 767px)")
+        ?.addEventListener?.("change", () => {
+            if (uiState.filtersOpen && uiState.lastModel?.state === "overview") {
+                render(uiState.lastModel, uiState.lastActions);
+            }
+        });
 
     uiState.render = render;
     return Object.freeze({ render });

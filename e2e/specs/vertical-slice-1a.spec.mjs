@@ -302,6 +302,7 @@ test("Deep Library shell, views, filters and Quick View recompose accessibly", a
     });
     await expect(page.getByRole("button", { name: "Boekenplank", exact: true })).toBeDisabled();
     await page.getByRole("button", { name: "Grid", exact: true }).click();
+    await page.getByRole("button", { name: "Filters", exact: true }).click();
 
     const workspaceBefore = await workspace.boundingBox();
     const quickTrigger = page.getByRole("button", { name: /Snel bekijken:/ }).first();
