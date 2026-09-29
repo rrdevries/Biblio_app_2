@@ -2,6 +2,40 @@
 
 Status: **TECHNICAL GO / HUMAN VISUAL GO**
 
+Current-status pointer (2026-09-27): het productmatig goedgekeurde
+UI-REENTRY-03-doelbeeld voor Mijn Bibliotheek staat in docs/31 §9. De
+historische UI-FOUND-01-GO omvat dat doelbeeld, de filterrail, het mobiele
+filterblad en `Meer lezen` nog niet.
+
+Current-status pointer (2026-09-27): UI-REENTRY-02 heeft de destijds nog open
+coverratio-keuze als optie B vastgelegd in `docs/31-biblio-design-system.md`
+§§9 en 11.1. De onderstaande `2:3`-implementatie en visuele GO blijven bewijs
+voor UI-FOUND-01 op zijn oorspronkelijke scope; de nieuwe volledige
+omslagweergave en optionele oorspronkelijke verhouding zijn nog niet gebouwd
+of als runtime visueel geaccepteerd.
+
+UI-REENTRY-02 heeft daarnaast de bestaande Ink Light-werkwaarden als exacte
+visuele productiebaseline (variant A) goedgekeurd in docs/31 §4.1. Deze
+historische UI-FOUND-01-GO wordt daardoor niet uitgebreid naar alle
+gerenderde states, Theme-varianten of schermen.
+
+UI-REENTRY-02 heeft ook Ink Dark (variant A) als visuele productiebaseline
+vastgelegd in docs/31 §4.2. De hieronder beschreven Ink/Light-shell levert
+nog geen Dark-implementatie of visuele runtime-GO.
+
+UI-REENTRY-02 heeft Cormorant Garamond + Source Sans 3 als fontfamilies
+gekozen in docs/31 §5. Dat verandert de oorspronkelijke UI-FOUND-01-GO niet:
+fontlevering en de door Renée bedoelde visuele verfijning vragen nog aparte
+uitwerking en acceptatie.
+De later goedgekeurde desktop- en mobiele basisschalen en het typografische
+basisritme in §5 zijn evenmin onderdeel van die oorspronkelijke runtime-GO of
+al geïmplementeerd.
+
+UI-REENTRY-02 heeft daarnaast Tabler Icons Outline als algemene iconenbasis
+gekozen in docs/31 §11. De hieronder beschreven eigen maskiconen blijven
+historisch bewijs van deze slice; er is nog geen Tabler-implementatie of
+nieuwe schermspecifieke visuele GO.
+
 Date: 2026-09-07
 
 Task severity: **High**

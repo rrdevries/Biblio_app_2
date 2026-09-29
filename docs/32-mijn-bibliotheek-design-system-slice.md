@@ -2,12 +2,48 @@
 
 Status: **implemented — GO WITH EXPLICIT DEFERRED CAPABILITIES**.
 
+Current-status pointer (2026-09-27): UI-REENTRY-03 heeft het nieuwe,
+productmatig goedgekeurde Mijn Bibliotheek-doelbeeld in docs/31 §9 vastgelegd:
+rechter filterrail op desktop, mobiel filterblad, zichtbare actieve chips en
+`Meer lezen` per filtergroep met verborgen opties. Het is geen uitvoering
+of nieuwe visuele runtime-GO voor deze historische slice.
+
+Current-status pointer (2026-09-28): UI-MYLIB-01 voert dit latere doelbeeld
+uit; zie `docs/148-ui-mylib-01-implementation-evidence.md`. De historische
+status hieronder wordt daardoor niet herschreven. Renées nieuwe visuele
+schermacceptatie is nog `NOT REVIEWED`.
+
 Current-status pointer (2026-09-27): the disabled Search/Sort and explanatory
 Filters below describe this presentation slice at its original date. Later
 CAT-UI-01 implemented server-backed Mijn Bibliotheek Search, Filter and Sort;
 see `docs/59-cat-ui-01-mijn-bibliotheek-search-filter-sort-integration.md`.
 The Design System in docs/31 remains the visual owner, and the cross-domain
 status is indexed in docs/00-product-decision-index.md.
+UI-REENTRY-02 heeft op 2026-09-27 de hieronder historisch open coverratio-
+keuze als optie B besloten; zie docs/31 §§9 en 11.1. De bij deze slice
+gebruikte `2:3`-crop en de ontbrekende originele weergave zijn nog niet aan
+dat nieuwe ontwerpbesluit aangepast.
+
+UI-REENTRY-02 heeft op dezelfde datum de bestaande Ink Light-werkwaarden als
+visuele productiebaseline (variant A) vastgelegd in docs/31 §4.1. De hieronder
+genoemde tijdelijke status beschrijft alleen de oorspronkelijke slice;
+volledige gerenderde contrast-/statesacceptatie blijft afzonderlijk.
+
+UI-REENTRY-02 heeft daarna Ink Dark (variant A) als visuele productiebaseline
+vastgelegd in docs/31 §4.2. Dark Mode is nog niet geïmplementeerd; de
+historische open-paletvermelding hieronder beschrijft de oorspronkelijke
+grens van deze Ink/Light-slice.
+
+UI-REENTRY-02 heeft ook Cormorant Garamond + Source Sans 3 als fontfamilies
+gekozen in docs/31 §5. Deze slice bewijst slechts de aanwezige font stacks,
+geen productie-fontlevering of visuele acceptatie van de latere referentie.
+De latere desktop- en mobiele basisschalen in die paragraaf zijn
+ontwerpbesluiten, net als het later goedgekeurde typografische basisritme.
+Deze slice implementeert of valideert ze niet.
+
+UI-REENTRY-02 heeft Tabler Icons Outline als algemene iconenbasis gekozen in
+docs/31 §11. Het hieronder beschreven eigen iconensetje is historisch
+implementatiebewijs en nog niet naar deze library omgezet.
 
 This record covers the presentation-only implementation slice that applies
 [`docs/31-biblio-design-system.md`](31-biblio-design-system.md) and

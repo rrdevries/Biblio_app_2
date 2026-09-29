@@ -76,6 +76,15 @@ Appearance is onafhankelijk van Theme en Atmosphere Pack. Theme verandert
 geen informatiearchitectuur of componentstructuur. Atmosphere staat los van
 Theme, Appearance, Genre en Werkmetadata.
 
+**UI-REENTRY-02 — initiële Appearance voor Ink (keuze A, goedgekeurd
+2026-09-27):** zonder expliciete persoonlijke Appearance-keuze start Biblio
+in `Light`, ook wanneer het apparaat donker weergeeft. Met het standaard-Theme
+`Ink` is dat Ink Light. Een expliciete keuze voor `Light` of `Dark` bepaalt de
+weergave rechtstreeks; `System` volgt de licht/donkerinstelling van het
+apparaat en gebruikt het bijbehorende Ink-palet. `System` is geen derde palet.
+De voorkeureninterface, opslag en omschakeling zijn nog geen onderdeel van de
+huidige Ink/Light-runtime en vragen een afzonderlijke implementatieslice.
+
 Theme beïnvloedt onder andere navigatie- en interactieve kleuren, hover/active
 states, subtiele washes, focusdetails, algemene surface textures en Dark
 Mode-surfaces. Algemene sidebar-/page-surface-texture hoort bij Appearance,
@@ -90,21 +99,103 @@ Deze uitbreidingen zijn nog geen uitgewerkt implementatiecontract.
 
 ### 4.1 Light — Soft Ivory
 
-Status: **Definitief qua richting**.
+Status: **Definitief voor Ink Light; overige Light-paletten nog open**.
 
 De lichte hoofdwerkruimte gebruikt **Soft Ivory**: warmer dan zuiver wit, maar
 niet beige of sepia. Zij contrasteert met de diepe sidebar, ondersteunt
-kleurrijke covers en blijft rustig tijdens lange gebruikssessies. Exacte
-hexwaarden zijn nog niet definitief.
+kleurrijke covers en blijft rustig tijdens lange gebruikssessies.
+
+**UI-REENTRY-02 — Ink Light (variant A, goedgekeurd 2026-09-27):** de bestaande
+Ink Light-werkwaarden worden hieronder de exacte visuele productiebaseline.
+Dit is een keuze voor de semantische tokenwaarden, geen wijziging van de
+bestaande CSS en geen nieuwe visuele runtimeacceptatie van alle schermen.
+
+| Rol | Ink Light | Rol | Ink Light |
+|---|---|---|---|
+| `page` | `#F7F4ED` | `surface` | `#FFFDF8` |
+| `surface-elevated` | `#FFFAF0` | `navigation` | `#172238` |
+| `navigation-hover` | `#26334B` | `navigation-active` | `#34425C` |
+| `navigation-text` | `#FFFFFF` | `text-primary` | `#22252B` |
+| `text-secondary` | `#4D535F` | `text-muted` | `#686E78` |
+| `interactive` | `#243B53` | `interactive-hover` | `#172B43` |
+| `interactive-subtle` | `#E9E4D9` | `border` | `#D5CEC0` |
+| `border-strong` | `#9B9385` | `focus` | `#075F9E` |
+| `brass` | `#866214` | `brass-subtle` | `#EEE2C5` |
+| `status-success` | `#276749` | `status-warning` | `#805B10` |
+| `status-danger` | `#9B1C1C` | `book-atmosphere` | `#D9D0C0` |
+
+De statuskleuren blijven gedeelde semantische Light-rollen; de keuze voor Ink
+maakt ze niet Theme-specifiek. `book-atmosphere` is hier alleen de neutrale
+hero-werkkleur, niet een Atmosphere Pack of automatische packselectie.
+
+De contrasttoets van deze tokenwaarden bevestigt de primaire tekst- en
+actieparen op `page`, `surface` en `surface-elevated`, witte tekst op de drie
+navigatiesurfaces en de interactieve actie, en de focuskleur op lichte
+surfaces. De tokens mogen niet willekeurig worden gecombineerd:
+
+- `text-muted` en `brass` op `interactive-subtle` of `brass-subtle` halen voor
+  gewone tekst de `4.5:1`-grens niet; gebruik daar een passend donkerder
+  teksttoken;
+- `border-strong` op `page` haalt als zelfstandige interactieve begrenzing
+  geen `3:1`; een relevante control heeft daarnaast een voldoende duidelijke
+  begrenzing of focusstate nodig.
+
+Directe-tokenberekening volgens de WCAG-contrastformule: `text-primary/page`
+`13.98:1`, `text-muted/page` `4.67:1`, `navigation-text/navigation-active`
+`10.10:1`, `navigation-text/interactive` `11.32:1` en `focus/page` `6.09:1`.
+De vier afgewezen tekstparen hierboven meten respectievelijk `4.05:1`,
+`4.39:1`, `3.99:1` en `4.33:1`; `border-strong/page` meet `2.77:1`.
+
+Dit zijn gebruiksgrenzen voor de goedgekeurde kleuren, geen aanpassing van
+de gekozen hexwaarden. Bij iedere UI-slice blijven de werkelijk gerenderde
+states, overlays, color-mix-combinaties en toegankelijkheid te toetsen. Een
+paletbesluit op zichzelf is geen volledige WCAG- of schermacceptatie.
 
 ### 4.2 Dark
 
-Status: **Definitief qua principe**.
+Status: **Definitief voor Ink Dark; overige Dark-paletten nog open**.
 
 Dark Mode is geen simpele inversie. Iedere Theme-familie levert eigen waarden
 voor page, surfaces, navigatie, interactie, borders en tekst. Ink Dark,
 Aubergine Dark en Petrol Dark blijven herkenbaar verschillend, behouden
 surface-niveaus, worden niet volledig zwart en laten covers spreken.
+
+**UI-REENTRY-02 — Ink Dark (variant A, goedgekeurd 2026-09-27):** het
+blauwzwarte palet hieronder is de exacte visuele productiebaseline voor deze
+Theme/Appearance-combinatie. De getoonde vergelijking hield inhoud en covers
+gelijk aan de Ink Light-vergelijking. Ink Dark is nog niet geïmplementeerd;
+dit besluit geeft geen nieuwe runtime- of schermacceptatie.
+
+| Rol | Ink Dark | Rol | Ink Dark |
+|---|---|---|---|
+| `page` | `#151C28` | `surface` | `#202B3A` |
+| `surface-elevated` | `#2B394C` | `navigation` | `#0C1422` |
+| `navigation-hover` | `#1E2B40` | `navigation-active` | `#2D405B` |
+| `navigation-text` | `#F4F5F3` | `text-primary` | `#F3F1EA` |
+| `text-secondary` | `#CCD3DA` | `text-muted` | `#B2BCC8` |
+| `interactive` | `#AACCEB` | `interactive-hover` | `#C7DFF4` |
+| `interactive-subtle` | `#2A4055` | `border` | `#506176` |
+| `border-strong` | `#7D91A7` | `focus` | `#9DD6FF` |
+| `brass` | `#DDBE81` | `brass-subtle` | `#3B352D` |
+| `status-success` | `#83D7AC` | `status-warning` | `#F2CE80` |
+| `status-danger` | `#F4A4A4` | `book-atmosphere` | `#263448` |
+
+In Ink Dark is `interactive` een lichte kleur die zowel als tekstlink op
+donkere surfaces als achtergrond van een gevulde primaire actie kan werken.
+Op die gevulde actie staat een donkere voorgrond, bijvoorbeeld `page`, en
+geen witte of andere lichte tekst. Dit is de contextuele toepassing van de
+bestaande semantische rollen, geen nieuwe token of wijziging van de vaste
+Theme-architectuur. `book-atmosphere` blijft uitsluitend de neutrale
+hero-werkkleur.
+
+De directe-tokencontrasttoets geeft onder meer `text-primary/page` `15.12:1`,
+`text-muted/surface` `7.44:1`, `navigation-text/navigation-active` `9.62:1`,
+`interactive/page` en `page/interactive` beide `10.21:1`, `focus/page`
+`10.98:1` en `border-strong/page` `5.27:1`. `border/page` meet `2.70:1` en
+mag daarom niet de enige waarneembare begrenzing van een interactieve control
+op de pagina zijn; gebruik daarvoor `border-strong` of een duidelijkere
+focus-/controlstate. Werkelijk gerenderde componenten, overlays, hover- en
+focusstates blijven bij uitvoering afzonderlijk te toetsen.
 
 ### 4.3 Semantische tokens
 
@@ -120,6 +211,7 @@ surface-elevated
 navigation
 navigation-hover
 navigation-active
+navigation-text
 
 text-primary
 text-secondary
@@ -145,12 +237,14 @@ book-atmosphere
 
 Ink, Aubergine en Petrol leveren waarden voor deze rollen. In Light Mode zijn
 Soft Ivory, lichte surfaces, tekst, neutrale borders, statuskleuren en brass
-grotendeels Theme-onafhankelijk. Exacte waarden blijven werkwaarden totdat alle
-combinaties op toegankelijk contrast zijn gevalideerd.
+grotendeels Theme-onafhankelijk. Ink Light en Ink Dark zijn in §§4.1–4.2
+vastgelegd; de exacte Aubergine- en Petrol-combinaties blijven open totdat
+hun eigen visuele keuze en contrasttoets zijn afgerond.
 
 ## 5. Typografie
 
-Status: **Definitief qua richting**.
+Status: **Definitief qua fontfamilies, rolverdeling en basis-desktopschaal;
+overige typografische uitwerking nog open**.
 
 > Serif = inhoudelijke identiteit. Sans-serif = interface, bediening en
 > informatie.
@@ -166,13 +260,79 @@ italic, zodat grote grids scanbaar blijven.
 Sans-serif wordt gebruikt voor navigatie, filters, knoppen, metadata,
 statussen, formulieren, tabellen, lijsten, grafieken en microcopy.
 
-- voorkeurs-serif: **Cormorant Garamond**;
-- voorkeurs-sans: **Source Sans 3**;
-- alternatieve sans: **Inter**.
+**UI-REENTRY-02 — productiefonts (keuze A, goedgekeurd 2026-09-27):**
+**Cormorant Garamond** is de serif voor inhoudelijke identiteit en
+**Source Sans 3** is de sans-serif voor interface, bediening en informatie.
+Inter blijft uitsluitend een technische fallback wanneer Source Sans 3 niet
+beschikbaar is; het is geen tweede bedoelde interfacefont. De bestaande CSS
+noemt deze families al in de font stacks, maar levert geen eigen fontbestanden.
+Fontlevering en de werkelijke weergave in de productie-UI zijn niet bewezen.
 
-De combinatie Cormorant Garamond + Source Sans 3 is nog niet definitief in de
-echte productie-UI gevalideerd. Gewichten, type scale en line-heights zijn nog
-open.
+Renée koos A boven de vergelijking met Inter en boven een later getoonde
+Spectral-variant. Dat besluit betreft de **fontfamilies**, niet de visuele
+acceptatie van de vergelijkingsmock. Renée vindt de aangeleverde warme
+bibliotheekdashboardreferentie duidelijk verfijnder dan die mock; de afzonderlijke
+oorzaken en hun uiteindelijke ontwerpwaarden zijn daarmee nog niet besloten.
+De vergelijkingsmock krijgt geen scherm-GO en is geen pixelprecies
+ontwerpcontract. De basisgewichten en -regelafstanden zijn hieronder apart
+besloten; bijzondere tekstrollen en de uiteindelijke visuele afwerking
+blijven open.
+
+**UI-REENTRY-02 — basis-desktopschaal voor Ink (S1, goedgekeurd
+2026-09-27):** de compacte editoriale schaal heeft de volgende
+rolwaarden. Dit zijn ontwerpwaarden voor de desktopbasis, niet uit pixels
+van de referentieafbeelding gemeten.
+
+| Rol | Desktopschaal |
+|---|---:|
+| Paginatitel | `38px` |
+| Quick View-titel | `30px` |
+| Boektitel in catalogusgrid | `18px` |
+| Algemene interfacetekst | `14px` |
+| Aanvullende metadata | `12px` |
+
+De `12px`-rol is voor aanvullende metadata; wezenlijke inhoud en bediening
+mogen niet automatisch naar deze kleinste rol worden teruggebracht. De
+verdere roltoewijzing, bijzondere tekstrollen, tekstzoom en
+gerenderde leesbaarheid worden afzonderlijk uitgewerkt en getoetst. De
+bestaande CSS bevat verspreide werkwaarden en is nog niet naar deze schaal
+omgezet. S1 geeft geen visuele scherm-GO voor de vergelijkingsmock.
+
+**UI-REENTRY-02 — mobiele basisschaal voor Ink (keuze A, goedgekeurd
+2026-09-27):** de compacte mobiele typografie gebruikt dezelfde vijf rollen
+als de desktopbasis, met de volgende ontwerpwaarden:
+
+| Rol | Mobiele schaal |
+|---|---:|
+| Paginatitel | `32px` |
+| Quick View-titel | `26px` |
+| Boektitel in catalogusgrid | `18px` |
+| Algemene interfacetekst | `16px` |
+| Aanvullende metadata | `12px` |
+
+De `12px`-rol blijft uitsluitend aanvullende metadata; wezenlijke inhoud,
+formuliervelden en bediening gebruiken niet automatisch deze kleinste maat.
+Dit besluit bepaalt de mobiele rolwaarden, niet het breakpoint waarop ze
+ingaan, de precieze responsive compositie of de hieronder afzonderlijk
+besloten basisgewichten en -regelafstanden.
+De typografieproef is geen menselijke visuele GO voor een volledig mobiel
+scherm. Bestaande CSS-werkwaarden zijn niet aangepast; tekstzoom en werkelijk
+gerenderde leesbaarheid blijven te toetsen.
+
+**UI-REENTRY-02 — typografisch basisritme voor Ink (keuze A, goedgekeurd
+2026-09-27):** voor de getoonde pagina-, Quick View- en catalogusboektitels
+geldt Cormorant Garamond `400` met een regelhoogte van `1.04`. Algemene
+Source Sans 3-interfacetekst gebruikt `400` met een regelhoogte van `1.4`.
+Deze verhouding geldt voor de desktop- en mobiele basisschalen hierboven.
+Aanvullende metadata kan hetzelfde sans-serif basisritme volgen; de
+kleinere grootte blijft uitsluitend voor die aanvullende rol.
+
+Dit besluit gaat over het basisritme van deze rollen. Nadruk, actieve
+bediening, langere leestekst, formulieren, uitzonderlijke titelvormen en
+eventuele compactere metadata krijgen alleen waar nodig een afzonderlijke
+rolregel. De proef is geen schermspecifieke visuele GO en bewijst geen
+fontlevering, tekstzoom of gerenderde toegankelijkheid. De CSS is niet
+aangepast.
 
 ## 6. Open compositie en surfaces
 
@@ -303,13 +463,91 @@ Mijn Bibliotheek ondersteunt uiteindelijk drie expliciete views:
 - **Boekenplank:** optionele user-selectable fysieke-kastweergave met ruggen
   naast elkaar en zichtbare titels.
 
-De mogelijke gebruikerskeuze tussen uniforme en oorspronkelijke coverratio is
-nog open.
+**UI-REENTRY-02 — coverpresentatie (keuze B, goedgekeurd 2026-09-27):** in
+covergerichte browsegrids is een uniform `2:3`-kader de standaard. Het echte
+omslagbeeld blijft daarin volledig zichtbaar: niet bijsnijden, oprekken of
+inhoudelijk aanvullen om het kader te vullen. De gebruiker kan expliciet een
+weergave met de oorspronkelijke coververhouding kiezen. Die keuze verandert
+alleen de presentatie en nooit het coverbestand, de bron, bibliografische
+identiteit of metadata. In beide weergaven blijven titels en metadata rustig
+uitgelijnd en scanbaar. Een ontbrekende cover behoudt het expliciete,
+toegankelijke no-cover-object zonder verzonnen afbeelding of verhouding.
+
+Dit is een product-/visual-designbesluit, geen implementatie- of visuele
+runtimeacceptatie. De huidige `2:3`-CSS met `object-fit: cover` en zonder
+keuze voor de oorspronkelijke verhouding is nog een implementatiewerkwaarde;
+aanpassing daarvan vereist een afzonderlijke UI-slice.
 
 Mijn Bibliotheek gebruikt **Functional / Refined Deep Library**: dezelfde
 kleuren, typografie, tokens, surface language en componentfamilie als
 Bibliotheek Home, met minder decoratieve diepte, cover-3D, zware shadows en
 visuele effecten voor voorspelbare scanbaarheid op catalogusschaal.
+
+### UI-REENTRY-03 — goedgekeurd visueel doelbeeld (2026-09-27)
+
+Status: **productmatig goedgekeurd doelbeeld; nog geen implementatie of nieuwe
+visuele runtime-GO**. De vergelijking gebruikte het werkelijke lokale
+DDEV-scherm met een bewaakte, tijdelijke geauthenticeerde testbibliotheek.
+Die fixture bevatte geen echte covers of bekende auteurs; hun werkelijke
+rendering blijft bij uitvoering visueel te toetsen. De eerdere
+UI-FOUND-01-scherm-GO en de CAT-UI-01-technische GO worden niet uitgebreid.
+
+- De bestaande Ink Light-shell en de in §5 vastgelegde desktop- en mobiele
+  rolwaarden bepalen typografie en dichtheid. De pagina behoudt een rustige
+  titel, Library Context en één primaire actie. Grid blijft covergericht,
+  Lijst compact; Search, Sort en `Meer laden` behouden hun echte
+  catalogusgedrag. De mobiele zoektekst en wisactie mogen elkaar niet
+  overlappen.
+- Op desktop opent `Filters` een rechter rail **in de pagina**. Resultaten
+  blijven daarnaast zichtbaar en herschikken binnen de beschikbare breedte.
+  Op mobiel opent dezelfde bediening een afzonderlijk **filterblad**; een
+  lange inline lijst duwt de catalogus daar niet omlaag. De keuze stelt geen
+  nieuw responsive breakpoint vast.
+- Actieve filterchips en `Alle filters wissen` blijven buiten de open rail
+  of het filterblad direct bij de resultaten zichtbaar. Bij filtergroepen
+  met meer opties dan de beknopte eerste reeks toont `Meer lezen` de overige
+  opties binnen die groep; `Minder tonen` vouwt ze weer in. Een aangevinkte
+  optie, actieve chip en catalogusquery blijven daarbij consistent. Groepen
+  zonder verborgen opties krijgen deze bediening niet.
+- De default voor echte covers blijft het in §9 vastgelegde uniforme
+  `2:3`-kader met het volledige beeld zichtbaar; het no-cover-object blijft
+  eerlijk. **Mijn Bibliotheek krijgt geen omslagverhoudingbediening** in
+  toolbar, filterrail of mobiel filterblad. Een eventuele bediening voor de
+  reeds besloten oorspronkelijke-verhoudingkeuze hoort hoogstens bij een
+  afzonderlijk ontwerp voor persoonlijke voorkeuren; deze schermslice
+  verzint daarvoor geen opslag of instellingenjourney.
+- Lege, ladende en fouttoestanden behouden afzonderlijke, leesbare feedback.
+  De feitelijke states, keyboard-/focusgedrag, tekstzoom en responsive
+  hercompositie krijgen na implementatie een eigen runtime- en menselijke
+  schermtoets.
+
+Dit doelbeeld verfijnt de bestaande presentatie. Een ontbrekende
+coverwaarde in de samengestelde catalogusrespons, nieuwe filteroptiebronnen
+of andere ontbrekende data vragen een aparte functionele contractuitbreiding;
+de visuele slice fabriceert die gegevens niet.
+
+### UI-REENTRY-03 — menselijke visual-QA-delta Mijn Bibliotheek (2026-09-29)
+
+Renée heeft de door UI-MYLIB-01 technisch gerealiseerde weergave visueel
+beoordeeld en geeft **nog geen visuele scherm-GO**. De correctie op dit
+schermdoelbeeld omvat precies deze drie presentatiepunten:
+
+- **Filterrail:** de desktoprail oogt minder als een losse kaart en meer als
+  onderdeel van de Soft Ivory-pagina. Border en radius treden terug; ruimte
+  en eventueel een subtiele hairline dragen de scheiding.
+- **Checkboxes:** filteropties gebruiken geen felblauwe standaardbrowsercontrol,
+  maar een custom Biblio-stijl met een rustige Ink-outline. De geselecteerde
+  state gebruikt Ink of het ochre-accent.
+- **Oogknoppen op covers:** deze worden kleiner en rustiger, zonder dominant
+  floating-action-buttongevoel. Op desktop zijn ze alleen zichtbaar bij
+  hover of focus; op mobiel blijven ze direct bereikbaar. Hun functie,
+  toegankelijke naam, toetsenbordbediening, zichtbare focus en bruikbaar
+  aanraakdoel blijven behouden.
+
+Deze visual-QA-delta verandert geen catalogusfunctie of eerder technisch
+testresultaat. De drie correcties en de volledige weergave vragen na
+uitvoering een nieuwe menselijke visuele schermbeoordeling; tot die tijd is
+de visuele acceptatie van UI-MYLIB-01 / Mijn Bibliotheek open.
 
 ## 10. Page header en Quick View
 
@@ -361,6 +599,19 @@ responsive gedrag, accessibility, sizing en loading.
   opvallende spine-/3D-constructie. Grote catalogi krijgen geen zware
   3D-treatment per cover.
 
+De in §9 gekozen coverregel is platformbreed voor `catalog`-presentatie:
+Mijn Bibliotheek en andere covergerichte browsegrids, zoals toekomstige
+Collection-, Author- en Series-views, gebruiken standaard het uniforme kader
+met het volledige omslagbeeld. Waar een volwaardige covergrid bestaat, kan de
+gebruiker de oorspronkelijke verhouding kiezen; compacte resultaatrijen en
+kleine coververwijzingen hoeven daarvoor geen eigen schakelaar te krijgen.
+Search en Verlanglijst tonen een echt omslag, wanneer hun autoritatieve
+contract dat levert, volledig binnen hun beschikbare coverruimte. De
+`featured`-variant en de goedgekeurde Book Detail-compositie blijven hun
+eigen schaal en diepte houden; ook daar wordt echt omslagbeeld niet
+bijgesneden of vervormd. Deze regel voegt geen coverbron, coverbeheer,
+Atmosphere of nieuwe navigatie toe.
+
 Bibliotheek Home volgt daarmee **Expressive Deep Library** en mag relatief
 meer texture, shadow, fysieke coverwerking, decoratieve compositie, Atmosphere
 en ademruimte inzetten. Mijn Bibliotheek volgt **Functional / Refined Deep
@@ -373,8 +624,21 @@ technisch-geometrisch. Active state ontstaat door kleur, achtergrond of accent,
 niet standaard door filled iconen.
 
 Een klein custom domeiniconensetje is toegestaan waar nodig, bijvoorbeeld voor
-Boek, Leesronde, Collectie, Exemplaar en Bibliotheek. De exacte icon library en
-custom set zijn nog open.
+Boek, Leesronde, Collectie, Exemplaar en Bibliotheek.
+
+**UI-REENTRY-02 — iconenbasis (keuze B, goedgekeurd 2026-09-27):**
+**Tabler Icons Outline** is de algemene icon library. Biblio past de iconen
+toe in de al vastgelegde Refined Outline-richting: doorgaans `18–20px` en
+circa `1.5–1.75px` lijngewicht. Het standaardlijngewicht van een library is
+geen nieuwe Biblio-ontwerpwaarde. Labels en betekenis blijven leidend;
+active state gebruikt kleur, achtergrond of accent en niet standaard een
+filled-variant. Een beperkt eigen domeinsetje mag op dezelfde visuele maat en
+lijnlogica aansluiten; de exacte glyphs en mappings blijven per toepasselijke
+UI-slice te bepalen.
+
+De huidige Biblio UI gebruikt een klein stel eigen SVG-maskiconen en nog
+geen Tabler-library. Dit besluit wijzigt die implementatie niet en geeft
+geen visuele scherm-GO of acceptatie van de referentieafbeelding.
 
 ## 12. Acties en interactiestates
 
@@ -713,21 +977,24 @@ De gedeelde minimumkwaliteit is:
 - gedeelde action hierarchy, empty/error/loading/status states, focus, targets,
   reflow en reduced-motion-regels voor Mijn Bibliotheek en flows zoals Add Book.
 
-Deze baseline canoniseert geen nog open exacte kleurwaarden, productiefonts,
-icon library, coverratio-keuze, Atmosphere-assets of Bookshelf-gedrag. De
-technische closure en het bewijs staan in
+Deze historische UI-FOUND-01-baseline canoniseerde destijds geen exacte
+kleurwaarden, productiefonts, icon library, coverratio-keuze,
+Atmosphere-assets of Bookshelf-gedrag. De coverpresentatie is later door
+UI-REENTRY-02 in §§9 en 11.1 besloten, de productiefonts in §5 en de
+iconenbasis in §11; de
+technische uitvoering en volledige visuele acceptatie daarvan zijn nog niet
+geleverd. De technische closure en het bewijs van UI-FOUND-01 staan in
 [`docs/54-ui-found-01-app-shell-and-mijn-bibliotheek-visual-baseline.md`](54-ui-found-01-app-shell-and-mijn-bibliotheek-visual-baseline.md).
 
 ## 18. Nog open en werkwaarden
 
 De volgende punten zijn bewust niet definitief:
 
-- exacte Light/Dark-hexwaarden voor Ink, Aubergine en Petrol;
-- brass-kleur en WCAG-validatie van alle combinaties;
-- productievalidatie van Cormorant Garamond + Source Sans 3;
-- fontweights, type scale en line-heights;
-- icon library en custom Biblio-icons;
-- uniforme of oorspronkelijke coverratio als gebruikerskeuze;
+- exacte Aubergine/Petrol Light/Dark-hexwaarden;
+- WCAG-validatie van werkelijk gerenderde states en de nog open combinaties;
+- productie-fontlevering en validatie van Cormorant Garamond + Source Sans 3;
+- afwijkende gewichten en regelafstanden voor bijzondere typografische rollen;
+- exacte custom Biblio-icons en iconmapping per toepasselijke UI-slice;
 - Storyscape-assets, Nature-assets en Book Cover-treatments;
 - exact cover-matching-algoritme;
 - custom en seasonal Atmosphere Packs;
