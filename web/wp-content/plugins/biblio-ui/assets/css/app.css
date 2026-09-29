@@ -1188,9 +1188,10 @@ body.admin-bar.biblio-app-shell-page {
 
 [data-biblio-ui-root] .biblio-ui__filter-panel {
     align-self: start;
-    background: var(--biblio-color-surface);
-    border: var(--biblio-boundary-width) solid var(--biblio-color-border);
-    border-radius: var(--biblio-radius-overlay);
+    background: var(--biblio-color-page);
+    border: 0;
+    border-inline-start: var(--biblio-boundary-width) solid var(--biblio-color-border);
+    border-radius: 0;
     color: var(--biblio-color-text-primary);
     display: grid;
     gap: var(--biblio-space-1);
@@ -1199,7 +1200,7 @@ body.admin-bar.biblio-app-shell-page {
     max-block-size: calc(100dvb - var(--biblio-space-8));
     max-inline-size: none;
     overflow: auto;
-    padding: var(--biblio-space-4);
+    padding: 0 0 var(--biblio-space-4) var(--biblio-space-6);
     position: sticky;
     top: var(--biblio-space-4);
 }
@@ -1256,8 +1257,40 @@ body.admin-bar.biblio-app-shell-page {
 }
 
 [data-biblio-ui-root] .biblio-ui__filter-option input {
-    block-size: 1.1rem;
-    inline-size: 1.1rem;
+    appearance: none;
+    background: var(--biblio-color-surface);
+    block-size: 1.125rem;
+    border: 2px solid var(--biblio-color-interactive);
+    border-radius: 0.1875rem;
+    cursor: pointer;
+    flex: 0 0 1.125rem;
+    inline-size: 1.125rem;
+    margin: 0;
+    min-block-size: 1.125rem;
+}
+
+[data-biblio-ui-root] .biblio-ui__filter-option input:hover:not(:disabled) {
+    background-color: var(--biblio-color-interactive-subtle);
+    border-color: var(--biblio-color-interactive-hover);
+}
+
+[data-biblio-ui-root] .biblio-ui__filter-option input:checked {
+    background: var(--biblio-color-interactive);
+    border-color: var(--biblio-color-interactive);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m3 8 3.2 3.2L13 4.5' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
+}
+
+[data-biblio-ui-root] .biblio-ui__filter-option input:checked:hover:not(:disabled) {
+    background-color: var(--biblio-color-interactive-hover);
+    border-color: var(--biblio-color-interactive-hover);
+}
+
+[data-biblio-ui-root] .biblio-ui__filter-option input:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
 }
 
 [data-biblio-ui-root] .biblio-ui__filter-chips {
@@ -1445,16 +1478,58 @@ body.admin-bar.biblio-app-shell-page {
 }
 
 [data-biblio-ui-root] .biblio-ui__quick-view-trigger {
-    background: color-mix(in srgb, var(--biblio-color-surface) 92%, transparent);
-    border-color: var(--biblio-color-border);
-    border-radius: 50%;
-    box-shadow: var(--biblio-control-shadow);
+    background: transparent;
+    border: 0;
+    border-radius: var(--biblio-radius-compact);
+    box-shadow: none;
+    color: var(--biblio-color-navigation-text);
     inset: var(--biblio-space-2) auto auto min(calc(var(--biblio-cover-width) - 2.75rem), calc(100% - 2.75rem));
     justify-self: start;
     min-block-size: var(--biblio-control-min);
     min-inline-size: var(--biblio-control-min);
-    padding: var(--biblio-space-2);
+    padding: 0;
     position: absolute;
+}
+
+[data-biblio-ui-root] .biblio-ui__quick-view-trigger::before {
+    background: color-mix(in srgb, var(--biblio-color-navigation) 82%, transparent);
+    border: var(--biblio-boundary-width) solid color-mix(in srgb, var(--biblio-color-navigation-text) 35%, transparent);
+    border-radius: var(--biblio-radius-compact);
+    block-size: 1.875rem;
+    content: "";
+    inline-size: 1.875rem;
+    inset: 50% auto auto 50%;
+    position: absolute;
+    transform: translate(-50%, -50%);
+}
+
+[data-biblio-ui-root] .biblio-ui__quick-view-trigger .biblio-ui__icon {
+    block-size: 1rem;
+    flex-basis: 1rem;
+    inline-size: 1rem;
+    position: relative;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    [data-biblio-ui-root] .biblio-ui__catalog-list[data-catalog-view="grid"] .biblio-ui__quick-view-trigger {
+        opacity: 0;
+    }
+
+    [data-biblio-ui-root] .biblio-ui__catalog-list[data-catalog-view="grid"] .biblio-ui__catalog-item:hover .biblio-ui__quick-view-trigger,
+    [data-biblio-ui-root] .biblio-ui__catalog-list[data-catalog-view="grid"] .biblio-ui__catalog-item:focus-within .biblio-ui__quick-view-trigger {
+        opacity: 1;
+    }
+}
+
+[data-biblio-ui-root] .biblio-ui__quick-view-trigger.biblio-ui__control--tertiary:not(:disabled):hover {
+    background: transparent;
+    color: var(--biblio-color-navigation-text);
+}
+
+[data-biblio-ui-root] .biblio-ui__quick-view-trigger:hover::before,
+[data-biblio-ui-root] .biblio-ui__quick-view-trigger:focus-visible::before {
+    background: var(--biblio-color-navigation);
+    border-color: var(--biblio-color-navigation-text);
 }
 
 [data-biblio-ui-root] .biblio-ui__catalog-list[data-catalog-view="list"] {
@@ -1663,6 +1738,8 @@ body.admin-bar.biblio-app-shell-page {
     }
 
     [data-biblio-ui-root] .biblio-ui__filter-panel {
+        background: var(--biblio-color-surface);
+        border: var(--biblio-boundary-width) solid var(--biblio-color-border);
         border-block-end: 0;
         border-radius: var(--biblio-radius-overlay) var(--biblio-radius-overlay) 0 0;
         box-shadow: var(--biblio-overlay-shadow);
@@ -1779,6 +1856,10 @@ body.admin-bar.biblio-app-shell-page {
     [data-biblio-ui-root] .biblio-ui__catalog-list[data-catalog-view="grid"] {
         gap: var(--biblio-space-8) var(--biblio-space-4);
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    [data-biblio-ui-root] .biblio-ui__catalog-list[data-catalog-view="grid"] .biblio-ui__quick-view-trigger {
+        opacity: 1;
     }
 
     [data-biblio-ui-root] .biblio-ui__cover--overview {
