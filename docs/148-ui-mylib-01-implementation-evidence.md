@@ -6,6 +6,43 @@ Branch: `wip/shared-search-rebuild`
 Start HEAD: `c020924062839d86e2120ae4da63a800e171f832`
 Core: `2.51.2` unchanged; Biblio UI: `0.20.0` → `0.21.0`; schema unchanged.
 
+## UI-MYLIB-01-F1 — visual-QA-correcties (2026-09-29)
+
+Status: **IMPLEMENTED / HUMAN VISUAL ACCEPTANCE NOT REVIEWED**.
+Start HEAD: `ab6a57c864d7e51ef45e229a00437c0e1c524bf4` op
+`wip/shared-search-rebuild`. De reeds goedgekeurde UI-REENTRY/UI-MYLIB-
+documentatiewijzigingen zijn vooraf apart vastgelegd als `abafb0e`; de
+designbesluiten in docs/31 zijn niet gewijzigd. Biblio UI is voor deze
+CSS-correctie verhoogd van `0.21.0` naar `0.21.1` om de assetcache te verversen.
+
+- De desktopfilterrail gebruikt de Soft Ivory-pagina als achtergrond, een
+  terughoudende linker hairline en geen kaartradius. De bestaande in-page
+  gridhercompositie, filtergroepen en bediening blijven intact. Het mobiele
+  modale filterblad behoudt zijn eigen lichte surface en sheet-afbakening.
+- Filteropties blijven native checkboxes met Biblio Ink-outline, een donkere
+  geselecteerde state met wit vinkje, hover/focus en disabled-presentatie.
+  Hun label, toetsenbordbediening, checked-state en querysemantiek blijven
+  behouden.
+- De cover-oogknop heeft een kleinere, donkere visuele vorm binnen het
+  bestaande 44px-doel. In desktop Grid is hij rustig verborgen tot tile-hover
+  of keyboard focus; in mobiel Grid en op touch is hij direct zichtbaar.
+  Accessible name, Quick View-functie en zichtbare focus blijven intact.
+
+Gerichte Chromium-runtimecontrole op de echte DDEV-pagina: desktop Grid zonder
+en met rail, een actief filter via `Space`, checked-state, tile-hover en
+keyboardfocus, mobiel Grid, filterblad met aangevinkte optie, en een echte
+touch-context met tap op de oogknop slaagden (`1/1`). De afzonderlijke
+1440/1024/768/390px- en 200%-reflowcheck slaagde (`1/1`). De finale
+`NODE_OPTIONS=--no-experimental-webstorage ./scripts/test-biblio-ui-smoke.sh`
+gate slaagde: PHP-lint, geïsoleerde UI-smoke, JS-syntax en 285/285 frontendtests.
+`git diff --check` slaagde. De synthetische fixture is dubbel opgeruimd; alle
+fixturecounts zijn nul en de niet-fixture fingerprint bleef 28.758 Core-rijen
+met SHA-256 `08f4f7ee917e2fc910973f238185e1221b04f7f962f17899622147de7ecda82a`.
+
+De runtime bevat nog geen echte omslagwaarde in de catalogusrespons. Deze
+technische checks en screenshots vormen geen menselijke visuele acceptatie;
+Renée moet de gecorrigeerde desktop- en mobiele weergave opnieuw beoordelen.
+
 ## Approved target and implementation
 
 The implementation follows the product-approved UI-REENTRY-03 target in

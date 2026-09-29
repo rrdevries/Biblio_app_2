@@ -200,6 +200,17 @@ test("approved desktop filter rail and mobile filter sheet preserve catalog cont
     await page.goto(LIBRARY_URL);
     const cards = page.locator("[data-biblio-view='overview'] [data-biblio-item-id]");
     await expect(cards).toHaveCount(24);
+    const eye = cards.first().getByRole("button", { name: /Snel bekijken/ });
+    await expect(eye).toHaveCSS("opacity", "0");
+    await cards.first().locator(".biblio-ui__book-link").focus();
+    await page.keyboard.press("Tab");
+    await expect(eye).toBeFocused();
+    await expect(eye).toHaveCSS("opacity", "1");
+    expect(await eye.evaluate((node) => getComputedStyle(node).outlineStyle)).toBe("solid");
+    await page.getByRole("heading", { name: "Mijn Bibliotheek" }).focus();
+    await cards.first().hover();
+    await expect(eye).toHaveCSS("opacity", "1");
+    await page.screenshot({ animations: "disabled", fullPage: false, path: ".local/ui-mylib-01-screenshots/desktop-eye-hover.png" });
     await page.getByRole("button", { name: "Filters", exact: true }).click();
     const panel = page.locator("#biblio-filter-panel");
     await expect(panel).toBeVisible();
@@ -214,6 +225,10 @@ test("approved desktop filter rail and mobile filter sheet preserve catalog cont
             titleFont: getComputedStyle(document.querySelector(".biblio-ui__book-title")).fontFamily,
             bodyFont: getComputedStyle(document.querySelector("[data-biblio-view='overview']")).fontFamily,
             eyeIcon: getComputedStyle(document.querySelector("[data-biblio-view='overview'] [data-biblio-icon='eye']")).maskImage,
+            railBackground: getComputedStyle(panel).backgroundColor,
+            pageBackground: getComputedStyle(document.querySelector("[data-biblio-ui-root]")).backgroundColor,
+            railRadius: getComputedStyle(panel).borderTopLeftRadius,
+            railLeftBorder: getComputedStyle(panel).borderLeftWidth,
         };
     });
     expect(desktop.panelLeft).toBeGreaterThanOrEqual(desktop.resultsRight);
@@ -222,6 +237,9 @@ test("approved desktop filter rail and mobile filter sheet preserve catalog cont
     expect(desktop.titleFont).toContain("Biblio Catalog Cormorant Garamond");
     expect(desktop.bodyFont).toContain("Biblio Catalog Source Sans 3");
     expect(desktop.eyeIcon).toContain("tabler-eye.svg");
+    expect(desktop.railBackground).toBe(desktop.pageBackground);
+    expect(desktop.railRadius).toBe("0px");
+    expect(desktop.railLeftBorder).toBe("1px");
     const loadedFonts = await page.evaluate(async () => {
         await document.fonts.ready;
         return Array.from(document.fonts)
@@ -246,7 +264,12 @@ test("approved desktop filter rail and mobile filter sheet preserve catalog cont
 
     const reading = panel.getByRole("group", { name: "Leesstatus" })
         .getByRole("checkbox", { name: "Niet gelezen" });
-    await waitForFirstPage(page, () => reading.check());
+    await expect(reading).toHaveCSS("appearance", "none");
+    await reading.focus();
+    expect(await reading.evaluate((node) => getComputedStyle(node).outlineStyle)).toBe("solid");
+    await waitForFirstPage(page, () => reading.press("Space"));
+    await expect(reading).toBeChecked();
+    await expect(reading).toHaveCSS("background-color", "rgb(36, 59, 83)");
     await expect(page.locator(".biblio-ui__catalog-main .biblio-ui__filter-chips")).toBeVisible();
     await expect(page.locator("#biblio-filter-panel .biblio-ui__filter-chips")).toHaveCount(0);
     await page.getByRole("button", { name: "Alle filters wissen" }).click();
@@ -254,15 +277,24 @@ test("approved desktop filter rail and mobile filter sheet preserve catalog cont
 
     await page.setViewportSize({ width: 390, height: 844 });
     await expectNoHorizontalOverflow(page);
+    await expect(eye).toHaveCSS("opacity", "1");
+    expect(await eye.evaluate((node) => node.getBoundingClientRect().width)).toBeGreaterThanOrEqual(44);
+    await page.screenshot({ animations: "disabled", fullPage: false, path: ".local/ui-mylib-01-screenshots/mobile-books.png" });
     await page.getByRole("button", { name: "Filters", exact: true }).click();
     await expect(panel).toBeVisible();
     expect(await panel.evaluate((node) => node.matches(":modal"))).toBe(true);
     await expect(panel.getByRole("button", { name: "Filters sluiten" })).toBeFocused();
     await expect(cards).toHaveCount(24);
+    const mobileReading = panel.getByRole("group", { name: "Leesstatus" })
+        .getByRole("checkbox", { name: "Niet gelezen" });
+    await waitForFirstPage(page, () => mobileReading.check());
+    await expect(mobileReading).toBeChecked();
+    await expect(mobileReading).toHaveCSS("background-image", /svg/);
     await page.screenshot({ animations: "disabled", fullPage: false, path: ".local/ui-mylib-01-screenshots/mobile-sheet.png" });
     await panel.press("Escape");
     await expect(panel).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Filters", exact: true })).toBeFocused();
+    await expect(page.getByRole("button", { name: /^Filters \(1\)$/ })).toBeFocused();
+    await page.getByRole("button", { name: "Alle filters wissen" }).click();
     await page.getByRole("button", { name: "Filters", exact: true }).click();
     await panel.getByRole("button", { name: "Filters sluiten" }).click();
     await expect(panel).toHaveCount(0);
@@ -275,4 +307,24 @@ test("approved desktop filter rail and mobile filter sheet preserve catalog cont
     }));
     expect(searchSpacing.padding).toBeGreaterThan(searchSpacing.clear);
     await expectNoHorizontalOverflow(page);
+
+    const touchContext = await page.context().browser().newContext({
+        baseURL: process.env.BIBLIO_E2E_BASE_URL,
+        storageState: await page.context().storageState(),
+        ignoreHTTPSErrors: true,
+        hasTouch: true,
+        isMobile: true,
+        viewport: { width: 390, height: 844 },
+    });
+    try {
+        const touchPage = await touchContext.newPage();
+        await touchPage.goto(LIBRARY_URL);
+        const touchEye = touchPage.locator(".biblio-ui__catalog-list[data-catalog-view='grid'] .biblio-ui__quick-view-trigger").first();
+        await expect(touchEye).toBeVisible();
+        await expect(touchEye).toHaveCSS("opacity", "1");
+        await touchEye.tap();
+        await expect(touchPage.locator(".biblio-ui__quick-view")).toBeVisible();
+    } finally {
+        await touchContext.close();
+    }
 });
