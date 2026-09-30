@@ -1222,6 +1222,11 @@ body.admin-bar.biblio-app-shell-page {
     min-inline-size: 0;
 }
 
+[data-biblio-ui-root] .biblio-ui__catalog-main:has(.biblio-ui__empty-state) {
+    align-content: start;
+    gap: var(--biblio-space-4);
+}
+
 [data-biblio-ui-root] .biblio-ui__filter-panel-header {
     align-items: center;
     display: flex;
@@ -1317,6 +1322,10 @@ body.admin-bar.biblio-app-shell-page {
 
 [data-biblio-ui-root] .biblio-ui__empty-state > .biblio-ui__icon {
     color: var(--biblio-color-brass);
+}
+
+[data-biblio-ui-root] .biblio-ui__catalog-main > .biblio-ui__empty-state {
+    padding-block-start: var(--biblio-space-4);
 }
 
 [data-biblio-ui-root] .biblio-ui__filter-heading {
@@ -1568,8 +1577,17 @@ body.admin-bar.biblio-app-shell-page {
 }
 
 [data-biblio-ui-root] .biblio-ui__catalog-list[data-catalog-view="list"] .biblio-ui__quick-view-trigger {
+    color: var(--biblio-color-text-secondary);
     inset: auto;
     position: static;
+}
+
+[data-biblio-ui-root] .biblio-ui__catalog-list[data-catalog-view="list"] .biblio-ui__quick-view-trigger::before {
+    content: none;
+}
+
+[data-biblio-ui-root] .biblio-ui__catalog-list[data-catalog-view="list"] .biblio-ui__quick-view-trigger:is(:hover, :focus-visible) {
+    color: var(--biblio-color-interactive-hover);
 }
 
 [data-biblio-ui-root] .biblio-ui__catalog-layout:has(.biblio-ui__filter-panel) .biblio-ui__catalog-list[data-catalog-view="list"] .biblio-ui__book-copy {

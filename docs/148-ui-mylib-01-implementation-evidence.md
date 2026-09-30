@@ -1,10 +1,45 @@
 # UI-MYLIB-01 — Mijn Bibliotheek visual reconciliation
 
-Status: **TECHNICAL GO / HUMAN VISUAL ACCEPTANCE NOT REVIEWED**
+Status: **TECHNICAL GO / HUMAN VISUAL ACCEPTANCE OPEN**
 Date: 2026-09-28
 Branch: `wip/shared-search-rebuild`
 Start HEAD: `c020924062839d86e2120ae4da63a800e171f832`
 Core: `2.51.2` unchanged; Biblio UI: `0.20.0` → `0.21.0`; schema unchanged.
+
+## UI-MYLIB-01-F2 — List en lege toestand (2026-09-30)
+
+Status: **IMPLEMENTED / HUMAN VISUAL ACCEPTANCE OPEN**.
+Start HEAD: `c17d70cf567c1fdc03ee2de52934776fc6cc58a9` op
+`wip/shared-search-rebuild`. Biblio UI is voor de CSS-cache verhoogd van
+`0.21.1` naar `0.21.2`; Core en schema blijven gelijk.
+
+- De donkere vierkanten in List kwamen van de `::before`-achtergrond van de
+  Grid-oogknop. In List is de oogknop `position: static`; de absoluut
+  gepositioneerde achtergrond gebruikte daardoor de rij als positionerings-
+  context en verscheen los bij de auteurs. Alleen in List vervalt die
+  achtergrond. Het oog blijft rechts in het bestaande 44px-doel, krijgt een
+  rustige tekstkleur en behoudt hover, zichtbare keyboardfocus, accessible
+  name en Quick View via `Enter`. De rij-inhoud en query blijven gelijk.
+- Bij nul resultaten gebruikt de resultaatskolom `align-content: start`, een
+  `--biblio-space-4`-gap en `--biblio-space-4` bovenruimte in de bestaande
+  empty state. Dit voorkomt dat een hoge geopende filterrail de lege toestand
+  uitrekt. Chips, bestaande tekst, semantiek en open compositie blijven staan.
+
+De finale bewaakte Chromium-run op de echte DDEV-pagina slaagde (`1/1`):
+desktop List met rail dicht en open, standaard/hover/keyboardfocus, geen
+`::before`-artifact, Quick View via `Enter`, nul resultaten na één actieve
+filter met zichtbare chip, en mobiele List/empty-state-reflow. De screenshots
+onder `.local/e2e-results/` tonen een compacte afstand tussen chip en melding.
+De fixture is dubbel opgeruimd; `verify-clean` meldde nul fixture-rijen en de
+non-fixture fingerprint vóór/na bleef identiek: 28.758 Core-rijen, SHA-256
+`08f4f7ee917e2fc910973f238185e1221b04f7f962f17899622147de7ecda82a`.
+
+De gerichte `overview-view`- en `design-contract`-tests slaagden (`19/19`).
+De finale `NODE_OPTIONS=--no-experimental-webstorage ./scripts/test-biblio-ui-smoke.sh`
+gate slaagde met PHP-lint, geïsoleerde
+UI-smoke, JS-syntax en `285/285` frontendtests. `git diff --check` slaagde.
+Geen push.
+Deze technische evidence is geen menselijke visuele schermacceptatie.
 
 ## UI-MYLIB-01-F1 — visual-QA-correcties (2026-09-29)
 
