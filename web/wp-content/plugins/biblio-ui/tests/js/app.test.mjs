@@ -48,6 +48,8 @@ function mount() {
             restRoot: "https://example.test/wp-json/biblio/v1/",
             restNonce: "rest-nonce",
             overviewUrl: "https://example.test/mijn-bibliotheek/",
+            platformUrl: "https://example.test/mijn-biblio/",
+            libraryHomeUrl: "https://example.test/bibliotheek-home/",
             searchUrl: "https://example.test/zoeken/",
             wishlistUrl: "https://example.test/verlanglijst/",
             nextReadingUrl: "https://example.test/hierna-lezen/",
@@ -100,14 +102,19 @@ test("mount configuration is the sole API bootstrap source", () => {
         restRoot: "https://example.test/wp-json/biblio/v1/",
         restNonce: "rest-nonce",
         overviewUrl: "https://example.test/mijn-bibliotheek/",
+        platformUrl: "https://example.test/mijn-biblio/",
+        libraryHomeUrl: "https://example.test/bibliotheek-home/",
         searchUrl: "https://example.test/zoeken/",
         wishlistUrl: "https://example.test/verlanglijst/",
         nextReadingUrl: "https://example.test/hierna-lezen/",
         loginUrl: "https://example.test/wp-login.php?redirect_to=library",
+        accountState: "guest",
+        accountName: "",
+        logoutUrl: "",
     });
 });
 
-test("Library bootstrap uses only me/libraries and canonicalizes one Library", async () => {
+test("Library bootstrap uses only me/libraries and requires explicit selection", async () => {
     const apiConfigurations = [];
     const requests = [];
     const browser = browserDouble(
@@ -130,22 +137,19 @@ test("Library bootstrap uses only me/libraries and canonicalizes one Library", a
     });
 
     assert.deepEqual(await app.loadLibraryContext(), {
-        state: "selected",
-        library: onlyLibrary,
-        canonicalize: true,
+        state: "chooser",
+        libraries: [onlyLibrary],
     });
     assert.deepEqual(apiConfigurations, [{
         restRoot: "https://example.test/wp-json/biblio/v1/",
         restNonce: "rest-nonce",
     }]);
     assert.deepEqual(requests, [["me/libraries", { signal: undefined }]]);
-    assert.deepEqual(browser.historyCalls, [[
-        "replace",
-        null,
-        "",
-        "https://example.test/mijn-bibliotheek/"
-            + "?library_id=library-1&item_id=item-1",
-    ]]);
+    assert.deepEqual(browser.historyCalls, []);
+    assert.equal(
+        browser.location.href,
+        "https://example.test/mijn-bibliotheek/?item_id=item-1"
+    );
 });
 
 test("an unavailable URL Library is not repaired or replaced", async () => {

@@ -493,6 +493,7 @@ function createApp({
         historyImpl: browser.history,
         locationImpl: browser.location,
         eventTarget: browser.eventTarget,
+        sessionStorageImpl: null,
         viewFactory: renders.factory,
         detailViewFactory: detailRenders.factory,
         endReadingViewFactory: endReadingRenders.factory,
@@ -599,6 +600,11 @@ test("zero, chooser and unavailable Library states never request Items", async (
             expected: "library-chooser",
         },
         {
+            url: "https://example.test/mijn-bibliotheek/",
+            libraries: [library("personal", { designated: true })],
+            expected: "library-chooser",
+        },
+        {
             url: "https://example.test/mijn-bibliotheek/?library_id=missing",
             libraries: [library("one", { designated: true })],
             expected: "library-unavailable",
@@ -667,7 +673,7 @@ test("a selected Library loads only the exact active overview contract", async (
     const requests = [];
     const renders = recorder();
     const { app } = createApp({
-        url: "https://example.test/mijn-bibliotheek/",
+        url: "https://example.test/mijn-bibliotheek/?library_id=library%2Fone",
         renders,
         async get(path, options) {
             requests.push([path, options.signal]);
@@ -2401,7 +2407,7 @@ test("Meer laden follows only the opaque cursor and appends in order", async () 
     const requests = [];
     const renders = recorder();
     const { app } = createApp({
-        url: "https://example.test/mijn-bibliotheek/",
+        url: "https://example.test/mijn-bibliotheek/?library_id=library-1",
         renders,
         async get(path) {
             requests.push(path);
@@ -2436,7 +2442,7 @@ test("a late cursor response cannot append after a newer query wins", async () =
     const oldCursor = deferred();
     const renders = recorder();
     const { app } = createApp({
-        url: "https://example.test/mijn-bibliotheek/",
+        url: "https://example.test/mijn-bibliotheek/?library_id=library-1",
         renders,
         get(path) {
             if (path === "me/libraries") {
@@ -2478,7 +2484,7 @@ test("invalid cursor keeps Items, permits one retry and can restart page one", a
         message: "A request field has invalid syntax.",
     });
     const { app } = createApp({
-        url: "https://example.test/mijn-bibliotheek/",
+        url: "https://example.test/mijn-bibliotheek/?library_id=library-1",
         renders,
         async get(path) {
             if (path === "me/libraries") {
@@ -2531,7 +2537,7 @@ test("overview failures render only safe retry or Library-unavailable states", a
         message: "The requested Biblio resource is not available.",
     });
     const { app } = createApp({
-        url: "https://example.test/mijn-bibliotheek/",
+        url: "https://example.test/mijn-bibliotheek/?library_id=library-1",
         renders,
         async get(path) {
             if (path === "me/libraries") {

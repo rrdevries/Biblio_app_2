@@ -752,10 +752,16 @@ export function readMountConfig(mount) {
         restRoot: mountValue(mount, "restRoot"),
         restNonce: mountValue(mount, "restNonce"),
         overviewUrl: mountValue(mount, "overviewUrl"),
+        platformUrl: mount?.dataset?.platformUrl ?? "",
+        libraryHomeUrl: mount?.dataset?.libraryHomeUrl ?? "",
         searchUrl: mountValue(mount, "searchUrl"),
         wishlistUrl: mountValue(mount, "wishlistUrl"),
         nextReadingUrl: mountValue(mount, "nextReadingUrl"),
         loginUrl: mountValue(mount, "loginUrl"),
+        accountState: mount?.dataset?.accountState === "authenticated"
+            ? "authenticated" : "guest",
+        accountName: mount?.dataset?.accountName ?? "",
+        logoutUrl: mount?.dataset?.logoutUrl ?? "",
     });
 }
 
@@ -824,9 +830,15 @@ export function createLibraryApp(mount, {
                     documentImpl,
                     eventTarget,
                     overviewUrl: config.overviewUrl,
+                    platformUrl: config.platformUrl,
+                    libraryHomeUrl: config.libraryHomeUrl,
                     searchUrl: config.searchUrl,
                     wishlistUrl: config.wishlistUrl,
                     nextReadingUrl: config.nextReadingUrl,
+                    loginUrl: config.loginUrl,
+                    accountState: config.accountState,
+                    accountName: config.accountName,
+                    logoutUrl: config.logoutUrl,
                     activeDestination: "library",
                 })
                 : Object.freeze({
@@ -1086,6 +1098,8 @@ export function createLibraryApp(mount, {
         }
 
         render({ state: "library-loading" });
+        applicationRoot();
+        shell?.setLibraryContext?.(null);
 
         try {
             const resolution = await loadLibraryContext({
@@ -1105,6 +1119,7 @@ export function createLibraryApp(mount, {
 
             assertLibraryPresentation(resolution.library);
             selectedLibraryId = resolution.library.library_id;
+            shell?.setLibraryContext?.(resolution.library);
             const routeState = routes.read();
 
             if (routeState.itemId !== null) {

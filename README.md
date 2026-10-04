@@ -1,105 +1,36 @@
 # Biblio V2
 
-Lokale ontwikkelomgeving voor Biblio V2.
+Lokale ontwikkelomgeving voor Biblio V2. De huidige productlijn is v2.001.
 
-## Baseline
+## Vereisten
 
-- Biblio: v2.001
-- WordPress: 7.0.2
-- PHP: 8.3
-- MariaDB: 10.11
-- DDEV
-- Docker-provider op macOS: OrbStack
+- DDEV met een werkende Docker-provider
+- Composer voor de vastgelegde PHP-afhankelijkheden
+- Node.js voor de JavaScript- en browsertests
 
-## Lokale URL
-
-https://biblio-v2.ddev.site
-
-## Biblio Core setup en tests
-
-Installeer na een verse checkout eerst de vastgelegde Composer-dependencies:
+## Lokale start
 
 ```bash
+ddev start
 ddev composer --working-dir=web/wp-content/plugins/biblio-core install
 ./scripts/bootstrap-wordpress.sh
 ddev wp plugin activate biblio-core
 ```
 
-Voer daarna de canonieke volledige quality gate uit vanaf de projectroot:
+De lokale URL is `https://biblio-v2.ddev.site`.
+
+## Tests
+
+De volledige Core-controle is beschikbaar via:
 
 ```bash
 ./scripts/test-biblio-core-all.sh
 ```
 
-Deze ene opdracht valideert Composer-metadata en platformrequirements, lint alle
-plugin-PHP, analyseert `src` met PHPStan, draait de volledige unit- en
-integratiesuites, voert de WordPress-smoke uit, valideert `manifest.json` en
-controleert beide Git-diffs op whitespacefouten. De gate faalt bij de eerste
-fout en controleert bij afsluiten dat zij de zichtbare repositorystatus niet
-heeft gewijzigd. De afzonderlijke unit-, integratie- en smoke-scripts blijven
-beschikbaar voor gericht lokaal werk.
-
-De integratietest gebruikt uitsluitend de wegwerpdatabase
-`biblio_core_test`. Het script bouwt die database per run opnieuw op en
-verwijdert haar ook wanneer de test faalt. De normale DDEV-database `db`
-wordt niet als testdatabase gebruikt; de smoke leest de reeds ingerichte lokale
-WordPress-runtime alleen uit.
+Gerichte UI- en browsertests staan onder `web/wp-content/plugins/biblio-ui/tests/` en `e2e/`. Gebruik voor browsertests de bewaakte tijdelijke fixture onder `scripts/e2e-fixture.sh` en controleer na afloop dat deze is opgeruimd.
 
 ## Architectuur
 
-Biblio V2 wordt gebouwd als één WordPress-site met een custom Biblio Core-plugin.
+Biblio V2 draait als één WordPress-site. `biblio-core` beheert domeinregels, autorisatie, bibliotheekcontext en persistente gegevens. `biblio-ui` verzorgt de presentatie en gebruikt de Core-contracten. De versies van product, schema en plugins worden onafhankelijk beheerd.
 
-Biblio Core is eigenaar van business rules, autorisatie, bibliotheekcontext, lifecycle-transities en integriteitsregels.
-
-Biblio-owned custom tables zijn de in Fase 0 bewezen baseline voor
-integriteits-, scope-, transactie- en concurrencygevoelige Core-data.
-Persistence blijft per domein beoordeeld volgens ADR-004.
-
-De formeel ondersteunde Core-schemahistorie begint op schema baseline `1000`.
-Productversie `v2.001`, de huidige Core-pluginversie `2.51.2`, UI-pluginversie
-`0.20.0` en huidige schemaversie `1026` zijn onafhankelijke dimensies
-(repositorycheck 2026-09-27). Zie ADR-005. Pluginactivation voert de formele
-migration en schema-healthcheck uit. Tijdens normale runtime controleert Core vroeg de
-schemaversie en gebruikt het een kortlevende health-cache; alleen een gezonde
-runtime publiceert de getypeerde application-serviceboundary.
-
-Historisch F1.4-checkpoint: de toen bestaande production application services
-bepaalden hun actor uitsluitend server-side via WordPress. Caller-input kan
-wel een Library als target selecteren, maar nooit de actor of een vertrouwde
-`LibraryContext` leveren.
-User-owned en Library-scoped reads en Reading-startflows gebruiken daardoor
-dezelfde authenticated identity; concrete repositories blijven intern aan de
-composition root. Destijds waren REST- en UI-adapters nog niet gebouwd.
-In de huidige checkout zijn Biblio Core REST-adapters en de afzonderlijke
-`biblio-ui`-plugin wel aanwezig; zie `docs/00-current-state.md`. F1.4 is
-historisch implementatiebewijs, geen actuele adapterinventaris.
-
-F1.5 laat een ReadingRound uitsluitend via een gevalideerde concrete bron
-starten. Voor een Library Item wordt Work via Item → Edition → Work afgeleid;
-voor een ExternalLoan komt Work uit de actieve, door de actor bezeten lening.
-Geen ondersteunde production-call accepteert een losse combinatie van Work en
-ReadingSource. De database behoudt de ADR-004-baseline met XOR, foreign keys en
-uniekheid per gebruiker + concrete bron; de repository controleert aanvullend
-dat de bron werkelijk bij het afgeleide Work hoort.
-
-Historisch F1.6-checkpoint: deze slice liet publiek geldige domainstate
-aansluiten op de toenmalige persistence:
-persistente Core-ID's zijn niet leeg, geldige UTF-8 en maximaal 191 tekens;
-ExternalLoan, Item, Library en ReadingRound waren in die technische scope
-active-only; en aanvullende membershippermissions zijn een geordende lijst van
-unieke, niet-lege UTF-8-identifiers die zonder normalisatie roundtrippen.
-De destijds geldende pluginversie `2.2.0` en schemabaseline `1000` in deze
-Fase-1-beschrijving zijn historische checkpointwaarden. De actuele versies
-staan hierboven en in de pluginheaders en Core-schemamigrator.
-
-F1.7 sluit Fase 1 af met één reproduceerbare root-quality-gate, gelockte
-PHPStan/WordPress-analysisdependencies en expliciete Fase-1-exit-evidence. De
-gate analyseert production `src` op niveau 6 zonder baseline of genegeerde
-fouten en borgt dat verificatie geen zichtbare repositorymutaties achterlaat.
-De bewezen status en bewuste deferred scope staan in
-`docs/07-fase-1-exit-evidence.md`.
-
-## Repository
-
-WordPress Core, lokale secrets, uploads en gelicentieerde pluginpackages worden niet in Git opgeslagen.
-DDEV-configuratie, Biblio Core-code en reproduceerbare projectconfiguratie worden wel in Git opgeslagen.
+De publieke repository bevat code en reproduceerbare configuratie. Projectbesluiten, werkregistratie, interne documentatie, Obsidian-vaultbestanden, lokale geheimen, uploads en gelicentieerde pluginpakketten blijven lokaal.

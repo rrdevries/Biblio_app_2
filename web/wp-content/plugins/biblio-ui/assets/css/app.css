@@ -80,6 +80,7 @@ body.admin-bar.biblio-app-shell-page {
     --biblio-color-navigation-hover: #26334b;
     --biblio-color-navigation-active: #34425c;
     --biblio-color-navigation-text: #ffffff;
+    --biblio-color-navigation-focus: #9dd6ff;
     --biblio-color-overlay-scrim: rgb(23 34 56 / 35%);
     --biblio-color-text-primary: #22252b;
     --biblio-color-text-secondary: #4d535f;
@@ -863,18 +864,22 @@ body.admin-bar.biblio-app-shell-page {
 
 [data-biblio-ui-root] .biblio-ui__sidebar {
     align-content: start;
+    align-self: start;
     background-color: var(--biblio-color-navigation);
     background-image:
         radial-gradient(circle at 16% 6%, color-mix(in srgb, var(--biblio-color-navigation-text) 7%, transparent), transparent 13rem),
         repeating-linear-gradient(108deg, color-mix(in srgb, var(--biblio-color-navigation-text) 1.8%, transparent) 0 1px, transparent 1px 8px);
     color: var(--biblio-color-navigation-text);
     display: grid;
-    grid-template-rows: auto auto 1fr auto;
-    min-block-size: calc(100dvb - var(--biblio-shell-viewport-offset, 0px));
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    block-size: calc(100dvb - var(--biblio-shell-viewport-offset, 0px));
+    min-block-size: 0;
     padding: var(--biblio-space-6) var(--biblio-space-4);
+    position: sticky;
+    top: var(--biblio-shell-viewport-offset, 0px);
 }
 
-[data-biblio-ui-root] :where(.biblio-ui__brand, .biblio-ui__nav-link, .biblio-ui__sidebar-toggle) {
+[data-biblio-ui-root] :where(.biblio-ui__brand, .biblio-ui__nav-link, .biblio-ui__sidebar-toggle, .biblio-ui__account-action) {
     align-items: center;
     border: 0;
     border-radius: var(--biblio-radius-control);
@@ -938,6 +943,14 @@ body.admin-bar.biblio-app-shell-page {
     mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='8' r='3.25' fill='none' stroke='black' stroke-width='1.6'/%3E%3Cpath d='M5.5 20c.35-4 2.5-6 6.5-6s6.15 2 6.5 6' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");
 }
 
+[data-biblio-ui-root] .biblio-ui__icon[data-biblio-icon="log-in"] {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M13 4h5a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5M4 12h11m-4-4 4 4-4 4' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+[data-biblio-ui-root] .biblio-ui__icon[data-biblio-icon="log-out"] {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M11 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5m9-8H9m4-4-4 4 4 4' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
 [data-biblio-ui-root] .biblio-ui__icon[data-biblio-icon="eye"] {
     mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M2.5 12s3.4-5.5 9.5-5.5 9.5 5.5 9.5 5.5-3.4 5.5-9.5 5.5S2.5 12 2.5 12Z' fill='none' stroke='black' stroke-width='1.6' stroke-linejoin='round'/%3E%3Ccircle cx='12' cy='12' r='2.5' fill='none' stroke='black' stroke-width='1.6'/%3E%3C/svg%3E");
 }
@@ -962,13 +975,28 @@ body.admin-bar.biblio-app-shell-page {
     inline-size: 100%;
 }
 
-[data-biblio-ui-root] :where(.biblio-ui__sidebar-toggle, .biblio-ui__nav-link):hover {
+[data-biblio-ui-root] :where(.biblio-ui__sidebar-toggle, .biblio-ui__nav-link, .biblio-ui__account-action):hover {
     background: var(--biblio-color-navigation-hover);
     color: var(--biblio-color-navigation-text);
 }
 
 [data-biblio-ui-root] .biblio-ui__nav {
     margin-block-start: var(--biblio-space-8);
+    min-block-size: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+[data-biblio-ui-root] .biblio-ui__nav-section {
+    color: color-mix(in srgb, var(--biblio-color-navigation-text) 68%, transparent);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    margin: var(--biblio-space-4) var(--biblio-space-3) var(--biblio-space-1);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
 }
 
 [data-biblio-ui-root] .biblio-ui__nav-link[aria-current="page"] {
@@ -976,10 +1004,24 @@ body.admin-bar.biblio-app-shell-page {
     box-shadow: inset 2px 0 var(--biblio-color-brass);
 }
 
+[data-biblio-ui-root] .biblio-ui__nav-link:focus:not(:focus-visible) {
+    outline: none;
+}
+
+[data-biblio-ui-root] .biblio-ui__nav-link:focus-visible {
+    outline: var(--biblio-focus-width) solid var(--biblio-color-navigation-focus);
+    outline-offset: -2px;
+}
+
 [data-biblio-ui-root] .biblio-ui__nav-mark {
     font-size: 0.7rem;
     font-weight: 700;
     letter-spacing: 0.06em;
+}
+
+[data-biblio-ui-root] .biblio-ui__sidebar-account {
+    border-block-start: 1px solid color-mix(in srgb, var(--biblio-color-navigation-text) 13%, transparent);
+    padding-block-start: var(--biblio-space-2);
 }
 
 [data-biblio-ui-root] .biblio-ui__sidebar-context {
@@ -990,8 +1032,18 @@ body.admin-bar.biblio-app-shell-page {
     gap: var(--biblio-space-3);
     margin: 0;
     min-block-size: var(--biblio-control-min);
+    min-inline-size: 0;
     padding: var(--biblio-space-2) var(--biblio-space-3);
-    border-block-start: 1px solid color-mix(in srgb, var(--biblio-color-navigation-text) 13%, transparent);
+}
+
+[data-biblio-ui-root] .biblio-ui__sidebar-context .biblio-ui__nav-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+[data-biblio-ui-root] .biblio-ui__account-action {
+    font-size: 0.875rem;
 }
 
 [data-biblio-ui-root] .biblio-ui__workspace {
@@ -1028,7 +1080,7 @@ body.admin-bar.biblio-app-shell-page {
     white-space: nowrap;
 }
 
-[data-biblio-ui-root] .biblio-ui__shell[data-sidebar-collapsed="true"] :where(.biblio-ui__brand, .biblio-ui__nav-link, .biblio-ui__sidebar-toggle, .biblio-ui__sidebar-context) {
+[data-biblio-ui-root] .biblio-ui__shell[data-sidebar-collapsed="true"] :where(.biblio-ui__brand, .biblio-ui__nav-link, .biblio-ui__sidebar-toggle, .biblio-ui__sidebar-context, .biblio-ui__account-action) {
     justify-content: center;
     padding-inline: var(--biblio-space-2);
 }
@@ -1712,7 +1764,7 @@ body.admin-bar.biblio-app-shell-page {
         white-space: nowrap;
     }
 
-    [data-biblio-ui-root] .biblio-ui__sidebar :where(.biblio-ui__brand, .biblio-ui__nav-link, .biblio-ui__sidebar-toggle, .biblio-ui__sidebar-context) {
+    [data-biblio-ui-root] .biblio-ui__sidebar :where(.biblio-ui__brand, .biblio-ui__nav-link, .biblio-ui__sidebar-toggle, .biblio-ui__sidebar-context, .biblio-ui__account-action) {
         justify-content: center;
         padding-inline: var(--biblio-space-2);
     }
@@ -1780,12 +1832,45 @@ body.admin-bar.biblio-app-shell-page {
 
     [data-biblio-ui-root] .biblio-ui__sidebar {
         box-shadow: var(--biblio-overlay-shadow);
-        inline-size: min(19rem, calc(100% - var(--biblio-space-12)));
-        inset: 0 auto 0 0;
+        grid-template-rows: auto minmax(0, 1fr) auto;
+        inline-size: min(17rem, calc(100% - var(--biblio-space-12)));
+        inset: var(--biblio-shell-viewport-offset, 0px) auto auto 0;
+        padding-block: var(--biblio-space-4) max(var(--biblio-space-4), env(safe-area-inset-bottom));
         position: fixed;
         transform: translateX(-105%);
         visibility: hidden;
         z-index: 20;
+    }
+
+    [data-biblio-ui-root] .biblio-ui__shell[data-sidebar-collapsed="true"] .biblio-ui__sidebar {
+        padding-inline: var(--biblio-space-4);
+    }
+
+    [data-biblio-ui-root] .biblio-ui__sidebar-toggle {
+        display: none;
+    }
+
+    [data-biblio-ui-root] .biblio-ui__brand {
+        margin-block-end: var(--biblio-space-2);
+    }
+
+    [data-biblio-ui-root] .biblio-ui__nav {
+        margin-block-start: var(--biblio-space-2);
+    }
+
+    [data-biblio-ui-root] .biblio-ui__shell[data-sidebar-collapsed="true"] .biblio-ui__sidebar .biblio-ui__nav-label {
+        block-size: auto;
+        clip: auto;
+        clip-path: none;
+        inline-size: auto;
+        overflow: visible;
+        position: static;
+        white-space: normal;
+    }
+
+    [data-biblio-ui-root] .biblio-ui__shell[data-sidebar-collapsed="true"] .biblio-ui__sidebar :where(.biblio-ui__brand, .biblio-ui__nav-link, .biblio-ui__sidebar-context, .biblio-ui__account-action) {
+        justify-content: flex-start;
+        padding-inline: var(--biblio-space-3);
     }
 
     [data-biblio-ui-root] .biblio-ui__shell[data-mobile-nav-open="true"] .biblio-ui__sidebar {
@@ -2289,6 +2374,44 @@ body.admin-bar.biblio-app-shell-page {
 
 [data-biblio-search-root] .biblio-ui__bibliographic-search {
     gap: var(--biblio-space-6);
+}
+
+[data-biblio-entry-root] .biblio-ui__entry {
+    gap: var(--biblio-space-6);
+    max-inline-size: 54rem;
+}
+
+[data-biblio-entry-root] .biblio-ui__entry-header {
+    border-block-end: 1px solid var(--biblio-color-border);
+    display: grid;
+    gap: var(--biblio-space-2);
+    padding-block-end: var(--biblio-space-6);
+}
+
+[data-biblio-entry-root] .biblio-ui__entry-libraries,
+[data-biblio-entry-root] .biblio-ui__entry-actions {
+    display: grid;
+    gap: var(--biblio-space-3);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+[data-biblio-entry-root] .biblio-ui__entry-link {
+    align-items: center;
+    border: 1px solid var(--biblio-color-border);
+    border-radius: var(--biblio-radius-control);
+    color: var(--biblio-color-text-primary);
+    display: flex;
+    min-block-size: var(--biblio-control-min);
+    padding: var(--biblio-space-3) var(--biblio-space-4);
+    text-decoration: none;
+}
+
+[data-biblio-entry-root] .biblio-ui__entry-link:hover,
+[data-biblio-entry-root] .biblio-ui__entry-link:focus-visible {
+    border-color: var(--biblio-color-brass);
+    text-decoration: underline;
 }
 
 [data-biblio-search-root] .biblio-ui__search-page-header {

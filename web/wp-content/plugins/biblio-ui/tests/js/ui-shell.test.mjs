@@ -110,3 +110,80 @@ test("shell composes Ink Light sidebar, remembered rail and mobile off-canvas", 
     shellController.destroy();
     assert.equal(listeners.has("keydown"), false);
 });
+
+test("guest account action uses the supplied login route in the bottom rail and mobile navigation", () => {
+    const mount = new FakeElement("div");
+    createLibraryShell(mount, {
+        documentImpl,
+        eventTarget: null,
+        overviewUrl: "/mijn-bibliotheek/",
+        loginUrl: "/wp-login.php?redirect_to=mijn-bibliotheek",
+        accountState: "guest",
+        preferences: { sidebarCollapsed: () => true },
+    });
+    const shell = mount.children[0];
+    const account = byClass(shell, "biblio-ui__sidebar-account");
+    const action = byClass(account, "biblio-ui__account-action");
+    assert.equal(account.tagName, "NAV");
+    assert.equal(account.getAttribute("aria-label"), "Account");
+    assert.equal(action.getAttribute("href"), "/wp-login.php?redirect_to=mijn-bibliotheek");
+    assert.equal(action.getAttribute("aria-label"), "Inloggen");
+    assert.equal(action.getAttribute("title"), "Inloggen");
+    assert.equal(byClass(account, "biblio-ui__sidebar-context"), undefined);
+    assert.equal(shell.getAttribute("data-sidebar-collapsed"), "true");
+    byClass(shell, "biblio-ui__menu-toggle").click();
+    assert.equal(shell.getAttribute("data-mobile-nav-open"), "true");
+    assert.equal(action.getAttribute("href"), "/wp-login.php?redirect_to=mijn-bibliotheek");
+});
+
+test("signed-in account displays its identity and only the supplied logout action", () => {
+    const mount = new FakeElement("div");
+    createLibraryShell(mount, {
+        documentImpl,
+        eventTarget: null,
+        overviewUrl: "/mijn-bibliotheek/",
+        loginUrl: "/wp-login.php",
+        accountState: "authenticated",
+        accountName: 'Renée <Admin>',
+        logoutUrl: "/wp-login.php?action=logout&_wpnonce=signed",
+        preferences: { sidebarCollapsed: () => false },
+    });
+    const account = byClass(mount.children[0], "biblio-ui__sidebar-account");
+    const identity = byClass(account, "biblio-ui__sidebar-context");
+    const action = byClass(account, "biblio-ui__account-action");
+    assert.equal(byClass(identity, "biblio-ui__nav-label").textContent, 'Renée <Admin>');
+    assert.equal(identity.getAttribute("title"), 'Renée <Admin>');
+    assert.equal(action.getAttribute("href"), "/wp-login.php?action=logout&_wpnonce=signed");
+    assert.equal(action.getAttribute("aria-label"), "Uitloggen");
+    assert.equal(action.getAttribute("title"), "Uitloggen");
+    assert.equal(allByClass(account, "biblio-ui__account-action").length, 1);
+});
+
+test("platform navigation adds exact contextual Home and Catalogus only after Library authorization", () => {
+    const mount = new FakeElement("div");
+    const shell = createLibraryShell(mount, {
+        documentImpl,
+        eventTarget: null,
+        platformUrl: "https://example.test/mijn-biblio/",
+        libraryHomeUrl: "https://example.test/bibliotheek-home/",
+        overviewUrl: "https://example.test/mijn-bibliotheek/",
+        wishlistUrl: "https://example.test/verlanglijst/",
+        nextReadingUrl: "https://example.test/hierna-lezen/",
+        activeDestination: "library",
+        preferences: { sidebarCollapsed: () => false },
+    });
+    const navigation = byClass(mount.children[0], "biblio-ui__nav");
+    assert.deepEqual(allByClass(navigation, "biblio-ui__nav-link").map((item) => item.getAttribute("title")), [
+        "Mijn Biblio", "Verlanglijst", "Hierna lezen",
+    ]);
+    shell.setLibraryContext({ library_id: "library/2", name: "Leesclub" });
+    const contextual = allByClass(navigation, "biblio-ui__nav-link");
+    assert.deepEqual(contextual.slice(1, 3).map((item) => item.getAttribute("title")), [
+        "Home", "Catalogus",
+    ]);
+    assert.equal(contextual[2].getAttribute("href"), "https://example.test/mijn-bibliotheek/?library_id=library%2F2");
+    assert.equal(contextual[1].getAttribute("href"), "https://example.test/bibliotheek-home/?library_id=library%2F2");
+    assert.deepEqual(allByClass(navigation, "biblio-ui__nav-section").map((item) => item.textContent), ["Leesclub", "Persoonlijk"]);
+    shell.setLibraryContext(null);
+    assert.equal(allByClass(navigation, "biblio-ui__nav-link").length, 3);
+});

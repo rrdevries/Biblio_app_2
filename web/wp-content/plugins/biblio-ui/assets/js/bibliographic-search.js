@@ -747,9 +747,14 @@ export function createBibliographicSearchApp({
         documentImpl,
         eventTarget,
         overviewUrl: root.dataset.overviewUrl,
+        platformUrl: root.dataset.platformUrl,
         searchUrl: root.dataset.searchUrl,
         wishlistUrl: root.dataset.wishlistUrl,
         nextReadingUrl: root.dataset.nextReadingUrl,
+        loginUrl: root.dataset.loginUrl,
+        accountState: root.dataset.accountState,
+        accountName: root.dataset.accountName,
+        logoutUrl: root.dataset.logoutUrl,
         activeDestination: "search",
     });
     const host = shell.contentRoot;

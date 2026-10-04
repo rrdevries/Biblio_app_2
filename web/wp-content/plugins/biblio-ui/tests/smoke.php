@@ -4,6 +4,23 @@ declare(strict_types=1);
 
 define("ABSPATH", __DIR__ . "/wordpress/");
 
+class WP_User
+{
+}
+
+class WP_Error
+{
+}
+
+$biblioUiTestUserCanManage = false;
+
+function user_can(WP_User $user, string $capability): bool
+{
+    global $biblioUiTestUserCanManage;
+
+    return $capability === "manage_options" && $biblioUiTestUserCanManage;
+}
+
 /** @var array<string, list<callable>> $biblioUiTestActions */
 $biblioUiTestActions = [];
 /** @var array<string, list<callable>> $biblioUiTestFilters */
@@ -30,6 +47,13 @@ $biblioUiTestNonceActions = [];
 $biblioUiTestHomePaths = [];
 /** @var list<string> $biblioUiTestLoginRedirects */
 $biblioUiTestLoginRedirects = [];
+/** @var list<string> $biblioUiTestLogoutRedirects */
+$biblioUiTestLogoutRedirects = [];
+$biblioUiTestLoggedIn = false;
+$biblioUiTestCurrentUser = (object) [
+    "display_name" => "",
+    "user_login" => "",
+];
 $biblioUiTestCurrentPageSlug = null;
 
 function add_action(
@@ -183,6 +207,11 @@ function home_url(string $path = "", ?string $scheme = null): string
     return "https://example.test" . $path;
 }
 
+function admin_url(string $path = ""): string
+{
+    return "https://example.test/wp-admin/" . $path;
+}
+
 function wp_login_url(string $redirect = "", bool $forceReauthentication = false): string
 {
     global $biblioUiTestLoginRedirects;
@@ -192,6 +221,31 @@ function wp_login_url(string $redirect = "", bool $forceReauthentication = false
     return "https://example.test/wp-login.php?redirect_to="
         . rawurlencode($redirect)
         . '&reason="session"';
+}
+
+function is_user_logged_in(): bool
+{
+    global $biblioUiTestLoggedIn;
+
+    return $biblioUiTestLoggedIn;
+}
+
+function wp_get_current_user(): object
+{
+    global $biblioUiTestCurrentUser;
+
+    return $biblioUiTestCurrentUser;
+}
+
+function wp_logout_url(string $redirect = ""): string
+{
+    global $biblioUiTestLogoutRedirects;
+
+    $biblioUiTestLogoutRedirects[] = $redirect;
+
+    return "https://example.test/wp-login.php?action=logout&redirect_to="
+        . rawurlencode($redirect)
+        . '&_wpnonce="logout"';
 }
 
 /** @param null|list<string> $protocols */
@@ -205,6 +259,11 @@ function esc_url(
 }
 
 function esc_attr(string $text): string
+{
+    return htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, "UTF-8");
+}
+
+function esc_html(string $text): string
 {
     return htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, "UTF-8");
 }
@@ -270,7 +329,11 @@ biblioUiAssertFalse(
     "The isolated smoke test must not load Biblio Core."
 );
 
+require_once __DIR__ . "/../src/AccountMount.php";
+require_once __DIR__ . "/../src/LoginPresentation.php";
 require_once __DIR__ . "/../src/LibraryAppShortcode.php";
+require_once __DIR__ . "/../src/EntryAppShortcode.php";
+require_once __DIR__ . "/../src/PublicHomeShortcode.php";
 require_once __DIR__ . "/../src/NextReadingAppShortcode.php";
 require_once __DIR__ . "/../src/WishlistAppShortcode.php";
 require_once __DIR__ . "/../src/SearchAppShortcode.php";
@@ -281,9 +344,9 @@ $plugin->boot();
 $plugin->boot();
 
 biblioUiAssertSame(
-    4,
+    6,
     count($biblioUiTestActions["init"] ?? []),
-    "Plugin boot must register all four init hooks exactly once."
+    "Plugin boot must register all six init hooks exactly once."
 );
 biblioUiAssertSame(
     1,
@@ -295,6 +358,140 @@ biblioUiAssertSame(
     count($biblioUiTestFilters["body_class"] ?? []),
     "Plugin boot must register the Page Shell body-class filter exactly once."
 );
+biblioUiAssertSame(
+    1,
+    count($biblioUiTestActions["login_enqueue_scripts"] ?? []),
+    "Login presentation must register its style hook exactly once."
+);
+biblioUiAssertSame(
+    1,
+    count($biblioUiTestActions["login_form"] ?? []),
+    "Login presentation must mark whether an admin destination was explicitly requested."
+);
+biblioUiRunAction("login_enqueue_scripts");
+biblioUiAssertSame(
+    [\Biblio\UI\LoginPresentation::STYLE_HANDLE],
+    $biblioUiTestEnqueuedStyles,
+    "WordPress login screens must load only the bounded Biblio login style."
+);
+$loginPresentation = new \Biblio\UI\LoginPresentation("/plugin/biblio-ui.php");
+biblioUiAssertSame(
+    "Inloggen bij Biblio",
+    $loginPresentation->pageTitle("Login ‹ Biblio V2 — WordPress", "Login"),
+    "The normal login page must use the Biblio title."
+);
+biblioUiAssertSame(
+    '<div class="biblio-login__intro"><h1>Inloggen bij Biblio</h1></div>',
+    $loginPresentation->intro(""),
+    "The login page must have one title without the former subtitle."
+);
+biblioUiAssertSame(
+    "https://example.test/",
+    $loginPresentation->headerUrl("https://wordpress.org/"),
+    "The login wordmark must return to the public Biblio start page."
+);
+biblioUiAssertSame(
+    '<a href="https://example.test/">Terug naar startpagina</a>',
+    $loginPresentation->returnLink('<a href="https://example.test/">Back to site</a>'),
+    "The login and recovery return link must name and open the public Biblio start page."
+);
+biblioUiAssertSame(
+    "Inloggen",
+    $loginPresentation->translateLoginLabel("Login", "Log In", "default"),
+    "The WordPress login control must use Dutch Biblio copy."
+);
+biblioUiAssertSame(
+    "Inloggen",
+    $loginPresentation->translateLoginLabel("Login", "Log in", "default"),
+    "The recovery page must link back with the same Dutch login label."
+);
+biblioUiAssertSame(
+    "Anmelden",
+    $loginPresentation->translateLoginLabel("Anmelden", "Log In", "other"),
+    "The login translation must leave other domains unchanged."
+);
+$_GET["redirect_to"] = admin_url();
+ob_start();
+$loginPresentation->redirectIntentField();
+biblioUiAssertSame(
+    '<input type="hidden" name="biblio_redirect_requested" value="1">',
+    ob_get_clean(),
+    "An explicitly requested WordPress admin page must be marked."
+);
+unset($_GET["redirect_to"]);
+ob_start();
+$loginPresentation->redirectIntentField();
+biblioUiAssertSame(
+    '<input type="hidden" name="biblio_redirect_requested" value="0">',
+    ob_get_clean(),
+    "The WordPress admin form default must not count as an explicit destination."
+);
+biblioUiAssertSame(
+    "https://example.test/mijn-biblio/",
+    $loginPresentation->defaultRedirect(
+        "https://example.test/wp-admin/",
+        "https://example.test/wp-admin/",
+        new WP_User()
+    ),
+    "WordPress's hidden admin URL must not override the ordinary Biblio default."
+);
+$_POST["biblio_redirect_requested"] = "1";
+biblioUiAssertSame(
+    "https://example.test/wp-admin/",
+    $loginPresentation->defaultRedirect(
+        "https://example.test/wp-admin/",
+        "https://example.test/wp-admin/",
+        new WP_User()
+    ),
+    "An explicitly requested safe WordPress admin page must keep priority."
+);
+unset($_POST["biblio_redirect_requested"]);
+biblioUiAssertSame(
+    "https://example.test/mijn-biblio/",
+    $loginPresentation->defaultRedirect("https://example.test/wp-admin/", "", new WP_User()),
+    "A normal account without a requested destination must enter Mijn Biblio."
+);
+biblioUiAssertSame(
+    "https://example.test/verlanglijst/",
+    $loginPresentation->defaultRedirect(
+        "https://example.test/verlanglijst/",
+        "https://example.test/verlanglijst/",
+        new WP_User()
+    ),
+    "An explicit Biblio destination must survive login."
+);
+biblioUiAssertSame(
+    "https://example.test/mijn-bibliotheek/?library_id=library-2&item_id=item-3",
+    $loginPresentation->defaultRedirect(
+        "https://example.test/mijn-bibliotheek/?library_id=library-2&item_id=item-3",
+        "https://example.test/mijn-bibliotheek/?library_id=library-2&item_id=item-3",
+        new WP_User()
+    ),
+    "A safe direct Library link must retain its explicit context after login."
+);
+biblioUiAssertSame(
+    "https://example.test/wp-admin/",
+    $loginPresentation->defaultRedirect(
+        "https://example.test/wp-admin/",
+        "https://external.example.test/unsafe",
+        new WP_User()
+    ),
+    "An unsafe requested destination must not be restored over WordPress's safe fallback."
+);
+biblioUiAssertSame(
+    "https://example.test/wp-admin/",
+    $loginPresentation->defaultRedirect("https://example.test/wp-admin/", "", new WP_Error()),
+    "A failed login must retain the WordPress destination."
+);
+$biblioUiTestUserCanManage = true;
+biblioUiAssertSame(
+    "https://example.test/wp-admin/",
+    $loginPresentation->defaultRedirect("https://example.test/wp-admin/", "", new WP_User()),
+    "A platform administrator must retain the standard admin destination."
+);
+$biblioUiTestUserCanManage = false;
+$biblioUiTestHomePaths = [];
+$biblioUiTestEnqueuedStyles = [];
 biblioUiAssertSame(
     ["existing"],
     biblioUiRunFilter("body_class", ["existing"]),
@@ -506,10 +703,10 @@ biblioUiAssertSame(
 );
 biblioUiAssertSame(
     [
-        "/hierna-lezen/", "/mijn-bibliotheek/", "/zoeken/", "/verlanglijst/",
-        "/verlanglijst/", "/mijn-bibliotheek/", "/zoeken/", "/hierna-lezen/",
-        "/zoeken/", "/mijn-bibliotheek/", "/verlanglijst/", "/hierna-lezen/",
-        "/mijn-bibliotheek/", "/zoeken/", "/verlanglijst/", "/hierna-lezen/",
+        "/hierna-lezen/", "/mijn-bibliotheek/", "/mijn-biblio/", "/zoeken/", "/verlanglijst/",
+        "/verlanglijst/", "/mijn-bibliotheek/", "/mijn-biblio/", "/zoeken/", "/hierna-lezen/",
+        "/zoeken/", "/mijn-bibliotheek/", "/mijn-biblio/", "/verlanglijst/", "/hierna-lezen/",
+        "/mijn-bibliotheek/", "/mijn-biblio/", "/bibliotheek-home/", "/zoeken/", "/verlanglijst/", "/hierna-lezen/",
     ],
     $biblioUiTestHomePaths,
     "All personal navigation URLs must be server-generated from canonical paths."
@@ -524,6 +721,71 @@ biblioUiAssertSame(
     $biblioUiTestLoginRedirects,
     "The login URL must return to the canonical overview URL."
 );
+
+foreach ([$nextReadingMount, $wishlistMount, $searchMount, $mount] as $guestMount) {
+    biblioUiAssertContains(
+        'data-account-state="guest"',
+        $guestMount,
+        "A guest mount must expose the guest account state."
+    );
+    biblioUiAssertFalse(
+        str_contains($guestMount, "data-logout-url"),
+        "A guest mount must not expose an authenticated logout URL."
+    );
+}
+biblioUiAssertSame(
+    [],
+    $biblioUiTestLogoutRedirects,
+    "Guest rendering must not generate a logout URL."
+);
+
+$biblioUiTestLoggedIn = true;
+$biblioUiTestCurrentUser = (object) [
+    "display_name" => 'Renée "Biblio" <Admin>',
+    "user_login" => "renee",
+];
+foreach ([
+    $nextReadingShortcode,
+    $wishlistShortcode,
+    $searchShortcode,
+    $shortcodeCallback,
+] as $callback) {
+    $signedInMount = $callback();
+    biblioUiAssertContains(
+        'data-account-state="authenticated"',
+        $signedInMount,
+        "An authenticated mount must expose its account state."
+    );
+    biblioUiAssertContains(
+        'data-account-name="Renée &quot;Biblio&quot; &lt;Admin&gt;"',
+        $signedInMount,
+        "An authenticated mount must safely expose the current display name."
+    );
+    biblioUiAssertContains(
+        'data-logout-url="https://example.test/wp-login.php?action=logout&amp;redirect_to='
+            . rawurlencode("https://example.test/")
+            . '&amp;_wpnonce=&quot;logout&quot;"',
+        $signedInMount,
+        "The WordPress logout URL must return to the public Biblio root."
+    );
+}
+biblioUiAssertSame(
+    [
+        "https://example.test/",
+        "https://example.test/",
+        "https://example.test/",
+        "https://example.test/",
+    ],
+    $biblioUiTestLogoutRedirects,
+    "Every authenticated page must use the public root as its logout return URL."
+);
+$biblioUiTestCurrentUser->display_name = "";
+biblioUiAssertContains(
+    'data-account-name="renee"',
+    $shortcodeCallback(),
+    "An account without a display name must still identify its user."
+);
+$biblioUiTestLoggedIn = false;
 
 biblioUiRunAction("wp_enqueue_scripts");
 
@@ -581,7 +843,7 @@ biblioUiAssertSame(
             "id" => \Biblio\UI\Plugin::WISHLIST_SCRIPT_MODULE_ID,
             "import" => "static",
         ]],
-        "version" => "0.21.2",
+        "version" => "0.22.5",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[\Biblio\UI\Plugin::SCRIPT_MODULE_ID] ?? null,
@@ -592,7 +854,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/api.js",
         "dependencies" => [],
-        "version" => "0.21.2",
+        "version" => "0.22.5",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -605,7 +867,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/catalog-query.js",
         "dependencies" => [],
-        "version" => "0.21.2",
+        "version" => "0.22.5",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -621,7 +883,7 @@ biblioUiAssertSame(
             "id" => \Biblio\UI\Plugin::CATALOG_QUERY_SCRIPT_MODULE_ID,
             "import" => "static",
         ]],
-        "version" => "0.21.2",
+        "version" => "0.22.5",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -634,7 +896,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/library-state.js",
         "dependencies" => [],
-        "version" => "0.21.2",
+        "version" => "0.22.5",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -647,7 +909,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/overview-view.js",
         "dependencies" => [],
-        "version" => "0.21.2",
+        "version" => "0.22.5",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -660,7 +922,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/ui-preferences.js",
         "dependencies" => [],
-        "version" => "0.21.2",
+        "version" => "0.22.5",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -676,7 +938,7 @@ biblioUiAssertSame(
             "id" => \Biblio\UI\Plugin::UI_PREFERENCES_SCRIPT_MODULE_ID,
             "import" => "static",
         ]],
-        "version" => "0.21.2",
+        "version" => "0.22.5",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -695,7 +957,7 @@ biblioUiAssertSame(
             "id" => \Biblio\UI\Plugin::UI_SHELL_SCRIPT_MODULE_ID,
             "import" => "static",
         ]],
-        "version" => "0.21.2",
+        "version" => "0.22.5",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -714,7 +976,7 @@ biblioUiAssertSame(
             "id" => \Biblio\UI\Plugin::UI_SHELL_SCRIPT_MODULE_ID,
             "import" => "static",
         ]],
-        "version" => "0.21.2",
+        "version" => "0.22.5",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -733,7 +995,7 @@ biblioUiAssertSame(
             "id" => \Biblio\UI\Plugin::UI_SHELL_SCRIPT_MODULE_ID,
             "import" => "static",
         ]],
-        "version" => "0.21.2",
+        "version" => "0.22.5",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -746,7 +1008,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/private-notes.js",
         "dependencies" => [],
-        "version" => "0.21.2",
+        "version" => "0.22.5",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -759,7 +1021,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/reading-history.js",
         "dependencies" => [],
-        "version" => "0.21.2",
+        "version" => "0.22.5",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -772,7 +1034,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/detail-view.js",
         "dependencies" => [],
-        "version" => "0.21.2",
+        "version" => "0.22.5",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -785,7 +1047,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/start-reading-view.js",
         "dependencies" => [],
-        "version" => "0.21.2",
+        "version" => "0.22.5",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -798,7 +1060,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/end-reading-view.js",
         "dependencies" => [],
-        "version" => "0.21.2",
+        "version" => "0.22.5",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -811,7 +1073,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/add-book-wizard.js",
         "dependencies" => [],
-        "version" => "0.21.2",
+        "version" => "0.22.5",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -824,7 +1086,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/css/app.css",
         "dependencies" => [],
-        "version" => "0.21.2",
+        "version" => "0.22.5",
         "media" => "all",
     ],
     $biblioUiTestRegisteredStyles[\Biblio\UI\Plugin::STYLE_HANDLE] ?? null,
@@ -846,8 +1108,8 @@ biblioUiAssertSame(
 );
 biblioUiAssertSame(
     [
-        "hierna-lezen", "verlanglijst", "zoeken", "mijn-bibliotheek",
-        "hierna-lezen", "verlanglijst", "zoeken", "mijn-bibliotheek",
+        "biblio", ["mijn-biblio", "bibliotheek-home"], "hierna-lezen", "verlanglijst", "zoeken", "mijn-bibliotheek",
+        "biblio", ["mijn-biblio", "bibliotheek-home"], "hierna-lezen", "verlanglijst", "zoeken", "mijn-bibliotheek",
     ],
     $biblioUiTestPageChecks,
     "Every asset decision must use the planned Page slug."
@@ -982,6 +1244,11 @@ biblioUiAssertSame(
 );
 biblioUiAssertSame(
     true,
+    is_file(__DIR__ . "/../assets/js/entry.js"),
+    "The personal and Library Home Script Module file must exist."
+);
+biblioUiAssertSame(
+    true,
     is_file(__DIR__ . "/../assets/js/bibliographic-discovery.js"),
     "The shared bibliographic discovery decoder file must exist."
 );
@@ -991,12 +1258,83 @@ biblioUiAssertSame(
     "The stylesheet file must exist."
 );
 
+foreach ([
+    \Biblio\UI\EntryAppShortcode::PERSONAL_TAG => "personal",
+    \Biblio\UI\EntryAppShortcode::LIBRARY_TAG => "library",
+] as $tag => $mode) {
+    biblioUiAssertSame(
+        1,
+        $biblioUiTestShortcodeRegistrations[$tag] ?? 0,
+        "Each entry shortcode must register exactly once."
+    );
+    $entryMount = $biblioUiTestShortcodes[$tag]();
+    biblioUiAssertContains('data-entry-mode="' . $mode . '"', $entryMount, "Entry mode is missing.");
+    biblioUiAssertContains('data-platform-url="https://example.test/mijn-biblio/"', $entryMount, "The personal route is missing.");
+    biblioUiAssertContains('data-library-home-url="https://example.test/bibliotheek-home/"', $entryMount, "The Library Home route is missing.");
+}
+$_GET["library_id"] = "member/2";
+$directHomeMount = $biblioUiTestShortcodes[\Biblio\UI\EntryAppShortcode::LIBRARY_TAG]();
+unset($_GET["library_id"]);
+biblioUiAssertContains(
+    'redirect_to=https%3A%2F%2Fexample.test%2Fbibliotheek-home%2F%3Flibrary_id%3Dmember%252F2',
+    $directHomeMount,
+    "A Library Home login must preserve its explicit Library target."
+);
+$biblioUiTestCurrentPageSlug = \Biblio\UI\EntryAppShortcode::PERSONAL_SLUG;
+$biblioUiTestEnqueuedModules = [];
+biblioUiRunAction("wp_enqueue_scripts");
+biblioUiAssertSame(
+    [\Biblio\UI\Plugin::ENTRY_SCRIPT_MODULE_ID],
+    $biblioUiTestEnqueuedModules,
+    "Mijn Biblio must load the entry module."
+);
+
+biblioUiAssertSame(
+    1,
+    $biblioUiTestShortcodeRegistrations[\Biblio\UI\PublicHomeShortcode::TAG] ?? 0,
+    "The public Home shortcode must register exactly once."
+);
+$publicHome = $biblioUiTestShortcodes[\Biblio\UI\PublicHomeShortcode::TAG] ?? null;
+if (!is_callable($publicHome)) {
+    throw new RuntimeException("The public Home shortcode is not callable.");
+}
+$guestHome = $publicHome();
+biblioUiAssertContains('<h1 id="biblio-public-home-title">Biblio</h1>', $guestHome, "The public Home title is missing.");
+biblioUiAssertContains("Biblio helpt je om boeken terug te vinden", $guestHome, "The public introduction is missing.");
+biblioUiAssertContains('href="https://example.test/wp-login.php?redirect_to=https%3A%2F%2Fexample.test%2Fmijn-biblio%2F', $guestHome, "Guest login must return to Mijn Biblio.");
+biblioUiAssertContains('>Inloggen<span', $guestHome, "Guests must see the login action.");
+biblioUiAssertFalse(str_contains($guestHome, "Naar Mijn Biblio<span"), "Guests must not see the signed-in action.");
+
+$biblioUiTestLoggedIn = true;
+$signedInHome = $publicHome();
+biblioUiAssertContains('href="https://example.test/mijn-biblio/"', $signedInHome, "A signed-in user must go directly to Mijn Biblio.");
+biblioUiAssertContains('>Naar Mijn Biblio<span', $signedInHome, "A signed-in user must see the personal entry action.");
+biblioUiAssertFalse(str_contains($signedInHome, "Renée"), "The public root must not expose account details.");
+$biblioUiTestLoggedIn = false;
+
+$biblioUiTestCurrentPageSlug = \Biblio\UI\PublicHomeShortcode::PAGE_SLUG;
+biblioUiAssertSame(
+    ["existing", \Biblio\UI\Plugin::PUBLIC_HOME_BODY_CLASS],
+    biblioUiRunFilter("body_class", ["existing"]),
+    "The public Home must receive only its scoped body class."
+);
+$biblioUiTestEnqueuedStyles = [];
+$biblioUiTestEnqueuedModules = [];
+biblioUiRunAction("wp_enqueue_scripts");
+biblioUiAssertSame(
+    [\Biblio\UI\Plugin::PUBLIC_HOME_STYLE_HANDLE],
+    $biblioUiTestEnqueuedStyles,
+    "The public Home must load its own stylesheet."
+);
+biblioUiAssertSame([], $biblioUiTestEnqueuedModules, "The public Home must not load app modules.");
+biblioUiAssertSame(true, is_file(__DIR__ . "/../assets/css/public-home.css"), "The public Home stylesheet must exist.");
+
 require __DIR__ . "/../biblio-ui.php";
 
 biblioUiAssertSame(
-    8,
+    12,
     count($biblioUiTestActions["init"] ?? []),
-    "The plugin entry point must register all four additional init hooks."
+    "The plugin entry point must register all six additional init hooks."
 );
 biblioUiAssertSame(
     2,
@@ -1009,7 +1347,7 @@ biblioUiAssertSame(
     "The plugin entry point must register one additional body-class filter."
 );
 biblioUiAssertSame(
-    "0.21.2",
+    "0.22.5",
     \Biblio\UI\Plugin::VERSION,
     "The plugin version must remain the single asset cache-busting version."
 );
@@ -1025,24 +1363,24 @@ biblioUiAssertFalse(
 echo "OK: Biblio UI isolated smoke test passed." . PHP_EOL;
 echo "Lifecycle: idempotent" . PHP_EOL;
 echo "Shortcode config: escaped server values" . PHP_EOL;
-echo "Script Module: biblio-ui/app@0.21.2" . PHP_EOL;
-echo "API Script Module: biblio-ui/api@0.21.2" . PHP_EOL;
-echo "Catalog Query Script Module: biblio-ui/catalog-query@0.21.2" . PHP_EOL;
-echo "Route Script Module: biblio-ui/route-state@0.21.2" . PHP_EOL;
-echo "Library Script Module: biblio-ui/library-state@0.21.2" . PHP_EOL;
-echo "Overview Script Module: biblio-ui/overview-view@0.21.2" . PHP_EOL;
-echo "UI Preferences Script Module: biblio-ui/ui-preferences@0.21.2" . PHP_EOL;
-echo "UI Shell Script Module: biblio-ui/ui-shell@0.21.2" . PHP_EOL;
-echo "Private Notes Script Module: biblio-ui/private-notes@0.21.2" . PHP_EOL;
-echo "Reading History Script Module: biblio-ui/reading-history@0.21.2" . PHP_EOL;
-echo "Detail Script Module: biblio-ui/detail-view@0.21.2" . PHP_EOL;
-echo "Start Reading Script Module: biblio-ui/start-reading-view@0.21.2" . PHP_EOL;
-echo "End Reading Script Module: biblio-ui/end-reading-view@0.21.2" . PHP_EOL;
-echo "Add Book Script Module: biblio-ui/add-book-wizard@0.21.2" . PHP_EOL;
-echo "Next Reading Script Module: biblio-ui/next-reading@0.21.2" . PHP_EOL;
-echo "Wishlist Script Module: biblio-ui/wishlist@0.21.2" . PHP_EOL;
-echo "Search Script Module: biblio-ui/bibliographic-search@0.21.2" . PHP_EOL;
-echo "Stylesheet: biblio-ui@0.21.2" . PHP_EOL;
+echo "Script Module: biblio-ui/app@0.22.5" . PHP_EOL;
+echo "API Script Module: biblio-ui/api@0.22.5" . PHP_EOL;
+echo "Catalog Query Script Module: biblio-ui/catalog-query@0.22.5" . PHP_EOL;
+echo "Route Script Module: biblio-ui/route-state@0.22.5" . PHP_EOL;
+echo "Library Script Module: biblio-ui/library-state@0.22.5" . PHP_EOL;
+echo "Overview Script Module: biblio-ui/overview-view@0.22.5" . PHP_EOL;
+echo "UI Preferences Script Module: biblio-ui/ui-preferences@0.22.5" . PHP_EOL;
+echo "UI Shell Script Module: biblio-ui/ui-shell@0.22.5" . PHP_EOL;
+echo "Private Notes Script Module: biblio-ui/private-notes@0.22.5" . PHP_EOL;
+echo "Reading History Script Module: biblio-ui/reading-history@0.22.5" . PHP_EOL;
+echo "Detail Script Module: biblio-ui/detail-view@0.22.5" . PHP_EOL;
+echo "Start Reading Script Module: biblio-ui/start-reading-view@0.22.5" . PHP_EOL;
+echo "End Reading Script Module: biblio-ui/end-reading-view@0.22.5" . PHP_EOL;
+echo "Add Book Script Module: biblio-ui/add-book-wizard@0.22.5" . PHP_EOL;
+echo "Next Reading Script Module: biblio-ui/next-reading@0.22.5" . PHP_EOL;
+echo "Wishlist Script Module: biblio-ui/wishlist@0.22.5" . PHP_EOL;
+echo "Search Script Module: biblio-ui/bibliographic-search@0.22.5" . PHP_EOL;
+echo "Stylesheet: biblio-ui@0.22.5" . PHP_EOL;
 echo "Global enqueue: no" . PHP_EOL;
 echo "Library Page enqueue: yes" . PHP_EOL;
 echo "Elementor loaded: no" . PHP_EOL;

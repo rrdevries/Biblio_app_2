@@ -54,7 +54,7 @@ test("zero Libraries without a URL target produces the neutral empty state", () 
     );
 });
 
-test("one Library without a URL target is selected for canonicalization", () => {
+test("one Library without a URL target still requires an explicit choice", () => {
     const onlyLibrary = library("library-1");
 
     assert.deepEqual(
@@ -62,27 +62,20 @@ test("one Library without a URL target is selected for canonicalization", () => 
             [onlyLibrary],
             { libraryId: null, itemId: "item-1" }
         ),
-        {
-            state: "selected",
-            library: onlyLibrary,
-            canonicalize: true,
-        }
+        { state: "chooser", libraries: [onlyLibrary] }
     );
 });
 
-test("multiple Libraries use exactly one designated personal Library", () => {
+test("a designated personal Library is not opened implicitly", () => {
     const designated = library("library-personal", true);
+    const libraries = [library("library-shared"), designated, library("library-other")];
 
     assert.deepEqual(
         resolveLibraryContext(
-            [library("library-shared"), designated, library("library-other")],
+            libraries,
             { libraryId: null, itemId: null }
         ),
-        {
-            state: "selected",
-            library: designated,
-            canonicalize: true,
-        }
+        { state: "chooser", libraries }
     );
 });
 

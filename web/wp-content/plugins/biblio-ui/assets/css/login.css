@@ -1,0 +1,218 @@
+@font-face {
+    font-family: "Biblio Login Cormorant Garamond";
+    font-style: normal;
+    font-weight: 300 700;
+    font-display: swap;
+    src: url("../fonts/cormorant-garamond-latin-wght-normal.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Biblio Login Source Sans 3";
+    font-style: normal;
+    font-weight: 200 900;
+    font-display: swap;
+    src: url("../fonts/source-sans-3-latin-wght-normal.woff2") format("woff2");
+}
+
+body.login {
+    --biblio-login-page: #f7f4ed;
+    --biblio-login-surface: #fffdf8;
+    --biblio-login-field: #fff;
+    --biblio-login-text: #22252b;
+    --biblio-login-secondary: #4d535f;
+    --biblio-login-border: #d5cec0;
+    --biblio-login-border-strong: #9b9385;
+    --biblio-login-interactive: #243b53;
+    --biblio-login-interactive-hover: #172b43;
+    --biblio-login-focus: #075f9e;
+    --biblio-login-brass: #866214;
+    --biblio-login-error: #9b1c1c;
+    --biblio-login-on-interactive: #fff;
+    background: var(--biblio-login-page);
+    color: var(--biblio-login-text);
+    font-family: "Biblio Login Source Sans 3", "Source Sans 3", system-ui, sans-serif;
+    min-block-size: 100vh;
+}
+
+body.login #login {
+    box-sizing: border-box;
+    inline-size: min(100% - 2rem, 27rem);
+    margin-inline: auto;
+    padding-block: clamp(2rem, 5vh, 3rem) 1.5rem;
+}
+
+body.login-action-login #login h1.wp-login-logo,
+body.login-action-lostpassword #login h1.wp-login-logo,
+body.login-action-retrievepassword #login h1.wp-login-logo {
+    display: none;
+}
+
+body.login .biblio-login__intro {
+    margin-block: 0 1.25rem;
+}
+
+body.login .biblio-login__intro h1 {
+    color: var(--biblio-login-text);
+    font-family: "Biblio Login Cormorant Garamond", "Cormorant Garamond", Georgia, serif;
+    font-size: clamp(2.5rem, 2.1rem + 1.4vw, 3.25rem);
+    font-weight: 500;
+    line-height: 1.02;
+    margin: 0;
+}
+
+body.login #login form {
+    background: var(--biblio-login-surface);
+    border: 1px solid var(--biblio-login-border);
+    border-block-start: 3px solid var(--biblio-login-brass);
+    border-radius: 0.625rem;
+    box-shadow: 0 0.75rem 2rem rgb(23 34 56 / 8%);
+    margin-block: 0;
+    padding: clamp(1.25rem, 4vw, 2rem);
+}
+
+body.login #login form label {
+    color: var(--biblio-login-text);
+    font-size: 1rem;
+    line-height: 1.4;
+}
+
+body.login #login form .input,
+body.login #login form input[type="text"],
+body.login #login form input[type="email"],
+body.login #login form input[type="password"] {
+    background: var(--biblio-login-field);
+    border: 1px solid var(--biblio-login-border-strong);
+    border-radius: 0.375rem;
+    box-shadow: none;
+    color: var(--biblio-login-text);
+    font-family: inherit;
+    font-size: 1rem;
+    inline-size: 100%;
+    min-block-size: 2.75rem;
+    padding: 0.5rem 0.75rem;
+}
+
+body.login #login form input[type="checkbox"] {
+    border-color: var(--biblio-login-border-strong);
+    margin-block: 0;
+}
+
+body.login #login form .forgetmenot {
+    float: none;
+    margin-block: 0.25rem 1.25rem;
+}
+
+body.login #login form .forgetmenot label {
+    align-items: center;
+    display: inline-flex;
+    gap: 0.5rem;
+    min-block-size: 2.75rem;
+}
+
+body.login #login form p.submit {
+    display: block;
+    float: none;
+    margin: 0;
+}
+
+body.login #login .button.button-primary {
+    background: var(--biblio-login-interactive);
+    border: 1px solid var(--biblio-login-interactive);
+    border-radius: 0.375rem;
+    color: var(--biblio-login-on-interactive);
+    float: none;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    inline-size: 100%;
+    min-block-size: 2.75rem;
+    padding: 0.5rem 1rem;
+    text-shadow: none;
+}
+
+body.login #login .button.button-primary:hover {
+    background: var(--biblio-login-interactive-hover);
+}
+
+body.login #login .button.wp-hide-pw {
+    color: var(--biblio-login-interactive);
+}
+
+body.login #login :is(a, button, input, select):focus-visible,
+body.login .language-switcher :is(button, input, select):focus-visible {
+    outline: 2px solid var(--biblio-login-focus);
+    outline-offset: 3px;
+}
+
+body.login #login :is(a, button, input, select):focus:not(:focus-visible),
+body.login .language-switcher :is(button, input, select):focus:not(:focus-visible) {
+    box-shadow: none;
+}
+
+body.login #login #login_error,
+body.login #login .message,
+body.login #login .notice {
+    background: var(--biblio-login-surface);
+    border: 1px solid var(--biblio-login-border);
+    border-inline-start: 4px solid var(--biblio-login-interactive);
+    border-radius: 0.375rem;
+    box-shadow: none;
+    color: var(--biblio-login-text);
+    font-size: 1rem;
+    line-height: 1.4;
+    margin-block: 0 1rem;
+    padding: 0.75rem 1rem;
+}
+
+body.login #login #login_error {
+    border-inline-start-color: var(--biblio-login-error);
+}
+
+body.login #login #nav,
+body.login #login #backtoblog {
+    color: var(--biblio-login-secondary);
+    font-size: 1rem;
+    line-height: 1.4;
+    margin: 0;
+    padding: 1rem 0 0;
+}
+
+body.login #login :is(#nav, #backtoblog) a {
+    color: var(--biblio-login-interactive);
+    display: inline-flex;
+    min-block-size: 2.75rem;
+    align-items: center;
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+}
+
+body.login #login :is(#nav, #backtoblog) a:hover {
+    color: var(--biblio-login-interactive-hover);
+}
+
+body.login .language-switcher {
+    margin-block: 0 1.5rem;
+    padding-inline: 1rem;
+}
+
+body.login .language-switcher :is(select, .button) {
+    min-block-size: 2.75rem;
+}
+
+body.login .language-switcher .button {
+    background: var(--biblio-login-surface);
+    border-color: var(--biblio-login-border-strong);
+    color: var(--biblio-login-interactive);
+}
+
+body.login .language-switcher .button:hover {
+    background: var(--biblio-login-page);
+    border-color: var(--biblio-login-interactive);
+    color: var(--biblio-login-interactive-hover);
+}
+
+@media (max-width: 480px) {
+    body.login #login {
+        padding-block-start: 2rem;
+    }
+}

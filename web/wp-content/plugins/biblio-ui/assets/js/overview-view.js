@@ -78,10 +78,10 @@ function page(documentImpl, state, busy = false) {
     });
 }
 
-function appHeading(documentImpl, parent) {
+function appHeading(documentImpl, parent, libraryName) {
     parent.append(element(documentImpl, "h1", {
         className: "biblio-ui__page-title",
-        text: "Mijn Bibliotheek",
+        text: libraryName,
     }));
 }
 
@@ -731,10 +731,9 @@ function renderLibraryLoading(documentImpl) {
 function renderOverviewLoading(documentImpl, model) {
     const view = page(documentImpl, "overview-loading", true);
     view.setAttribute("aria-live", "polite");
-    appHeading(documentImpl, view);
+    appHeading(documentImpl, view, model.library.name);
     append(
         view,
-        element(documentImpl, "p", { text: model.library.name }),
         element(documentImpl, "h2", { text: "Boeken laden" })
     );
     return view;
@@ -795,8 +794,10 @@ function renderRequestError(documentImpl, actions) {
 
 function renderChooser(documentImpl, model, actions) {
     const view = page(documentImpl, "library-chooser");
-    appHeading(documentImpl, view);
-    view.append(element(documentImpl, "h2", { text: "Kies een bibliotheek" }));
+    view.append(element(documentImpl, "h1", {
+        className: "biblio-ui__page-title",
+        text: "Kies een bibliotheek",
+    }));
     const list = element(documentImpl, "ul", {
         className: "biblio-ui__library-list",
     });
@@ -876,11 +877,7 @@ function renderOverview(documentImpl, model, actions, itemUrl, uiState) {
             text: "Catalogus",
         })
     );
-    appHeading(documentImpl, headingGroup);
-    headingGroup.append(element(documentImpl, "p", {
-        className: "biblio-ui__library",
-        text: model.library.name,
-    }));
+    appHeading(documentImpl, headingGroup, model.library.name);
     header.append(headingGroup);
     if (model.library.capabilities.add_catalog_item === true) {
         const addBook = actionButton(

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Biblio UI
  * Description: Browser presentation adapter for Biblio V2.
- * Version: 0.21.2
+ * Version: 0.22.5
  * Requires at least: 7.0
  * Requires PHP: 8.3
  * Text Domain: biblio-ui
@@ -12,7 +12,11 @@ declare(strict_types=1);
 
 defined("ABSPATH") || exit;
 
+require_once __DIR__ . "/src/AccountMount.php";
+require_once __DIR__ . "/src/LoginPresentation.php";
 require_once __DIR__ . "/src/LibraryAppShortcode.php";
+require_once __DIR__ . "/src/EntryAppShortcode.php";
+require_once __DIR__ . "/src/PublicHomeShortcode.php";
 require_once __DIR__ . "/src/NextReadingAppShortcode.php";
 require_once __DIR__ . "/src/WishlistAppShortcode.php";
 require_once __DIR__ . "/src/SearchAppShortcode.php";

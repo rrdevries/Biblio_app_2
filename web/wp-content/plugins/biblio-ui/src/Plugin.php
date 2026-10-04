@@ -6,8 +6,9 @@ namespace Biblio\UI;
 
 final class Plugin
 {
-    public const VERSION = "0.21.2";
+    public const VERSION = "0.22.5";
     public const PAGE_BODY_CLASS = "biblio-app-shell-page";
+    public const PUBLIC_HOME_BODY_CLASS = "biblio-public-home-page";
     public const SCRIPT_MODULE_ID = "biblio-ui/app";
     public const ADD_BOOK_SCRIPT_MODULE_ID = "biblio-ui/add-book-wizard";
     public const API_SCRIPT_MODULE_ID = "biblio-ui/api";
@@ -25,20 +26,26 @@ final class Plugin
     public const NEXT_READING_SCRIPT_MODULE_ID = "biblio-ui/next-reading";
     public const WISHLIST_SCRIPT_MODULE_ID = "biblio-ui/wishlist";
     public const SEARCH_SCRIPT_MODULE_ID = "biblio-ui/bibliographic-search";
+    public const ENTRY_SCRIPT_MODULE_ID = "biblio-ui/entry";
     public const STYLE_HANDLE = "biblio-ui";
+    public const PUBLIC_HOME_STYLE_HANDLE = "biblio-ui-public-home";
 
     private bool $booted = false;
     private readonly LibraryAppShortcode $libraryAppShortcode;
     private readonly NextReadingAppShortcode $nextReadingAppShortcode;
     private readonly WishlistAppShortcode $wishlistAppShortcode;
     private readonly SearchAppShortcode $searchAppShortcode;
+    private readonly LoginPresentation $loginPresentation;
+    private readonly EntryAppShortcode $entryAppShortcode;
+    private readonly PublicHomeShortcode $publicHomeShortcode;
 
     public function __construct(
         private readonly string $pluginFile,
         ?LibraryAppShortcode $libraryAppShortcode = null,
         ?NextReadingAppShortcode $nextReadingAppShortcode = null,
         ?WishlistAppShortcode $wishlistAppShortcode = null,
-        ?SearchAppShortcode $searchAppShortcode = null
+        ?SearchAppShortcode $searchAppShortcode = null,
+        ?LoginPresentation $loginPresentation = null
     ) {
         $this->libraryAppShortcode = $libraryAppShortcode
             ?? new LibraryAppShortcode();
@@ -48,6 +55,10 @@ final class Plugin
             ?? new WishlistAppShortcode();
         $this->searchAppShortcode = $searchAppShortcode
             ?? new SearchAppShortcode();
+        $this->loginPresentation = $loginPresentation
+            ?? new LoginPresentation($pluginFile);
+        $this->entryAppShortcode = new EntryAppShortcode();
+        $this->publicHomeShortcode = new PublicHomeShortcode();
     }
 
     public function boot(): void
@@ -60,8 +71,11 @@ final class Plugin
         add_action("init", [$this->nextReadingAppShortcode, "register"]);
         add_action("init", [$this->wishlistAppShortcode, "register"]);
         add_action("init", [$this->searchAppShortcode, "register"]);
+        add_action("init", [$this->entryAppShortcode, "register"]);
+        add_action("init", [$this->publicHomeShortcode, "register"]);
         add_action("wp_enqueue_scripts", [$this, "registerAndEnqueueAssets"]);
         add_filter("body_class", [$this, "addPageBodyClass"]);
+        $this->loginPresentation->boot();
         $this->booted = true;
     }
 
@@ -71,11 +85,18 @@ final class Plugin
      */
     public function addPageBodyClass(array $classes): array
     {
+        if (is_page(PublicHomeShortcode::PAGE_SLUG)) {
+            $classes[] = self::PUBLIC_HOME_BODY_CLASS;
+            return array_values(array_unique($classes));
+        }
+
         if (!is_page([
             LibraryAppShortcode::PAGE_SLUG,
             NextReadingAppShortcode::PAGE_SLUG,
             WishlistAppShortcode::PAGE_SLUG,
             SearchAppShortcode::PAGE_SLUG,
+            EntryAppShortcode::PERSONAL_SLUG,
+            EntryAppShortcode::LIBRARY_SLUG,
         ])) {
             return $classes;
         }
@@ -152,6 +173,18 @@ final class Plugin
         wp_register_script_module(
             self::SEARCH_SCRIPT_MODULE_ID,
             $assetBaseUrl . "js/bibliographic-search.js",
+            [[
+                "id" => self::API_SCRIPT_MODULE_ID,
+                "import" => "static",
+            ], [
+                "id" => self::UI_SHELL_SCRIPT_MODULE_ID,
+                "import" => "static",
+            ]],
+            self::VERSION
+        );
+        wp_register_script_module(
+            self::ENTRY_SCRIPT_MODULE_ID,
+            $assetBaseUrl . "js/entry.js",
             [[
                 "id" => self::API_SCRIPT_MODULE_ID,
                 "import" => "static",
@@ -260,6 +293,24 @@ final class Plugin
             [],
             self::VERSION
         );
+        wp_register_style(
+            self::PUBLIC_HOME_STYLE_HANDLE,
+            $assetBaseUrl . "css/public-home.css",
+            [],
+            self::VERSION
+        );
+
+        if (is_page(PublicHomeShortcode::PAGE_SLUG)) {
+            wp_enqueue_style(self::PUBLIC_HOME_STYLE_HANDLE);
+            return;
+        }
+
+        if (is_page([EntryAppShortcode::PERSONAL_SLUG, EntryAppShortcode::LIBRARY_SLUG])) {
+            wp_enqueue_script_module(self::ENTRY_SCRIPT_MODULE_ID);
+            wp_enqueue_style(self::STYLE_HANDLE);
+
+            return;
+        }
 
         if (is_page(NextReadingAppShortcode::PAGE_SLUG)) {
             wp_enqueue_script_module(self::NEXT_READING_SCRIPT_MODULE_ID);

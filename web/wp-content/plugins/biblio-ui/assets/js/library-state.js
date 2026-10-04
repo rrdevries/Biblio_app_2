@@ -55,18 +55,6 @@ export function resolveLibraryContext(libraries, routeState) {
         return Object.freeze({ state: "empty" });
     }
 
-    if (libraries.length === 1) {
-        return selected(libraries[0], true);
-    }
-
-    const designated = libraries.filter(
-        (library) => library.designated_personal === true
-    );
-
-    if (designated.length === 1) {
-        return selected(designated[0], true);
-    }
-
     return Object.freeze({
         state: "chooser",
         libraries: Object.freeze([...libraries]),

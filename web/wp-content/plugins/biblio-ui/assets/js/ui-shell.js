@@ -36,9 +36,15 @@ export function createLibraryShell(mount, {
     documentImpl = globalThis.document,
     eventTarget = globalThis,
     overviewUrl,
+    platformUrl,
+    libraryHomeUrl,
     searchUrl,
     wishlistUrl,
     nextReadingUrl,
+    loginUrl,
+    accountState = "guest",
+    accountName = "",
+    logoutUrl,
     activeDestination = "library",
     preferences = createUiPreferences(),
 } = {}) {
@@ -60,7 +66,7 @@ export function createLibraryShell(mount, {
     });
     const brand = element(documentImpl, "a", {
         className: "biblio-ui__brand",
-        attributes: { href: overviewUrl },
+        attributes: { href: platformUrl || overviewUrl },
     });
     brand.append(
         icon(documentImpl, "book-open", "biblio-ui__brand-mark"),
@@ -91,46 +97,99 @@ export function createLibraryShell(mount, {
         className: "biblio-ui__nav",
         attributes: { "aria-label": "Hoofdnavigatie" },
     });
-    const destinations = [
-        ["library", "Mijn Bibliotheek", overviewUrl, "books"],
-        ["search", "Zoeken", searchUrl, "search"],
-        ["wishlist", "Verlanglijst", wishlistUrl, "bookmark"],
-        ["next-reading", "Hierna lezen", nextReadingUrl, "book-open"],
-    ];
-    const navLinks = [];
-    for (const [key, label, href, iconName] of destinations) {
-        if (typeof href !== "string" || href.length === 0) {
-            continue;
+    let activeLibrary = null;
+    function renderNavigation() {
+        const contextual = typeof platformUrl === "string" && platformUrl.length > 0;
+        const destinations = contextual ? [
+            ["platform", "Mijn Biblio", platformUrl, "user"],
+            ...(activeLibrary === null ? [] : [
+                ["section", activeLibrary.name],
+                ["home", "Home", activeLibrary.homeUrl, "book-open"],
+                ["library", "Catalogus", activeLibrary.catalogUrl, "books"],
+            ]),
+            ["section", "Persoonlijk"],
+            ["search", "Zoeken", searchUrl, "search"],
+            ["wishlist", "Verlanglijst", wishlistUrl, "bookmark"],
+            ["next-reading", "Hierna lezen", nextReadingUrl, "book-open"],
+        ] : [
+            ["library", "Mijn Bibliotheek", overviewUrl, "books"],
+            ["search", "Zoeken", searchUrl, "search"],
+            ["wishlist", "Verlanglijst", wishlistUrl, "bookmark"],
+            ["next-reading", "Hierna lezen", nextReadingUrl, "book-open"],
+        ];
+        const links = [];
+        for (const [key, label, href, iconName] of destinations) {
+            if (key === "section") {
+                links.push(element(documentImpl, "p", {
+                    className: "biblio-ui__nav-section biblio-ui__nav-label",
+                    text: label,
+                }));
+                continue;
+            }
+            if (typeof href !== "string" || href.length === 0) {
+                continue;
+            }
+            const link = element(documentImpl, "a", {
+                className: "biblio-ui__nav-link",
+                attributes: {
+                    href,
+                    ...(activeDestination === key ? { "aria-current": "page" } : {}),
+                    title: label,
+                },
+            });
+            link.append(
+                icon(documentImpl, iconName, "biblio-ui__nav-mark"),
+                element(documentImpl, "span", {
+                    className: "biblio-ui__nav-label",
+                    text: label,
+                })
+            );
+            link.addEventListener("click", closeMobileNavigation);
+            links.push(link);
         }
-        const link = element(documentImpl, "a", {
-            className: "biblio-ui__nav-link",
-            attributes: {
-                href,
-                ...(activeDestination === key ? { "aria-current": "page" } : {}),
-                title: label,
-            },
+        nav.replaceChildren(...links);
+    }
+    renderNavigation();
+
+    const account = element(documentImpl, "nav", {
+        className: "biblio-ui__sidebar-account",
+        attributes: { "aria-label": "Account" },
+    });
+    const authenticated = accountState === "authenticated";
+    if (authenticated) {
+        const identity = element(documentImpl, "p", {
+            className: "biblio-ui__sidebar-context",
+            attributes: { title: accountName || "Aangemeld" },
         });
-        link.append(
-            icon(documentImpl, iconName, "biblio-ui__nav-mark"),
+        identity.append(
+            icon(documentImpl, "user", "biblio-ui__context-mark"),
             element(documentImpl, "span", {
                 className: "biblio-ui__nav-label",
-                text: label,
+                text: accountName || "Aangemeld",
             })
         );
-        nav.append(link);
-        navLinks.push(link);
+        account.append(identity);
     }
-
-    const account = element(documentImpl, "p", {
-        className: "biblio-ui__sidebar-context",
-    });
-    account.append(
-        icon(documentImpl, "user", "biblio-ui__context-mark"),
-        element(documentImpl, "span", {
-            className: "biblio-ui__nav-label",
-            text: "Privéomgeving",
-        })
-    );
+    const actionLabel = authenticated ? "Uitloggen" : "Inloggen";
+    const actionUrl = authenticated ? logoutUrl : loginUrl;
+    if (typeof actionUrl === "string" && actionUrl.length > 0) {
+        const action = element(documentImpl, "a", {
+            className: "biblio-ui__account-action",
+            attributes: {
+                href: actionUrl,
+                title: actionLabel,
+                "aria-label": actionLabel,
+            },
+        });
+        action.append(
+            icon(documentImpl, authenticated ? "log-out" : "log-in", "biblio-ui__context-mark"),
+            element(documentImpl, "span", {
+                className: "biblio-ui__nav-label",
+                text: actionLabel,
+            })
+        );
+        account.append(action);
+    }
 
     sidebar.append(brand, collapseButton, nav, account);
 
@@ -229,14 +288,28 @@ export function createLibraryShell(mount, {
         closeMobileNavigation();
         menuButton.focus?.();
     });
-    for (const link of navLinks) {
-        link.addEventListener("click", closeMobileNavigation);
-    }
     eventTarget?.addEventListener?.("keydown", onKeyDown);
     sync();
 
     return Object.freeze({
         contentRoot,
+        setLibraryContext(library) {
+            if (library === null) {
+                activeLibrary = null;
+            } else {
+                if (typeof library?.library_id !== "string" || library.library_id.length === 0
+                    || typeof library.name !== "string" || library.name.length === 0
+                    || typeof libraryHomeUrl !== "string" || typeof overviewUrl !== "string") {
+                    throw new TypeError("An authorized Library and its routes are required.");
+                }
+                const home = new URL(libraryHomeUrl);
+                const catalog = new URL(overviewUrl);
+                home.searchParams.set("library_id", library.library_id);
+                catalog.searchParams.set("library_id", library.library_id);
+                activeLibrary = { name: library.name, homeUrl: home.toString(), catalogUrl: catalog.toString() };
+            }
+            renderNavigation();
+        },
         destroy() {
             eventTarget?.removeEventListener?.("keydown", onKeyDown);
         },

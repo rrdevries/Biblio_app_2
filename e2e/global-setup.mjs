@@ -20,13 +20,13 @@ export default async function globalSetup() {
     });
     const page = await context.newPage();
 
-    const redirect = encodeURIComponent(`${baseURL}/mijn-bibliotheek/`);
+    const redirect = encodeURIComponent(`${baseURL}/mijn-biblio/`);
     await page.goto(`/wp-login.php?redirect_to=${redirect}`);
     await page.locator("#user_login").fill(username);
     await page.locator("#user_pass").fill(password);
     await page.locator("#wp-submit").click();
-    await page.waitForURL(/\/mijn-bibliotheek\//);
-    await page.locator("[data-biblio-view='overview']").waitFor();
+    await page.waitForURL(/\/mijn-biblio\//);
+    await page.locator("[data-biblio-entry-root][data-entry-mode='personal']").waitFor();
     await context.storageState({ path: ".local/e2e-auth/actor.json" });
     await browser.close();
 }
