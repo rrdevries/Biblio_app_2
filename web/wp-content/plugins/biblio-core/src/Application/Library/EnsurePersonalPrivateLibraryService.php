@@ -18,8 +18,8 @@ final readonly class EnsurePersonalPrivateLibraryService
 
     public function ensure(): LibraryId
     {
-        return $this->provisioner->provision(
+        return $this->provisioner->existingFor(
             $this->authenticatedUser->requireUserId()
-        );
+        ) ?? throw new \Biblio\Core\Exception\AuthorizationException("Personal Library creation requires authorized account preparation.");
     }
 }

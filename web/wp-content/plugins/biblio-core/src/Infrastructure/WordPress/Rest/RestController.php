@@ -43,6 +43,16 @@ final class RestController
             return;
         }
 
+        register_rest_route(self::NAMESPACE, "/me/account-preparation", [
+            "methods" => WP_REST_Server::READABLE,
+            "callback" => [$this, "accountPreparation"],
+            "permission_callback" => [$this, "authenticated"],
+        ]);
+        register_rest_route(self::NAMESPACE, "/libraries/(?P<library_id>[^/]+)/name", [
+            "methods" => WP_REST_Server::CREATABLE,
+            "callback" => [$this, "libraryName"],
+            "permission_callback" => [$this, "authenticated"],
+        ]);
         register_rest_route(self::NAMESPACE, "/me/libraries", [
             "methods" => WP_REST_Server::READABLE,
             "callback" => [$this, "libraries"],
@@ -297,6 +307,21 @@ final class RestController
         return is_user_logged_in()
             ? true
             : $this->errors->authenticationRequired();
+    }
+
+    public function accountPreparation(WP_REST_Request $request): WP_REST_Response|WP_Error
+    {
+        return $this->execute(fn (CoreApplication $app): WP_REST_Response => $this->success($app->accountPreparation()->myStatus()));
+    }
+
+    public function libraryName(WP_REST_Request $request): WP_REST_Response|WP_Error
+    {
+        return $this->execute(function (CoreApplication $app) use ($request): WP_REST_Response {
+            $name = $request->get_param("name");
+            if (!is_string($name)) { throw new \Biblio\Core\Exception\ValidationException("A Library name is required."); }
+            $app->accountPreparation()->saveName($this->requests->libraryId($request), $name);
+            return $this->success($app->accountPreparation()->myStatus());
+        });
     }
 
     public function libraries(WP_REST_Request $request): WP_REST_Response|WP_Error

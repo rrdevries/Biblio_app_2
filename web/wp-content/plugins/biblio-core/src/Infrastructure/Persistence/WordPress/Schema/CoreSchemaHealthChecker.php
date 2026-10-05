@@ -56,6 +56,7 @@ final readonly class CoreSchemaHealthChecker
             1024 => $this->inspectTables($this->tableNames->schema1024(), true, 1024),
             1025 => $this->inspectTables($this->tableNames->schema1025(), true, 1025),
             1026 => $this->inspectTables($this->tableNames->schema1026(), true, 1026),
+            1027 => $this->inspectTables($this->tableNames->schema1027(), true, 1027),
             default => throw new CoreSchemaMigrationException(
                 "No explicit Biblio Core schema-health contract exists for "
                 . "schema version {$expectedVersion}."
@@ -322,6 +323,11 @@ final readonly class CoreSchemaHealthChecker
             true,
             1024
         );
+    }
+
+    public function inspectExistingSchema1027Additions(): CoreSchemaHealth
+    {
+        return $this->inspectTables([$this->tableNames->accountPreparations()], false, 1027);
     }
 
     /** @param list<string> $tableNames */
@@ -941,6 +947,11 @@ final readonly class CoreSchemaHealthChecker
         }
 
         return [
+            ...($schemaVersion >= 1027 ? [$this->tableNames->accountPreparations() => [
+                "user_id" => $id, "library_id" => $nullableId,
+                "naming_complete" => ["type" => "tinyint(1)", "nullable" => "NO"],
+                "notification_sent" => ["type" => "tinyint(1)", "nullable" => "NO"],
+            ]] : []),
             $this->tableNames->libraries() => $libraryColumns,
             $this->tableNames->memberships() => [
                 "library_id" => $id,
@@ -1772,6 +1783,10 @@ final readonly class CoreSchemaHealthChecker
         }
 
         return [
+            ...($schemaVersion >= 1027 ? [$this->tableNames->accountPreparations() => [
+                "PRIMARY" => ["unique" => true, "columns" => ["user_id"]],
+                "one_preparation_per_library" => ["unique" => true, "columns" => ["library_id"]],
+            ]] : []),
             $this->tableNames->libraries() => [
                 "PRIMARY" => ["unique" => true, "columns" => ["library_id"]],
             ],
@@ -2369,6 +2384,9 @@ final readonly class CoreSchemaHealthChecker
         ];
 
         return [
+            ...($schemaVersion >= 1027 ? [$this->tableNames->accountPreparations() => [
+                $restrict(["library_id"], $this->tableNames->libraries(), ["library_id"]),
+            ]] : []),
             $this->tableNames->memberships() => [
                 $restrict(["library_id"], $this->tableNames->libraries(), ["library_id"]),
             ],
@@ -2692,6 +2710,11 @@ final readonly class CoreSchemaHealthChecker
             );
 
         return [
+            ...($schemaVersion >= 1027 ? [$this->tableNames->accountPreparations() => [
+                "naming_complete IN (0,1) AND notification_sent IN (0,1)",
+                "library_id IS NOT NULL OR naming_complete=0 AND notification_sent=0",
+                "CHAR_LENGTH(TRIM(user_id)) > 0",
+            ]] : []),
             $this->tableNames->libraries() => [
                 "library_type = 'private_library'",
                 "library_status = 'active'",

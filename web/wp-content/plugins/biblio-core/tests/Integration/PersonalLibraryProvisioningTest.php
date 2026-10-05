@@ -6,7 +6,6 @@ namespace Biblio\Core\Tests\Integration;
 
 use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Application\Library\CreateLibraryService;
-use Biblio\Core\Application\Library\EnsurePersonalPrivateLibraryService;
 use Biblio\Core\Application\Library\ProvisionPersonalPrivateLibraryService;
 use Biblio\Core\Identity\UserId;
 use Biblio\Core\Infrastructure\Persistence\PersistenceException;
@@ -26,7 +25,6 @@ use Biblio\Core\Library\PersonalLibraryDesignationConflict;
 use Biblio\Core\Library\PersonalLibraryRepository;
 use Biblio\Core\Library\UseAccess;
 use Biblio\Core\Library\WritableLibraryMembershipRepository;
-use Biblio\Core\Tests\Support\ControllableAuthenticatedUser;
 use RuntimeException;
 
 final class PersonalLibraryProvisioningTest extends
@@ -47,7 +45,7 @@ final class PersonalLibraryProvisioningTest extends
     public function testFirstProvisioningCreatesCanonicalState(): void
     {
         $userId = new UserId("user-x");
-        $libraryId = $this->ensureService($userId)->ensure();
+        $libraryId = $this->provisionService()->provision($userId);
         $library = $this->libraryRepository()->find($libraryId);
         $membership = $this->membershipRepository()->findFor(
             $libraryId,
@@ -82,11 +80,11 @@ final class PersonalLibraryProvisioningTest extends
     public function testRepeatedProvisioningReusesExactlyOneLibrary(): void
     {
         $userId = new UserId("user-x");
-        $service = $this->ensureService($userId);
+        $service = $this->provisionService();
 
-        $first = $service->ensure();
-        $second = $service->ensure();
-        $third = $service->ensure();
+        $first = $service->provision($userId);
+        $second = $service->provision($userId);
+        $third = $service->provision($userId);
 
         self::assertTrue($first->equals($second));
         self::assertTrue($first->equals($third));
@@ -99,8 +97,8 @@ final class PersonalLibraryProvisioningTest extends
     {
         $userX = new UserId("user-x");
         $userY = new UserId("user-y");
-        $libraryX = $this->ensureService($userX)->ensure();
-        $libraryY = $this->ensureService($userY)->ensure();
+        $libraryX = $this->provisionService()->provision($userX);
+        $libraryY = $this->provisionService()->provision($userY);
 
         self::assertFalse($libraryX->equals($libraryY));
         self::assertTrue($libraryX->equals(
@@ -123,7 +121,7 @@ final class PersonalLibraryProvisioningTest extends
             $userId
         );
 
-        $personalLibraryId = $this->ensureService($userId)->ensure();
+        $personalLibraryId = $this->provisionService()->provision($userId);
 
         self::assertFalse($otherLibraryId->equals($personalLibraryId));
         self::assertTrue($personalLibraryId->equals(
@@ -138,7 +136,7 @@ final class PersonalLibraryProvisioningTest extends
     {
         $userX = new UserId("user-x");
         $userY = new UserId("user-y");
-        $personalLibraryId = $this->ensureService($userX)->ensure();
+        $personalLibraryId = $this->provisionService()->provision($userX);
         $otherLibraryId = new LibraryId("other-owned-library");
         $this->createLibraryService()->create(
             Library::privateLibrary($otherLibraryId),
@@ -241,13 +239,12 @@ final class PersonalLibraryProvisioningTest extends
                 return $this->repository->findFor($libraryId, $userId);
             }
         };
-        $service = $this->ensureService(
-            new UserId("user-x"),
+        $service = $this->provisionService(
             $failingMembershipRepository
         );
 
         try {
-            $service->ensure();
+            $service->provision(new UserId("user-x"));
             self::fail("Forced failure did not occur.");
         } catch (RuntimeException $exception) {
             self::assertSame(
@@ -284,14 +281,13 @@ final class PersonalLibraryProvisioningTest extends
                 );
             }
         };
-        $service = $this->ensureService(
-            new UserId("user-x"),
+        $service = $this->provisionService(
             null,
             $failingPersonalLibraryRepository
         );
 
         try {
-            $service->ensure();
+            $service->provision(new UserId("user-x"));
             self::fail("Forced failure did not occur.");
         } catch (RuntimeException $exception) {
             self::assertSame(
@@ -303,19 +299,14 @@ final class PersonalLibraryProvisioningTest extends
         $this->assertEmptyProvisioningState();
     }
 
-    private function ensureService(
-        UserId $userId,
+    /** Low-level primitive retained for authorized provisioning/migration, not an ordinary-user boundary. */
+    private function provisionService(
         ?WritableLibraryMembershipRepository $membershipRepository = null,
         ?PersonalLibraryRepository $personalLibraryRepository = null
-    ): EnsurePersonalPrivateLibraryService {
-        $personalLibraryRepository ??= $this->personalLibraryRepository();
-
-        return new EnsurePersonalPrivateLibraryService(
-            new ControllableAuthenticatedUser($userId),
-            new ProvisionPersonalPrivateLibraryService(
-                $personalLibraryRepository,
-                $this->createLibraryService($membershipRepository)
-            )
+    ): ProvisionPersonalPrivateLibraryService {
+        return new ProvisionPersonalPrivateLibraryService(
+            $personalLibraryRepository ?? $this->personalLibraryRepository(),
+            $this->createLibraryService($membershipRepository)
         );
     }
 

@@ -18,7 +18,7 @@ use wpdb;
 
 final class Plugin
 {
-    public const VERSION = "2.51.2";
+    public const VERSION = "2.52.0";
 
     private bool $hooksRegistered = false;
     private bool $initialized = false;
@@ -62,6 +62,9 @@ final class Plugin
         add_action("init", [$this, "initialize"], 1);
         add_action("admin_notices", [$this, "renderAdminNotice"]);
         $this->restApi->boot();
+        (new \Biblio\Core\Infrastructure\WordPress\Identity\AccountPreparationAdapter(
+            fn (): ?CoreApplication => $this->application()
+        ))->boot();
         $this->registerCli();
         $this->hooksRegistered = true;
     }

@@ -11,6 +11,7 @@ final readonly class CoreTableNames
     private const MAX_TABLE_NAME_LENGTH = 64;
 
     private string $libraries;
+    private string $accountPreparations;
     private string $memberships;
     private string $personalLibraryDesignations;
     private string $works;
@@ -75,6 +76,7 @@ final readonly class CoreTableNames
     public function __construct(string $prefix)
     {
         $this->libraries = $prefix . "biblio_libraries";
+        $this->accountPreparations = $prefix . "biblio_account_preparations";
         $this->memberships = $prefix . "biblio_library_memberships";
         $this->personalLibraryDesignations = $prefix
             . "biblio_personal_library_designations";
@@ -154,7 +156,7 @@ final readonly class CoreTableNames
         $this->authorCreditEvidence = $prefix
             . "biblio_author_credit_evidence";
 
-        foreach ($this->schema1026() as $tableName) {
+        foreach ($this->schema1027() as $tableName) {
             $this->assertSafe($tableName);
         }
         $this->assertSafe($this->nextReadingInsertTrigger);
@@ -688,6 +690,11 @@ final readonly class CoreTableNames
     {
         return $this->schema1025();
     }
+
+    public function accountPreparations(): string { return $this->accountPreparations; }
+
+    /** @return list<string> */
+    public function schema1027(): array { return [...$this->schema1026(), $this->accountPreparations]; }
 
     private function assertSafe(string $tableName): void
     {

@@ -45,6 +45,9 @@ abstract class PersistenceIntegrationTestCase extends TestCase
 
     protected function resetCoreTables(): void
     {
+        if ($this->tableExists($this->tableNames->accountPreparations())) {
+            $this->database->query("DELETE FROM `" . $this->tableNames->accountPreparations() . "`");
+        }
         $activityEvents = $this->tableNames->libraryActivityEvents();
         $contextGenres = $this->tableNames->libraryCatalogContextGenres();
         $contextSubjects = $this->tableNames->libraryCatalogContextSubjects();

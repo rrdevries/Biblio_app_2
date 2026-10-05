@@ -111,6 +111,8 @@ final class RestApiTest extends PersistenceIntegrationTestCase
     {
         $routes = $this->server->get_routes();
         $expected = [
+            "/biblio/v1/me/account-preparation",
+            "/biblio/v1/libraries/(?P<library_id>[^/]+)/name",
             "/biblio/v1/me/libraries",
             "/biblio/v1/me/reading-rounds/(?P<reading_round_id>[^/]+)/end",
             "/biblio/v1/me/works/(?P<work_id>[^/]+)/reading-history",
@@ -151,7 +153,7 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             }
         }
 
-        self::assertCount(26, array_filter(
+        self::assertCount(28, array_filter(
             array_keys($routes),
             static fn (string $route): bool => str_starts_with(
                 $route,
@@ -1285,10 +1287,12 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             "SELECT COUNT(*) FROM `{$this->tableNames->works()}`"
         ));
 
-        wp_set_current_user($this->actorId);
-        (new ProductionComposition($this->database))->application()
-            ->personalLibraries()
-            ->ensure();
+        // Explicit test setup: ordinary reads no longer provision a personal Library.
+        $this->seedLibrary("materialization-personal", "Eigen boeken", $this->actorId, "owner");
+        self::assertSame(1, $this->database->insert($this->tableNames->personalLibraryDesignations(), [
+            "user_id" => (string) $this->actorId,
+            "library_id" => "materialization-personal",
+        ]));
         $authorized = $this->dispatchAsActor($request);
         self::assertSame(201, $authorized->get_status());
         self::assertStringStartsWith(
@@ -2657,7 +2661,8 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         $firstData = $this->successData($first);
 
         self::assertSame(200, $first->get_status());
-        self::assertSame(16, $firstCalls);
+        // Six actor checks now each read indexed account readiness; this remains independent of result size.
+        self::assertSame(22, $firstCalls);
         self::assertSame("author-work-rich-a", $firstData["items"][0]["authors"][0]["author_id"]);
         self::assertSame("series-work-rich-a", $firstData["items"][0]["series"][0]["series_id"]);
         self::assertSame("location-query-count", $firstData["items"][0]["location"]["location_id"]);
@@ -2675,7 +2680,7 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         $nextCalls = $this->database->num_queries - $before;
 
         self::assertSame(200, $next->get_status());
-        self::assertSame(17, $nextCalls);
+        self::assertSame(23, $nextCalls);
         self::assertSame(["item-rich-b"], array_column(
             $this->successData($next)["items"],
             "item_id"

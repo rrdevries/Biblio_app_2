@@ -161,8 +161,14 @@ final readonly class CoreApplication
         private BibliographicMaterializationService $bibliographicMaterialization,
         private MigrationParticipantRegistry $migrationParticipants,
         private MigrationSourceMapperRegistry $migrationSourceMappers,
-        private MigrationReconciliationService $migrationReconciliation
+        private MigrationReconciliationService $migrationReconciliation,
+        private ?\Biblio\Core\Application\Accounts\AccountPreparationService $accountPreparation = null
     ) {
+    }
+
+    public function accountPreparation(): \Biblio\Core\Application\Accounts\AccountPreparationService
+    {
+        return $this->accountPreparation ?? throw new \LogicException("Account preparation is unavailable.");
     }
 
     public function migrationParticipants(): MigrationParticipantRegistry

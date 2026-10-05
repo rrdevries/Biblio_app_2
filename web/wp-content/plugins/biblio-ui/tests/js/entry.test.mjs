@@ -160,3 +160,20 @@ test("guest entry does not request the private Library list", async () => {
     assert.ok(labels(host).includes("Log in om je bibliotheken te bekijken."));
     assert.equal(links(host)[0].textContent, "Inloggen");
 });
+
+
+test("rename action belongs only to the exact designated personal Library", async () => {
+    for (const isPersonal of [true, false]) {
+        const own = { ...library("own/id", "Boekenkast", true), designated_personal: isPersonal,
+            capabilities: { view_collection: true, add_catalog_item: true, modify_catalog_context: true } };
+        const { host, app } = harness("library", [own], "https://example.test/bibliotheek-home/?library_id=own%2Fid");
+        await app.load();
+        const rename = links(host).filter((node) => node.textContent === "Bibliotheeknaam wijzigen");
+        assert.equal(rename.length, isPersonal ? 1 : 0);
+        if (isPersonal) {
+            const target = new URL(rename[0].getAttribute("href"));
+            assert.equal(target.searchParams.get("library_id"), "own/id");
+            assert.equal(target.searchParams.get("biblio_name"), "1");
+        }
+    }
+});

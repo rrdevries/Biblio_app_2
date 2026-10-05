@@ -331,6 +331,7 @@ biblioUiAssertFalse(
 
 require_once __DIR__ . "/../src/AccountMount.php";
 require_once __DIR__ . "/../src/LoginPresentation.php";
+require_once __DIR__ . "/../src/LibraryNamePresentation.php";
 require_once __DIR__ . "/../src/LibraryAppShortcode.php";
 require_once __DIR__ . "/../src/EntryAppShortcode.php";
 require_once __DIR__ . "/../src/PublicHomeShortcode.php";
@@ -843,7 +844,7 @@ biblioUiAssertSame(
             "id" => \Biblio\UI\Plugin::WISHLIST_SCRIPT_MODULE_ID,
             "import" => "static",
         ]],
-        "version" => "0.22.5",
+        "version" => "0.23.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[\Biblio\UI\Plugin::SCRIPT_MODULE_ID] ?? null,
@@ -854,7 +855,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/api.js",
         "dependencies" => [],
-        "version" => "0.22.5",
+        "version" => "0.23.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -867,7 +868,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/catalog-query.js",
         "dependencies" => [],
-        "version" => "0.22.5",
+        "version" => "0.23.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -883,7 +884,7 @@ biblioUiAssertSame(
             "id" => \Biblio\UI\Plugin::CATALOG_QUERY_SCRIPT_MODULE_ID,
             "import" => "static",
         ]],
-        "version" => "0.22.5",
+        "version" => "0.23.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -896,7 +897,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/library-state.js",
         "dependencies" => [],
-        "version" => "0.22.5",
+        "version" => "0.23.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -909,7 +910,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/overview-view.js",
         "dependencies" => [],
-        "version" => "0.22.5",
+        "version" => "0.23.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -922,7 +923,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/ui-preferences.js",
         "dependencies" => [],
-        "version" => "0.22.5",
+        "version" => "0.23.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -938,7 +939,7 @@ biblioUiAssertSame(
             "id" => \Biblio\UI\Plugin::UI_PREFERENCES_SCRIPT_MODULE_ID,
             "import" => "static",
         ]],
-        "version" => "0.22.5",
+        "version" => "0.23.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -957,7 +958,7 @@ biblioUiAssertSame(
             "id" => \Biblio\UI\Plugin::UI_SHELL_SCRIPT_MODULE_ID,
             "import" => "static",
         ]],
-        "version" => "0.22.5",
+        "version" => "0.23.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -976,7 +977,7 @@ biblioUiAssertSame(
             "id" => \Biblio\UI\Plugin::UI_SHELL_SCRIPT_MODULE_ID,
             "import" => "static",
         ]],
-        "version" => "0.22.5",
+        "version" => "0.23.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -995,7 +996,7 @@ biblioUiAssertSame(
             "id" => \Biblio\UI\Plugin::UI_SHELL_SCRIPT_MODULE_ID,
             "import" => "static",
         ]],
-        "version" => "0.22.5",
+        "version" => "0.23.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -1008,7 +1009,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/private-notes.js",
         "dependencies" => [],
-        "version" => "0.22.5",
+        "version" => "0.23.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -1021,7 +1022,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/reading-history.js",
         "dependencies" => [],
-        "version" => "0.22.5",
+        "version" => "0.23.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -1034,7 +1035,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/detail-view.js",
         "dependencies" => [],
-        "version" => "0.22.5",
+        "version" => "0.23.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -1047,7 +1048,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/start-reading-view.js",
         "dependencies" => [],
-        "version" => "0.22.5",
+        "version" => "0.23.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -1060,7 +1061,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/end-reading-view.js",
         "dependencies" => [],
-        "version" => "0.22.5",
+        "version" => "0.23.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -1073,7 +1074,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/js/add-book-wizard.js",
         "dependencies" => [],
-        "version" => "0.22.5",
+        "version" => "0.23.0",
         "arguments" => [],
     ],
     $biblioUiTestRegisteredModules[
@@ -1086,7 +1087,7 @@ biblioUiAssertSame(
         "source" => "https://example.test/wp-content/plugins/biblio-ui/"
             . "assets/css/app.css",
         "dependencies" => [],
-        "version" => "0.22.5",
+        "version" => "0.23.0",
         "media" => "all",
     ],
     $biblioUiTestRegisteredStyles[\Biblio\UI\Plugin::STYLE_HANDLE] ?? null,
@@ -1347,7 +1348,7 @@ biblioUiAssertSame(
     "The plugin entry point must register one additional body-class filter."
 );
 biblioUiAssertSame(
-    "0.22.5",
+    "0.23.0",
     \Biblio\UI\Plugin::VERSION,
     "The plugin version must remain the single asset cache-busting version."
 );
@@ -1363,24 +1364,24 @@ biblioUiAssertFalse(
 echo "OK: Biblio UI isolated smoke test passed." . PHP_EOL;
 echo "Lifecycle: idempotent" . PHP_EOL;
 echo "Shortcode config: escaped server values" . PHP_EOL;
-echo "Script Module: biblio-ui/app@0.22.5" . PHP_EOL;
-echo "API Script Module: biblio-ui/api@0.22.5" . PHP_EOL;
-echo "Catalog Query Script Module: biblio-ui/catalog-query@0.22.5" . PHP_EOL;
-echo "Route Script Module: biblio-ui/route-state@0.22.5" . PHP_EOL;
-echo "Library Script Module: biblio-ui/library-state@0.22.5" . PHP_EOL;
-echo "Overview Script Module: biblio-ui/overview-view@0.22.5" . PHP_EOL;
-echo "UI Preferences Script Module: biblio-ui/ui-preferences@0.22.5" . PHP_EOL;
-echo "UI Shell Script Module: biblio-ui/ui-shell@0.22.5" . PHP_EOL;
-echo "Private Notes Script Module: biblio-ui/private-notes@0.22.5" . PHP_EOL;
-echo "Reading History Script Module: biblio-ui/reading-history@0.22.5" . PHP_EOL;
-echo "Detail Script Module: biblio-ui/detail-view@0.22.5" . PHP_EOL;
-echo "Start Reading Script Module: biblio-ui/start-reading-view@0.22.5" . PHP_EOL;
-echo "End Reading Script Module: biblio-ui/end-reading-view@0.22.5" . PHP_EOL;
-echo "Add Book Script Module: biblio-ui/add-book-wizard@0.22.5" . PHP_EOL;
-echo "Next Reading Script Module: biblio-ui/next-reading@0.22.5" . PHP_EOL;
-echo "Wishlist Script Module: biblio-ui/wishlist@0.22.5" . PHP_EOL;
-echo "Search Script Module: biblio-ui/bibliographic-search@0.22.5" . PHP_EOL;
-echo "Stylesheet: biblio-ui@0.22.5" . PHP_EOL;
+echo "Script Module: biblio-ui/app@0.23.0" . PHP_EOL;
+echo "API Script Module: biblio-ui/api@0.23.0" . PHP_EOL;
+echo "Catalog Query Script Module: biblio-ui/catalog-query@0.23.0" . PHP_EOL;
+echo "Route Script Module: biblio-ui/route-state@0.23.0" . PHP_EOL;
+echo "Library Script Module: biblio-ui/library-state@0.23.0" . PHP_EOL;
+echo "Overview Script Module: biblio-ui/overview-view@0.23.0" . PHP_EOL;
+echo "UI Preferences Script Module: biblio-ui/ui-preferences@0.23.0" . PHP_EOL;
+echo "UI Shell Script Module: biblio-ui/ui-shell@0.23.0" . PHP_EOL;
+echo "Private Notes Script Module: biblio-ui/private-notes@0.23.0" . PHP_EOL;
+echo "Reading History Script Module: biblio-ui/reading-history@0.23.0" . PHP_EOL;
+echo "Detail Script Module: biblio-ui/detail-view@0.23.0" . PHP_EOL;
+echo "Start Reading Script Module: biblio-ui/start-reading-view@0.23.0" . PHP_EOL;
+echo "End Reading Script Module: biblio-ui/end-reading-view@0.23.0" . PHP_EOL;
+echo "Add Book Script Module: biblio-ui/add-book-wizard@0.23.0" . PHP_EOL;
+echo "Next Reading Script Module: biblio-ui/next-reading@0.23.0" . PHP_EOL;
+echo "Wishlist Script Module: biblio-ui/wishlist@0.23.0" . PHP_EOL;
+echo "Search Script Module: biblio-ui/bibliographic-search@0.23.0" . PHP_EOL;
+echo "Stylesheet: biblio-ui@0.23.0" . PHP_EOL;
 echo "Global enqueue: no" . PHP_EOL;
 echo "Library Page enqueue: yes" . PHP_EOL;
 echo "Elementor loaded: no" . PHP_EOL;

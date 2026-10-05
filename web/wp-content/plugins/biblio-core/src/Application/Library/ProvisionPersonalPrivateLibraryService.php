@@ -18,6 +18,11 @@ final readonly class ProvisionPersonalPrivateLibraryService
     ) {
     }
 
+    public function existingFor(UserId $userId): ?LibraryId
+    {
+        return $this->personalLibraryRepository->findForUser($userId);
+    }
+
     public function provision(UserId $userId): LibraryId
     {
         $designatedLibraryId = $this->personalLibraryRepository

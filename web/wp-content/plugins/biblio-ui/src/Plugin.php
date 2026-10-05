@@ -6,7 +6,7 @@ namespace Biblio\UI;
 
 final class Plugin
 {
-    public const VERSION = "0.22.5";
+    public const VERSION = "0.23.0";
     public const PAGE_BODY_CLASS = "biblio-app-shell-page";
     public const PUBLIC_HOME_BODY_CLASS = "biblio-public-home-page";
     public const SCRIPT_MODULE_ID = "biblio-ui/app";
@@ -76,6 +76,7 @@ final class Plugin
         add_action("wp_enqueue_scripts", [$this, "registerAndEnqueueAssets"]);
         add_filter("body_class", [$this, "addPageBodyClass"]);
         $this->loginPresentation->boot();
+        (new LibraryNamePresentation($this->pluginFile))->boot();
         $this->booted = true;
     }
 

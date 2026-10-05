@@ -235,6 +235,32 @@ final class ProductionComposition
             $database,
             $tableNames
         );
+        $seedEvolution = WpdbClassificationSeedEvolutionFactory::create(
+            $database,
+            $tableNames
+        );
+        $createLibrary = new CreateLibraryService(
+            $libraryRepository,
+            $membershipRepository,
+            $seedEvolution,
+            $transactionManager
+        );
+        $personalLibraryProvisioner = new ProvisionPersonalPrivateLibraryService(
+            $personalLibraryRepository,
+            $createLibrary
+        );
+        $accountPreparations = new \Biblio\Core\Application\Accounts\AccountPreparationService(
+            $authenticatedUser, new \Biblio\Core\Infrastructure\WordPress\Identity\WordPressAccountDirectory(),
+            new \Biblio\Core\Infrastructure\Persistence\WordPress\WpdbAccountPreparationRepository($database, $tableNames),
+            $personalLibraryRepository, $libraryRepository, $membershipRepository,
+            $personalLibraryProvisioner, $transactionManager
+        );
+        $authenticatedUser = new \Biblio\Core\Application\Accounts\PreparedAuthenticatedUser($authenticatedUser, $accountPreparations);
+        $personalLibraries = new EnsurePersonalPrivateLibraryService(
+            $authenticatedUser,
+            $personalLibraryProvisioner
+        );
+
         $workRepository = new WpdbWorkRepository($database, $tableNames);
         $authorRepository = new WpdbAuthorRepository($database, $tableNames);
         $seriesRepository = new WpdbSeriesRepository($database, $tableNames);
@@ -389,24 +415,6 @@ final class ProductionComposition
         $readingRoundCreation = new ReadingRoundCreation(
             $readingRoundIds,
             $readingRoundRepository
-        );
-        $seedEvolution = WpdbClassificationSeedEvolutionFactory::create(
-            $database,
-            $tableNames
-        );
-        $createLibrary = new CreateLibraryService(
-            $libraryRepository,
-            $membershipRepository,
-            $seedEvolution,
-            $transactionManager
-        );
-        $personalLibraryProvisioner = new ProvisionPersonalPrivateLibraryService(
-            $personalLibraryRepository,
-            $createLibrary
-        );
-        $personalLibraries = new EnsurePersonalPrivateLibraryService(
-            $authenticatedUser,
-            $personalLibraryProvisioner
         );
         $personalMigrationTargets = new PersonalMigrationTargetService(
             $platformUsers,
@@ -1268,7 +1276,8 @@ final class ProductionComposition
             $bibliographicMaterialization,
             $migrationParticipants,
             $migrationSourceMappers,
-            $migrationReconciliation
+            $migrationReconciliation,
+            $accountPreparations
         );
         $this->lifecycle = new CoreLifecycleCoordinator(
             new CoreSchemaMigrator(

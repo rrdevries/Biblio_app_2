@@ -157,6 +157,11 @@ export function createEntryApp(root, {
             if (library.capabilities.add_catalog_item) {
                 actions.append(link(documentImpl, "Naar Catalogus om een boek toe te voegen", catalogUrl));
             }
+            if (library.designated_personal === true && library.capabilities.modify_catalog_context === true) {
+                const renameUrl = new URL(entryLibraryUrl(config.libraryHomeUrl, library.library_id));
+                renameUrl.searchParams.set("biblio_name", "1");
+                actions.append(link(documentImpl, "Bibliotheeknaam wijzigen", renameUrl.toString()));
+            }
             actions.append(link(documentImpl, "Andere bibliotheek kiezen", config.platformUrl));
             section.append(actions);
             host.replaceChildren(section);

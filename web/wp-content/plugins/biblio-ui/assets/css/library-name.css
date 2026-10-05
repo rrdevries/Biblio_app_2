@@ -1,0 +1,11 @@
+body.biblio-name-page { margin: 0; }
+body.biblio-name-page #login { inline-size: min(100% - 2rem, 32rem); padding-block-start: clamp(2.5rem, 9vh, 6rem); }
+body.biblio-name-page .biblio-login__intro p { font-size: 1.1rem; line-height: 1.55; margin-block: 1.25rem 1.75rem; }
+body.biblio-name-page label { display: block; margin-block-end: .5rem; }
+body.biblio-name-page input[type="text"] { box-sizing: border-box; inline-size: 100%; min-block-size: 2.75rem; font: inherit; }
+body.biblio-name-page .biblio-name__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-block-start: 1.5rem; }
+body.biblio-name-page .biblio-name__actions .button { float: none; min-block-size: 2.75rem; }
+body.biblio-name-page .biblio-name__actions a, body.biblio-name-page .biblio-name__logout a { display: inline-flex; align-items: center; min-block-size: 2.75rem; }
+body.biblio-name-page .biblio-name__error { color: var(--biblio-login-error); }
+body.biblio-name-page a { color: var(--biblio-login-interactive); }
+body.biblio-name-page :focus-visible { outline: 3px solid var(--biblio-login-focus); outline-offset: 3px; }

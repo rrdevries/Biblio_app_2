@@ -19,11 +19,13 @@ final readonly class LibraryName
             throw new ValidationException("Library name must be valid UTF-8.");
         }
 
-        $normalized = preg_replace('/\s+/u', ' ', trim($value));
+        $normalized = preg_replace('/\s+/u', ' ', $value);
 
-        if ($normalized === null || $normalized === "") {
+        if ($normalized === null || trim($normalized) === "") {
             throw new ValidationException("Library name must not be empty.");
         }
+
+        $normalized = trim($normalized);
 
         if (mb_strlen($normalized, "UTF-8") > self::MAX_LENGTH) {
             throw new ValidationException(
