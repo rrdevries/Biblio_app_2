@@ -103,6 +103,7 @@ test("catalog URL state is canonical, repeatable and fail-closed", () => {
         readingStatuses: ["read", "reading"],
         bookTypeIds: ["type-1"],
         sort: "author",
+        archiveScope: "active_and_archived",
     }));
     assert.equal(url.searchParams.get("old"), "yes");
     assert.throws(() => readCatalogQueryFromUrl(
@@ -113,7 +114,8 @@ test("catalog URL state is canonical, repeatable and fail-closed", () => {
     ), /Series sort/);
     assert.equal(readCatalogQueryFromUrl(
         "https://example.test/?catalog_archive=active_and_archived"
-    ).explicit, false);
+    ).explicit, true);
+    assert.throws(() => readCatalogQueryFromUrl("https://example.test/?catalog_archive=unknown"));
 });
 
 test("catalog page decoder maps only strict server fields into presentation", () => {

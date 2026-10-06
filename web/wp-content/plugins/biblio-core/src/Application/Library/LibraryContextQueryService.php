@@ -129,7 +129,8 @@ final readonly class LibraryContextQueryService
                 $this->authorizationPolicy->canReceiveInternalLoan(
                     $context,
                     $membership
-                )
+                ),
+                $this->authorizationPolicy->canManageLibraryDefaults($context, $membership)
             )
         );
     }

@@ -45,6 +45,9 @@ abstract class PersistenceIntegrationTestCase extends TestCase
 
     protected function resetCoreTables(): void
     {
+        foreach ($this->tableNames->schema1028Additions() as $table) {
+            if ($this->tableExists($table)) { $this->database->query("DELETE FROM `{$table}`"); }
+        }
         if ($this->tableExists($this->tableNames->accountPreparations())) {
             $this->database->query("DELETE FROM `" . $this->tableNames->accountPreparations() . "`");
         }

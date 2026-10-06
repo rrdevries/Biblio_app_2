@@ -8,6 +8,7 @@ use Biblio\Core\Exception\ValidationException;
 
 final readonly class AdditionalPermissions
 {
+    public const LIBRARY_DEFAULTS_MANAGE = "library.defaults_manage";
     public const CATALOG_ITEM_ADD = "catalog.item_add";
     public const CATALOG_CLASSIFICATION_MANAGE =
         "catalog.classification_manage";

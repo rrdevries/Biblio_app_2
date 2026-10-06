@@ -162,9 +162,13 @@ final readonly class CoreApplication
         private MigrationParticipantRegistry $migrationParticipants,
         private MigrationSourceMapperRegistry $migrationSourceMappers,
         private MigrationReconciliationService $migrationReconciliation,
-        private ?\Biblio\Core\Application\Accounts\AccountPreparationService $accountPreparation = null
+        private ?\Biblio\Core\Application\Accounts\AccountPreparationService $accountPreparation = null,
+        private ?\Biblio\Core\Application\Settings\LibrarySettingsService $librarySettings = null
     ) {
     }
+
+    public function librarySettings(): \Biblio\Core\Application\Settings\LibrarySettingsService
+    { return $this->librarySettings ?? throw new \LogicException("Library settings are unavailable."); }
 
     public function accountPreparation(): \Biblio\Core\Application\Accounts\AccountPreparationService
     {

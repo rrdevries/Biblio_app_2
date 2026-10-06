@@ -6,7 +6,7 @@ namespace Biblio\UI;
 
 final class Plugin
 {
-    public const VERSION = "0.23.0";
+    public const VERSION = "0.24.2";
     public const PAGE_BODY_CLASS = "biblio-app-shell-page";
     public const PUBLIC_HOME_BODY_CLASS = "biblio-public-home-page";
     public const SCRIPT_MODULE_ID = "biblio-ui/app";
@@ -26,6 +26,7 @@ final class Plugin
     public const NEXT_READING_SCRIPT_MODULE_ID = "biblio-ui/next-reading";
     public const WISHLIST_SCRIPT_MODULE_ID = "biblio-ui/wishlist";
     public const SEARCH_SCRIPT_MODULE_ID = "biblio-ui/bibliographic-search";
+    public const SETTINGS_SCRIPT_MODULE_ID = "biblio-ui/settings";
     public const ENTRY_SCRIPT_MODULE_ID = "biblio-ui/entry";
     public const STYLE_HANDLE = "biblio-ui";
     public const PUBLIC_HOME_STYLE_HANDLE = "biblio-ui-public-home";
@@ -72,6 +73,7 @@ final class Plugin
         add_action("init", [$this->wishlistAppShortcode, "register"]);
         add_action("init", [$this->searchAppShortcode, "register"]);
         add_action("init", [$this->entryAppShortcode, "register"]);
+        add_action("init", [new SettingsAppShortcode(), "register"]);
         add_action("init", [$this->publicHomeShortcode, "register"]);
         add_action("wp_enqueue_scripts", [$this, "registerAndEnqueueAssets"]);
         add_filter("body_class", [$this, "addPageBodyClass"]);
@@ -98,6 +100,8 @@ final class Plugin
             SearchAppShortcode::PAGE_SLUG,
             EntryAppShortcode::PERSONAL_SLUG,
             EntryAppShortcode::LIBRARY_SLUG,
+            SettingsAppShortcode::PAGE_SLUG,
+            SettingsAppShortcode::MANAGEMENT_SLUG,
         ])) {
             return $classes;
         }
@@ -288,6 +292,13 @@ final class Plugin
             ]],
             self::VERSION
         );
+        wp_register_script_module(
+            self::SETTINGS_SCRIPT_MODULE_ID,
+            $assetBaseUrl . "js/settings.js",
+            [["id" => self::API_SCRIPT_MODULE_ID, "import" => "static"],
+             ["id" => self::UI_SHELL_SCRIPT_MODULE_ID, "import" => "static"]],
+            self::VERSION
+        );
         wp_register_style(
             self::STYLE_HANDLE,
             $assetBaseUrl . "css/app.css",
@@ -303,6 +314,12 @@ final class Plugin
 
         if (is_page(PublicHomeShortcode::PAGE_SLUG)) {
             wp_enqueue_style(self::PUBLIC_HOME_STYLE_HANDLE);
+            return;
+        }
+
+        if (is_page([SettingsAppShortcode::PAGE_SLUG, SettingsAppShortcode::MANAGEMENT_SLUG])) {
+            wp_enqueue_script_module(self::SETTINGS_SCRIPT_MODULE_ID);
+            wp_enqueue_style(self::STYLE_HANDLE);
             return;
         }
 

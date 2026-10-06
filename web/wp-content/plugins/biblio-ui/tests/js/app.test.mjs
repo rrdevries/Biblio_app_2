@@ -17,6 +17,7 @@ const routeStateTestSource = (await readFile(
 const routeStateTestUrl = `data:text/javascript;base64,${Buffer.from(routeStateTestSource).toString("base64")}`;
 
 for (const [moduleId, file] of [
+    ["./settings-state.js", "settings-state.js"],
     ["biblio-ui/api", "api.js"],
     ["biblio-ui/add-book-wizard", "add-book-wizard.js"],
     ["biblio-ui/catalog-query", "catalog-query.js"],
@@ -38,9 +39,18 @@ for (const [moduleId, file] of [
 }
 appSource = appSource.replaceAll('"biblio-ui/route-state"', JSON.stringify(routeStateTestUrl));
 
-const { createLibraryApp, readMountConfig } = await import(
+const { createLibraryApp: productionCreateLibraryApp, readMountConfig } = await import(
     `data:text/javascript;base64,${Buffer.from(appSource).toString("base64")}`
 );
+
+function createLibraryApp(root, options = {}) {
+    return productionCreateLibraryApp(root, {
+        settingsReader: async id => ({library:{library_id:id,name:`Library ${id}`},capabilities:{manage_defaults:false},preferences:{
+            catalog_view:{value:null,version:0,effective:"grid",source:"biblio"},
+            catalog_archive_visible:{value:null,version:0,effective:false,source:"biblio"},
+        }}), ...options,
+    });
+}
 
 function mount() {
     return {
@@ -104,6 +114,8 @@ test("mount configuration is the sole API bootstrap source", () => {
         overviewUrl: "https://example.test/mijn-bibliotheek/",
         platformUrl: "https://example.test/mijn-biblio/",
         libraryHomeUrl: "https://example.test/bibliotheek-home/",
+        settingsUrl: "",
+        librarySettingsUrl: "",
         searchUrl: "https://example.test/zoeken/",
         wishlistUrl: "https://example.test/verlanglijst/",
         nextReadingUrl: "https://example.test/hierna-lezen/",
@@ -247,7 +259,7 @@ test("functional modules keep personal UI storage isolated from domain state", a
     const source = sources.join("\n");
 
     assert.doesNotMatch(source, /localStorage|insertAdjacentHTML/);
-    assert.equal((source.match(/sessionStorageImpl/g) ?? []).length, 2);
+    assert.equal((source.match(/sessionStorageImpl/g) ?? []).length, 4);
     assert.equal((source.match(/\.innerHTML\s*=/gu) ?? []).length, 1);
     assert.match(source, /template\.innerHTML = html/);
     assert.doesNotMatch(

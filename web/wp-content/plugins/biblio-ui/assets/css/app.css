@@ -999,7 +999,8 @@ body.admin-bar.biblio-app-shell-page {
     white-space: nowrap;
 }
 
-[data-biblio-ui-root] .biblio-ui__nav-link[aria-current="page"] {
+[data-biblio-ui-root] .biblio-ui__nav-link[aria-current="page"],
+[data-biblio-ui-root] .biblio-ui__account-action[aria-current="page"] {
     background: color-mix(in srgb, var(--biblio-color-navigation-active) 82%, transparent);
     box-shadow: inset 2px 0 var(--biblio-color-brass);
 }
@@ -3279,4 +3280,37 @@ body.admin-bar.biblio-app-shell-page {
         flex: 1 1 10rem;
         inline-size: 100%;
     }
+}
+
+/* Library-scoped settings: native inputs, separate control-level feedback. */
+[data-biblio-ui-root] .biblio-ui__settings { max-width: 58rem; }
+[data-biblio-ui-root] .biblio-ui__settings-section { margin-block: 2.5rem; padding-block-start: 1.5rem; border-top: 1px solid var(--biblio-color-border); }
+[data-biblio-ui-root] .biblio-ui__setting { margin: 2rem 0; padding: 1.5rem; border: 1px solid var(--biblio-color-border); border-radius: .5rem; min-width: 0; }
+[data-biblio-ui-root] .biblio-ui__setting-title { font-size: 1.25rem; padding-inline: .4rem; }
+[data-biblio-ui-root] .biblio-ui__setting-choices { display: flex; flex-direction: column; gap: .5rem; margin-block: 1rem; }
+[data-biblio-ui-root] .biblio-ui__setting-choice { display: flex; align-items: center; gap: .75rem; min-height: 44px; cursor: pointer; }
+[data-biblio-ui-root] .biblio-ui__setting-choice input { width: 1.25rem; height: 1.25rem; min-block-size: 0; flex-shrink: 0; accent-color: var(--biblio-color-interactive); }
+[data-biblio-ui-root] .biblio-ui__setting-source { color: var(--biblio-color-text-muted); font-size: .95rem; }
+[data-biblio-ui-root] .biblio-ui__setting-feedback { min-height: 1.5em; }
+[data-biblio-ui-root] .biblio-ui__settings-button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: .6rem 1rem; border: 1px solid var(--biblio-color-border-strong); border-radius: .4rem; background: var(--biblio-color-surface); color: var(--biblio-color-interactive); font: inherit; cursor: pointer; text-decoration: none; }
+[data-biblio-ui-root] .biblio-ui__settings-button[hidden] { display: none; }
+[data-biblio-ui-root] .biblio-ui__setting:disabled { opacity: .8; }
+[data-biblio-ui-root] .biblio-ui__icon[data-biblio-icon="settings"] { mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 7h16M4 17h16' fill='none' stroke='black' stroke-width='1.6'/%3E%3Ccircle cx='9' cy='7' r='2.5' fill='white' stroke='black' stroke-width='1.6'/%3E%3Ccircle cx='15' cy='17' r='2.5' fill='white' stroke='black' stroke-width='1.6'/%3E%3C/svg%3E"); }
+@media (max-width: 600px) {
+    [data-biblio-ui-root] .biblio-ui__setting { padding: 1rem; }
+}
+
+[data-biblio-ui-root] .biblio-ui__setting-choice input[role="switch"] {
+    appearance: none; width: 2.75rem; height: 1.5rem; border: 1px solid var(--biblio-color-border-strong);
+    border-radius: 1rem; background: var(--biblio-color-surface); cursor: pointer;
+}
+[data-biblio-ui-root] .biblio-ui__setting-choice input[role="switch"]::before {
+    content: ""; display: block; width: 1.1rem; height: 1.1rem; margin: .13rem;
+    border-radius: 50%; background: var(--biblio-color-text-secondary);
+}
+[data-biblio-ui-root] .biblio-ui__setting-choice input[role="switch"]:checked { background: var(--biblio-color-interactive); }
+[data-biblio-ui-root] .biblio-ui__setting-choice input[role="switch"]:checked::before { transform: translateX(1.2rem); background: var(--biblio-color-surface); }
+@media (forced-colors: active) {
+    [data-biblio-ui-root] .biblio-ui__setting-choice input[role="switch"] { appearance: auto; width: 1.25rem; height: 1.25rem; }
+    [data-biblio-ui-root] .biblio-ui__setting-choice input[role="switch"]::before { display: none; }
 }

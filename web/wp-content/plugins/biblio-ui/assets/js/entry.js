@@ -76,6 +76,8 @@ export function createEntryApp(root, {
         documentImpl,
         platformUrl: config.platformUrl,
         libraryHomeUrl: config.libraryHomeUrl,
+        settingsUrl: config.settingsUrl,
+        librarySettingsUrl: config.librarySettingsUrl,
         overviewUrl: config.overviewUrl,
         searchUrl: config.searchUrl,
         wishlistUrl: config.wishlistUrl,

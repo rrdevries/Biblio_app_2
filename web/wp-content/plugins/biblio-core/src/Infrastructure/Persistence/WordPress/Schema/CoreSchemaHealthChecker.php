@@ -56,6 +56,7 @@ final readonly class CoreSchemaHealthChecker
             1024 => $this->inspectTables($this->tableNames->schema1024(), true, 1024),
             1025 => $this->inspectTables($this->tableNames->schema1025(), true, 1025),
             1026 => $this->inspectTables($this->tableNames->schema1026(), true, 1026),
+            1028 => $this->inspectTables($this->tableNames->schema1028(), true, 1028),
             1027 => $this->inspectTables($this->tableNames->schema1027(), true, 1027),
             default => throw new CoreSchemaMigrationException(
                 "No explicit Biblio Core schema-health contract exists for "
@@ -324,6 +325,9 @@ final readonly class CoreSchemaHealthChecker
             1024
         );
     }
+
+    public function inspectExistingSchema1028Additions(): CoreSchemaHealth
+    { return $this->inspectTables($this->tableNames->schema1028Additions(), false, 1028); }
 
     public function inspectExistingSchema1027Additions(): CoreSchemaHealth
     {
@@ -947,6 +951,16 @@ final readonly class CoreSchemaHealthChecker
         }
 
         return [
+            ...($schemaVersion >= 1028 ? [
+                $this->tableNames->personalSettings() => ['user_id'=>$id,'library_id'=>$id,
+                    'setting_key'=>['type'=>'varchar(40)','nullable'=>'NO','collation'=>'utf8mb4_bin'],
+                    'setting_value'=>['type'=>'varchar(5)','nullable'=>'YES','collation'=>'utf8mb4_bin'],
+                    'setting_version'=>['type'=>'bigint(20) unsigned','nullable'=>'NO']],
+                $this->tableNames->libraryDefaults() => ['library_id'=>$id,
+                    'setting_key'=>['type'=>'varchar(40)','nullable'=>'NO','collation'=>'utf8mb4_bin'],
+                    'setting_value'=>['type'=>'varchar(5)','nullable'=>'YES','collation'=>'utf8mb4_bin'],
+                    'setting_version'=>['type'=>'bigint(20) unsigned','nullable'=>'NO']],
+            ] : []),
             ...($schemaVersion >= 1027 ? [$this->tableNames->accountPreparations() => [
                 "user_id" => $id, "library_id" => $nullableId,
                 "naming_complete" => ["type" => "tinyint(1)", "nullable" => "NO"],
@@ -1783,6 +1797,13 @@ final readonly class CoreSchemaHealthChecker
         }
 
         return [
+            ...($schemaVersion >= 1028 ? [
+                $this->tableNames->personalSettings() => [
+                    'PRIMARY'=>['unique'=>true,'columns'=>['user_id','library_id','setting_key']],
+                    'library_scope'=>['unique'=>false,'columns'=>['library_id']]],
+                $this->tableNames->libraryDefaults() => [
+                    'PRIMARY'=>['unique'=>true,'columns'=>['library_id','setting_key']]],
+            ] : []),
             ...($schemaVersion >= 1027 ? [$this->tableNames->accountPreparations() => [
                 "PRIMARY" => ["unique" => true, "columns" => ["user_id"]],
                 "one_preparation_per_library" => ["unique" => true, "columns" => ["library_id"]],
@@ -2384,6 +2405,10 @@ final readonly class CoreSchemaHealthChecker
         ];
 
         return [
+            ...($schemaVersion >= 1028 ? [
+                $this->tableNames->personalSettings() => [$restrict(['library_id'],$this->tableNames->libraries(),['library_id'])],
+                $this->tableNames->libraryDefaults() => [$restrict(['library_id'],$this->tableNames->libraries(),['library_id'])],
+            ] : []),
             ...($schemaVersion >= 1027 ? [$this->tableNames->accountPreparations() => [
                 $restrict(["library_id"], $this->tableNames->libraries(), ["library_id"]),
             ]] : []),
@@ -2710,6 +2735,13 @@ final readonly class CoreSchemaHealthChecker
             );
 
         return [
+            ...($schemaVersion >= 1028 ? [
+                $this->tableNames->personalSettings() => [
+                    "setting_key IN ('catalog_view','catalog_archive_visible') AND (setting_value IS NULL OR setting_key='catalog_view' AND setting_value IN ('grid','list') OR setting_key='catalog_archive_visible' AND setting_value IN ('0','1'))",
+                    'setting_version>0','CHAR_LENGTH(TRIM(user_id))>0'],
+                $this->tableNames->libraryDefaults() => [
+                    "setting_key='catalog_view' AND (setting_value IS NULL OR setting_value IN ('grid','list'))",'setting_version>0'],
+            ] : []),
             ...($schemaVersion >= 1027 ? [$this->tableNames->accountPreparations() => [
                 "naming_complete IN (0,1) AND notification_sent IN (0,1)",
                 "library_id IS NOT NULL OR naming_complete=0 AND notification_sent=0",

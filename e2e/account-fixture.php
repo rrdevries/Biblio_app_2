@@ -29,7 +29,7 @@ foreach ($accountFixtureNames as $username) {
 }
 if ($accountFixtureAction === 'fingerprint') {
     $payload = [];
-    foreach ($accountFixtureTables->schema1027() as $table) {
+    foreach ($accountFixtureTables->schema1028() as $table) {
         $rows = $wpdb->get_results("SELECT * FROM `{$table}`", ARRAY_A);
         if ($wpdb->last_error !== '') { throw new RuntimeException('Fingerprint read failed.'); }
         $serialized = [];
@@ -56,7 +56,7 @@ if ($accountFixtureAction === 'cleanup') {
         try {
             if ($wpdb->delete($accountFixtureTables->accountPreparations(), ['user_id' => (string) $user->ID]) === false) { throw new RuntimeException('Preparation cleanup failed.'); }
             if ($id !== null) {
-                foreach ([$accountFixtureTables->libraryCatalogContextGenres(), $accountFixtureTables->libraryCatalogContextSubjects(), $accountFixtureTables->libraryCatalogContexts(), $accountFixtureTables->libraryBookTypes(), $accountFixtureTables->libraryGenres(), $accountFixtureTables->librarySubjects(), $accountFixtureTables->personalLibraryDesignations(), $accountFixtureTables->memberships(), $accountFixtureTables->libraries()] as $table) {
+                foreach ([$accountFixtureTables->personalSettings(), $accountFixtureTables->libraryDefaults(), $accountFixtureTables->libraryCatalogContextGenres(), $accountFixtureTables->libraryCatalogContextSubjects(), $accountFixtureTables->libraryCatalogContexts(), $accountFixtureTables->libraryBookTypes(), $accountFixtureTables->libraryGenres(), $accountFixtureTables->librarySubjects(), $accountFixtureTables->personalLibraryDesignations(), $accountFixtureTables->memberships(), $accountFixtureTables->libraries()] as $table) {
                     if ($wpdb->delete($table, ['library_id' => $id]) === false) { throw new RuntimeException('Exact fixture Library cleanup failed.'); }
                 }
             }

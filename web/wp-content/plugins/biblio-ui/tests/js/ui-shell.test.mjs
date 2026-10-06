@@ -187,3 +187,40 @@ test("platform navigation adds exact contextual Home and Catalogus only after Li
     shell.setLibraryContext(null);
     assert.equal(allByClass(navigation, "biblio-ui__nav-link").length, 3);
 });
+
+
+test("Settings is an exact authorized Library account link, absent from Mijn Biblio and guests", () => {
+    for (const accountState of ["authenticated","guest"]) {
+        const mount = new FakeElement("div");
+        const shell = createLibraryShell(mount,{documentImpl,eventTarget:null,accountState,platformUrl:"https://example.test/mijn-biblio/",libraryHomeUrl:"https://example.test/bibliotheek-home/",overviewUrl:"https://example.test/mijn-bibliotheek/",settingsUrl:"https://example.test/instellingen/",activeDestination:"settings"});
+        const settings = () => descendants(mount).find(node=>node.getAttribute("title")==="Mijn voorkeuren");
+        assert.equal(settings(),undefined);
+        shell.setLibraryContext({library_id:"exact/a",name:"Eigen naam"});
+        if (accountState === "authenticated") {
+            assert.equal(new URL(settings().getAttribute("href")).searchParams.get("library_id"),"exact/a");
+            assert.equal(settings().getAttribute("aria-current"),"page");
+        } else assert.equal(settings(),undefined);
+        shell.setLibraryContext(null); assert.equal(settings(),undefined);
+    }
+});
+
+test("Library settings is a separate management destination based only on its explicit capability", () => {
+    for (const capability of [true, false, undefined, "true"]) {
+        const mount = new FakeElement("div");
+        const shell = createLibraryShell(mount, {documentImpl,eventTarget:null,
+            accountState:"authenticated",platformUrl:"https://example.test/mijn-biblio/",
+            libraryHomeUrl:"https://example.test/bibliotheek-home/",overviewUrl:"https://example.test/mijn-bibliotheek/",
+            settingsUrl:"https://example.test/instellingen/",librarySettingsUrl:"https://example.test/bibliotheekinstellingen/",
+            activeDestination:"library-settings"});
+        const management = () => descendants(mount).find(node=>node.getAttribute("title")==="Bibliotheekinstellingen");
+        assert.equal(management(),undefined);
+        shell.setLibraryContext({library_id:"exact/a",name:"Eigen naam",capabilities:{manage_defaults:capability,modify_catalog_context:true}});
+        if (capability === true) {
+            assert.equal(new URL(management().getAttribute("href")).pathname,"/bibliotheekinstellingen/");
+            assert.equal(new URL(management().getAttribute("href")).searchParams.get("library_id"),"exact/a");
+            assert.equal(management().getAttribute("aria-current"),"page");
+            assert.equal(management().getAttribute("aria-label"),"Bibliotheekinstellingen voor Eigen naam");
+        } else assert.equal(management(),undefined);
+        shell.setLibraryContext(null); assert.equal(management(),undefined);
+    }
+});

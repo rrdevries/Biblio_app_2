@@ -1,3 +1,4 @@
+import { readSettings, createCatalogPresentationSession } from "./settings-state.js";
 import { BiblioApiError, createBiblioApi } from "biblio-ui/api";
 import { createAddBookWizard } from "biblio-ui/add-book-wizard";
 import {
@@ -754,6 +755,8 @@ export function readMountConfig(mount) {
         overviewUrl: mountValue(mount, "overviewUrl"),
         platformUrl: mount?.dataset?.platformUrl ?? "",
         libraryHomeUrl: mount?.dataset?.libraryHomeUrl ?? "",
+        settingsUrl: mount?.dataset?.settingsUrl ?? "",
+        librarySettingsUrl: mount?.dataset?.librarySettingsUrl ?? "",
         searchUrl: mountValue(mount, "searchUrl"),
         wishlistUrl: mountValue(mount, "wishlistUrl"),
         nextReadingUrl: mountValue(mount, "nextReadingUrl"),
@@ -773,6 +776,7 @@ export function createLibraryApp(mount, {
     eventTarget = globalThis,
     documentImpl = globalThis.document,
     viewFactory = createOverviewView,
+    settingsReader = null,
     detailViewFactory = createDetailView,
     endReadingViewFactory = createEndReadingView,
     readingHistoryViewFactory = createReadingHistoryView,
@@ -798,6 +802,7 @@ export function createLibraryApp(mount, {
     }
 
     const api = apiFactory(apiConfig);
+    const readLibrarySettings = settingsReader ?? ((id, signal) => api.get(`libraries/${encodeURIComponent(id)}/preferences`, { signal }));
     const routes = createRouteController({
         overviewUrl: config.overviewUrl,
         historyImpl,
@@ -832,6 +837,8 @@ export function createLibraryApp(mount, {
                     overviewUrl: config.overviewUrl,
                     platformUrl: config.platformUrl,
                     libraryHomeUrl: config.libraryHomeUrl,
+                    settingsUrl: config.settingsUrl,
+                    librarySettingsUrl: config.librarySettingsUrl,
                     searchUrl: config.searchUrl,
                     wishlistUrl: config.wishlistUrl,
                     nextReadingUrl: config.nextReadingUrl,
@@ -1747,6 +1754,15 @@ export function createLibraryApp(mount, {
             operation = "overview";
             const libraryId = resolution.library.library_id;
             const initialRouteState = routes.read();
+            const settings = readSettings(await readLibrarySettings(libraryId, controller.signal), libraryId);
+            if (!isCurrent(runGeneration, controller)) return;
+            const scope = `${config.restNonce}:${libraryId}:mijn-bibliotheek`;
+            const viewSession = createCatalogPresentationSession({ storage: sessionStorageImpl, scope, preference: settings.preferences.catalog_view, setting: "view" });
+            const archiveSession = createCatalogPresentationSession({ storage: sessionStorageImpl, scope, preference: settings.preferences.catalog_archive_visible, setting: "archive" });
+            const explicitParams = new URL(locationImpl.href).searchParams;
+            const explicitView = explicitParams.get("catalog_view");
+            if (explicitParams.getAll("catalog_view").length > 1 || (explicitView !== null && !["grid", "list"].includes(explicitView))) throw new TypeError("Invalid catalog view.");
+            const initialView = explicitView ?? viewSession.read();
             const querySession = createCatalogQuerySession({
                 storage: sessionStorageImpl,
                 scope: `${config.restNonce}:${libraryId}:mijn-bibliotheek`,
@@ -1757,6 +1773,9 @@ export function createLibraryApp(mount, {
             let query = initialRouteState.hasCatalogQuery
                 ? initialRouteState.catalogQuery
                 : rememberedQuery ?? defaultCatalogQuery();
+
+            query = normalizeCatalogQuery({ ...query, archiveScope: explicitParams.has("catalog_archive")
+                ? query.archiveScope : archiveSession.read() ? "active_and_archived" : "active_only" });
 
             if (!initialRouteState.hasCatalogQuery && rememberedQuery !== null) {
                 routes.replace({
@@ -1833,6 +1852,7 @@ export function createLibraryApp(mount, {
                 routes[method](routeState);
                 activeRouteState = Object.freeze(routeState);
                 querySession.write(query);
+                archiveSession.write(query.archiveScope === "active_and_archived");
             }
 
             async function requestFirstPage(nextQuery, {
@@ -2012,6 +2032,8 @@ export function createLibraryApp(mount, {
                     {
                         state: "overview",
                         ...overview,
+                        initialView,
+                        presentationKey: `${libraryId}:${runGeneration}`,
                         ...consumeHeadingFocus(),
                     },
                     {
@@ -2033,6 +2055,7 @@ export function createLibraryApp(mount, {
                                 force: true,
                             }));
                         },
+                        selectView(value) { viewSession.write(value); },
                         searchInput: scheduleSearch,
                         submitSearch(value) {
                             if (searchTimer !== null) {

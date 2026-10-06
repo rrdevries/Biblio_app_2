@@ -17,6 +17,7 @@ const routeStateTestSource = (await readFile(
 const routeStateTestUrl = `data:text/javascript;base64,${Buffer.from(routeStateTestSource).toString("base64")}`;
 
 for (const [moduleId, file] of [
+    ["./settings-state.js", "settings-state.js"],
     ["biblio-ui/api", "api.js"],
     ["biblio-ui/add-book-wizard", "add-book-wizard.js"],
     ["biblio-ui/catalog-query", "catalog-query.js"],
@@ -38,9 +39,18 @@ for (const [moduleId, file] of [
 }
 appSource = appSource.replaceAll('"biblio-ui/route-state"', JSON.stringify(routeStateTestUrl));
 
-const { bootstrapLibraryApps, createLibraryApp } = await import(
+const { bootstrapLibraryApps, createLibraryApp: productionCreateLibraryApp } = await import(
     `data:text/javascript;base64,${Buffer.from(appSource).toString("base64")}`
 );
+
+function createLibraryApp(root, options = {}) {
+    return productionCreateLibraryApp(root, {
+        settingsReader: async id => ({library:{library_id:id,name:`Library ${id}`},capabilities:{manage_defaults:false},preferences:{
+            catalog_view:{value:null,version:0,effective:"grid",source:"biblio"},
+            catalog_archive_visible:{value:null,version:0,effective:false,source:"biblio"},
+        }}), ...options,
+    });
+}
 
 function mount() {
     return {
@@ -462,6 +472,8 @@ function createApp({
         throw new Error("Unexpected POST request.");
     },
     renders,
+    settingsReader,
+    sessionStorageImpl = null,
     detailRenders = recorder(),
     endReadingRenders = endReadingRecorder(),
     historyRenders = historyRecorder(),
@@ -493,7 +505,8 @@ function createApp({
         historyImpl: browser.history,
         locationImpl: browser.location,
         eventTarget: browser.eventTarget,
-        sessionStorageImpl: null,
+        sessionStorageImpl,
+        ...(settingsReader !== undefined ? {settingsReader} : {}),
         viewFactory: renders.factory,
         detailViewFactory: detailRenders.factory,
         endReadingViewFactory: endReadingRenders.factory,
@@ -697,6 +710,8 @@ test("a selected Library loads only the exact active overview contract", async (
     );
     assert.deepEqual(renders.renders.at(-1).model, {
         state: "overview",
+        initialView: "grid",
+        presentationKey: "library/one:1",
         library: selected,
         items: [item("one")],
         nextCursor: "cursor-1",
@@ -3246,4 +3261,57 @@ test("initial history errors map to local authentication, session or retry recov
             );
         });
     }
+});
+
+
+test("catalog preferences apply on opening; URL and valid temporary choices win without writes", async () => {
+    const selected = library("library-1");
+    const preferences = {library:{library_id:"library-1",name:"Library library-1"},capabilities:{manage_defaults:false},preferences:{
+        catalog_view:{value:"list",version:2,effective:"list",source:"personal"},
+        catalog_archive_visible:{value:true,version:2,effective:true,source:"personal"},
+    }};
+    const map = new Map(); const storage = {getItem:key=>map.get(key),setItem:(key,value)=>map.set(key,value)};
+    const requests = []; let writes = 0;
+    async function open(suffix = "") {
+        const renders = recorder();
+        const {app} = createApp({url:`https://example.test/mijn-bibliotheek/?library_id=library-1${suffix}`,renders,
+            settingsReader: async () => preferences,sessionStorageImpl:storage,
+            post: async () => {writes++;},get: async path => {requests.push(path); return path === "me/libraries" ? {libraries:[selected]} : overview(selected,[]);} });
+        await app.start(); return {app,renders};
+    }
+    const first = await open();
+    assert.equal(first.renders.renders.at(-1).model.initialView,"list");
+    assert.equal(first.renders.renders.at(-1).model.query.archiveScope,"active_and_archived");
+    assert.match(requests.at(-1), /archive_scope=active_and_archived/);
+    first.renders.renders.at(-1).actions.selectView("grid");
+    const second = await open(); assert.equal(second.renders.renders.at(-1).model.initialView,"grid");
+    preferences.preferences.catalog_view={value:null,version:3,effective:"list",source:"library",default_version:1};
+    const reset = await open(); assert.equal(reset.renders.renders.at(-1).model.initialView,"list");
+    const explicit = await open("&catalog_view=grid&catalog_archive=active_only&catalog_search=Dune");
+    assert.equal(explicit.renders.renders.at(-1).model.initialView,"grid");
+    assert.equal(explicit.renders.renders.at(-1).model.query.archiveScope,"active_only");
+    assert.equal(explicit.renders.renders.at(-1).model.query.search,"Dune");
+    assert.equal(writes,0);
+});
+
+test("lost Library access while reading preferences prevents a catalog read", async () => {
+    const renders = recorder(); const requested=[];
+    const {app} = createApp({url:"https://example.test/mijn-bibliotheek/?library_id=library-1",renders,
+        settingsReader:async()=>{throw new BiblioApiError({kind:"http",code:"biblio_resource_not_available",status:404,message:"denied"});},
+        get:async path=>{requested.push(path);return {libraries:[library("library-1")]};}});
+    await app.start(); assert.equal(renders.renders.at(-1).model.state,"library-unavailable");
+    assert.deepEqual(requested,["me/libraries"]);
+});
+
+test("production Catalogus reads preferences through its authenticated API before requesting items", async () => {
+    const requested=[]; const renders=recorder(); const selected=library("library-1");
+    const {app}=createApp({url:"https://example.test/mijn-bibliotheek/?library_id=library-1",renders,
+        // Disable the legacy fixture adapter to exercise actual transport wiring.
+        settingsReader: null,
+        get:async path=>{requested.push(path); if(path==="me/libraries") return {libraries:[selected]};
+            if(path.endsWith("/preferences")) return {library:{library_id:"library-1",name:"Library library-1"},capabilities:{manage_defaults:false},preferences:{catalog_view:{value:null,version:0,effective:"grid",source:"biblio"},catalog_archive_visible:{value:null,version:0,effective:false,source:"biblio"}}};
+            return overview(selected,[]);}});
+    await app.start();
+    assert.equal(renders.renders.at(-1).model.state,"overview");
+    assert.deepEqual(requested,["me/libraries","libraries/library-1/preferences","libraries/library-1/catalog"]);
 });

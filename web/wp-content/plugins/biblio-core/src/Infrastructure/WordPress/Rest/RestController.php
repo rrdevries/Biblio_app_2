@@ -43,6 +43,12 @@ final class RestController
             return;
         }
 
+        foreach (['preferences'=>'settingsPreferences','defaults'=>'settingsDefaults'] as $suffix=>$callback) {
+            register_rest_route(self::NAMESPACE, '/libraries/(?P<library_id>[^/]+)/'.$suffix, [
+                ['methods'=>WP_REST_Server::READABLE,'callback'=>[$this,$callback],'permission_callback'=>[$this,'authenticated']],
+                ['methods'=>'PATCH','callback'=>[$this,$callback],'permission_callback'=>[$this,'authenticated']],
+            ]);
+        }
         register_rest_route(self::NAMESPACE, "/me/account-preparation", [
             "methods" => WP_REST_Server::READABLE,
             "callback" => [$this, "accountPreparation"],
@@ -307,6 +313,45 @@ final class RestController
         return is_user_logged_in()
             ? true
             : $this->errors->authenticationRequired();
+    }
+
+    public function settingsPreferences(WP_REST_Request $request): WP_REST_Response|WP_Error
+    { return $this->settings($request, false); }
+    public function settingsDefaults(WP_REST_Request $request): WP_REST_Response|WP_Error
+    { return $this->settings($request, true); }
+    private function settings(WP_REST_Request $request, bool $shared): WP_REST_Response|WP_Error
+    {
+        return $this->execute(function (CoreApplication $app) use ($request,$shared): WP_REST_Response {
+            $library=$this->requests->libraryId($request);$service=$app->librarySettings();
+            if ($request->get_method() === 'GET') {
+                $query=$request->get_query_params();
+                if (array_diff(array_keys($query), ['_locale','_wpnonce','context']) !== []) {
+                    throw new \Biblio\Core\Exception\ValidationException('Unexpected settings query.');
+                }
+                return $this->settingsResponse($shared ? $service->defaults($library) : $service->preferences($library));
+            }
+            $body=$request->get_json_params();
+            if (!is_array($body) || array_diff(array_keys($body),['setting','operation','value','expected_version']) !== []
+                || !is_string($body['setting'] ?? null) || !is_int($body['expected_version'] ?? null)
+                || !in_array($body['operation'] ?? null,['set','reset'],true)
+                || ($body['operation'] === 'set' && (!array_key_exists('value',$body) || $body['value'] === null))
+                || ($body['operation'] === 'reset' && array_key_exists('value',$body))) {
+                throw new \Biblio\Core\Exception\ValidationException('Invalid settings change.');
+            }
+            if (array_diff(array_keys($request->get_query_params()), ['_locale','_wpnonce','context']) !== []) {
+                throw new \Biblio\Core\Exception\ValidationException('Unexpected settings query.');
+            }
+            $value=$body['operation'] === 'reset' ? null : $body['value'];
+            return $this->settingsResponse($shared
+                ? $service->changeDefault($library,$body['setting'],$value,$body['expected_version'])
+                : $service->changePersonal($library,$body['setting'],$value,$body['expected_version']));
+        });
+    }
+    private function settingsResponse(array $data): WP_REST_Response
+    {
+        $response=$this->success($data);
+        $response->header('Cache-Control','private, no-store');
+        return $response;
     }
 
     public function accountPreparation(WP_REST_Request $request): WP_REST_Response|WP_Error

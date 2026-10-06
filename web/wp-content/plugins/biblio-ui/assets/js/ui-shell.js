@@ -38,6 +38,8 @@ export function createLibraryShell(mount, {
     overviewUrl,
     platformUrl,
     libraryHomeUrl,
+    settingsUrl,
+    librarySettingsUrl,
     searchUrl,
     wishlistUrl,
     nextReadingUrl,
@@ -106,6 +108,9 @@ export function createLibraryShell(mount, {
                 ["section", activeLibrary.name],
                 ["home", "Home", activeLibrary.homeUrl, "book-open"],
                 ["library", "Catalogus", activeLibrary.catalogUrl, "books"],
+                ...(accountState === "authenticated" && activeLibrary.manageDefaults && activeLibrary.settingsUrl ? [
+                    ["library-settings", "Instellingen", activeLibrary.settingsUrl, "settings"],
+                ] : []),
             ]),
             ["section", "Persoonlijk"],
             ["search", "Zoeken", searchUrl, "search"],
@@ -134,7 +139,8 @@ export function createLibraryShell(mount, {
                 attributes: {
                     href,
                     ...(activeDestination === key ? { "aria-current": "page" } : {}),
-                    title: label,
+                    title: key === "library-settings" ? "Bibliotheekinstellingen" : label,
+                    ...(key === "library-settings" ? {"aria-label":`Bibliotheekinstellingen voor ${activeLibrary.name}`} : {}),
                 },
             });
             link.append(
@@ -170,6 +176,9 @@ export function createLibraryShell(mount, {
         );
         account.append(identity);
     }
+    const settingsSlot = element(documentImpl, "div", { className: "biblio-ui__settings-slot" });
+    settingsSlot.hidden = true;
+    account.append(settingsSlot);
     const actionLabel = authenticated ? "Uitloggen" : "Inloggen";
     const actionUrl = authenticated ? logoutUrl : loginUrl;
     if (typeof actionUrl === "string" && actionUrl.length > 0) {
@@ -191,6 +200,27 @@ export function createLibraryShell(mount, {
         account.append(action);
     }
 
+    function renderSettingsLink() {
+        const links = [];
+        if (authenticated && activeLibrary && typeof settingsUrl === "string" && settingsUrl.length > 0) {
+            const url = new URL(settingsUrl);
+            url.search = "";
+            url.hash = "";
+            url.searchParams.set("library_id", activeLibrary.id);
+            const link = element(documentImpl, "a", {
+                className: "biblio-ui__account-action",
+                attributes: { href: url.toString(), title: "Mijn voorkeuren", "aria-label": `Mijn voorkeuren voor ${activeLibrary.name}`,
+                    ...(activeDestination === "settings" ? { "aria-current": "page" } : {}) },
+            });
+            link.append(icon(documentImpl, "settings", "biblio-ui__context-mark"), element(documentImpl, "span", {
+                className: "biblio-ui__nav-label", text: "Mijn voorkeuren",
+            }));
+            link.addEventListener("click", closeMobileNavigation);
+            links.push(link);
+        }
+        settingsSlot.hidden = links.length === 0;
+        settingsSlot.replaceChildren(...links);
+    }
     sidebar.append(brand, collapseButton, nav, account);
 
     const scrim = element(documentImpl, "button", {
@@ -306,9 +336,17 @@ export function createLibraryShell(mount, {
                 const catalog = new URL(overviewUrl);
                 home.searchParams.set("library_id", library.library_id);
                 catalog.searchParams.set("library_id", library.library_id);
-                activeLibrary = { name: library.name, homeUrl: home.toString(), catalogUrl: catalog.toString() };
+                let settings = null;
+                if (typeof librarySettingsUrl === "string" && librarySettingsUrl.length > 0) {
+                    settings = new URL(librarySettingsUrl);
+                    settings.search = ""; settings.hash = "";
+                    settings.searchParams.set("library_id", library.library_id);
+                }
+                activeLibrary = { id: library.library_id, name: library.name, homeUrl: home.toString(), catalogUrl: catalog.toString(),
+                    manageDefaults: library.capabilities?.manage_defaults === true, settingsUrl:settings?.toString() };
             }
             renderNavigation();
+            renderSettingsLink();
         },
         destroy() {
             eventTarget?.removeEventListener?.("keydown", onKeyDown);

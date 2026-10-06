@@ -920,6 +920,7 @@ function renderOverview(documentImpl, model, actions, itemUrl, uiState) {
         },
         setView(value) {
             uiState.selectedView = value;
+            actions.selectView?.(value);
             rerender();
         },
     });
@@ -1086,6 +1087,10 @@ export function createOverviewView(root, {
     };
 
     function render(model, actions = {}) {
+        if (model.state === "overview" && model.presentationKey !== undefined && model.presentationKey !== uiState.presentationKey) {
+            uiState.selectedView = ["grid", "list"].includes(model.initialView) ? model.initialView : "grid";
+            uiState.presentationKey = model.presentationKey;
+        }
         uiState.lastModel = model;
         uiState.lastActions = actions;
         uiState.filterDialog = null;

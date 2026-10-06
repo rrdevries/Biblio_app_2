@@ -84,6 +84,7 @@ final readonly class RestErrorMapper
         }
 
         if (in_array($reason, [
+            FailureReason::SettingStale,
             FailureReason::ReadingRoundAlreadyActiveForSource,
             FailureReason::ReadingRoundStale,
             FailureReason::CatalogRecordAlreadyExists,

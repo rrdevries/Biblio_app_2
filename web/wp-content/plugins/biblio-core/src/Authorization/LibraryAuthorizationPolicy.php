@@ -13,6 +13,11 @@ use Biblio\Core\Library\UseAccess;
 
 final class LibraryAuthorizationPolicy
 {
+    public function canManageLibraryDefaults(LibraryContext $context, LibraryMembershipAssignment $assignment): bool
+    {
+        return $this->canUseManagementPermission($context, $assignment, AdditionalPermissions::LIBRARY_DEFAULTS_MANAGE);
+    }
+
     public function canAddCatalogItem(
         LibraryContext $context,
         LibraryMembershipAssignment $assignment

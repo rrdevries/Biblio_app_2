@@ -34,7 +34,7 @@ final class LibraryAppShortcode
                 . 'data-rest-nonce="%s" data-overview-url="%s" '
                 . 'data-platform-url="%s" data-library-home-url="%s" '
                 . 'data-search-url="%s" data-wishlist-url="%s" data-next-reading-url="%s" '
-                . 'data-login-url="%s" %s></div>',
+                . 'data-settings-url="%s" data-library-settings-url="%s" data-login-url="%s" %s></div>',
             esc_url(rest_url("biblio/v1/")),
             esc_attr(wp_create_nonce("wp_rest")),
             esc_url($overviewUrl),
@@ -43,6 +43,8 @@ final class LibraryAppShortcode
             esc_url(home_url("/" . SearchAppShortcode::PAGE_SLUG . "/")),
             esc_url(home_url("/" . WishlistAppShortcode::PAGE_SLUG . "/")),
             esc_url(home_url("/" . NextReadingAppShortcode::PAGE_SLUG . "/")),
+            esc_url(home_url("/instellingen/")),
+            esc_url(home_url("/" . SettingsAppShortcode::MANAGEMENT_SLUG . "/")),
             esc_url(wp_login_url($overviewUrl)),
             AccountMount::attributes()
         );

@@ -878,6 +878,7 @@ final readonly class RestResponseSerializer
                 "view_collection" => $capabilities->canViewCollection(),
                 "add_catalog_item" => $capabilities->canAddCatalogItem(),
                 "modify_catalog_context" => $capabilities->canModifyCatalogContext(),
+                "manage_defaults" => $capabilities->canManageLibraryDefaults(),
                 "manage_classification_terms" =>
                     $capabilities->canManageClassificationTerms(),
                 "publish_contribution" => $capabilities->canPublishContribution(),

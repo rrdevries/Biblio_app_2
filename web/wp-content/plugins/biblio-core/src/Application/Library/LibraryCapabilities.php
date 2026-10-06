@@ -16,10 +16,12 @@ final readonly class LibraryCapabilities
         private bool $publishContribution,
         private bool $moderateContribution,
         private bool $useItemDirectly,
-        private bool $receiveInternalLoan
+        private bool $receiveInternalLoan,
+        private bool $manageLibraryDefaults = false
     ) {
     }
 
+    public function canManageLibraryDefaults(): bool { return $this->manageLibraryDefaults; }
     public function canViewCollection(): bool { return $this->viewCollection; }
     public function canAddCatalogItem(): bool { return $this->addCatalogItem; }
     public function canManageCatalogItems(): bool { return $this->manageCatalogItems; }

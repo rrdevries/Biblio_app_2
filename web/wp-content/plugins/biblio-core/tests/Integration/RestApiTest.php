@@ -111,6 +111,8 @@ final class RestApiTest extends PersistenceIntegrationTestCase
     {
         $routes = $this->server->get_routes();
         $expected = [
+            "/biblio/v1/libraries/(?P<library_id>[^/]+)/preferences",
+            "/biblio/v1/libraries/(?P<library_id>[^/]+)/defaults",
             "/biblio/v1/me/account-preparation",
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/name",
             "/biblio/v1/me/libraries",
@@ -153,7 +155,7 @@ final class RestApiTest extends PersistenceIntegrationTestCase
             }
         }
 
-        self::assertCount(28, array_filter(
+        self::assertCount(count($expected), array_filter(
             array_keys($routes),
             static fn (string $route): bool => str_starts_with(
                 $route,

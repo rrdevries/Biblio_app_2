@@ -1277,7 +1277,11 @@ final class ProductionComposition
             $migrationParticipants,
             $migrationSourceMappers,
             $migrationReconciliation,
-            $accountPreparations
+            $accountPreparations,
+            new \Biblio\Core\Application\Settings\LibrarySettingsService(
+                $authenticatedUser, $libraryContexts,
+                new \Biblio\Core\Infrastructure\Persistence\WordPress\WpdbSettingsRepository($database, $tableNames)
+            )
         );
         $this->lifecycle = new CoreLifecycleCoordinator(
             new CoreSchemaMigrator(
