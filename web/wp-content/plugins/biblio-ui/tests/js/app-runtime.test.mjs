@@ -474,6 +474,7 @@ function createApp({
     renders,
     settingsReader,
     sessionStorageImpl = null,
+    timerOptions = {},
     detailRenders = recorder(),
     endReadingRenders = endReadingRecorder(),
     historyRenders = historyRecorder(),
@@ -506,6 +507,7 @@ function createApp({
         locationImpl: browser.location,
         eventTarget: browser.eventTarget,
         sessionStorageImpl,
+        ...timerOptions,
         ...(settingsReader !== undefined ? {settingsReader} : {}),
         viewFactory: renders.factory,
         detailViewFactory: detailRenders.factory,
@@ -3264,7 +3266,7 @@ test("initial history errors map to local authentication, session or retry recov
 });
 
 
-test("catalog preferences apply on opening; URL and valid temporary choices win without writes", async () => {
+test("catalog preferences apply on opening; view and search restore but archive follows stored preference", async () => {
     const selected = library("library-1");
     const preferences = {library:{library_id:"library-1",name:"Library library-1"},capabilities:{manage_defaults:false},preferences:{
         catalog_view:{value:"list",version:2,effective:"list",source:"personal"},
@@ -3289,9 +3291,66 @@ test("catalog preferences apply on opening; URL and valid temporary choices win 
     const reset = await open(); assert.equal(reset.renders.renders.at(-1).model.initialView,"list");
     const explicit = await open("&catalog_view=grid&catalog_archive=active_only&catalog_search=Dune");
     assert.equal(explicit.renders.renders.at(-1).model.initialView,"grid");
-    assert.equal(explicit.renders.renders.at(-1).model.query.archiveScope,"active_only");
+    assert.equal(explicit.renders.renders.at(-1).model.query.archiveScope,"active_and_archived");
     assert.equal(explicit.renders.renders.at(-1).model.query.search,"Dune");
     assert.equal(writes,0);
+});
+
+test("archive resets on reopening and history while search, filters, sort and view still restore", async (t) => {
+    for (const stored of [false, true]) {
+        await t.test(`stored archive ${stored}`, async () => {
+            const selected = library("library-1");
+            const preference = (value) => ({value,version:2,effective:value,source:"personal"});
+            const preferences = {library:{library_id:"library-1",name:"Library library-1"},capabilities:{manage_defaults:false},preferences:{
+                catalog_view:preference("list"), catalog_archive_visible:preference(stored),
+            }};
+            const map = new Map();
+            const storage = {getItem:key=>map.get(key)??null,setItem:(key,value)=>map.set(key,value)};
+            const scope = encodeURIComponent("rest-nonce:library-1:mijn-bibliotheek");
+            const stamp = state => JSON.stringify([state.version,state.value,state.effective,state.source,null]);
+            const legacyKey = `biblio.catalog.presentation.${scope}.archive`;
+            map.set(legacyKey,JSON.stringify({value:!stored,stamp:stamp(preferences.preferences.catalog_archive_visible)}));
+            map.set(`biblio.catalog.presentation.${scope}.view`,JSON.stringify({value:"grid",stamp:stamp(preferences.preferences.catalog_view)}));
+            map.set(`biblio.catalog.query.${scope}`,JSON.stringify({search:"Dune",readingStatuses:["not_read"],sort:"author",archiveScope:!stored?"active_and_archived":"active_only"}));
+            const legacyValue=map.get(legacyKey);
+            let writes=0;
+            async function open(suffix="") {
+                const renders=recorder();
+                const instance=createApp({url:`https://example.test/mijn-bibliotheek/?library_id=library-1${suffix}`,renders,sessionStorageImpl:storage,
+                    settingsReader:async()=>preferences,post:async()=>{writes++;},
+                    get:async path=>path==="me/libraries"?{libraries:[selected]}:overview(selected,[])});
+                await instance.app.start();return {...instance,renders};
+            }
+            const expected=stored?"active_and_archived":"active_only";
+            const first=await open();
+            let rendered=first.renders.renders.at(-1);
+            assert.equal(rendered.model.query.archiveScope,expected);
+            assert.equal(rendered.model.query.search,"Dune");
+            assert.deepEqual(rendered.model.query.readingStatuses,["not_read"]);
+            assert.equal(rendered.model.query.sort,"author");
+            assert.equal(rendered.model.initialView,"grid");
+            await rendered.actions.setArchiveScope(!stored);
+            rendered=first.renders.renders.at(-1);
+            assert.equal(rendered.model.query.archiveScope,!stored?"active_and_archived":"active_only");
+            assert.equal(new URL(first.browser.location.href).searchParams.has("catalog_archive"),false);
+            assert.equal(map.get(legacyKey),legacyValue,"temporary choice must not update legacy archive storage");
+            const reopened=await open();
+            assert.equal(reopened.renders.renders.at(-1).model.query.archiveScope,expected);
+            assert.equal(reopened.renders.renders.at(-1).model.query.search,"Dune");
+            const legacy=await open(`&catalog_archive=${!stored?"active_and_archived":"active_only"}&catalog_search=Foundation&catalog_sort=author&catalog_reading_status=read&catalog_view=list`);
+            assert.equal(legacy.renders.renders.at(-1).model.query.archiveScope,expected);
+            assert.equal(legacy.renders.renders.at(-1).model.query.search,"Foundation");
+            assert.equal(legacy.renders.renders.at(-1).model.initialView,"list");
+            first.browser.location.href=`https://example.test/mijn-bibliotheek/?library_id=library-1&catalog_search=Foundation&catalog_sort=author&catalog_archive=${!stored?"active_and_archived":"active_only"}`;
+            first.browser.listeners.get("popstate")();
+            await first.app.whenIdle();
+            assert.equal(first.renders.renders.at(-1).model.query.archiveScope,expected);
+            assert.equal(first.renders.renders.at(-1).model.query.search,"Foundation");
+            assert.equal(first.renders.renders.at(-1).model.query.sort,"author");
+            assert.equal(writes,0);
+            first.app.destroy();reopened.app.destroy();legacy.app.destroy();
+        });
+    }
 });
 
 test("lost Library access while reading preferences prevents a catalog read", async () => {
@@ -3301,6 +3360,23 @@ test("lost Library access while reading preferences prevents a catalog read", as
         get:async path=>{requested.push(path);return {libraries:[library("library-1")]};}});
     await app.start(); assert.equal(renders.renders.at(-1).model.state,"library-unavailable");
     assert.deepEqual(requested,["me/libraries"]);
+});
+
+test("search clear and filter clear keep their separate intents without saving preferences", async () => {
+    const selected=library("library-1");const renders=recorder();let writes=0;
+    const {app}=createApp({url:"https://example.test/mijn-bibliotheek/?library_id=library-1&catalog_search=Dune&catalog_reading_status=not_read&catalog_sort=author",renders,
+        post:async()=>{writes++;},get:async path=>path==="me/libraries"?{libraries:[selected]}:overview(selected,[])});
+    await app.start();
+    await renders.renders.at(-1).actions.clearSearch();
+    assert.equal(renders.renders.at(-1).model.searchDraft,"");
+    assert.deepEqual(renders.renders.at(-1).model.query.readingStatuses,["not_read"]);
+    assert.equal(renders.renders.at(-1).model.query.sort,"author");
+    await renders.renders.at(-1).actions.submitSearch("Foundation");
+    await renders.renders.at(-1).actions.clearFilters();
+    assert.equal(renders.renders.at(-1).model.query.search,"Foundation");
+    assert.deepEqual(renders.renders.at(-1).model.query.readingStatuses,[]);
+    assert.equal(writes,0);
+    app.destroy();
 });
 
 test("production Catalogus reads preferences through its authenticated API before requesting items", async () => {
@@ -3314,4 +3390,54 @@ test("production Catalogus reads preferences through its authenticated API befor
     await app.start();
     assert.equal(renders.renders.at(-1).model.state,"overview");
     assert.deepEqual(requested,["me/libraries","libraries/library-1/preferences","libraries/library-1/catalog"]);
+});
+
+
+test("catalog typing preserves spaces across debounce, responses and other controls", async () => {
+    const selected = library("library-1", { designated: true });
+    const renders = recorder();
+    const requests = [];
+    const pending = deferred();
+    let scheduled;
+    const { app } = createApp({
+        url: "https://example.test/mijn-bibliotheek/?library_id=library-1",
+        renders,
+        timerOptions: {
+            setTimeoutImpl(callback) { scheduled = callback; return 1; },
+            clearTimeoutImpl() { scheduled = null; },
+        },
+        get(path) {
+            requests.push(path);
+            if (path === "me/libraries") return Promise.resolve({ libraries: [selected] });
+            if (path.includes("search=An+Offer")) return pending.promise;
+            return Promise.resolve(overview(selected, [item("initial")]));
+        },
+    });
+    await app.start();
+    let actions = renders.renders.at(-1).actions;
+    actions.searchInput("An ");
+    scheduled();
+    await app.whenIdle();
+    assert.equal(renders.renders.at(-1).model.searchDraft, "An ");
+    assert.equal(renders.renders.at(-1).model.query.search, "An");
+    const requestCount = requests.length;
+    actions = renders.renders.at(-1).actions;
+    actions.searchInput("An  ");
+    scheduled();
+    await app.whenIdle();
+    assert.equal(renders.renders.at(-1).model.searchDraft, "An  ");
+    assert.equal(requests.length, requestCount, "unchanged normalized query needs no request");
+    actions.searchInput("An Offer ");
+    scheduled();
+    assert.equal(renders.renders.at(-1).model.searchDraft, "An Offer ", "loading render keeps trailing space");
+    actions.searchInput("An Offer f");
+    pending.resolve(overview(selected, [item("offer")]));
+    await app.whenIdle();
+    assert.equal(renders.renders.at(-1).model.searchDraft, "An Offer f", "earlier response must preserve newer typing");
+    await renders.renders.at(-1).actions.clearFilters();
+    assert.equal(renders.renders.at(-1).model.searchDraft, "An Offer f", "other query controls preserve draft");
+    await renders.renders.at(-1).actions.clearSearch();
+    assert.equal(renders.renders.at(-1).model.searchDraft, "");
+    assert.equal(renders.renders.at(-1).model.query.search, "");
+    app.destroy();
 });

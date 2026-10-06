@@ -103,9 +103,12 @@ test("catalog URL state is canonical, repeatable and fail-closed", () => {
         readingStatuses: ["read", "reading"],
         bookTypeIds: ["type-1"],
         sort: "author",
-        archiveScope: "active_and_archived",
     }));
     assert.equal(url.searchParams.get("old"), "yes");
+    assert.equal(url.searchParams.has("catalog_archive"), false);
+    const legacy = readCatalogQueryFromUrl("https://example.test/?catalog_search=Dune&catalog_archive=active_and_archived");
+    assert.equal(legacy.query.archiveScope, "active_only");
+    assert.equal(legacy.query.search, "Dune");
     assert.throws(() => readCatalogQueryFromUrl(
         "https://example.test/?catalog_search=x"
     ), /2 to 191/);
@@ -114,7 +117,7 @@ test("catalog URL state is canonical, repeatable and fail-closed", () => {
     ), /Series sort/);
     assert.equal(readCatalogQueryFromUrl(
         "https://example.test/?catalog_archive=active_and_archived"
-    ).explicit, true);
+    ).explicit, false);
     assert.throws(() => readCatalogQueryFromUrl("https://example.test/?catalog_archive=unknown"));
 });
 

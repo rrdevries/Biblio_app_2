@@ -1758,7 +1758,6 @@ export function createLibraryApp(mount, {
             if (!isCurrent(runGeneration, controller)) return;
             const scope = `${config.restNonce}:${libraryId}:mijn-bibliotheek`;
             const viewSession = createCatalogPresentationSession({ storage: sessionStorageImpl, scope, preference: settings.preferences.catalog_view, setting: "view" });
-            const archiveSession = createCatalogPresentationSession({ storage: sessionStorageImpl, scope, preference: settings.preferences.catalog_archive_visible, setting: "archive" });
             const explicitParams = new URL(locationImpl.href).searchParams;
             const explicitView = explicitParams.get("catalog_view");
             if (explicitParams.getAll("catalog_view").length > 1 || (explicitView !== null && !["grid", "list"].includes(explicitView))) throw new TypeError("Invalid catalog view.");
@@ -1774,8 +1773,10 @@ export function createLibraryApp(mount, {
                 ? initialRouteState.catalogQuery
                 : rememberedQuery ?? defaultCatalogQuery();
 
-            query = normalizeCatalogQuery({ ...query, archiveScope: explicitParams.has("catalog_archive")
-                ? query.archiveScope : archiveSession.read() ? "active_and_archived" : "active_only" });
+            // Archive inclusion is temporary for this opening. URL/session
+            // query restoration must not override the stored personal setting.
+            query = normalizeCatalogQuery({ ...query, archiveScope: settings.preferences.catalog_archive_visible.effective
+                ? "active_and_archived" : "active_only" });
 
             if (!initialRouteState.hasCatalogQuery && rememberedQuery !== null) {
                 routes.replace({
@@ -1852,7 +1853,6 @@ export function createLibraryApp(mount, {
                 routes[method](routeState);
                 activeRouteState = Object.freeze(routeState);
                 querySession.write(query);
-                archiveSession.write(query.archiveScope === "active_and_archived");
             }
 
             async function requestFirstPage(nextQuery, {
@@ -1861,14 +1861,12 @@ export function createLibraryApp(mount, {
             } = {}) {
                 const normalized = normalizeCatalogQuery(nextQuery);
                 if (!force && sameQuery(query, normalized)) {
-                    overview.searchDraft = normalized.search;
                     renderOverview();
                     return true;
                 }
 
                 query = normalized;
                 overview.query = query;
-                overview.searchDraft = query.search;
                 overview.items = [];
                 overview.nextCursor = null;
                 overview.loadingMore = false;
@@ -1933,12 +1931,14 @@ export function createLibraryApp(mount, {
             }
 
             function applySearch(value) {
+                // The editable draft belongs to the input, not the normalized query.
+                // Keep spaces while typing and across request/result renders.
+                overview.searchDraft = typeof value === "string" ? value : "";
                 const normalized = typeof value === "string" ? value.trim() : "";
                 if (normalized !== "" && (
                     [...normalized].length < 2
                     || [...normalized].length > 191
                 )) {
-                    overview.searchDraft = typeof value === "string" ? value : "";
                     renderOverview();
                     return Promise.resolve(false);
                 }
@@ -2069,6 +2069,7 @@ export function createLibraryApp(mount, {
                                 clearTimeoutImpl(searchTimer);
                                 searchTimer = null;
                             }
+                            overview.searchDraft = "";
                             return setIdle(requestFirstPage({ ...query, search: "" }));
                         },
                         setSort(sort) {

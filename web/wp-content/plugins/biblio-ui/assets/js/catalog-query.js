@@ -155,7 +155,13 @@ export function normalizeCatalogQuery(value) {
 
 export function readCatalogQueryFromUrl(url) {
     const params = new URL(url).searchParams;
-    const explicit = Object.values(URL_FIELDS).some((name) => params.has(name));
+    // Accept valid old archive URLs without restoring their temporary choice.
+    // An archive-only URL must not suppress ordinary query session fallback.
+    if (params.getAll(URL_FIELDS.archiveScope).length > 1
+        || (params.has(URL_FIELDS.archiveScope) && !ARCHIVE_SCOPES.has(params.get(URL_FIELDS.archiveScope)))) {
+        throw new TypeError("Catalog URL query state is invalid.");
+    }
+    const explicit = Object.entries(URL_FIELDS).some(([property, name]) => property !== "archiveScope" && params.has(name));
     if (!explicit) {
         return Object.freeze({ explicit: false, query: defaultCatalogQuery() });
     }
@@ -164,9 +170,7 @@ export function readCatalogQueryFromUrl(url) {
     const sort = params.get(URL_FIELDS.sort) ?? "title";
     const withoutCollection = params.get(URL_FIELDS.withoutCollection) === "true";
     if (
-        params.getAll(URL_FIELDS.archiveScope).length > 1
-        || (params.has(URL_FIELDS.archiveScope) && !ARCHIVE_SCOPES.has(params.get(URL_FIELDS.archiveScope)))
-        || params.getAll(URL_FIELDS.search).length > 1
+        params.getAll(URL_FIELDS.search).length > 1
         || params.getAll(URL_FIELDS.sort).length > 1
         || params.getAll(URL_FIELDS.withoutCollection).length > 1
         || (params.has(URL_FIELDS.withoutCollection)
@@ -180,7 +184,6 @@ export function readCatalogQueryFromUrl(url) {
         query: normalizeCatalogQuery({
             search,
             sort,
-            archiveScope: params.get(URL_FIELDS.archiveScope) ?? "active_only",
             withoutCollection,
             readingStatuses: exactIdentifierList(params, URL_FIELDS.readingStatuses),
             authorIds: exactIdentifierList(params, URL_FIELDS.authorIds),
@@ -200,7 +203,6 @@ export function writeCatalogQueryToUrl(url, queryValue) {
     for (const name of Object.values(URL_FIELDS)) {
         params.delete(name);
     }
-    if (query.archiveScope !== "active_only") params.set(URL_FIELDS.archiveScope, query.archiveScope);
     if (query.search !== "") {
         params.set(URL_FIELDS.search, query.search);
     }

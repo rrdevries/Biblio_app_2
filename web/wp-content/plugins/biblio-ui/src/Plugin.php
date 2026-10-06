@@ -6,7 +6,7 @@ namespace Biblio\UI;
 
 final class Plugin
 {
-    public const VERSION = "0.24.2";
+    public const VERSION = "0.24.5";
     public const PAGE_BODY_CLASS = "biblio-app-shell-page";
     public const PUBLIC_HOME_BODY_CLASS = "biblio-public-home-page";
     public const SCRIPT_MODULE_ID = "biblio-ui/app";

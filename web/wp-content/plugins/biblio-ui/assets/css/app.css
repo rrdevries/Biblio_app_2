@@ -1270,6 +1270,7 @@ body.admin-bar.biblio-app-shell-page {
 }
 
 [data-biblio-ui-root] .biblio-ui__catalog-main {
+    align-content: start;
     display: grid;
     gap: var(--biblio-space-6);
     min-inline-size: 0;

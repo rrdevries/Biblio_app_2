@@ -259,7 +259,7 @@ test("functional modules keep personal UI storage isolated from domain state", a
     const source = sources.join("\n");
 
     assert.doesNotMatch(source, /localStorage|insertAdjacentHTML/);
-    assert.equal((source.match(/sessionStorageImpl/g) ?? []).length, 4);
+    assert.equal((source.match(/sessionStorageImpl/g) ?? []).length, 3);
     assert.equal((source.match(/\.innerHTML\s*=/gu) ?? []).length, 1);
     assert.match(source, /template\.innerHTML = html/);
     assert.doesNotMatch(
