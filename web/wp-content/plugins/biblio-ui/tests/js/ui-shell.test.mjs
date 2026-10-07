@@ -6,6 +6,7 @@ let source = await readFile(
     new URL("../../assets/js/ui-shell.js", import.meta.url),
     "utf8"
 );
+source = source.replace('"./search-return.js"', JSON.stringify(new URL('../../assets/js/search-return.js', import.meta.url).href));
 source = source.replace(
     '"./ui-preferences.js"',
     JSON.stringify(new URL(

@@ -18,6 +18,7 @@ const routeStateTestUrl = `data:text/javascript;base64,${Buffer.from(routeStateT
 
 for (const [moduleId, file] of [
     ["./settings-state.js", "settings-state.js"],
+    ["./search-return.js", "search-return.js"],
     ["biblio-ui/api", "api.js"],
     ["biblio-ui/add-book-wizard", "add-book-wizard.js"],
     ["biblio-ui/catalog-query", "catalog-query.js"],
@@ -259,7 +260,8 @@ test("functional modules keep personal UI storage isolated from domain state", a
     const source = sources.join("\n");
 
     assert.doesNotMatch(source, /localStorage|insertAdjacentHTML/);
-    assert.equal((source.match(/sessionStorageImpl/g) ?? []).length, 3);
+    // Presentation preferences plus the separately validated Search return cache.
+    assert.equal((source.match(/sessionStorageImpl/g) ?? []).length, 6);
     assert.equal((source.match(/\.innerHTML\s*=/gu) ?? []).length, 1);
     assert.match(source, /template\.innerHTML = html/);
     assert.doesNotMatch(

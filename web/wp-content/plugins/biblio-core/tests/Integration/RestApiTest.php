@@ -107,10 +107,152 @@ final class RestApiTest extends PersistenceIntegrationTestCase
         parent::tearDown();
     }
 
+    public function testStandaloneWorkMatcherReusesExactTitleAndAuthorTokenPredicates(): void
+    {
+        $this->seedWork('source-match','Magic stone');$this->seedWork('source-other','Other title');
+        self::assertSame(1,$this->database->insert($this->tableNames->authors(),['author_id'=>'source-author','display_name'=>'Ada Writer']));
+        self::assertSame(1,$this->database->insert($this->tableNames->workContributors(),['work_id'=>'source-match','author_id'=>'source-author','contributor_role'=>'author','contributor_position'=>1]));
+        $provider=new \Biblio\Core\Infrastructure\Persistence\WordPress\WpdbBibliographicSearchProvider($this->database,$this->tableNames);
+        foreach(['Magic ADA','stone writer','missing Ada','Magic missing','% Magic'] as $text) {
+            $query=new BibliographicTextSearchQuery($text);$ids=array_map(fn($v)=>$v->reference()->workId()->value(),$provider->searchWorks($query)->items());
+            foreach(['source-match','source-other'] as $id) self::assertSame(in_array($id,$ids,true),$provider->workMatchesQuery(new WorkId($id),$query));
+        }
+        self::assertTrue($provider->workMatchesQuery(new WorkId('source-match'),new BibliographicTextSearchQuery('Magic ADA')));
+    }
+
+    public function testStandaloneSourceWindowsGroupIsolationRetryLegacyAndReadOnlyProof(): void
+    {
+        $_COOKIE[LOGGED_IN_COOKIE] = wp_generate_auth_cookie($this->actorId,time()+3600,'logged_in','source-window-session');
+        $this->rebuildApiWithOpenLibraryConfiguration();
+        $requests=[]; $repair=false; $transport=false; $allBad=false;
+        $fixture=static function($preempt,$arguments,$url) use (&$requests,&$repair,&$transport,&$allBad) {
+            $requests[]=$url;parse_str((string)parse_url($url,PHP_URL_QUERY),$p);
+            if (str_contains($url,'authors.json')) $payload=['numFound'=>0,'start'=>(int)($p['offset']??0),'docs'=>[]];
+            else {
+                if ($transport) return new WP_Error('http_request_failed','fixture timeout');
+                $offset=(int)($p['offset']??0);$capacity=(int)($p['limit']??10);$docs=[];
+                for($n=0;$n<$capacity && $offset+$n<20;$n++) $docs[]=['key'=>'/works/OL'.(100+$offset+$n).(($allBad||(!$repair&&$offset+$n===9))?'M':'W'),'title'=>'Source Work '.($offset+$n)];
+                $payload=['numFound'=>20,'start'=>$offset,'docs'=>$docs];
+            }
+            return ['headers'=>[],'body'=>wp_json_encode($payload),'response'=>['code'=>200,'message'=>'OK'],'cookies'=>[],'filename'=>null];
+        };
+        $request=static function($body){$r=new WP_REST_Request('POST','/biblio/v1/me/book-searches');$r->set_header('content-type','application/json');$r->set_body(wp_json_encode($body));return $r;};
+        $call=function($body)use($request){$response=$this->dispatchAsActor($request($body));self::assertSame(200,$response->get_status(),wp_json_encode($response->get_data()));return $this->successData($response);};
+        $before=$this->addBookPersistenceCounts();
+        add_filter('pre_http_request',$fixture,10,3);
+        try {
+            $first=$call(['query'=>'Source Work']);self::assertSame(2,$first['version']);self::assertSame('all',$first['requested_group']);self::assertSame('partial_failure',$first['state']);$g=$first['text_results']['works'];self::assertCount(9,$g['items']);self::assertSame('incomplete',$g['source_state']);self::assertNotNull($g['retry_cursor']);self::assertNotNull($g['next_cursor']);
+            $ctx=$first['search_context'];$requests=[];
+            $next=$call(['query'=>'Source Work','search_context'=>$ctx,'result_group'=>'works','work_cursor'=>$g['next_cursor']]);self::assertNull($next['text_results']['authors']);self::assertSame('complete',$next['text_results']['works']['source_state']);self::assertSame(range(10,19),array_column($next['text_results']['works']['items'],'presentation_order'));self::assertCount(1,$requests);self::assertStringContainsString('offset=10',$requests[0]);
+            $repair=true;$requests=[];
+            $retry=$call(['query'=>'Source Work','search_context'=>$ctx,'result_group'=>'works','work_cursor'=>$g['retry_cursor']]);self::assertCount(10,$retry['text_results']['works']['items']);self::assertSame('complete',$retry['text_results']['works']['source_state']);self::assertNull($retry['text_results']['works']['retry_cursor']);self::assertCount(1,$requests);self::assertStringContainsString('offset=0',$requests[0]);
+            $requests=[];$author=$call(['query'=>'Source Work','search_context'=>$ctx,'result_group'=>'authors']);self::assertNull($author['text_results']['works']);self::assertCount(1,$requests);self::assertStringContainsString('authors.json',$requests[0]);
+            $transport=true;$failed=$call(['query'=>'Source Work','search_context'=>$ctx,'result_group'=>'works','work_cursor'=>$g['next_cursor']]);self::assertSame('failure',$failed['state']);self::assertSame('failed',$failed['text_results']['works']['source_state']);self::assertNull($failed['text_results']['works']['next_cursor']);self::assertNotNull($failed['text_results']['works']['retry_cursor']);
+            $transport=false;$allBad=true;$empty=$call(['query'=>'Source Work','search_context'=>$ctx,'result_group'=>'works','work_cursor'=>$g['next_cursor']]);self::assertSame('failure',$empty['state']);self::assertSame([],$empty['text_results']['works']['items']);self::assertSame('incomplete',$empty['text_results']['works']['source_state']);self::assertNull($empty['text_results']['works']['next_cursor']);
+            $legacy=(new BibliographicSearchCursorCodec(hash('sha256',AUTH_SALT.':bibliographic-text-search-v1')))->encode(new \Biblio\Core\Application\Metadata\Search\BibliographicSearchCursor(new BibliographicTextSearchQuery('Source Work'),\Biblio\Core\Application\Metadata\Search\BibliographicSearchGroup::Works,\Biblio\Core\Application\Metadata\Search\BibliographicSearchResultKind::ExternalCandidate,9,'search-work-'.str_repeat('a',64)));
+            $old=$this->dispatchAsActor($request(['query'=>'Source Work','search_context'=>$ctx,'result_group'=>'works','work_cursor'=>$legacy]));self::assertSame(409,$old->get_status());self::assertSame('biblio_book_search_context_unavailable',$old->get_data()['code']);
+            self::assertSame(409,$this->dispatchAsUser($request(['query'=>'Source Work','search_context'=>$ctx,'result_group'=>'works','work_cursor'=>$g['next_cursor']]),$this->otherId)->get_status());
+            self::assertSame(422,$this->dispatchAsActor($request(['query'=>'Source Work','search_context'=>$ctx,'result_group'=>'authors','work_cursor'=>$g['next_cursor']]))->get_status());
+            self::assertSame(422,$this->dispatchAsActor($request(['query'=>'9780140328721','search_context'=>$ctx,'result_group'=>'works']))->get_status());
+            self::assertSame($before,$this->addBookPersistenceCounts());
+        } finally { remove_filter('pre_http_request',$fixture,10); }
+    }
+
+    public function testStandaloneBookSearchScopesPresencePagingSessionAndEditionIdentity(): void
+    {
+        $_COOKIE[LOGGED_IN_COOKIE] = wp_generate_auth_cookie($this->actorId, time()+3600, 'logged_in', 'search-session-one');
+        $this->seedLibrary('search-visible', 'Visible Library', $this->actorId, 'owner');
+        $this->seedLibrary('search-hidden', 'Secret Library', $this->otherId, 'owner');
+        for ($n=1; $n<=27; $n++) { $this->seedItem(sprintf('search-item-%02d',$n),'search-visible','search-work','Standalone Search Book'); }
+        $this->seedItem('search-secret','search-hidden','search-work','Standalone Search Book');
+        $this->database->update($this->tableNames->items(), ['item_status'=>'archived'], ['item_id'=>'search-item-27']);
+        $request = function(string $path,array $body): WP_REST_Request {
+            $r=new WP_REST_Request('POST','/biblio/v1/me/'.$path);$r->set_header('content-type','application/json');$r->set_body(wp_json_encode($body));return $r;
+        };
+        $first=$this->successData($this->dispatchAsActor($request('book-searches',['query'=>'Standalone Search'])));
+        self::assertSame('text',$first['query']['type']);
+        $work=$first['text_results']['works']['items'][0];$selected=['search_context'=>$first['search_context'],'result_selector'=>$work['result_selector']];
+        $presence=$this->successData($this->dispatchAsActor($request('book-search-presence',['search_context'=>$first['search_context'],'result_selectors'=>[$work['result_selector']]])));
+        self::assertSame('present',$presence['items'][0]['state']);self::assertArrayNotHasKey('library_name',$presence['items'][0]);
+        $page=$this->successData($this->dispatchAsActor($request('book-search-catalogs',$selected)));
+        self::assertCount(25,$page['items']);self::assertNotNull($page['next_cursor']);self::assertSame(['search-visible'],array_unique(array_column($page['items'],'library_id')));
+        self::assertStringNotContainsString('Secret Library',wp_json_encode($page));
+        $next=$this->successData($this->dispatchAsActor($request('book-search-catalogs',$selected+['cursor'=>$page['next_cursor']])));self::assertCount(1,$next['items']);self::assertNull($next['next_cursor']);
+        $before=(int)$this->database->get_var('SELECT COUNT(*) FROM `'.$this->tableNames->items().'`');
+        $editions=$this->successData($this->dispatchAsActor($request('book-search-editions',$selected)));
+        $edition=$editions['items'][0];self::assertArrayNotHasKey('can_add_work_only',$edition);
+        $detail=$this->successData($this->dispatchAsActor($request('book-search-details',['search_context'=>$first['search_context'],'result_selector'=>$edition['result_selector']])));
+        self::assertSame('edition',$detail['entity_type']);self::assertSame('search-work',$detail['book']['work_id']);self::assertSame($before,(int)$this->database->get_var('SELECT COUNT(*) FROM `'.$this->tableNames->items().'`'));
+        $this->database->update($this->tableNames->memberships(),['membership_status'=>'inactive'],['library_id'=>'search-visible','user_id'=>(string)$this->actorId]);
+        self::assertSame(409,$this->dispatchAsActor($request('book-search-catalogs',$selected+['cursor'=>$page['next_cursor']]))->get_status());
+        $revoked=$this->successData($this->dispatchAsActor($request('book-search-catalogs',$selected)));self::assertSame([],$revoked['items']);
+        $other=$this->dispatchAsUser($request('book-search-details',$selected),$this->otherId);self::assertSame(409,$other->get_status());
+        $_COOKIE[LOGGED_IN_COOKIE] = wp_generate_auth_cookie($this->actorId,time()+3600,'logged_in','search-session-two');
+        self::assertSame(409,$this->dispatchAsActor($request('book-search-contexts/validate',['search_context'=>$first['search_context']]))->get_status());
+        unset($_COOKIE[LOGGED_IN_COOKIE]);
+    }
+
+    public function testStandaloneIsbn10And13FindSameExactEditionWithoutMaterialization(): void
+    {
+        $_COOKIE[LOGGED_IN_COOKIE] = wp_generate_auth_cookie($this->actorId,time()+3600,'logged_in','isbn-search-session');
+        $this->seedLibrary('isbn-library','ISBN Library',$this->actorId,'owner');
+        $this->seedItem('isbn-a','isbn-library','isbn-work','ISBN Work');$this->seedItem('isbn-b','isbn-library','isbn-work','Other edition');
+        $this->database->update($this->tableNames->editions(),['isbn_10'=>'0140328726','isbn_13'=>'9780140328721'],['edition_id'=>'edition-isbn-a']);
+        $call=function(string $path,array $body):array{$r=new WP_REST_Request('POST','/biblio/v1/me/'.$path);$r->set_header('content-type','application/json');$r->set_body(wp_json_encode($body));return $this->successData($this->dispatchAsActor($r));};
+        $a=$call('book-searches',['query'=>'0140328726']);$b=$call('book-searches',['query'=>'978-0-14-032872-1']);
+        self::assertSame('isbn',$a['query']['type']);self::assertSame($a['isbn_results']['items'][0]['result_id'],$b['isbn_results']['items'][0]['result_id']);
+        $item=$a['isbn_results']['items'][0];$p=$call('book-search-catalogs',['search_context'=>$a['search_context'],'result_selector'=>$item['result_selector']]);self::assertSame(['isbn-a'],array_column($p['items'],'item_id'));
+        $d=$call('book-search-details',['search_context'=>$a['search_context'],'result_selector'=>$item['result_selector']]);self::assertSame('edition-isbn-a',$d['edition']['edition_id']);
+        $this->database->update($this->tableNames->editions(),['isbn_13'=>'9791090636071'],['edition_id'=>'edition-isbn-b']);
+        $new=$call('book-searches',['query'=>'9791090636071']);self::assertSame('isbn',$new['query']['type']);self::assertNull($new['isbn_results']['items'][0]['isbn_10']);
+        $text=$call('book-searches',['query'=>'9780140328720']);self::assertSame('text',$text['query']['type']);
+        unset($_COOKIE[LOGGED_IN_COOKIE]);
+    }
+
+    public function testStandaloneExternalIsbnReadDoesNotMaterializeAndCorruptSnapshotIsReportedAsFailure(): void
+    {
+        wp_set_current_user($this->actorId);
+        $_COOKIE[LOGGED_IN_COOKIE] = wp_generate_auth_cookie($this->actorId,time()+3600,'logged_in','external-isbn-session');
+        $identity=(new \Biblio\Core\Catalog\IsbnCanonicalizer())->parse('9780140328721')->identity();
+        $provider=new class($identity) implements \Biblio\Core\Application\Metadata\MetadataProvider {
+            public function __construct(private \Biblio\Core\Catalog\CanonicalIsbnIdentity $isbn){}
+            public function key():string{return 'google_books';}
+            public function lookup(\Biblio\Core\Catalog\CanonicalIsbnIdentity $isbn):\Biblio\Core\Application\Metadata\ProviderLookupResult {
+                return \Biblio\Core\Application\Metadata\ProviderLookupResult::candidates([new \Biblio\Core\Application\Metadata\MetadataCandidate(
+                    'google_books','volume-one',new DateTimeImmutable('now'),\Biblio\Core\Application\Metadata\MetadataMatchMethod::ExactIsbn,
+                    $isbn,$isbn,'External ISBN Edition',null,['Exact Author'],['eng'],['Publisher'],'2020',100,'hardcover',null
+                )]);
+            }
+        };
+        $search=(new ProductionComposition($this->database,metadataLookup:new FirstSufficientMetadataLookupService(new CandidateClassifier(),$provider,new ConfigurationErrorMetadataProvider('open_library')),providerConfiguration:new RuntimeMetadataProviderConfiguration(static fn(string $n):bool=>false,static fn(string $n):mixed=>null,static fn(string $n):mixed=>false)))->application()->bookSearch();
+        $before=(int)$this->database->get_var('SELECT COUNT(*) FROM `'.$this->tableNames->editions().'`');
+        $response=$search->search(['query'=>'0140328726']);$edition=$response['isbn_results']['items'][0];
+        self::assertSame('google_books',$response['isbn_results']['provider_attempts'][0]['provider_key']);
+        $selected=['search_context'=>$response['search_context'],'result_selector'=>$edition['result_selector']];
+        $detail=$search->details($selected);self::assertSame('External ISBN Edition',$detail['edition']['title']);self::assertNull($detail['book']);
+        $p=$search->presence(['search_context'=>$response['search_context'],'result_selectors'=>[$edition['result_selector']]]);self::assertSame('unknown',$p['items'][0]['state']);
+        self::assertSame($before,(int)$this->database->get_var('SELECT COUNT(*) FROM `'.$this->tableNames->editions().'`'));
+        // Preserve SQL hash integrity while exercising invalid typed snapshot data.
+        $row=$this->database->get_row('SELECT discovery_id,candidate_id,candidate_json FROM `'.$this->tableNames->bibliographicDiscoveryCandidates().'` LIMIT 1');
+        $invalid=json_decode($row->candidate_json,true);$invalid['type']='unsupported';$json=wp_json_encode($invalid);
+        self::assertSame(1,$this->database->update($this->tableNames->bibliographicDiscoveryCandidates(),['candidate_json'=>$json,'candidate_hash'=>hash('sha256',$json)],['discovery_id'=>$row->discovery_id,'candidate_id'=>$row->candidate_id]));
+        $p=$search->presence(['search_context'=>$response['search_context'],'result_selectors'=>[$edition['result_selector']]]);self::assertSame('failure',$p['items'][0]['state']);
+        try{$search->details($selected);self::fail('Corrupt candidate was displayed.');}catch(\Biblio\Core\Infrastructure\Persistence\PersistenceException){self::assertTrue(true);}
+        unset($_COOKIE[LOGGED_IN_COOKIE]);
+    }
+
     public function testRoutesRegisterExactlyOnceAndFailClosedWithoutCore(): void
     {
         $routes = $this->server->get_routes();
         $expected = [
+            "/biblio/v1/me/book-searches",
+            "/biblio/v1/me/book-search-presence",
+            "/biblio/v1/me/book-search-details",
+            "/biblio/v1/me/book-search-catalogs",
+            "/biblio/v1/me/book-search-descriptions",
+            "/biblio/v1/me/book-search-contexts/validate",
+            "/biblio/v1/me/book-search-author-works",
+            "/biblio/v1/me/book-search-editions",
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/preferences",
             "/biblio/v1/libraries/(?P<library_id>[^/]+)/defaults",
             "/biblio/v1/me/account-preparation",

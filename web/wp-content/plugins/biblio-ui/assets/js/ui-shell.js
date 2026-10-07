@@ -1,3 +1,4 @@
+import {clearSearchReturns} from "./search-return.js";
 import { createUiPreferences } from "./ui-preferences.js";
 
 function element(documentImpl, tagName, {
@@ -104,6 +105,7 @@ export function createLibraryShell(mount, {
         const contextual = typeof platformUrl === "string" && platformUrl.length > 0;
         const destinations = contextual ? [
             ["platform", "Mijn Biblio", platformUrl, "user"],
+            ["search", "Zoeken in Biblio", searchUrl, "search"],
             ...(activeLibrary === null ? [] : [
                 ["section", activeLibrary.name],
                 ["home", "Home", activeLibrary.homeUrl, "book-open"],
@@ -113,7 +115,6 @@ export function createLibraryShell(mount, {
                 ] : []),
             ]),
             ["section", "Persoonlijk"],
-            ["search", "Zoeken", searchUrl, "search"],
             ["wishlist", "Verlanglijst", wishlistUrl, "bookmark"],
             ["next-reading", "Hierna lezen", nextReadingUrl, "book-open"],
         ] : [
@@ -197,6 +198,7 @@ export function createLibraryShell(mount, {
                 text: actionLabel,
             })
         );
+        if (authenticated) { action.addEventListener("click", () => clearSearchReturns()); }
         account.append(action);
     }
 

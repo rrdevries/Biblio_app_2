@@ -45,6 +45,12 @@ final readonly class RestErrorMapper
             return $this->internalError();
         }
 
+        if ($exception instanceof \Biblio\Core\Application\Metadata\GlobalSearch\BookSearchAccessChanged) {
+            return $this->error('biblio_book_search_access_changed', 'Catalog access changed. Reload the results.', 409);
+        }
+        if ($exception instanceof \Biblio\Core\Application\Metadata\GlobalSearch\BookSearchContextUnavailable) {
+            return $this->error('biblio_book_search_context_unavailable', 'Start a new search to continue.', 409);
+        }
         $reason = $exception->reason();
 
         if ($reason === FailureReason::AuthenticationRequired) {

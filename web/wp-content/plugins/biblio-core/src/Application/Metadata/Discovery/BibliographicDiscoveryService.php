@@ -64,6 +64,10 @@ final readonly class BibliographicDiscoveryService
                 );
             }
             $lookup = $this->isbnLookup->lookup($parsed->identity());
+            $attempts = array_map(static fn ($attempt): array => [
+                'provider_key'=>$attempt->providerKey(), 'status'=>$attempt->result()->status()->value,
+                'failure_reason'=>$attempt->result()->failureReason()?->value,
+            ], $lookup->attempts());
             $candidates = [];
             foreach ($lookup->candidates() as $order => $classified) {
                 $candidate = $classified->candidate();
@@ -90,7 +94,7 @@ final readonly class BibliographicDiscoveryService
                 );
             }
             if ($candidates !== []) {
-                return $this->snapshot($query, $candidates, $actor, []);
+                return $this->snapshot($query, $candidates, $actor, $attempts);
             }
             return new BibliographicDiscoveryResult(
                 $query,
@@ -98,7 +102,8 @@ final readonly class BibliographicDiscoveryService
                     ? BibliographicDiscoveryStatus::ProviderFailure
                     : BibliographicDiscoveryStatus::NoResults,
                 [],
-                null
+                null,
+                $attempts
             );
         }
 

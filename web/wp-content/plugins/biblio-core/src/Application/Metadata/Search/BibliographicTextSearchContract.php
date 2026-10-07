@@ -54,7 +54,22 @@ final readonly class BibliographicTextSearchContract
     {
         return [
             "query" => $result->query()->value(),
-            "authors" => [
+            "authors" => $this->serializeAuthorGroup($result->authors(), $result->authorProviderAttempts()),
+            "works" => [
+                "items" => array_map($this->serializeWork(...), $result->works()->items()),
+                "next_cursor" => $result->works()->nextCursor() === null
+                    ? null
+                    : $this->cursors->encode($result->works()->nextCursor()),
+                "provider_attempts" => $this->serializeAttempts(
+                    $result->workProviderAttempts()
+                ),
+            ],
+        ];
+    }
+
+    public function serializeAuthorGroup(BibliographicAuthorSearchPage $page, array $attempts): array
+    {
+        return [
                 "items" => array_map(
                     fn (BibliographicAuthorSearchResult $author): array => [
                         "result_id" => $author->reference()->resultId(),
@@ -74,32 +89,22 @@ final readonly class BibliographicTextSearchContract
                             "birth_year" => $author->disambiguation()->birthYear(),
                         ],
                     ],
-                    $result->authors()->items()
+                    $page->items()
                 ),
-                "next_cursor" => $result->authors()->nextCursor() === null
+                "next_cursor" => $page->nextCursor() === null
                     ? null
-                    : $this->cursors->encode($result->authors()->nextCursor()),
+                    : $this->cursors->encode($page->nextCursor()),
                 "provider_attempts" => $this->serializeAttempts(
-                    $result->authorProviderAttempts()
+                    $attempts
                 ),
-            ],
-            "works" => [
-                "items" => array_map($this->serializeWork(...), $result->works()->items()),
-                "next_cursor" => $result->works()->nextCursor() === null
-                    ? null
-                    : $this->cursors->encode($result->works()->nextCursor()),
-                "provider_attempts" => $this->serializeAttempts(
-                    $result->workProviderAttempts()
-                ),
-            ],
-        ];
+            ];
     }
 
     /**
      * @param list<BibliographicSearchProviderAttempt> $attempts
      * @return list<array{provider_key:string,status:string,failure_reason:?string}>
      */
-    private function serializeAttempts(array $attempts): array
+    public function serializeAttempts(array $attempts): array
     {
         return array_map(
             static fn (BibliographicSearchProviderAttempt $attempt): array => [
@@ -112,7 +117,7 @@ final readonly class BibliographicTextSearchContract
     }
 
     /** @return array<string,mixed> */
-    private function serializeWork(BibliographicWorkSearchResult $work): array
+    public function serializeWork(BibliographicWorkSearchResult $work): array
     {
         return [
             "result_id" => $work->reference()->resultId(),

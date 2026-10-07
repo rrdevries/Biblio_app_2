@@ -32,7 +32,8 @@ use Throwable;
 use wpdb;
 
 final readonly class WpdbBibliographicDiscoverySnapshotRepository implements
-    BibliographicDiscoverySnapshotRepository
+    BibliographicDiscoverySnapshotRepository,
+    \Biblio\Core\Application\Metadata\Discovery\BibliographicDiscoveryCandidateReader
 {
     private const string DATE_FORMAT = "Y-m-d H:i:s.u";
 
@@ -79,6 +80,20 @@ final readonly class WpdbBibliographicDiscoverySnapshotRepository implements
         UserId $actorId,
         DateTimeImmutable $at
     ): ?BibliographicDiscoveryCandidate {
+        return $this->readCandidate($discoveryId, $candidateId, $actorId, $at);
+    }
+
+    public function candidateForRead(
+        MetadataLookupId $discoveryId, MetadataCandidateId $candidateId,
+        UserId $actorId, DateTimeImmutable $at
+    ): ?BibliographicDiscoveryCandidate {
+        return $this->readCandidate($discoveryId, $candidateId, $actorId, $at);
+    }
+
+    private function readCandidate(
+        MetadataLookupId $discoveryId, MetadataCandidateId $candidateId,
+        UserId $actorId, DateTimeImmutable $at
+    ): ?BibliographicDiscoveryCandidate {
         $snapshots = $this->tables->bibliographicDiscoverySnapshots();
         $candidates = $this->tables->bibliographicDiscoveryCandidates();
         $row = $this->database->get_row($this->database->prepare(
@@ -92,6 +107,9 @@ final readonly class WpdbBibliographicDiscoverySnapshotRepository implements
             $actorId->value(),
             $this->date($at)
         ));
+        if ($this->database->last_error !== '') {
+            throw new PersistenceException('Could not read bibliographic discovery candidate.', 0, null, FailureReason::PersistenceReadFailed);
+        }
         if ($row === null) { return null; }
 
         try {

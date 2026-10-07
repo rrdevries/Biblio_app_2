@@ -43,6 +43,14 @@ final class RestController
             return;
         }
 
+        foreach (['book-searches'=>'bookSearch', 'book-search-presence'=>'bookSearchPresence',
+            'book-search-details'=>'bookSearchDetails', 'book-search-catalogs'=>'bookSearchCatalogs',
+            'book-search-descriptions'=>'bookSearchDescriptions', 'book-search-contexts/validate'=>'bookSearchValidate',
+            'book-search-author-works'=>'bookSearchAuthorWorks', 'book-search-editions'=>'bookSearchEditions'] as $path=>$callback) {
+            register_rest_route(self::NAMESPACE, '/me/'.$path, [
+                'methods'=>WP_REST_Server::CREATABLE, 'callback'=>[$this,$callback], 'permission_callback'=>[$this,'authenticated']
+            ]);
+        }
         foreach (['preferences'=>'settingsPreferences','defaults'=>'settingsDefaults'] as $suffix=>$callback) {
             register_rest_route(self::NAMESPACE, '/libraries/(?P<library_id>[^/]+)/'.$suffix, [
                 ['methods'=>WP_REST_Server::READABLE,'callback'=>[$this,$callback],'permission_callback'=>[$this,'authenticated']],
@@ -888,6 +896,62 @@ final class RestController
             return $this->success($this->responses->workDiscovery($page));
         });
     }
+
+    public function bookSearch(WP_REST_Request $request): WP_REST_Response|WP_Error
+    { return $this->execute(function(CoreApplication $app) use ($request): WP_REST_Response {
+        $payload = $request->get_json_params();
+        if (!is_array($payload)) { throw new \Biblio\Core\Exception\ValidationException('A JSON search request is required.'); }
+        return $this->success($app->bookSearch()->search($payload));
+    }); }
+
+    public function bookSearchPresence(WP_REST_Request $request): WP_REST_Response|WP_Error
+    { return $this->execute(function(CoreApplication $app) use ($request): WP_REST_Response {
+        $payload = $request->get_json_params();
+        if (!is_array($payload)) { throw new \Biblio\Core\Exception\ValidationException('A JSON search request is required.'); }
+        return $this->success($app->bookSearch()->presence($payload));
+    }); }
+
+    public function bookSearchDetails(WP_REST_Request $request): WP_REST_Response|WP_Error
+    { return $this->execute(function(CoreApplication $app) use ($request): WP_REST_Response {
+        $payload = $request->get_json_params();
+        if (!is_array($payload)) { throw new \Biblio\Core\Exception\ValidationException('A JSON search request is required.'); }
+        return $this->success($app->bookSearch()->details($payload));
+    }); }
+
+    public function bookSearchCatalogs(WP_REST_Request $request): WP_REST_Response|WP_Error
+    { return $this->execute(function(CoreApplication $app) use ($request): WP_REST_Response {
+        $payload = $request->get_json_params();
+        if (!is_array($payload)) { throw new \Biblio\Core\Exception\ValidationException('A JSON search request is required.'); }
+        return $this->success($app->bookSearch()->catalogs($payload));
+    }); }
+
+    public function bookSearchDescriptions(WP_REST_Request $request): WP_REST_Response|WP_Error
+    { return $this->execute(function(CoreApplication $app) use ($request): WP_REST_Response {
+        $payload = $request->get_json_params();
+        if (!is_array($payload)) { throw new \Biblio\Core\Exception\ValidationException('A JSON search request is required.'); }
+        return $this->success($app->bookSearch()->description($payload));
+    }); }
+
+    public function bookSearchValidate(WP_REST_Request $request): WP_REST_Response|WP_Error
+    { return $this->execute(function(CoreApplication $app) use ($request): WP_REST_Response {
+        $payload = $request->get_json_params();
+        if (!is_array($payload)) { throw new \Biblio\Core\Exception\ValidationException('A JSON search request is required.'); }
+        return $this->success($app->bookSearch()->validate($payload));
+    }); }
+
+    public function bookSearchAuthorWorks(WP_REST_Request $request): WP_REST_Response|WP_Error
+    { return $this->execute(function(CoreApplication $app) use ($request): WP_REST_Response {
+        $payload = $request->get_json_params();
+        if (!is_array($payload)) { throw new \Biblio\Core\Exception\ValidationException('A JSON search request is required.'); }
+        return $this->success($app->bookSearch()->authorWorks($payload));
+    }); }
+
+    public function bookSearchEditions(WP_REST_Request $request): WP_REST_Response|WP_Error
+    { return $this->execute(function(CoreApplication $app) use ($request): WP_REST_Response {
+        $payload = $request->get_json_params();
+        if (!is_array($payload)) { throw new \Biblio\Core\Exception\ValidationException('A JSON search request is required.'); }
+        return $this->success($app->bookSearch()->editions($payload));
+    }); }
 
     public function createBibliographicDiscovery(
         WP_REST_Request $request

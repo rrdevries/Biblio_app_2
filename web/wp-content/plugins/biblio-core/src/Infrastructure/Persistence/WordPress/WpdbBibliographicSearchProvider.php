@@ -27,12 +27,14 @@ use Biblio\Core\Catalog\WorkId;
 use Biblio\Core\Exception\FailureReason;
 use Biblio\Core\Infrastructure\Persistence\PersistenceException;
 use Throwable;
+use Biblio\Core\Application\Metadata\Search\BibliographicLocalWorkQueryMatcher;
 use wpdb;
 
 final readonly class WpdbBibliographicSearchProvider implements
     BibliographicAuthorSearchProvider,
     BibliographicWorkSearchProvider,
-    BibliographicAuthorDisambiguationLookup
+    BibliographicAuthorDisambiguationLookup,
+    BibliographicLocalWorkQueryMatcher
 {
     private const string PROVIDER_KEY = "local";
 
@@ -142,20 +144,7 @@ final readonly class WpdbBibliographicSearchProvider implements
         ?BibliographicSearchCursor $cursor = null
     ): BibliographicWorkSearchPage {
         $works = $this->tables->works();
-        $contributors = $this->tables->workContributors();
-        $authors = $this->tables->authors();
-        $predicates = [];
-        $parameters = [];
-        foreach ($this->tokens($query) as $token) {
-            $pattern = "%" . $this->database->esc_like($token) . "%";
-            $predicates[] = "(w.work_title LIKE %s OR EXISTS ("
-                . "SELECT 1 FROM `{$contributors}` wc_search "
-                . "INNER JOIN `{$authors}` a_search "
-                . "ON a_search.author_id=wc_search.author_id "
-                . "WHERE wc_search.work_id=w.work_id AND "
-                . $this->caseInsensitiveLike("a_search.display_name") . "))";
-            array_push($parameters, $pattern, $pattern);
-        }
+        [$predicates, $parameters] = $this->workPredicates($query);
         $offset = $cursor === null ? 0 : $cursor->presentationOrder() + 1;
         array_push($parameters, BibliographicTextSearchService::PAGE_SIZE + 1, $offset);
         $rows = $this->database->get_results($this->database->prepare(
@@ -194,6 +183,35 @@ final readonly class WpdbBibliographicSearchProvider implements
         } catch (Throwable $exception) {
             throw $this->invalid("Stored bibliographic Work search data is invalid.", $exception);
         }
+    }
+
+    public function workMatchesQuery(WorkId $workId, BibliographicTextSearchQuery $query): bool
+    {
+        [$predicates, $parameters] = $this->workPredicates($query);
+        $parameters[] = $workId->value();
+        $works = $this->tables->works();
+        return $this->database->get_var($this->database->prepare(
+            "SELECT w.work_id FROM `{$works}` w WHERE " . implode(' AND ', $predicates) . ' AND w.work_id=%s LIMIT 1', ...$parameters
+        )) !== null;
+    }
+
+    private function workPredicates(BibliographicTextSearchQuery $query): array
+    {
+        $contributors = $this->tables->workContributors();
+        $authors = $this->tables->authors();
+        $predicates = [];
+        $parameters = [];
+        foreach ($this->tokens($query) as $token) {
+            $pattern = "%" . $this->database->esc_like($token) . "%";
+            $predicates[] = "(w.work_title LIKE %s OR EXISTS ("
+                . "SELECT 1 FROM `{$contributors}` wc_search "
+                . "INNER JOIN `{$authors}` a_search "
+                . "ON a_search.author_id=wc_search.author_id "
+                . "WHERE wc_search.work_id=w.work_id AND "
+                . $this->caseInsensitiveLike("a_search.display_name") . "))";
+            array_push($parameters, $pattern, $pattern);
+        }
+        return [$predicates, $parameters];
     }
 
     /** @return list<string> */

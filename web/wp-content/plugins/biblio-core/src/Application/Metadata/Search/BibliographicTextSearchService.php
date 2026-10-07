@@ -42,6 +42,12 @@ final readonly class BibliographicTextSearchService
     /**
      * @return array{BibliographicAuthorSearchPage,list<BibliographicSearchProviderAttempt>}
      */
+    public function searchAuthorsGroup(BibliographicTextSearchRequest $request): array
+    {
+        $this->authenticatedUser->requireUserId();
+        return $this->authors($request);
+    }
+
     private function authors(BibliographicTextSearchRequest $request): array
     {
         $cursor = $request->authorCursor();

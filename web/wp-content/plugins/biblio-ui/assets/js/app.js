@@ -1,3 +1,4 @@
+import {readSearchReturn, searchReturnUrl, clearSearchReturns} from "./search-return.js";
 import { readSettings, createCatalogPresentationSession } from "./settings-state.js";
 import { BiblioApiError, createBiblioApi } from "biblio-ui/api";
 import { createAddBookWizard } from "biblio-ui/add-book-wizard";
@@ -1136,6 +1137,19 @@ export function createLibraryApp(mount, {
                     itemId: null,
                     catalogQuery: routeState.catalogQuery,
                 });
+                let searchBackUrl = null;
+                try {
+                    const key = new URL(locationImpl.href).searchParams.get('search_return');
+                    const record = readSearchReturn(key, sessionStorageImpl);
+                    if (record !== null) {
+                        await api.post('me/book-search-contexts/validate', {search_context:record.search_context}, {signal:controller.signal});
+                        if (!isCurrent(runGeneration, controller)) { return; }
+                        searchBackUrl = searchReturnUrl(config.searchUrl, key, sessionStorageImpl);
+                    }
+                } catch (error) {
+                    if (isAborted(error)) { return; }
+                    clearSearchReturns(sessionStorageImpl);
+                }
                 const requestedItemId = routeState.itemId;
                 const resourcePath = detailPath(
                     selectedLibraryId,
@@ -1383,6 +1397,7 @@ export function createLibraryApp(mount, {
                             state: "detail",
                             detail: currentDetail,
                             backUrl: detailBackUrl,
+                            searchBackUrl,
                             notice,
                             focusReading,
                             ...consumeHeadingFocus(),

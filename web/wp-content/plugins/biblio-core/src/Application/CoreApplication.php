@@ -163,9 +163,13 @@ final readonly class CoreApplication
         private MigrationSourceMapperRegistry $migrationSourceMappers,
         private MigrationReconciliationService $migrationReconciliation,
         private ?\Biblio\Core\Application\Accounts\AccountPreparationService $accountPreparation = null,
-        private ?\Biblio\Core\Application\Settings\LibrarySettingsService $librarySettings = null
+        private ?\Biblio\Core\Application\Settings\LibrarySettingsService $librarySettings = null,
+        private ?\Biblio\Core\Application\Metadata\GlobalSearch\GlobalBookSearchService $bookSearch = null
     ) {
     }
+
+    public function bookSearch(): \Biblio\Core\Application\Metadata\GlobalSearch\GlobalBookSearchService
+    { return $this->bookSearch ?? throw new \LogicException("Standalone search is unavailable."); }
 
     public function librarySettings(): \Biblio\Core\Application\Settings\LibrarySettingsService
     { return $this->librarySettings ?? throw new \LogicException("Library settings are unavailable."); }

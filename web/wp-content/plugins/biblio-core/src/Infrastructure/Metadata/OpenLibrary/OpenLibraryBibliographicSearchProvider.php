@@ -24,13 +24,15 @@ use Biblio\Core\Application\Metadata\Search\BibliographicWorkReference;
 use Biblio\Core\Application\Metadata\Search\BibliographicWorkSearchPage;
 use Biblio\Core\Application\Metadata\Search\BibliographicWorkSearchProvider;
 use Biblio\Core\Application\Metadata\Search\BibliographicWorkSearchResult;
+use Biblio\Core\Application\Metadata\Search\{BibliographicWorkSourceProvider,BibliographicWorkSourcePage};
 use InvalidArgumentException;
 use JsonException;
 use stdClass;
 
 final readonly class OpenLibraryBibliographicSearchProvider implements
     BibliographicAuthorSearchProvider,
-    BibliographicWorkSearchProvider
+    BibliographicWorkSearchProvider,
+    BibliographicWorkSourceProvider
 {
     private const string PROVIDER_KEY = "open_library";
     private const int MAXIMUM_RESPONSE_BYTES = 262144;
@@ -110,23 +112,7 @@ final readonly class OpenLibraryBibliographicSearchProvider implements
             );
             $items = [];
             foreach ($documents as $position => $document) {
-                if (!$document instanceof stdClass) {
-                    throw new InvalidArgumentException("Invalid Work search document.");
-                }
-                $key = $this->workKey($this->requiredString($document, "key", 64));
-                $items[] = new BibliographicWorkSearchResult(
-                    BibliographicWorkReference::external(
-                        BibliographicProviderEntityIdentity::work(self::PROVIDER_KEY, $key)
-                    ),
-                    $this->requiredString($document, "title", 512),
-                    array_map(
-                        static fn (string $name): BibliographicWorkAuthor =>
-                            new BibliographicWorkAuthor($name),
-                        $this->strings($document, "author_name", 32, 255)
-                    ),
-                    [],
-                    $offset + $position
-                );
+                $items[] = $this->workDocument($document, $offset + $position);
             }
             $last = $items === [] ? null : $items[array_key_last($items)];
             $hasMore = $last !== null && $found > $offset + count($documents);
@@ -138,6 +124,53 @@ final readonly class OpenLibraryBibliographicSearchProvider implements
         } catch (JsonException|InvalidArgumentException) {
             throw $this->malformed();
         }
+    }
+
+    public function searchWorkSource(BibliographicTextSearchQuery $query, int $offset, int $capacity): BibliographicWorkSourcePage
+    {
+        if ($offset < 0 || $offset > 1000000 || $capacity < 1 || $capacity > 10) {
+            throw new InvalidArgumentException('Invalid Work source window.');
+        }
+        $payload = $this->request('https://openlibrary.org/search.json?' . http_build_query([
+            'q'=>$query->value(), 'fields'=>'key,title,author_name', 'limit'=>$capacity, 'offset'=>$offset,
+        ], '', '&', PHP_QUERY_RFC3986));
+        try {
+            [$found, $documents] = $this->searchPayload($payload, $offset, $capacity);
+            if ($documents !== [] && ($offset + count($documents) > $found || $offset + count($documents) > 1000001)) {
+                throw new InvalidArgumentException('Inconsistent source count.');
+            }
+        } catch (InvalidArgumentException) { throw $this->malformed(); }
+        $items = []; $rejected = 0;
+        foreach ($documents as $position=>$document) {
+            // Only raw document validation is recoverable; typed construction is outside the catch.
+            try { $fields = $this->workFields($document); }
+            catch (InvalidArgumentException) { $rejected++; continue; }
+            $items[] = $this->workFromFields($fields, $offset + $position);
+        }
+        $next = $found > $offset + count($documents) ? $offset + count($documents) : null;
+        if ($next !== null && $next > 1000000) { throw $this->malformed(); }
+        return new BibliographicWorkSourcePage($query, $offset, $capacity, count($documents), $items, $rejected, $next);
+    }
+
+    private function workFields(mixed $document): array
+    {
+        if (!$document instanceof stdClass) { throw new InvalidArgumentException('Invalid Work document.'); }
+        return [$this->workKey($this->requiredString($document, 'key', 64)),
+            $this->requiredString($document, 'title', 512), $this->strings($document, 'author_name', 32, 255)];
+    }
+
+    private function workFromFields(array $fields, int $order): BibliographicWorkSearchResult
+    {
+        [$key, $title, $authors] = $fields;
+        return new BibliographicWorkSearchResult(
+            BibliographicWorkReference::external(BibliographicProviderEntityIdentity::work(self::PROVIDER_KEY, $key)),
+            $title, array_map(static fn(string $name): BibliographicWorkAuthor => new BibliographicWorkAuthor($name), $authors), [], $order
+        );
+    }
+
+    private function workDocument(mixed $document, int $order): BibliographicWorkSearchResult
+    {
+        return $this->workFromFields($this->workFields($document), $order);
     }
 
     private function offset(?BibliographicSearchCursor $cursor): int

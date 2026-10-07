@@ -13,11 +13,13 @@ use Biblio\Core\Application\Metadata\Search\BibliographicSearchProviderFailure;
 use Biblio\Core\Application\Metadata\Search\BibliographicTextSearchQuery;
 use Biblio\Core\Application\Metadata\Search\BibliographicWorkSearchPage;
 use Biblio\Core\Application\Metadata\Search\BibliographicWorkSearchProvider;
+use Biblio\Core\Application\Metadata\Search\{BibliographicWorkSourceProvider,BibliographicWorkSourcePage};
 use InvalidArgumentException;
 
 final readonly class ConfigurationErrorBibliographicSearchProvider implements
     BibliographicAuthorSearchProvider,
-    BibliographicWorkSearchProvider
+    BibliographicWorkSearchProvider,
+    BibliographicWorkSourceProvider
 {
     public function __construct(private string $providerKey)
     {
@@ -37,6 +39,11 @@ final readonly class ConfigurationErrorBibliographicSearchProvider implements
             ProviderLookupStatus::ConfigurationError,
             ProviderFailureReason::Configuration
         );
+    }
+
+    public function searchWorkSource(BibliographicTextSearchQuery $query, int $offset, int $capacity): BibliographicWorkSourcePage
+    {
+        throw new BibliographicSearchProviderFailure(ProviderLookupStatus::ConfigurationError, ProviderFailureReason::Configuration);
     }
 
     public function searchWorks(

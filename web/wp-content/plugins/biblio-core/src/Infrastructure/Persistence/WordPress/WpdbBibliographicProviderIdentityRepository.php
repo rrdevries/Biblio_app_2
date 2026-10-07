@@ -35,6 +35,9 @@ final readonly class WpdbBibliographicProviderIdentityRepository implements
                 . "AND provider_record_id=%s AND target_type='work'",
             $provider, $sourceType, $recordId
         ));
+        if ($this->database->last_error !== '') {
+            throw new \Biblio\Core\Infrastructure\Persistence\PersistenceException('Provider identity read failed.', failureReason:\Biblio\Core\Exception\FailureReason::PersistenceReadFailed);
+        }
         return is_string($value) ? new WorkId($value) : null;
     }
 
@@ -46,6 +49,9 @@ final readonly class WpdbBibliographicProviderIdentityRepository implements
                 . "AND provider_record_id=%s AND target_type='edition'",
             $provider, $recordId
         ));
+        if ($this->database->last_error !== '') {
+            throw new \Biblio\Core\Infrastructure\Persistence\PersistenceException('Provider identity read failed.', failureReason:\Biblio\Core\Exception\FailureReason::PersistenceReadFailed);
+        }
         return is_string($value) ? new EditionId($value) : null;
     }
 

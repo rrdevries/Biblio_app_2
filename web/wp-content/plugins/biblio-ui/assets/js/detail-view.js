@@ -171,7 +171,7 @@ function navigationLink(documentImpl, label, url, listener) {
         attributes: { href: url },
     });
 
-    link.addEventListener("click", (event) => {
+    if (typeof listener === "function") link.addEventListener("click", (event) => {
         if (!shouldHandleNavigation(event)) {
             return;
         }
@@ -497,6 +497,11 @@ function renderDetail(documentImpl, model, actions) {
         actions.backToOverview
     );
     backLink.className = "biblio-ui__quiet-link biblio-ui__detail-back";
+    if (typeof model.searchBackUrl === 'string') {
+        const searchBack = navigationLink(documentImpl, 'Terug naar zoeken', model.searchBackUrl);
+        searchBack.className = 'biblio-ui__quiet-link biblio-ui__detail-back';
+        view.append(searchBack);
+    }
     view.append(backLink);
     const hero = element(documentImpl, "header", {
         className: "biblio-ui__detail-hero",

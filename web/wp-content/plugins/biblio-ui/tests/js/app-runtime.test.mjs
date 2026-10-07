@@ -18,6 +18,7 @@ const routeStateTestUrl = `data:text/javascript;base64,${Buffer.from(routeStateT
 
 for (const [moduleId, file] of [
     ["./settings-state.js", "settings-state.js"],
+    ["./search-return.js", "search-return.js"],
     ["biblio-ui/api", "api.js"],
     ["biblio-ui/add-book-wizard", "add-book-wizard.js"],
     ["biblio-ui/catalog-query", "catalog-query.js"],

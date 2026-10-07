@@ -1188,6 +1188,34 @@ final class ProductionComposition
             $editionRepository
         );
 
+        $searchSecret = static fn(string $purpose): string => hash('sha256', AUTH_SALT . ':' . $purpose);
+        $workSelectors = new \Biblio\Core\Application\Metadata\Search\BibliographicWorkSelectorCodec($searchSecret('bibliographic-work-selector-v1'), $bibliographicProviderIdentities);
+        $authorSelectors = new \Biblio\Core\Application\Metadata\Search\BibliographicAuthorSelectorCodec($searchSecret('bibliographic-author-selector-v1'));
+        $openLibraryDescriptionConfig = null;
+        $googleDescriptionConfig = null;
+        try {
+            if ($this->providerConfiguration->openLibraryContactEmail() !== null) {
+                $openLibraryDescriptionConfig = new OpenLibraryConfiguration('Biblio', '2.001', $this->providerConfiguration->openLibraryContactEmail());
+            }
+        } catch (\InvalidArgumentException) {}
+        try { $googleDescriptionConfig = new GoogleBooksConfiguration($this->providerConfiguration->googleBooksApiKey()); }
+        catch (\InvalidArgumentException) {}
+        $bookSearch = new \Biblio\Core\Application\Metadata\GlobalSearch\GlobalBookSearchService(
+            $authenticatedUser, $metadataClock,
+            new \Biblio\Core\Application\Metadata\GlobalSearch\BookSearchTokenCodec($searchSecret('standalone-book-search-v1'), $authenticatedUser, $metadataClock, static fn(): string => wp_get_session_token()),
+            new IsbnCanonicalizer(), $bibliographicTextSearch,
+            new \Biblio\Core\Application\Metadata\Search\BibliographicTextSearchContract(new \Biblio\Core\Application\Metadata\Search\BibliographicSearchCursorCodec($searchSecret('bibliographic-text-search-v1')), $authorSelectors, $workSelectors),
+            $bibliographicAuthorWorkSearch,
+            new \Biblio\Core\Application\Metadata\Search\BibliographicAuthorWorkSearchContract(new \Biblio\Core\Application\Metadata\Search\BibliographicAuthorWorkSearchCursorCodec($searchSecret('bibliographic-author-work-search-v1')), $workSelectors),
+            $authorSelectors, $bibliographicEditionSearch,
+            new \Biblio\Core\Application\Metadata\Search\BibliographicEditionSearchContract(new \Biblio\Core\Application\Metadata\Search\BibliographicEditionSearchCursorCodec($searchSecret('bibliographic-edition-search-v1'))),
+            $workSelectors, $bibliographicDiscovery, $bibliographicDiscoverySnapshots,
+            $localEditionResolver, $bibliographicProviderIdentities, $libraryContexts,
+            new \Biblio\Core\Infrastructure\Persistence\WordPress\WpdbBookSearchReadRepository($database, $tableNames),
+            new \Biblio\Core\Infrastructure\Metadata\ProviderBookSearchDescriptionReader(new WordPressProviderHttpClient(), $metadataClock, $openLibraryDescriptionConfig, $googleDescriptionConfig),
+            new \Biblio\Core\Application\Metadata\GlobalSearch\BookSearchWorkGroupService($authenticatedUser, $localBibliographicSearch, $openLibraryBibliographicSearch, $localBibliographicSearch, $bibliographicProviderIdentities)
+        );
+
         $this->application = new CoreApplication(
             $personalLibraries,
             $personalMigrationTargets,
@@ -1281,7 +1309,8 @@ final class ProductionComposition
             new \Biblio\Core\Application\Settings\LibrarySettingsService(
                 $authenticatedUser, $libraryContexts,
                 new \Biblio\Core\Infrastructure\Persistence\WordPress\WpdbSettingsRepository($database, $tableNames)
-            )
+            ),
+            $bookSearch
         );
         $this->lifecycle = new CoreLifecycleCoordinator(
             new CoreSchemaMigrator(
